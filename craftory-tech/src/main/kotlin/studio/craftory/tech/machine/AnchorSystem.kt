@@ -12,6 +12,7 @@ import com.hypixel.hytale.component.dependency.SystemDependency
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.RefSystem
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem
+import com.hypixel.hytale.logger.HytaleLogger
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.modules.block.BlockModule
@@ -123,14 +124,32 @@ internal class AnchorSystem : EntityTickingSystem<ChunkStore>() {
             state.coverageActive = active
             CraftoryCore.setAnchorCoverage(store, id, position.x shr 5, position.z shr 5, active)
         }
-        updateArea(world, state, position, active)
-        val drain = active && !hasPlayerInArea(world, position)
-        val result = AnchorChargeMath.drain(state.chargeSeconds, state.drainRemainderSeconds, dt, drain)
-        if (state.chargeSeconds != result.chargeSeconds) {
-            state.chargeSeconds = result.chargeSeconds
-            blockState.markNeedsSaving(commandBuffer)
+        if (active) {
+            state.drainElapsedSeconds += dt.coerceAtLeast(0f)
+            state.areaRefreshTicks++
+            if (state.areaRefreshTicks >= AREA_REFRESH_TICKS) {
+                state.areaRefreshTicks = 0
+                state.areaHasNoPlayer = !hasPlayerInArea(world, position)
+                requestAreaInternal(world, state, position, store)
+                val result =
+                    AnchorChargeMath.drain(
+                        state.chargeSeconds,
+                        state.drainRemainderSeconds,
+                        state.drainElapsedSeconds,
+                        state.areaHasNoPlayer,
+                    )
+                state.drainElapsedSeconds = 0f
+                if (state.chargeSeconds != result.chargeSeconds) {
+                    state.chargeSeconds = result.chargeSeconds
+                    blockState.markNeedsSaving(commandBuffer)
+                }
+                state.drainRemainderSeconds = result.remainderSeconds
+            }
+        } else {
+            state.drainElapsedSeconds = 0f
+            state.areaHasNoPlayer = false
+            releaseKeepLoaded(world, state)
         }
-        state.drainRemainderSeconds = result.remainderSeconds
         val shouldShowActive = state.chargeSeconds > 0 && maxChargeSeconds > 0
         if (state.visualActive != shouldShowActive) {
             state.visualActive = shouldShowActive
@@ -143,55 +162,85 @@ internal class AnchorSystem : EntityTickingSystem<ChunkStore>() {
         }
     }
 
-    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth")
-    private fun updateArea(
+    private fun refreshChunkSections(
         world: World,
-        state: AnchorState,
-        position: BlockPos,
-        active: Boolean,
+        chunkX: Int,
+        chunkZ: Int,
     ) {
         val grid = world.chunkStore
         val store = grid.store
-        val nonTickingType = ChunkStore.REGISTRY.getNonTickingComponentType()
+        grid.getLoadedSectionReferences(chunkX, chunkZ).forEach { sectionRef ->
+            if (!sectionRef.isValid) return@forEach
+            val section = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return@forEach
+            section.resetActiveTimer()
+            grid.getChunkSectionReferenceAsync(
+                section.x,
+                section.y,
+                section.z,
+                GetChunkFlags.SET_TICKING,
+            )
+        }
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    private fun requestAreaInternal(
+        world: World,
+        state: AnchorState,
+        position: BlockPos,
+        store: Store<ChunkStore>,
+    ) {
+        world.execute {
+            val anchorRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+            val currentState =
+                anchorRef?.takeIf { it.isValid }?.let { store.getComponent(it, AnchorState.type) }
+            if (currentState !== state || state.coverageActive != true || state.chargeSeconds <= 0) return@execute
+            requestAreaNow(world, state, position, store)
+        }
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    private fun requestAreaNow(
+        world: World,
+        state: AnchorState,
+        position: BlockPos,
+        store: Store<ChunkStore>,
+    ) {
+        val grid = world.chunkStore
         val centerChunkX = position.x shr 5
         val centerChunkZ = position.z shr 5
         for (chunkX in centerChunkX - 1..centerChunkX + 1) {
             for (chunkZ in centerChunkZ - 1..centerChunkZ + 1) {
                 val chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ)
-                val chunkRef = grid.getChunkReference(chunkIndex)
-                if (chunkRef != null && chunkRef.isValid) {
-                    val worldChunk = store.getComponent(chunkRef, WorldChunk.getComponentType())
-                    if (worldChunk != null) {
-                        if (active && state.keepLoadedChunks.add(chunkIndex)) worldChunk.addKeepLoaded()
-                        if (active) {
-                            worldChunk.resetActiveTimer()
-                            if (store.getArchetype(chunkRef).contains(nonTickingType)) {
-                                grid.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING)
-                            }
-                        } else if (state.keepLoadedChunks.remove(chunkIndex)) {
-                            worldChunk.removeKeepLoaded()
+                val future = grid.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING)
+                if (!state.pendingChunkLoads.add(chunkIndex)) continue
+                future.whenComplete { chunkRef, failure ->
+                    world.execute {
+                        state.pendingChunkLoads.remove(chunkIndex)
+                        if (failure != null || chunkRef == null || !chunkRef.isValid) {
+                            LOGGER.atWarning().log("Anchor chunk load failed for $chunkIndex: $failure")
+                            return@execute
                         }
-                    }
-                } else {
-                    state.keepLoadedChunks.remove(chunkIndex)
-                }
-                if (!active) continue
-                grid.getLoadedSectionReferences(chunkX, chunkZ).forEach { sectionRef ->
-                    if (!sectionRef.isValid) return@forEach
-                    val section = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return@forEach
-                    section.resetActiveTimer()
-                    if (store.getArchetype(sectionRef).contains(nonTickingType)) {
-                        grid.getChunkSectionReferenceAsync(
-                            section.x,
-                            section.y,
-                            section.z,
-                            GetChunkFlags.SET_TICKING,
-                        )
+                        val currentStore = grid.store
+                        val anchorRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+                        val currentState =
+                            anchorRef?.takeIf { it.isValid }?.let { currentStore.getComponent(it, AnchorState.type) }
+                        if (currentState !== state || state.coverageActive != true || state.chargeSeconds <= 0) {
+                            return@execute
+                        }
+                        val worldChunk = currentStore.getComponent(chunkRef, WorldChunk.getComponentType())
+                        if (worldChunk == null) {
+                            LOGGER.atWarning().log("Anchor chunk load completed without WorldChunk for $chunkIndex")
+                            return@execute
+                        }
+                        if (state.keepLoadedChunks.add(chunkIndex)) worldChunk.addKeepLoaded()
+                        if (store.getResource(AnchorRefreshIndex.type).markRefreshed(chunkIndex, world.tick)) {
+                            worldChunk.resetActiveTimer()
+                            refreshChunkSections(world, chunkX, chunkZ)
+                        }
                     }
                 }
             }
         }
-        if (!active) releaseKeepLoaded(world, state)
     }
 
     private fun hasPlayerInArea(
@@ -240,7 +289,18 @@ internal class AnchorSystem : EntityTickingSystem<ChunkStore>() {
     }
 
     companion object {
+        internal fun requestArea(
+            world: World,
+            state: AnchorState,
+            position: BlockPos,
+            store: Store<ChunkStore>,
+        ) {
+            AnchorSystem().requestAreaInternal(world, state, position, store)
+        }
+
         private const val SECONDS_PER_MINUTE = 60L
+        private const val AREA_REFRESH_TICKS = 10
+        private val LOGGER: HytaleLogger = HytaleLogger.get("CraftoryTech")
     }
 }
 

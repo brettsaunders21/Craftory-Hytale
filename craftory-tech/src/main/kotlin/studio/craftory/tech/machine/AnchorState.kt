@@ -15,6 +15,10 @@ class AnchorState(
     var coverageId: Long? = null,
     var drainRemainderSeconds: Float = 0f,
     val keepLoadedChunks: MutableSet<Long> = mutableSetOf(),
+    var areaRefreshTicks: Int = 9,
+    var drainElapsedSeconds: Float = 0f,
+    var areaHasNoPlayer: Boolean = false,
+    val pendingChunkLoads: MutableSet<Long> = mutableSetOf(),
 ) : Component<ChunkStore>,
     Inspectable {
     override fun clone(): Component<ChunkStore> =
@@ -25,6 +29,10 @@ class AnchorState(
             coverageId,
             drainRemainderSeconds,
             keepLoadedChunks.toMutableSet(),
+            areaRefreshTicks,
+            drainElapsedSeconds,
+            areaHasNoPlayer,
+            pendingChunkLoads.toMutableSet(),
         )
 
     override fun describe(): List<Pair<String, String>> = listOf("chargeSeconds" to chargeSeconds.toString())

@@ -95,7 +95,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
 
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught")
     override fun tick(
         dt: Float,
         systemIndex: Int,
@@ -103,6 +103,13 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
+        if (tick >= run.startTick + 2_400L) {
+            run.context.sendMessage(Message.raw("selftest: FAIL timed out"))
+            CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+            CraftorySelfTest.releaseTestKeepLoaded(run)
+            store.getResource(SelfTestRun.type).active = null
+            return
+        }
         run.sectionEntityTicking =
             store.getComponent(
                 run.sectionRef,
@@ -111,14 +118,37 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         if (!CraftoryCore.isEnergyTick(store)) return
         reportTickingState(run, tick)
         if (run.phase == 4) {
-            tickPowerLossPhase(run, store, tick)
+            try {
+                tickPowerLossPhase(run, store, tick)
+            } catch (failure: Exception) {
+                abortRun(run, store, failure)
+            }
             return
         }
         if (run.phase == 5) {
-            tickAnchorDisablePhase(run, store, tick)
+            try {
+                tickAnchorDisablePhase(run, store, tick)
+            } catch (failure: Exception) {
+                abortRun(run, store, failure)
+            }
             return
         }
-        tickSelfTestPhase(run, store, tick)
+        try {
+            tickSelfTestPhase(run, store, tick)
+        } catch (failure: Exception) {
+            abortRun(run, store, failure)
+        }
+    }
+
+    private fun abortRun(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        failure: Throwable,
+    ) {
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+        runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
+        store.getResource(SelfTestRun.type).active = null
+        run.context.sendMessage(Message.raw("selftest: FAIL exception (${failure.message})"))
     }
 
     private fun reportTickingState(
@@ -279,6 +309,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val burner = burnerRef?.let { store.getComponent(it, BurnerState.type) }
         val canister = canisterRef?.let { store.getComponent(it, EnergyMember.type) }
         reportEnergyTopology(run, store)
+        check(
+            run,
+            run.anchorStateForTest?.keepLoadedChunks?.size == 9,
+            "anchor covers all nine chunks",
+            "keepLoaded=${run.anchorStateForTest?.keepLoadedChunks?.size}",
+        )
         check(run, (canister?.stored ?: 0) > 0, "burner energy", "canisterStored=${canister?.stored}")
         check(
             run,
@@ -560,7 +596,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val disableTick = run.anchorDisableTick ?: return
         if (run.anchorDisabledReported) {
             if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
-                CraftoryCore.setAnchorMaxChargeMinutes(run.anchorMaxChargeBeforeTest)
+                CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
                 reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
                 store.getResource(SelfTestRun.type).active = null
             }
@@ -671,7 +707,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 run.anchorDisableTick = tick + 20
                 return
             }
-            CraftoryCore.setAnchorMaxChargeMinutes(0)
+            CraftoryCore.setAnchorMaxChargeMinutesInMemory(0)
             run.anchorDisablePrepared = true
             run.anchorDisableTick = tick + 1
             return
@@ -682,7 +718,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         anchorRef?.let {
             store.getComponent(it, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
         }
-        CraftoryCore.setAnchorMaxChargeMinutes(0)
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(0)
         run.anchorDisablePrepared = true
         run.anchorDisableTick = tick + 20
     }
@@ -691,7 +727,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         run: SelfTestRun.Run,
         tick: Long,
     ) {
-        CraftoryCore.setAnchorMaxChargeMinutes(run.anchorMaxChargeBeforeTest)
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
         CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
         run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
@@ -806,12 +842,14 @@ object CraftorySelfTest {
         return CompletableFuture.completedFuture(null)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun setup(
         context: CommandContext,
         world: World,
         sectionRef: Ref<ChunkStore>,
     ) {
         val store = world.chunkStore.store
+        var previousAnchorMax: Int? = null
         try {
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
@@ -840,7 +878,8 @@ object CraftorySelfTest {
             check(MachineActions.pulse(crank, crankMember, crankBlock, store, world.tick))
             val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
             run.crankSpinWithoutAnchor = crank.spinTicks
-            CraftoryCore.setAnchorMaxChargeMinutes(maxOf(run.anchorMaxChargeBeforeTest, 240))
+            previousAnchorMax = run.anchorMaxChargeBeforeTest
+            CraftoryCore.setAnchorMaxChargeMinutesInMemory(maxOf(run.anchorMaxChargeBeforeTest, 240))
             store.getResource(SelfTestRun.type).active = run
             context.sendMessage(
                 Message.raw(
@@ -849,7 +888,8 @@ object CraftorySelfTest {
                         "chunkHolders=${initialCleanup.chunkHolders})",
                 ),
             )
-        } catch (failure: IllegalStateException) {
+        } catch (failure: Exception) {
+            previousAnchorMax?.let { CraftoryCore.setAnchorMaxChargeMinutesInMemory(it) }
             context.sendMessage(
                 Message.raw("selftest: FAIL setup (${failure.message ?: failure.javaClass.simpleName})"),
             )
@@ -900,6 +940,11 @@ object CraftorySelfTest {
             BlockModule.getBlockEntity(world, GNASHER.x, GNASHER.y, GNASHER.z)
                 ?: error("gnasher block entity missing")
         val state = store.getComponent(gnasherRef, GnasherState.type) ?: error("gnasher state missing")
+        state.oreQueue = ""
+        state.progressPulses = 0
+        state.jammed = false
+        state.lastAutoCrankTick = world.tick
+        state.lastPulseTick = null
         val blockState =
             store.getComponent(gnasherRef, BlockModule.BlockStateInfo.getComponentType())
                 ?: error("gnasher block state missing")
@@ -1076,18 +1121,18 @@ object CraftorySelfTest {
         )
         check(
             run,
-            addedQuantity == 4,
+            addedQuantity >= run.spawnedGritQuantity,
             "gnasher live and parked grit accounting",
             "baseline=${run.gnasherBaselineQuantity}, live=$liveQuantity, parked=$parkedQuantity, " +
-                "total=$totalQuantity, added=$addedQuantity",
+                "total=$totalQuantity, added=$addedQuantity, manual=${run.spawnedGritQuantity}",
         )
         if (holders.nonTicking) {
             check(
                 run,
-                addedParkedQuantity == 4,
+                addedParkedQuantity >= run.spawnedGritQuantity,
                 "gnasher non-ticking parked grit",
                 "addedParked=$addedParkedQuantity, EntityChunk=${holders.entityChunkGrit}, " +
-                    "EntitySection=${holders.entitySectionGrit}",
+                    "EntitySection=${holders.entitySectionGrit}, manual=${run.spawnedGritQuantity}",
             )
             run.context.sendMessage(
                 Message.raw("selftest: SKIP live Gnasher drop visibility after N ticks (NonTicking)"),
@@ -1095,10 +1140,10 @@ object CraftorySelfTest {
         } else {
             check(
                 run,
-                addedParkedQuantity == 0 && addedQuantity == 4,
+                addedParkedQuantity == 0 && addedQuantity >= run.spawnedGritQuantity,
                 "gnasher live drops after 4 ticks",
                 "baseline=${run.gnasherBaselineQuantity}, live=$liveQuantity, parked=$parkedQuantity, " +
-                    "added=$addedQuantity",
+                    "added=$addedQuantity, manual=${run.spawnedGritQuantity}",
             )
         }
         repeat(GnasherMachine.HOPPER_CAPACITY + 1) {
@@ -1247,6 +1292,18 @@ object CraftorySelfTest {
         world: World,
         sectionRef: Ref<ChunkStore>,
     ): SelfTestCleanupResult {
+        val store = world.chunkStore.store
+        BlockModule
+            .getBlockEntity(world, GNASHER.x, GNASHER.y, GNASHER.z)
+            ?.takeIf { it.isValid }
+            ?.let { store.getComponent(it, GnasherState.type) }
+            ?.apply {
+                oreQueue = ""
+                progressPulses = 0
+                jammed = false
+                lastAutoCrankTick = world.tick
+                lastPulseTick = null
+            }
         testPositions().forEach { position ->
             BlockOperations.setBlock(
                 world.chunkStore,

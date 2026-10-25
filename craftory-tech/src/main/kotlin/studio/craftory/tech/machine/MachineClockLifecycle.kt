@@ -35,6 +35,7 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
                 studio.craftory.core.api.CraftoryCore
                     .energyAccess(store.externalData.world)
             ovenPower.lastFizzSolveTick = energy.lastSolveTick()
+            MachineClock.initialize(ovenPower, tick)
         }
     }
 
@@ -67,5 +68,40 @@ internal object MachineClock {
     ) {
         state.lastAutoCrankTick = tick
         state.lastPulseTick = null
+    }
+
+    fun initialize(
+        state: OvenPower,
+        tick: Long,
+    ) {
+        state.lastDeliveredTick = tick
+    }
+
+    fun pause(
+        state: CrankState,
+        tick: Long,
+    ) {
+        state.lastAdvancedTick = tick
+    }
+
+    fun pause(
+        state: BurnerState,
+        tick: Long,
+    ) {
+        state.lastAdvancedTick = tick
+    }
+
+    fun pause(
+        state: GnasherState,
+        tick: Long,
+    ) {
+        state.lastAutoCrankTick = tick
+    }
+
+    fun pause(
+        state: OvenPower,
+        tick: Long,
+    ) {
+        state.lastDeliveredTick = tick
     }
 }

@@ -67,7 +67,7 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
-        if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
+        super.tick(dt, chunk, store, commandBuffer)
     }
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
@@ -81,8 +81,12 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, CrankState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val tick = store.externalData.world.tick
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            MachineClock.pause(state, tick)
+            return
+        }
+        if (!CraftoryCore.isEnergyTick(store)) return
         if (CrankMachine.advanceTo(state, tick)) member.unsaved = true
         member.production = CrankMachine.productionPerSolveTick(state)
         member.persist(blockState, commandBuffer, tick, SAVE_INTERVAL_TICKS, immediate = false)
@@ -112,10 +116,10 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
-        if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
+        super.tick(dt, chunk, store, commandBuffer)
     }
 
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -126,9 +130,13 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, BurnerState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val tick = store.externalData.world.tick
         val world = store.externalData.world
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            MachineClock.pause(state, tick)
+            return
+        }
+        if (!CraftoryCore.isEnergyTick(store)) return
         if (BurnerMachine.advanceTo(state, tick)) member.unsaved = true
         member.production = BurnerMachine.productionPerSolveTick(state)
         member.persist(blockState, commandBuffer, tick, SAVE_INTERVAL_TICKS, immediate = false)
@@ -177,10 +185,10 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
-        if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
+        super.tick(dt, chunk, store, commandBuffer)
     }
 
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -193,11 +201,16 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         val bench = chunk.getComponent(index, ProcessingBenchBlock.getComponentType()) ?: return
         val benchBlock = chunk.getComponent(index, BenchBlock.getComponentType()) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val world = store.externalData.world
-        if (member.delivered > 0) {
-            power.lastDeliveredTick = world.tick
-        } else if (bench.isActive() && OvenPowerMath.shouldStopAfterPowerLoss(power.lastDeliveredTick, world.tick)) {
+        val tick = world.tick
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            MachineClock.pause(power, tick)
+            return
+        }
+        if (!CraftoryCore.isEnergyTick(store)) return
+        val powerLoss = OvenPowerMath.updatePowerLoss(power.lastDeliveredTick, tick, member.delivered > 0)
+        power.lastDeliveredTick = powerLoss.lastDeliveredTick
+        if (bench.isActive() && powerLoss.shouldStop) {
             bench.setActive(false, benchBlock, blockState)
         }
         val position = Vector3i()
@@ -278,7 +291,7 @@ internal class GnasherSystem : EntityTickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
-        if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
+        super.tick(dt, chunk, store, commandBuffer)
     }
 
     override fun tick(
@@ -291,8 +304,12 @@ internal class GnasherSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, GnasherState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val world = store.externalData.world
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            MachineClock.pause(state, world.tick)
+            return
+        }
+        if (!CraftoryCore.isEnergyTick(store)) return
         val position = blockState.worldPosition(commandBuffer) ?: return
         val id = BlockPos.pack(position.x, position.y, position.z)
         val demand =
@@ -541,41 +558,9 @@ internal object MachineActions {
         val id = BlockPos.pack(position.x, position.y, position.z)
         state.coverageId = id
         state.coverageActive = true
+        state.areaRefreshTicks = 9
         CraftoryCore.setAnchorCoverage(store, id, position.x shr 5, position.z shr 5, true)
-        val grid = world.chunkStore
-        val chunkStore = grid.store
-        val nonTickingType = ChunkStore.REGISTRY.getNonTickingComponentType()
-        val centerX = position.x shr 5
-        val centerZ = position.z shr 5
-        for (chunkX in centerX - 1..centerX + 1) {
-            for (chunkZ in centerZ - 1..centerZ + 1) {
-                val chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ)
-                val chunkRef = grid.getChunkReference(chunkIndex)
-                if (chunkRef != null && chunkRef.isValid) {
-                    val worldChunk = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType())
-                    if (worldChunk != null) {
-                        if (state.keepLoadedChunks.add(chunkIndex)) worldChunk.addKeepLoaded()
-                        worldChunk.resetActiveTimer()
-                        if (chunkStore.getArchetype(chunkRef).contains(nonTickingType)) {
-                            grid.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING)
-                        }
-                    }
-                }
-                grid.getLoadedSectionReferences(chunkX, chunkZ).forEach { sectionRef ->
-                    if (!sectionRef.isValid) return@forEach
-                    val section = chunkStore.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return@forEach
-                    section.resetActiveTimer()
-                    if (chunkStore.getArchetype(sectionRef).contains(nonTickingType)) {
-                        grid.getChunkSectionReferenceAsync(
-                            section.x,
-                            section.y,
-                            section.z,
-                            GetChunkFlags.SET_TICKING,
-                        )
-                    }
-                }
-            }
-        }
+        AnchorSystem.requestArea(world, state, position, store)
         blockState.markNeedsSaving(store)
     }
 

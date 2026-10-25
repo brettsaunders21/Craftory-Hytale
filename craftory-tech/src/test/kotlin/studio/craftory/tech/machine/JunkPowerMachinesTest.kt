@@ -70,6 +70,22 @@ class JunkPowerMachinesTest {
     }
 
     @Test
+    fun `paused machines do not advance spin or fuel`() {
+        val crank = CrankState(spinTicks = 40, lastAdvancedTick = 100)
+        val burner = BurnerState(burnTicks = 200, burning = true, lastAdvancedTick = 100)
+
+        MachineClock.pause(crank, 400)
+        MachineClock.pause(burner, 400)
+
+        assertEquals(40, crank.spinTicks)
+        assertEquals(200, burner.burnTicks)
+        assertFalse(CrankMachine.advanceTo(crank, 400))
+        assertFalse(BurnerMachine.advanceTo(burner, 400))
+        assertEquals(40, crank.spinTicks)
+        assertEquals(200, burner.burnTicks)
+    }
+
+    @Test
     fun `reloaded machine state starts advancing from the current world tick`() {
         val crank = CrankState(spinTicks = 40)
         val burner = BurnerState(burnTicks = 40, burning = true)

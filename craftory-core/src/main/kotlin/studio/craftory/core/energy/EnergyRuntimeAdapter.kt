@@ -94,6 +94,15 @@ internal class EnergyRuntimeAdapter {
         node.demand = amount
     }
 
+    fun setStorageEnabled(
+        id: Long,
+        enabled: Boolean,
+    ) {
+        val node = nodes.getValue(id)
+        require((node.spec.role and MemberSpec.STORAGE) != 0) { "Member $id is not storage" }
+        graph.setStorageEnabled(id, enabled)
+    }
+
     fun tick(sink: EnergyEventSink) {
         nodes.forEach { (id, node) ->
             node.lastSolveNetworkId = graph.networkOf(id)

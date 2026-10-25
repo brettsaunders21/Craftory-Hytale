@@ -124,6 +124,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
             val spec = CraftoryCore.energyType(member.typeId)?.spec ?: return@forEach
             val blockState = currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
             val active = blockState?.let { CraftoryCore.isAreaActive(currentStore, it) } ?: false
+            if ((spec.role and MemberSpec.STORAGE) != 0) runtime.setStorageEnabled(id, active)
             if ((spec.role and MemberSpec.PRODUCER) != 0) {
                 runtime.setProduction(id, if (active) member.production else 0, member.productionRank)
             }

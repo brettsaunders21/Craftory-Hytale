@@ -102,6 +102,10 @@ object CraftoryCore {
     fun anchorMaxChargeMinutes(): Int = currentAnchorMaxChargeMinutes
 
     fun setAnchorMaxChargeMinutes(minutes: Int) {
+        setAnchorMaxChargeMinutesInMemory(minutes)
+    }
+
+    fun setAnchorMaxChargeMinutesInMemory(minutes: Int) {
         require(minutes >= 0) { "Anchor maximum charge must not be negative" }
         currentAnchorMaxChargeMinutes = minutes
     }

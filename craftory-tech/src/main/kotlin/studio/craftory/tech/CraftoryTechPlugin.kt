@@ -9,6 +9,7 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.tech.command.SummonCommand
 import studio.craftory.tech.machine.AnchorLifecycle
+import studio.craftory.tech.machine.AnchorRefreshIndex
 import studio.craftory.tech.machine.AnchorState
 import studio.craftory.tech.machine.AnchorSystem
 import studio.craftory.tech.machine.BurnerState
@@ -108,6 +109,7 @@ class CraftoryTechPlugin(
             accessor.getComponent(ref, AnchorState.type)
         }
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
+        AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
         chunkRegistry.registerSystem(CrankSystem())

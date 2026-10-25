@@ -202,6 +202,40 @@ class EnergyGraphTest {
     }
 
     @Test
+    fun `disabled storage preserves charge and resumes without rebuilding`() {
+        val graph = EnergyGraph()
+        graph.add(1L, producer(), longArrayOf())
+        graph.add(2L, store(), longArrayOf(1L))
+        graph.add(3L, consumer(), longArrayOf(2L))
+        graph.restoreStored(2L, 5L, 0)
+        val network = graph.networkOf(2L)
+
+        graph.setStorageEnabled(2L, false)
+        graph.setDemand(3L, 5L)
+        graph.tick()
+        assertEquals(0L, graph.delivered(3L))
+        assertEquals(5L, graph.stored(2L))
+
+        graph.setProduction(1L, 10L, 0)
+        graph.setDemand(3L, 0L)
+        graph.tick()
+        assertEquals(5L, graph.stored(2L))
+
+        graph.setStorageEnabled(2L, true)
+        assertEquals(network, graph.networkOf(2L))
+        graph.setProduction(1L, 0L, 0)
+        graph.setDemand(3L, 5L)
+        graph.tick()
+        assertEquals(5L, graph.delivered(3L))
+        assertEquals(0L, graph.stored(2L))
+
+        graph.setProduction(1L, 10L, 0)
+        graph.setDemand(3L, 0L)
+        graph.tick()
+        assertEquals(10L, graph.stored(2L))
+    }
+
+    @Test
     fun `link losses reduce network supply`() {
         val graph = EnergyGraph()
         graph.add(1L, producer(), longArrayOf())

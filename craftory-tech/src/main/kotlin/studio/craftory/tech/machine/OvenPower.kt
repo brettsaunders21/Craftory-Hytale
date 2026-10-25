@@ -85,13 +85,36 @@ internal object OvenFizzAccounting {
 }
 
 internal object OvenPowerMath {
+    fun updatePowerLoss(
+        lastDeliveredTick: Long?,
+        currentTick: Long,
+        hasDelivery: Boolean,
+    ): OvenPowerLossUpdate {
+        val nextLastDeliveredTick =
+            if (hasDelivery) {
+                currentTick
+            } else {
+                lastDeliveredTick ?: currentTick
+            }
+        return OvenPowerLossUpdate(
+            nextLastDeliveredTick,
+            !hasDelivery && shouldStopAfterPowerLoss(nextLastDeliveredTick, currentTick),
+        )
+    }
+
     fun shouldStopAfterPowerLoss(
         lastDeliveredTick: Long?,
         currentTick: Long,
-    ): Boolean =
-        lastDeliveredTick != null &&
-            currentTick >= lastDeliveredTick &&
-            currentTick - lastDeliveredTick >= POWER_LOSS_TIMEOUT_TICKS
+    ): Boolean {
+        val lossStartTick = lastDeliveredTick ?: currentTick
+        return currentTick >= lossStartTick &&
+            currentTick - lossStartTick >= POWER_LOSS_TIMEOUT_TICKS
+    }
 
     const val POWER_LOSS_TIMEOUT_TICKS = 120L
 }
+
+internal data class OvenPowerLossUpdate(
+    val lastDeliveredTick: Long,
+    val shouldStop: Boolean,
+)

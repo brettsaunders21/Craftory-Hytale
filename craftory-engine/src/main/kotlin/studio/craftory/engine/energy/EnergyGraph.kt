@@ -14,6 +14,7 @@ class EnergyGraph {
         var ids = LongArray(INITIAL_CAPACITY)
         var handles = IntArray(INITIAL_CAPACITY)
         var stored = LongArray(INITIAL_CAPACITY)
+        var storageEnabled = BooleanArray(INITIAL_CAPACITY)
         var capacity = LongArray(INITIAL_CAPACITY)
         var maxInput = LongArray(INITIAL_CAPACITY)
         var maxOutput = LongArray(INITIAL_CAPACITY)
@@ -39,6 +40,7 @@ class EnergyGraph {
             ids[slot] = id
             handles[slot] = handle
             stored[slot] = 0L
+            storageEnabled[slot] = (spec.role and MemberSpec.STORAGE) != 0
             capacity[slot] = spec.capacity
             maxInput[slot] = spec.maxInput
             maxOutput[slot] = spec.maxOutput
@@ -72,6 +74,7 @@ class EnergyGraph {
             ids[targetSlot] = source.ids[sourceSlot]
             handles[targetSlot] = source.handles[sourceSlot]
             stored[targetSlot] = source.stored[sourceSlot]
+            storageEnabled[targetSlot] = source.storageEnabled[sourceSlot]
             capacity[targetSlot] = source.capacity[sourceSlot]
             maxInput[targetSlot] = source.maxInput[sourceSlot]
             maxOutput[targetSlot] = source.maxOutput[sourceSlot]
@@ -100,6 +103,7 @@ class EnergyGraph {
             ids = ids.copyOf(newCapacity)
             handles = handles.copyOf(newCapacity)
             stored = stored.copyOf(newCapacity)
+            storageEnabled = storageEnabled.copyOf(newCapacity)
             capacity = capacity.copyOf(newCapacity)
             maxInput = maxInput.copyOf(newCapacity)
             maxOutput = maxOutput.copyOf(newCapacity)
@@ -278,6 +282,19 @@ class EnergyGraph {
         wake(network)
     }
 
+    fun setStorageEnabled(
+        id: Long,
+        enabled: Boolean,
+    ) {
+        val handle = requireHandle(id)
+        val network = networkForHandle(handle)
+        val slot = handleSlots[handle]
+        require((network.role[slot] and MemberSpec.STORAGE) != 0) { "Member $id is not storage" }
+        if (network.storageEnabled[slot] == enabled) return
+        network.storageEnabled[slot] = enabled
+        wake(network)
+    }
+
     fun stored(id: Long): Long {
         val handle = idToHandle.getOrDefault(id, -1)
         if (handle < 0) {
@@ -351,6 +368,7 @@ class EnergyGraph {
         settleSupply(network, grade, delivered)
     }
 
+    @Suppress("ComplexCondition")
     private fun prepareSupply(network: Network): Int {
         var grade = -1
         productionTotalScratch = 0L
@@ -367,6 +385,7 @@ class EnergyGraph {
             }
             if (
                 (network.role[slot] and MemberSpec.STORAGE) != 0 &&
+                network.storageEnabled[slot] &&
                 network.stored[slot] > 0L &&
                 network.storeRank[slot] > grade
             ) {
@@ -383,6 +402,7 @@ class EnergyGraph {
         while (slot < network.size) {
             if (
                 (network.role[slot] and MemberSpec.STORAGE) != 0 &&
+                network.storageEnabled[slot] &&
                 network.stored[slot] > 0L &&
                 network.storeRank[slot] == grade
             ) {
@@ -615,7 +635,7 @@ class EnergyGraph {
             val acceptsGrade =
                 stored == 0L ||
                     (network.storeRank[slot] == grade)
-            if ((network.role[slot] and MemberSpec.STORAGE) != 0 && acceptsGrade) {
+            if ((network.role[slot] and MemberSpec.STORAGE) != 0 && network.storageEnabled[slot] && acceptsGrade) {
                 val free = network.capacity[slot] - stored
                 val inputCapacity = min(free.coerceAtLeast(0L), network.maxInput[slot])
                 weightScratch[slot] = inputCapacity
