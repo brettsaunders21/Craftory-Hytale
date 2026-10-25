@@ -72,7 +72,16 @@ object SpikeCommands {
             }
 
             "beam" -> {
-                withPlayer(context, "beam") { ref, store -> beam(context, ref, store, args.drop(1)) }
+                if (args.getOrNull(1)?.lowercase() == "list") {
+                    val ids =
+                        Beam
+                            .getAssetMap()
+                            .assetMap.keys
+                            .sorted()
+                    respond(context, "beam", "assets=${ids.size} ${ids.take(40).joinToString()}")
+                } else {
+                    withPlayer(context, "beam") { ref, store -> beam(context, ref, store, args.drop(1)) }
+                }
             }
 
             "projectile" -> {
@@ -150,6 +159,14 @@ object SpikeCommands {
         args: List<String>,
     ): CompletableFuture<Void> {
         val ref = context.senderAsPlayerRef()
+        if (args.firstOrNull()?.lowercase() == "assets") {
+            val ids =
+                Weather
+                    .getAssetMap()
+                    .assetMap.keys
+                    .sorted()
+            return respond(context, "weather", "assets=${ids.size} [${ids.take(40).joinToString()}]")
+        }
         if (args.isEmpty()) {
             val playerRef = ref ?: return respond(context, "weather", "requires a player to inspect world weather")
             val store = playerRef.store
@@ -228,7 +245,10 @@ object SpikeCommands {
                 context,
                 "events",
                 "assets=${ids.size} [${ids.take(40).joinToString()}] " +
-                    "active=${GlobalWorldEventManager.INSTANCE.activeIds()} " +
+                    "active=${GlobalWorldEventManager.INSTANCE.activeIds().joinToString(
+                        prefix = "[",
+                        postfix = "]",
+                    )} " +
                     "candidateVanilla=${vanilla.ifEmpty { listOf("none found by ID") }} " +
                     "MoonPhaseChangeEvent is a separate moon-phase event",
             )
