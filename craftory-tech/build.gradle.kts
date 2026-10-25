@@ -11,5 +11,5 @@ hytaleTools {
 }
 
 dependencies {
-    add("vineImplementation", project(":craftory-core"))
+    add("vineCompileOnly", project(":craftory-core"))
 }
