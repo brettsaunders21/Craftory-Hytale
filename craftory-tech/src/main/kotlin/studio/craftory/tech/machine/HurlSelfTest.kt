@@ -16,12 +16,16 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.transport.HurlArc
 import studio.craftory.core.api.transport.HurlPoint
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.transport.HurlBoarding
+import studio.craftory.tech.transport.HurlMode
 import studio.craftory.tech.transport.HurlRide
 import studio.craftory.tech.transport.HurlRides
 import studio.craftory.tech.transport.HurlStartFailure
 import studio.craftory.tech.transport.HurlStation
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
@@ -71,6 +75,7 @@ internal class HurlSelfTest(
                 "hurl split on break",
             )
             place(pos(24), CraftoryIds.HURL_TUBE)
+            verifyUnload(baseline + 9)
             val ref = entity(source)
             val station = requireNotNull(store.getComponent(ref, HurlStation.type))
             station.rename("  Selftest Station  ", ref, store)
@@ -85,8 +90,72 @@ internal class HurlSelfTest(
             )
             place(storage, CraftoryIds.CANISTER)
             seed(10_000)
-            after(4) { startTube() }
+            after(4) {
+                reviewRegressions()
+                startTube()
+            }
         }
+    }
+
+    private fun verifyUnload(expectedNodes: Int) {
+        val tubes = CraftoryCore.tubeAccess(world)
+        val unloaded = store.removeEntity(entity(pos(24)), RemoveReason.UNLOAD)
+        check(
+            tubes.nodeCount == expectedNodes && tubes.route(source, destination) != null,
+            "hurl graph retains unloaded tube",
+        )
+        store.addEntity(unloaded, AddReason.LOAD)
+        check(
+            tubes.nodeCount == expectedNodes && tubes.route(source, destination) != null,
+            "hurl graph reload is idempotent",
+        )
+    }
+
+    private fun reviewRegressions() {
+        val energy = CraftoryCore.energyAccess(world)
+        val before = energy.stored(storage)
+        for (position in listOf(source, destination)) {
+            val owner = requireNotNull(store.getComponent(entity(position), MachineOwner.type))
+            val previous = owner.placerUuid
+            try {
+                owner.placerUuid = UUID.randomUUID()
+                check(
+                    HurlRides.start(world, source, destination, riderUuid = UUID.randomUUID()).failure ==
+                        HurlStartFailure.FORBIDDEN && energy.stored(storage) == before,
+                    "hurl foreign station refuses ride without debit",
+                    "station=$position",
+                )
+            } finally {
+                owner.placerUuid = previous
+            }
+        }
+        val route = requireNotNull(CraftoryCore.tubeAccess(world).route(source, destination))
+        val ride =
+            HurlRide().also {
+                it.route = route
+                route.positionAt(0.0, it.output)
+            }
+        check(
+            HurlBoarding.spawn(world, ride) { false }.failure == HurlStartFailure.INSUFFICIENT_ENERGY &&
+                energy.stored(storage) == before && HurlRides.counters(world).capsules == 0,
+            "hurl boarding payment refusal cleans capsule without debit",
+        )
+        val failed =
+            HurlRide().also {
+                it.mode = HurlMode.ARC
+                it.arc = HurlArc.create(HurlPoint(0.5, -64.0, 0.5), HurlPoint(1.5, -64.0, 0.5))
+                requireNotNull(it.arc).positionAt(0.0, it.output)
+            }
+        var charged = false
+        val result =
+            HurlBoarding.spawn(world, failed) {
+                charged = true
+                true
+            }
+        check(
+            result.failure == HurlStartFailure.SPAWN_FAILED && !charged && energy.stored(storage) == before,
+            "hurl failed spawn does not debit energy",
+        )
     }
 
     private fun startTube() {

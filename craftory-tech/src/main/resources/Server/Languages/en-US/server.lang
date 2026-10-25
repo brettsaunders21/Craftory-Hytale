@@ -98,6 +98,7 @@ craftory.hurl.no-destinations = No reachable stations belonging to your crew or 
 craftory.hurl.insufficient-energy = Not enough stored Fizz of the required grade to start this ride.
 craftory.hurl.already-riding = You are already riding a Hurl Tube.
 craftory.hurl.no-route = The route is no longer available.
+craftory.hurl.spawn-failed = Unable to board the capsule. Please try again; no energy was spent.
 items.Craftory_Hurl_Cannon.name = Hurl Cannon
 items.Craftory_Hurl_Cannon.description = Aim at a Catch Net within 64 blocks and climb aboard. Boom Powder charges coming soon.
 items.Craftory_Catch_Net.name = Catch Net

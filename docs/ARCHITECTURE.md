@@ -116,6 +116,12 @@ route wrappers. Each ride holds its own keep-loaded chunk leases and requests `S
 ahead; asynchronous completions check ride lifetime before acquiring leases. Removal releases leases,
 including disconnect/unload cleanup. No capsule is saved across restart.
 
+Core retains tube topology on chunk UNLOAD for the current world session; LOAD is idempotent,
+while real block removal still splits routes and triggers mid-ride ejection. After a restart,
+never-loaded chunks are not indexed until loaded. Energy caches remain loaded-member-only so
+debits never target unloaded storage components. Ride clones share lease state and lifetime flags,
+including pending load callbacks, so cleanup releases each lease once.
+
 The primary driver is the official `MountedComponent(capsuleRef, Vector3f(), MountController.Minecart)`
 with a `MountedByComponent` passenger list. Capsules copy vanilla minecart spawn's model, persistent-model
 reference and bounding box, plus UUID/NetworkId for tracking, but omit minecart physics and interactions.

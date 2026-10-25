@@ -34,7 +34,13 @@ internal fun openHurlStation(
     if (world.chunkStore.store.getComponent(block, HurlStation.type) == null) return false
     val playerRef = commands.getComponent(rider, PlayerRef.getComponentType()) ?: return true
     val player = commands.getComponent(rider, Player.getComponentType()) ?: return true
-    if (rename && !mayRename(world, block, playerRef)) {
+    val allowed =
+        if (rename) {
+            mayRename(world, block, playerRef)
+        } else {
+            StationPermissions.mayUse(world, source, playerRef.uuid)
+        }
+    if (!allowed) {
         playerRef.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
         return true
     }
@@ -157,11 +163,7 @@ class HurlStationPage(
                 } else {
                     playerRef.sendMessage(
                         Message.translation(
-                            when (result.failure) {
-                                HurlStartFailure.INSUFFICIENT_ENERGY -> "server.craftory.hurl.insufficient-energy"
-                                HurlStartFailure.ALREADY_RIDING -> "server.craftory.hurl.already-riding"
-                                else -> "server.craftory.hurl.no-route"
-                            },
+                            result.failure.messageKey(),
                         ),
                     )
                 }
@@ -197,3 +199,12 @@ class HurlStationPage(
         }
     }
 }
+
+private fun HurlStartFailure.messageKey(): String =
+    when (this) {
+        HurlStartFailure.INSUFFICIENT_ENERGY -> "server.craftory.hurl.insufficient-energy"
+        HurlStartFailure.ALREADY_RIDING -> "server.craftory.hurl.already-riding"
+        HurlStartFailure.FORBIDDEN -> "server.craftory.wrench.foreign-crew"
+        HurlStartFailure.SPAWN_FAILED -> "server.craftory.hurl.spawn-failed"
+        HurlStartFailure.NO_ROUTE -> "server.craftory.hurl.no-route"
+    }

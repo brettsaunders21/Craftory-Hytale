@@ -27,15 +27,24 @@ class HurlRide : Component<EntityStore> {
     var mode = HurlMode.TUBE
     var mounted = false
     var exitPosition: HurlPoint? = null
-    val heldChunks = mutableSetOf<Long>()
-    internal val wantedChunks = mutableSetOf<Long>()
-    internal val pendingChunks = mutableSetOf<Long>()
-    internal val pendingSections = mutableSetOf<Long>()
-    internal val loadedSections = mutableSetOf<Long>()
+    private var leases = HurlLeaseState()
+    val heldChunks get() = leases.heldChunks
+    internal val wantedChunks get() = leases.wantedChunks
+    internal val pendingChunks get() = leases.pendingChunks
+    internal val pendingSections get() = leases.pendingSections
+    internal val loadedSections get() = leases.loadedSections
     internal val output = DoubleArray(3)
     internal val position = Vector3d()
-    internal var loadFailed = false
-    internal var ended = false
+    internal var loadFailed: Boolean
+        get() = leases.loadFailed
+        set(value) {
+            leases.loadFailed = value
+        }
+    internal var ended: Boolean
+        get() = leases.ended
+        set(value) {
+            leases.ended = value
+        }
 
     override fun clone(): Component<EntityStore> =
         HurlRide().also {
@@ -47,6 +56,10 @@ class HurlRide : Component<EntityStore> {
             it.distance = distance
             it.speed = speed
             it.mode = mode
+            it.leases = leases
+            it.mounted = mounted
+            it.exitPosition = exitPosition
+            it.position.set(position)
             output.copyInto(it.output)
         }
 
@@ -87,6 +100,16 @@ class HurlRide : Component<EntityStore> {
     companion object {
         lateinit var type: ComponentType<EntityStore, HurlRide>
     }
+}
+
+private class HurlLeaseState {
+    val heldChunks = mutableSetOf<Long>()
+    val wantedChunks = mutableSetOf<Long>()
+    val pendingChunks = mutableSetOf<Long>()
+    val pendingSections = mutableSetOf<Long>()
+    val loadedSections = mutableSetOf<Long>()
+    var loadFailed = false
+    var ended = false
 }
 
 class HurlRider(

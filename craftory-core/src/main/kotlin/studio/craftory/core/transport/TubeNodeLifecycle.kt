@@ -37,6 +37,7 @@ internal class TubeNodeLifecycle : RefSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
+        if (reason == RemoveReason.UNLOAD) return
         commandBuffer.getComponent(ref, TubeNode.type) ?: return
         val blockState = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val position = Vector3i()

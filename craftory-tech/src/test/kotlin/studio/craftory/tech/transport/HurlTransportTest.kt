@@ -14,6 +14,48 @@ import java.util.UUID
 
 class HurlTransportTest {
     @Test
+    fun `ride clone shares leases and callback lifetime while preserving motion and mounting`() {
+        val ride = HurlRide()
+        ride.heldChunks.add(1L)
+        ride.wantedChunks.add(2L)
+        ride.pendingChunks.add(3L)
+        ride.pendingSections.add(4L)
+        ride.loadedSections.add(5L)
+        ride.mounted = true
+        ride.exitPosition = HurlPoint(1.0, 2.0, 3.0)
+        ride.position.set(1.0, 2.0, 3.0)
+        val copy = ride.clone() as HurlRide
+        assertTrue(copy.mounted)
+        assertEquals(ride.exitPosition, copy.exitPosition)
+        assertEquals(ride.position, copy.position)
+        assertEquals(setOf(1L), copy.heldChunks)
+        assertEquals(setOf(2L), copy.wantedChunks)
+        assertEquals(setOf(3L), copy.pendingChunks)
+        assertEquals(setOf(4L), copy.pendingSections)
+        assertEquals(setOf(5L), copy.loadedSections)
+        copy.heldChunks.clear()
+        copy.ended = true
+        copy.loadFailed = true
+        assertTrue(ride.heldChunks.isEmpty())
+        assertTrue(ride.ended)
+        assertTrue(ride.loadFailed)
+        ride.pendingChunks.remove(3L)
+        assertTrue(copy.pendingChunks.isEmpty())
+    }
+
+    @Test
+    fun `empty ride clone preserves empty leases and active lifetime`() {
+        val ride = HurlRide()
+        val copy = ride.clone() as HurlRide
+        assertTrue(copy.heldChunks.isEmpty())
+        assertTrue(copy.pendingSections.isEmpty())
+        assertFalse(copy.ended)
+        assertFalse(copy.loadFailed)
+        assertFalse(copy.mounted)
+        assertNull(copy.exitPosition)
+    }
+
+    @Test
     fun `mount is the default driver with an explicit teleport escape hatch`() {
         val config = HurlConfig()
         assertEquals("mount", config.rideDriver)

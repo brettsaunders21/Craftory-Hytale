@@ -70,7 +70,12 @@ private fun fireCannon(
             player.uuid,
         )
     result.failure?.let {
-        val key = if (it == HurlStartFailure.ALREADY_RIDING) "already-riding" else "no-net"
+        val key =
+            when (it) {
+                HurlStartFailure.ALREADY_RIDING -> "already-riding"
+                HurlStartFailure.SPAWN_FAILED -> "spawn-failed"
+                else -> "no-net"
+            }
         player.sendMessage(Message.translation("server.craftory.hurl.$key"))
     }
 }

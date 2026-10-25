@@ -1,13 +1,9 @@
 package studio.craftory.tech.transport
 
-import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
-import com.hypixel.hytale.math.vector.Rotation3f
-import com.hypixel.hytale.server.core.entity.UUIDComponent
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
@@ -17,14 +13,14 @@ import studio.craftory.core.api.transport.HurlArc
 import studio.craftory.core.api.transport.HurlPoint
 import java.util.UUID
 
-enum class HurlStartFailure { NO_ROUTE, ALREADY_RIDING, INSUFFICIENT_ENERGY }
+enum class HurlStartFailure { NO_ROUTE, ALREADY_RIDING, INSUFFICIENT_ENERGY, SPAWN_FAILED, FORBIDDEN }
 
 data class HurlStartResult(
     val capsule: Ref<EntityStore>? = null,
     val failure: HurlStartFailure? = null,
 )
 
-object HurlRides {
+internal object HurlRides {
     fun counters(world: World): HurlCounters = world.entityStore.store.getResource(HurlCounters.type)
 
     fun start(
@@ -36,6 +32,10 @@ object HurlRides {
     ): HurlStartResult {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
+        val identity = StationPermissions.riderIdentity(store, rider, riderUuid)
+        if (!StationPermissions.mayStart(world, from, to, identity, rider != null || riderUuid != null)) {
+            return HurlStartResult(failure = HurlStartFailure.FORBIDDEN)
+        }
         if (rider != null && HurlMounts.occupied(rider, store)) {
             return HurlStartResult(failure = HurlStartFailure.ALREADY_RIDING)
         }
@@ -47,18 +47,19 @@ object HurlRides {
         val cost =
             config.energyCost(route.lengthBlocks)
                 ?: return HurlStartResult(failure = HurlStartFailure.INSUFFICIENT_ENERGY)
-        if (rank == null || !CraftoryCore.energyAccess(world).drawStored(from, cost, rank)) {
+        val energy = CraftoryCore.energyAccess(world)
+        if (rank == null || energy.networkStored(from, rank) < cost) {
             return HurlStartResult(failure = HurlStartFailure.INSUFFICIENT_ENERGY)
         }
         val ride =
             HurlRide().also {
                 it.route = route
                 it.rider = rider
-                it.riderUuid = riderUuid
+                it.riderUuid = identity
                 it.speed = config.speed
             }
         route.positionAt(0.0, ride.output)
-        return spawn(world, ride)
+        return HurlBoarding.spawn(world, ride) { energy.drawStored(from, cost, rank) }
     }
 
     fun startArc(
@@ -82,28 +83,7 @@ object HurlRides {
                 it.riderUuid = riderUuid
                 trajectory.positionAt(0.0, it.output)
             }
-        return spawn(world, ride)
-    }
-
-    private fun spawn(
-        world: World,
-        ride: HurlRide,
-    ): HurlStartResult {
-        val store = world.entityStore.store
-        val holder = EntityStore.REGISTRY.newHolder()
-        holder.addComponent(HurlRide.type, ride)
-        holder.ensureComponent(EntityStore.REGISTRY.nonSerializedComponentType)
-        holder.ensureComponent(UUIDComponent.getComponentType())
-        HurlMounts.prepare(holder, store)
-        holder.addComponent(
-            TransformComponent.getComponentType(),
-            TransformComponent(HurlMotion.vector(ride), Rotation3f.IDENTITY),
-        )
-        HurlChunks.refresh(world, ride)
-        val capsule = requireNotNull(store.addEntity(holder, AddReason.SPAWN))
-        ride.rider?.let { store.putComponent(it, HurlRider.type, HurlRider(capsule)) }
-        HurlMounts.attach(store, capsule, ride, counters(world).config)
-        return HurlStartResult(capsule)
+        return HurlBoarding.spawn(world, ride)
     }
 
     fun advance(
