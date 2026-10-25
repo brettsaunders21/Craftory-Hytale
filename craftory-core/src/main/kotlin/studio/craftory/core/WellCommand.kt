@@ -81,14 +81,26 @@ internal class WellCommand : AbstractCommand("well", "Inspect or spawn Glimmerwe
                         val target =
                             TargetUtil
                                 .getTargetBlock(playerRef, 8.0, entityStore)
-                                ?.let { BlockPos(it.x, it.y, it.z) } ?: playerPosition
-                        val ref = CraftoryCore.wells().spawn(world, target, temperament, strength)
+                                ?.let { BlockPos(it.x, it.y + 1, it.z) }
+                        val targetRef = target?.let { CraftoryCore.wells().spawn(world, it, temperament, strength) }
+                        val fallbackRef =
+                            if (targetRef == null) {
+                                CraftoryCore.wells().spawn(world, playerPosition, temperament, strength)
+                            } else {
+                                null
+                            }
+                        val ref = targetRef ?: fallbackRef
+                        val spawnPosition = if (targetRef != null) target else playerPosition
                         context.sendMessage(
                             Message.raw(
                                 if (ref == null) {
-                                    "Could not spawn a Glimmerwell at $target."
+                                    if (target == null) {
+                                        "Could not spawn a Glimmerwell at your position; it is occupied."
+                                    } else {
+                                        "Could not spawn a Glimmerwell; both the target space and your position are occupied."
+                                    }
                                 } else {
-                                    "Spawned ${temperament.name} ${strength.name} Glimmerwell at $target."
+                                    "Spawned ${temperament.name} ${strength.name} Glimmerwell at $spawnPosition."
                                 },
                             ),
                         )

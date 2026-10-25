@@ -89,6 +89,7 @@ craftory.receipt.granted = Grizzlecog's delivery is recorded in your crew's Note
 craftory.jar.not-well = No Glimmerwell is targeted.
 craftory.jar.too-big = The well is too strong for a Gob-Jar.
 craftory.jar.caught = Caught a {temperament} Flicker.
+craftory.jar.full = Your inventory has no room for a filled Gob-Jar.
 craftory.tier.locked = Your crew must reach Tinkered tier to use this.
 craftory.lens.started = Resonance locked: press again to catch each ring.
 craftory.lens.perfect = Perfect resonance! Taste revealed: {taste}

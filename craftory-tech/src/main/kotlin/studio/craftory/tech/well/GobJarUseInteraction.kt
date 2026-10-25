@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.entity.InteractionContext
+import com.hypixel.hytale.server.core.inventory.InventoryComponent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer
 import com.hypixel.hytale.server.core.modules.block.BlockModule
@@ -37,7 +38,7 @@ class GobJarUseInteraction : SimpleInteraction() {
         val container = context.heldItemContainer ?: return
         val slot = context.heldItemSlot.toShort()
         val slotItem = container.getItemStack(slot) ?: return
-        if (slotItem.itemId != CraftoryIds.GOB_JAR || slotItem.quantity != 1) return
+        if (slotItem.itemId != CraftoryIds.GOB_JAR) return
         catchJar(context, commandBuffer, playerRef, container, slot)
     }
 
@@ -49,7 +50,7 @@ class GobJarUseInteraction : SimpleInteraction() {
         slot: Short,
     ) {
         val originalStack = container.getItemStack(slot) ?: return
-        if (originalStack.itemId != CraftoryIds.GOB_JAR || originalStack.quantity != 1) return
+        if (originalStack.itemId != CraftoryIds.GOB_JAR || originalStack.quantity <= 0) return
         val position = targetPosition(context, commandBuffer)
         if (position == null) {
             playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
@@ -130,17 +131,99 @@ class GobJarUseInteraction : SimpleInteraction() {
         slot: Short,
         originalStack: ItemStack,
     ) {
-        if (!container.setItemStackForSlot(slot, JarActions.filledJar(caught)).succeeded()) return
-        if (!JarActions.commitCatch(world, ref, position, playerRef.uuid, caught, crews)) {
-            container.setItemStackForSlot(slot, originalStack)
-            playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
-            return
-        }
+        val committed =
+            if (originalStack.quantity == 1) {
+                commitSingleJarCatch(
+                    world,
+                    position,
+                    ref,
+                    playerRef,
+                    crews,
+                    container,
+                    slot,
+                    originalStack,
+                    caught,
+                )
+            } else {
+                commitStackedJarCatch(
+                    world,
+                    position,
+                    ref,
+                    playerRef,
+                    crews,
+                    container,
+                    slot,
+                    originalStack,
+                    caught,
+                )
+            }
+        if (!committed) return
         playerRef.sendMessage(
             Message
                 .translation("server.craftory.jar.caught")
                 .param("temperament", caught.temperament.name),
         )
+    }
+
+    private fun commitSingleJarCatch(
+        world: World,
+        position: BlockPos,
+        ref: Ref<ChunkStore>,
+        playerRef: PlayerRef,
+        crews: CrewService,
+        container: ItemContainer,
+        slot: Short,
+        originalStack: ItemStack,
+        caught: JarCatchResult.Caught,
+    ): Boolean {
+        val filledJar = JarActions.filledJar(caught)
+        if (!container.setItemStackForSlot(slot, filledJar).succeeded()) return false
+        if (JarActions.commitCatch(world, ref, position, playerRef.uuid, caught, crews)) {
+            return true
+        }
+        container.setItemStackForSlot(slot, originalStack)
+        playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
+        return false
+    }
+
+    private fun commitStackedJarCatch(
+        world: World,
+        position: BlockPos,
+        ref: Ref<ChunkStore>,
+        playerRef: PlayerRef,
+        crews: CrewService,
+        container: ItemContainer,
+        slot: Short,
+        originalStack: ItemStack,
+        caught: JarCatchResult.Caught,
+    ): Boolean {
+        val filledJar = JarActions.filledJar(caught)
+        val inventory =
+            playerRef.reference?.let {
+                InventoryComponent.getCombined(
+                    world.entityStore.store,
+                    it,
+                    *InventoryComponent.HOTBAR_STORAGE_BACKPACK,
+                )
+            }
+        if (inventory?.canAddItemStack(filledJar) != true) {
+            playerRef.sendMessage(Message.translation("server.craftory.jar.full"))
+            return false
+        }
+        val remainingJars = originalStack.withQuantity(originalStack.quantity - 1)
+        if (!container.setItemStackForSlot(slot, remainingJars).succeeded()) return false
+        if (!inventory.addItemStack(filledJar).succeeded()) {
+            container.setItemStackForSlot(slot, originalStack)
+            playerRef.sendMessage(Message.translation("server.craftory.jar.full"))
+            return false
+        }
+        if (JarActions.commitCatch(world, ref, position, playerRef.uuid, caught, crews)) {
+            return true
+        }
+        inventory.removeItemStack(filledJar)
+        container.setItemStackForSlot(slot, originalStack)
+        playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
+        return false
     }
 
     override fun simulateTick0(

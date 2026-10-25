@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
+import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.protocol.BlockMaterial
 import com.hypixel.hytale.protocol.SoundCategory
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
@@ -21,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.heightmap.HeightmapColumn
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -84,15 +86,31 @@ object WellBirths {
         z: Int,
         originY: Int,
     ): BlockPos? {
-        for (y in originY + 8 downTo originY - 8) {
-            val targetIndex = blockIndexAt(world, x, y, z)
-            val belowIndex = blockIndexAt(world, x, y - 1, z)
-            val below = belowIndex?.let { BlockType.getAssetMap().getAsset(it) }
-            if (targetIndex == BlockType.EMPTY_ID && below?.material == BlockMaterial.Solid) {
-                return BlockPos(x, y, z)
-            }
+        val heightmap =
+            world.chunkStore.getChunkComponent(
+                ChunkUtil.indexChunkFromBlock(x, z),
+                HeightmapColumn.getComponentType(),
+            )
+        val surfaceY = heightmap?.getCollisionHeight(x and 31, z and 31)
+        if (surfaceY != null && surfaceY != HeightmapColumn.NO_HEIGHT) {
+            val target = BlockPos(x, surfaceY + 1, z)
+            if (isSurface(world, target)) return target
+        }
+        for (y in originY + 24 downTo originY - 32) {
+            val target = BlockPos(x, y, z)
+            if (isSurface(world, target)) return target
         }
         return null
+    }
+
+    private fun isSurface(
+        world: World,
+        target: BlockPos,
+    ): Boolean {
+        val targetIndex = blockIndexAt(world, target.x, target.y, target.z)
+        val belowIndex = blockIndexAt(world, target.x, target.y - 1, target.z)
+        val below = belowIndex?.let { BlockType.getAssetMap().getAsset(it) }
+        return targetIndex == BlockType.EMPTY_ID && below?.material == BlockMaterial.Solid
     }
 
     private fun blockIndexAt(
@@ -180,10 +198,11 @@ internal class WellBirthSystem(
         val now = world.tick
         val interval = settings.stormcallIntervalSeconds.coerceAtLeast(1) * 20L
         if (!WellBirthRules.cooldownElapsed(state.lastStormcallByPlayer[player.uuid], now, interval)) return
-        state.lastStormcallByPlayer[player.uuid] = now
         val region = regionId(playerPos.x shr 9, playerPos.z shr 9)
         if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
-        if (!rules.stormcall(settings.stormcallChance) || !noStrongWellInRegion(world, playerPos)) return
+        val chancePassed = rules.stormcall(settings.stormcallChance)
+        state.lastStormcallByPlayer[player.uuid] = now
+        if (!chancePassed || !noStrongWellInRegion(world, playerPos)) return
         if (WellBirths.spawnStormcall(world, playerPos, rules, Random) != null) {
             state.lastStormcallByRegion[region] = now
             pulseEffects(player, position, store)
@@ -205,7 +224,6 @@ internal class WellBirthSystem(
         val cooldown = settings.playerFlickerCooldownSeconds.coerceAtLeast(0) * 20L
         if (!WellBirthRules.cooldownElapsed(state.lastFlickerByPlayer[player.uuid], now, cooldown)) return
         if (!rules.rainFlicker(settings.rainFlickerChance)) return
-        state.lastFlickerByPlayer[player.uuid] = now
         val spawned =
             WellBirths.spawnNear(
                 world,
@@ -215,7 +233,10 @@ internal class WellBirthSystem(
                 rules.surfaceOffset(),
                 Random,
             )
-        if (spawned != null) pulseEffects(player, position, store)
+        if (spawned != null) {
+            state.lastFlickerByPlayer[player.uuid] = now
+            pulseEffects(player, position, store)
+        }
     }
 
     private fun noStrongWellInRegion(
@@ -275,14 +296,15 @@ internal class WellKillBirthSystem(
         val cooldown = config.get().playerFlickerCooldownSeconds.coerceAtLeast(0) * 20L
         if (!WellBirthRules.cooldownElapsed(birthState.lastFlickerByPlayer[player.uuid], now, cooldown)) return
         if (!rules.killFlicker(config.get().killFlickerChance)) return
-        birthState.lastFlickerByPlayer[player.uuid] = now
-        WellBirths.spawnNear(
-            world,
-            corpse,
-            InsightRules.mobTemperament(npc.roleName),
-            rules.flickerStrength(),
-            rules.surfaceOffset(),
-            Random,
-        )
+        val spawned =
+            WellBirths.spawnNear(
+                world,
+                corpse,
+                InsightRules.mobTemperament(npc.roleName),
+                rules.flickerStrength(),
+                rules.surfaceOffset(),
+                Random,
+            )
+        if (spawned != null) birthState.lastFlickerByPlayer[player.uuid] = now
     }
 }
