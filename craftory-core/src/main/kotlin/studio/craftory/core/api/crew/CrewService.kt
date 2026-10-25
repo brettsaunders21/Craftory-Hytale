@@ -75,6 +75,7 @@ class CrewService private constructor(
     private val crews = LinkedHashMap<UUID, CrewData>()
     private val playerCrews = HashMap<UUID, UUID>()
     private val knowledgeListeners = CopyOnWriteArrayList<(Crew, String) -> Unit>()
+    private val crewChangedListeners = CopyOnWriteArrayList<(Crew) -> Unit>()
     private var scheduledFlush: ScheduledFuture<*>? = null
     private var lastFlushNanos = 0L
     private var dirty = false
@@ -105,16 +106,19 @@ class CrewService private constructor(
         val normalizedName = name.trim()
         require(normalizedName.isNotEmpty()) { "Crew name must not be blank" }
         require(normalizedName.length <= MAX_NAME_LENGTH) { "Crew name must be at most $MAX_NAME_LENGTH characters" }
-        return synchronized(lock) {
-            ensureOpen()
-            val crew = crewForPlayerLocked(owner)
-            check(crew.solo) { "You are already in a crew" }
-            crew.name = normalizedName
-            crew.owner = owner
-            crew.solo = false
-            markDirtyLocked()
-            crew.snapshot()
-        }
+        val created =
+            synchronized(lock) {
+                ensureOpen()
+                val crew = crewForPlayerLocked(owner)
+                check(crew.solo) { "You are already in a crew" }
+                crew.name = normalizedName
+                crew.owner = owner
+                crew.solo = false
+                markDirtyLocked()
+                crew.snapshot()
+            }
+        notifyCrewChanged(listOf(created))
+        return created
     }
 
     fun invite(
@@ -133,55 +137,74 @@ class CrewService private constructor(
     fun accept(
         target: UUID,
         crewId: UUID,
-    ): Crew? =
-        synchronized(lock) {
-            ensureOpen()
-            val destination = crews[crewId] ?: return@synchronized null
-            if (destination.solo || target !in destination.pendingInvites) return@synchronized null
-            val current = playerCrews[target]?.let(crews::get)
-            if (current != null && !current.solo) return@synchronized null
+    ): Crew? {
+        val accepted =
+            synchronized(lock) {
+                ensureOpen()
+                val destination = crews[crewId] ?: return@synchronized null
+                if (destination.solo || target !in destination.pendingInvites) return@synchronized null
+                val current = playerCrews[target]?.let(crews::get)
+                if (current != null && !current.solo) return@synchronized null
 
-            val solo = current ?: crewForPlayerLocked(target)
-            destination.knowledge.addAll(solo.knowledge)
-            detachMemberLocked(solo, target)
-            destination.members.add(target)
-            destination.pendingInvites.remove(target)
-            playerCrews[target] = destination.id
-            markDirtyLocked()
-            destination.snapshot()
-        }
-
-    fun leave(playerUuid: UUID): Crew =
-        synchronized(lock) {
-            ensureOpen()
-            val current = crewForPlayerLocked(playerUuid)
-            if (current.solo) return@synchronized current.snapshot()
-            val carriedKnowledge = current.knowledge.toSet()
-            detachMemberLocked(current, playerUuid)
-            if (current.owner == playerUuid && current.members.isNotEmpty()) {
-                current.owner = current.members.minBy(UUID::toString)
+                val solo = current ?: crewForPlayerLocked(target)
+                destination.knowledge.addAll(solo.knowledge)
+                destination.tier = maxOf(destination.tier, solo.tier)
+                detachMemberLocked(solo, target)
+                destination.members.add(target)
+                destination.pendingInvites.remove(target)
+                playerCrews[target] = destination.id
+                markDirtyLocked()
+                destination.snapshot()
             }
-            createSoloLocked(playerUuid, carriedKnowledge).snapshot()
-        }
+        accepted?.let { notifyCrewChanged(listOf(it)) }
+        return accepted
+    }
+
+    fun leave(playerUuid: UUID): Crew {
+        val (departing, changedCrews) =
+            synchronized(lock) {
+                ensureOpen()
+                val current = crewForPlayerLocked(playerUuid)
+                if (current.solo) return@synchronized current.snapshot() to emptyList()
+                val carriedKnowledge = current.knowledge.toSet()
+                val carriedTier = current.tier
+                detachMemberLocked(current, playerUuid)
+                if (current.owner == playerUuid && current.members.isNotEmpty()) {
+                    current.owner = current.members.minBy(UUID::toString)
+                }
+                val solo = createSoloLocked(playerUuid, carriedKnowledge, carriedTier)
+                val changed =
+                    buildList {
+                        add(solo.snapshot())
+                        if (current.members.isNotEmpty()) add(current.snapshot())
+                    }
+                solo.snapshot() to changed
+            }
+        notifyCrewChanged(changedCrews)
+        return departing
+    }
 
     fun kick(
         owner: UUID,
         target: UUID,
-    ): Boolean =
-        synchronized(lock) {
-            ensureOpen()
-            val crew = playerCrews[owner]?.let(crews::get) ?: return@synchronized false
-            if (crew.solo || crew.owner != owner) return@synchronized false
-            if (target == owner || target !in crew.members) {
-                return@synchronized false
-            }
-            val carriedKnowledge = crew.knowledge.toSet()
-            crew.pendingInvites.remove(target)
-            detachMemberLocked(crew, target)
-            createSoloLocked(target, carriedKnowledge)
-            markDirtyLocked()
-            true
-        }
+    ): Boolean {
+        val changedCrews =
+            synchronized(lock) {
+                ensureOpen()
+                val crew = playerCrews[owner]?.let(crews::get) ?: return@synchronized null
+                if (crew.solo || crew.owner != owner) return@synchronized null
+                if (target == owner || target !in crew.members) return@synchronized null
+                val carriedKnowledge = crew.knowledge.toSet()
+                val carriedTier = crew.tier
+                crew.pendingInvites.remove(target)
+                detachMemberLocked(crew, target)
+                val solo = createSoloLocked(target, carriedKnowledge, carriedTier)
+                markDirtyLocked()
+                listOf(solo.snapshot(), crew.snapshot())
+            } ?: return false
+        notifyCrewChanged(changedCrews)
+        return true
+    }
 
     fun hasKnowledge(
         playerUuid: UUID,
@@ -241,6 +264,11 @@ class CrewService private constructor(
         return AutoCloseable { knowledgeListeners.remove(listener) }
     }
 
+    fun onCrewChanged(listener: (Crew) -> Unit): AutoCloseable {
+        crewChangedListeners.add(listener)
+        return AutoCloseable { crewChangedListeners.remove(listener) }
+    }
+
     fun flush() {
         synchronized(lock) {
             scheduledFlush?.cancel(false)
@@ -272,6 +300,7 @@ class CrewService private constructor(
     private fun createSoloLocked(
         playerUuid: UUID,
         knowledge: Set<String>,
+        tier: Int = 1,
     ): CrewData {
         val crew =
             CrewData(
@@ -281,13 +310,25 @@ class CrewService private constructor(
                 members = mutableSetOf(playerUuid),
                 pendingInvites = mutableSetOf(),
                 knowledge = knowledge.toMutableSet(),
-                tier = 1,
+                tier = tier,
                 solo = true,
             )
         crews[crew.id] = crew
         playerCrews[playerUuid] = crew.id
         markDirtyLocked()
         return crew
+    }
+
+    private fun notifyCrewChanged(changedCrews: Iterable<Crew>) {
+        changedCrews.forEach { crew ->
+            crewChangedListeners.forEach { listener ->
+                try {
+                    listener(crew)
+                } catch (exception: Exception) {
+                    LOGGER.log(Level.WARNING, "Crew change listener failed for ${crew.id}", exception)
+                }
+            }
+        }
     }
 
     private fun detachMemberLocked(

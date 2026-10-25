@@ -51,6 +51,100 @@ class CrewServiceTest {
     }
 
     @Test
+    fun `accept keeps the greater destination or solo tier`() {
+        val service = CrewService(temporaryDirectory.resolve("tiers.json"), 60_000)
+        val owner = UUID.randomUUID()
+        val lowerTierMember = UUID.randomUUID()
+        val higherTierMember = UUID.randomUUID()
+        try {
+            val crew = service.create(owner, "Tiered Crew")
+            service.setTier(crew.id, 3)
+
+            val lowerTierSolo = service.crewOf(lowerTierMember)
+            service.setTier(lowerTierSolo.id, 2)
+            assertTrue(service.invite(crew, lowerTierMember))
+            assertEquals(3, service.accept(lowerTierMember, crew.id)?.tier)
+
+            val higherTierSolo = service.crewOf(higherTierMember)
+            service.setTier(higherTierSolo.id, 4)
+            assertTrue(service.invite(crew, higherTierMember))
+            assertEquals(4, service.accept(higherTierMember, crew.id)?.tier)
+        } finally {
+            service.close()
+        }
+    }
+
+    @Test
+    fun `leave and kick preserve the departed crew tier`() {
+        val service = CrewService(temporaryDirectory.resolve("departed-tiers.json"), 60_000)
+        val owner = UUID.randomUUID()
+        val leaving = UUID.randomUUID()
+        val kicked = UUID.randomUUID()
+        try {
+            val crew = service.create(owner, "Tiered Crew")
+            assertTrue(service.invite(crew, leaving))
+            assertEquals(crew.id, service.accept(leaving, crew.id)?.id)
+            assertTrue(service.invite(crew, kicked))
+            assertEquals(crew.id, service.accept(kicked, crew.id)?.id)
+            service.setTier(crew.id, 4)
+
+            assertEquals(4, service.leave(leaving).tier)
+            assertTrue(service.kick(owner, kicked))
+            assertEquals(4, service.crewOf(kicked).tier)
+        } finally {
+            service.close()
+        }
+    }
+
+    @Test
+    fun `crew changed listener receives snapshots for create accept leave and kick`() {
+        val service = CrewService(temporaryDirectory.resolve("crew-events.json"), 60_000)
+        val events = mutableListOf<Crew>()
+        val owner = UUID.randomUUID()
+        val joining = UUID.randomUUID()
+        val leaving = UUID.randomUUID()
+        val kicked = UUID.randomUUID()
+        val subscription = service.onCrewChanged { events.add(it) }
+        try {
+            val crew = service.create(owner, "Event Crew")
+            assertEquals(listOf(crew.id), events.map(Crew::id))
+
+            events.clear()
+            assertTrue(service.invite(crew, joining))
+            assertEquals(crew.id, service.accept(joining, crew.id)?.id)
+            assertEquals(listOf(crew.id), events.map(Crew::id))
+
+            assertTrue(service.invite(crew, leaving))
+            assertEquals(crew.id, service.accept(leaving, crew.id)?.id)
+            events.clear()
+            val departing = service.leave(leaving)
+            assertEquals(listOf(departing.id, crew.id), events.map(Crew::id))
+
+            assertTrue(service.invite(crew, kicked))
+            assertEquals(crew.id, service.accept(kicked, crew.id)?.id)
+            events.clear()
+            assertTrue(service.kick(owner, kicked))
+            val kickedSolo = service.crewOf(kicked)
+            assertEquals(setOf(kickedSolo.id, crew.id), events.map(Crew::id).toSet())
+            assertEquals(2, events.size)
+
+            events.clear()
+            val ownerSolo = service.leave(owner)
+            assertEquals(listOf(ownerSolo.id, crew.id), events.map(Crew::id))
+
+            val onlyMember = UUID.randomUUID()
+            val onlyCrew = service.create(onlyMember, "Single Member")
+            events.clear()
+            val finalSolo = service.leave(onlyMember)
+            assertEquals(listOf(finalSolo.id), events.map(Crew::id))
+            assertNotEquals(onlyCrew.id, finalSolo.id)
+        } finally {
+            subscription.close()
+            service.close()
+        }
+    }
+
+    @Test
     fun `crew state round trips through the data file`() {
         val file = temporaryDirectory.resolve("crews.json")
         val owner = UUID.randomUUID()

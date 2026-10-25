@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.crew.Crew
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.tech.command.SummonCommand
 import studio.craftory.tech.machine.AnchorLifecycle
@@ -35,11 +36,13 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.notebook.NotebookTierProgression
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
     private var crewKnowledgeSubscription: AutoCloseable? = null
+    private var crewChangedSubscription: AutoCloseable? = null
 
     @Suppress("LongMethod")
     override fun setup() {
@@ -158,24 +161,9 @@ class CraftoryTechPlugin(
                 ReceiptUseInteraction::class.java,
                 ReceiptUseInteraction.CODEC,
             )
-        crewKnowledgeSubscription =
-            CraftoryCore.crewService().onKnowledgeGranted { crew, _ ->
-                val allPagesFound = NotebookPages.pages.all { it.id in crew.knowledge }
-                if (allPagesFound && crew.tier < 2 && CraftoryCore.crewService().setTier(crew.id, 2)) {
-                    Universe
-                        .get()
-                        .getPlayers()
-                        .filter { it.uuid in crew.members }
-                        .forEach { playerRef ->
-                            playerRef.sendMessage(
-                                Message
-                                    .translation("server.craftory.crew.tier-advanced")
-                                    .param("name", crew.name)
-                                    .param("tier", 2),
-                            )
-                        }
-                }
-            }
+        val crews = CraftoryCore.crewService()
+        crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }
+        crewChangedSubscription = crews.onCrewChanged(::evaluateTier)
         CraftoryCore.registerCommandHandler("summon", SummonCommand::execute)
         CraftoryCore.registerCommandHandler("selftest", CraftorySelfTest::execute)
         LOGGER.atInfo().log("Craftory Tech v%s loaded", pluginVersion)
@@ -184,6 +172,24 @@ class CraftoryTechPlugin(
     override fun shutdown() {
         crewKnowledgeSubscription?.close()
         crewKnowledgeSubscription = null
+        crewChangedSubscription?.close()
+        crewChangedSubscription = null
+    }
+
+    private fun evaluateTier(crew: Crew) {
+        val upgraded = NotebookTierProgression.evaluateTier(crew, CraftoryCore.crewService()) ?: return
+        Universe
+            .get()
+            .getPlayers()
+            .filter { it.uuid in upgraded.members }
+            .forEach { playerRef ->
+                playerRef.sendMessage(
+                    Message
+                        .translation("server.craftory.crew.tier-advanced")
+                        .param("name", upgraded.name)
+                        .param("tier", upgraded.tier),
+                )
+            }
     }
 
     private companion object {
