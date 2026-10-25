@@ -1,7 +1,13 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.builtin.adventure.worldevents.event.WorldEventAsset
+import com.hypixel.hytale.builtin.beam.asset.Beam
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
+import com.hypixel.hytale.builtin.instances.InstancesPlugin
+import com.hypixel.hytale.builtin.instances.config.InstanceWorldConfig
+import com.hypixel.hytale.builtin.instances.removal.WorldEmptyCondition
+import com.hypixel.hytale.builtin.weather.resources.WeatherResource
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
@@ -44,6 +50,7 @@ import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
+import java.util.function.Consumer
 
 internal class SelfTestRun : Resource<ChunkStore> {
     data class Run(
@@ -78,6 +85,10 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var anchorMaxChargeBeforeTest: Int = CraftoryCore.anchorMaxChargeMinutes(),
         val testKeepLoadedChunks: MutableSet<Long> = mutableSetOf(),
         var anchorStateForTest: AnchorState? = null,
+        var spikeRealmName: String? = null,
+        var spikeRealmFuture: CompletableFuture<World>? = null,
+        var spikeRealmStage: Int = 0,
+        var spikeRealmRemovalTick: Long? = null,
     )
 
     var active: Run? = null
@@ -107,12 +118,23 @@ private fun reportCleanup(
     )
 }
 
+private fun reportSpikeCheck(
+    run: SelfTestRun.Run,
+    passed: Boolean,
+    name: String,
+    detail: String,
+) {
+    if (passed) run.passed++ else run.failed++
+    run.context.sendMessage(Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $name ($detail)"))
+}
+
 private fun abort(
     run: SelfTestRun.Run,
     reason: String,
 ) {
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
+    run.spikeRealmName?.let { Universe.get().getWorld(it)?.let(InstancesPlugin::safeRemoveInstance) }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -137,6 +159,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
+        CraftorySelfTest.tickSpikeRealmProbe(run, tick)
         if (tick >= run.startTick + 2_400L) {
             abort(run, "timed out")
             return
@@ -617,6 +640,18 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val disableTick = run.anchorDisableTick ?: return
         if (run.anchorDisabledReported) {
             if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+                if (run.spikeRealmStage != 2) {
+                    if (tick < run.startTick + 2_200L) {
+                        run.cleanupTick = tick + 20
+                        return
+                    }
+                    run.spikeRealmName?.let { name ->
+                        Universe.get().getWorld(name)?.let(InstancesPlugin::safeRemoveInstance)
+                    }
+                    reportSpikeCheck(run, false, "spike realm round-trip", "timed out waiting for cleanup")
+                    run.spikeRealmStage = 2
+                }
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
                 CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
                 reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
                 store.getResource(SelfTestRun.type).active = null
@@ -751,7 +786,6 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
         CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
-        run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
         run.cleanupTick = tick + 20
     }
 
@@ -888,6 +922,7 @@ object CraftorySelfTest {
             run.crankSpinWithoutAnchor = crank.spinTicks
             CraftoryCore.setAnchorMaxChargeMinutesInMemory(maxOf(run.anchorMaxChargeBeforeTest, 240))
             store.getResource(SelfTestRun.type).active = run
+            runSpikeAssetChecks(run)
             context.sendMessage(
                 Message.raw(
                     "selftest: cleanup before run (liveGrit=${initialCleanup.liveDrops}, " +
@@ -897,6 +932,107 @@ object CraftorySelfTest {
             )
         } catch (failure: Exception) {
             abort(run, "setup (${failure.message ?: failure.javaClass.simpleName})")
+        }
+    }
+
+    @Suppress("MaxLineLength")
+    private fun runSpikeAssetChecks(run: SelfTestRun.Run) {
+        val entityStore = run.world.entityStore.store
+        reportSpikeCheck(
+            run,
+            Beam.getAssetMap().assetCount > 0,
+            "spike beam assets",
+            "count=${Beam.getAssetMap().assetCount}",
+        )
+        val weatherResource = runCatching { entityStore.getResource(WeatherResource.getResourceType()) }.getOrNull()
+        reportSpikeCheck(
+            run,
+            com.hypixel.hytale.server.core.asset.type.weather.config.Weather
+                .getAssetMap()
+                .assetCount > 0 &&
+                weatherResource != null,
+            "spike weather assets and resource",
+            "assets=${com.hypixel.hytale.server.core.asset.type.weather.config.Weather.getAssetMap().assetCount}, resource=${weatherResource != null}",
+        )
+        val eventIds = WorldEventAsset.ASSET_MAP.assetMap.keys
+        reportSpikeCheck(
+            run,
+            eventIds.contains("Craftory_Spike_Event"),
+            "spike custom world event asset",
+            "loaded=${eventIds.contains("Craftory_Spike_Event")}",
+        )
+        val instanceAsset =
+            InstancesPlugin
+                .get()
+                .getInstanceAssets()
+                .sorted()
+                .firstOrNull()
+        if (instanceAsset == null) {
+            reportSpikeCheck(run, false, "spike realm round-trip", "no vanilla instance assets loaded")
+            run.spikeRealmStage = 2
+            return
+        }
+        val returnTransform =
+            com.hypixel.hytale.math.vector
+                .Transform(0.0, 100.0, 0.0)
+        val name = "craftory_selftest_${UUID.randomUUID().toString().take(8)}"
+        run.spikeRealmName = name
+        run.spikeRealmFuture =
+            try {
+                InstancesPlugin.get().spawnInstance(
+                    instanceAsset,
+                    name,
+                    run.world,
+                    returnTransform,
+                    Consumer { config ->
+                        InstanceWorldConfig.ensureAndGet(config).setRemovalConditions(WorldEmptyCondition(5.0))
+                    },
+                )
+            } catch (failure: IllegalArgumentException) {
+                reportSpikeCheck(run, false, "spike realm round-trip", "spawn failed: ${failure.message}")
+                run.spikeRealmStage = 2
+                null
+            }
+    }
+
+    @Suppress("MaxLineLength")
+    internal fun tickSpikeRealmProbe(
+        run: SelfTestRun.Run,
+        tick: Long,
+    ) {
+        if (run.spikeRealmStage == 0) {
+            val future = run.spikeRealmFuture ?: return
+            if (!future.isDone) return
+            val instance =
+                runCatching { future.getNow(null) }
+                    .getOrNull()
+            val name = run.spikeRealmName ?: "unknown"
+            val visible = Universe.get().getWorld(name) != null
+            reportSpikeCheck(run, visible, "spike realm appears in Universe", "world=$name visible=$visible")
+            if (instance == null) {
+                reportSpikeCheck(run, false, "spike realm cleanup", "spawn future did not return a world")
+                run.spikeRealmStage = 2
+                return
+            }
+            InstancesPlugin.safeRemoveInstance(instance)
+            run.spikeRealmRemovalTick = tick
+            run.spikeRealmStage = 1
+        } else if (run.spikeRealmStage == 1) {
+            val name = run.spikeRealmName ?: return
+            val removed = Universe.get().getWorld(name) == null
+            if (removed) {
+                reportSpikeCheck(run, true, "spike realm removed from Universe", "world=$name")
+                run.spikeRealmStage = 2
+            } else if (tick - (run.spikeRealmRemovalTick ?: tick) >= 600L) {
+                InstancesPlugin.safeRemoveInstance(Universe.get().getWorld(name))
+                reportSpikeCheck(
+                    run,
+                    false,
+                    "spike realm removed from Universe",
+                    "timeout world=$name removal requested",
+                )
+                run.spikeRealmStage = 2
+            }
         }
     }
 

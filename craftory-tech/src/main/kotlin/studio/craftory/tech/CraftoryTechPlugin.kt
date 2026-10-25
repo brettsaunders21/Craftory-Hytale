@@ -40,6 +40,8 @@ import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
+import studio.craftory.tech.spike.SpikeCommands
+import studio.craftory.tech.spike.SpikeComponents
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
@@ -138,6 +140,8 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
+        SpikeComponents.register(entityRegistry)
+        SpikeComponents.registerSystems(entityRegistry)
         EnergyHudState.type =
             entityRegistry.registerComponent(
                 EnergyHudState::class.java,
@@ -180,6 +184,7 @@ class CraftoryTechPlugin(
         crewChangedSubscription = crews.onCrewChanged(::evaluateTier)
         CraftoryCore.registerCommandHandler("summon", SummonCommand::execute)
         CraftoryCore.registerCommandHandler("selftest", CraftorySelfTest::execute)
+        CraftoryCore.registerCommandHandler("spike", SpikeCommands::execute)
         LOGGER.atInfo().log("Craftory Tech v%s loaded", pluginVersion)
     }
 

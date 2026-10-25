@@ -1,0 +1,13 @@
+{
+  "Forks": [
+    {
+      "Conditions": [
+        {
+          "Type": "SignalCondition",
+          "SignalId": "Craftory_Spike_Signal"
+        }
+      ],
+      "Mode": "COMPLETE"
+    }
+  ]
+}

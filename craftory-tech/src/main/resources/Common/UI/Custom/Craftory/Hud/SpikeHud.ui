@@ -1,0 +1,10 @@
+Group {
+  Anchor: (Top: 24, Right: 24, Width: 360);
+  Background: #000000(0.55);
+  Padding: (Full: 12);
+
+  Label #Spike {
+    Text: "Craftory spike HUD";
+    Style: (FontSize: 18, RenderBold: true);
+  }
+}
