@@ -197,9 +197,12 @@ internal class MultiblockAssemblySystem : EntityTickingSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val controller = chunk.getComponent(index, MultiblockController.type) ?: return
-        if (controller.state != MultiblockState.ASSEMBLING && controller.state != MultiblockState.READY_TO_START) return
         val world = store.externalData.world
         val tick = world.tick
+        if (controller.state != MultiblockState.ASSEMBLING && controller.state != MultiblockState.READY_TO_START) {
+            if (tick % GHOST_INTERVAL_TICKS == 0L) hideStalePreview(chunk, index, store, commandBuffer)
+            return
+        }
         val interval =
             if (controller.state ==
                 MultiblockState.ASSEMBLING
@@ -224,6 +227,24 @@ internal class MultiblockAssemblySystem : EntityTickingSystem<ChunkStore>() {
             if (!ref.isValid) return@execute
             JunkHeartActions.showAssembly(world, ref, controllerPos)
         }
+    }
+
+    /** Catches previews left by transitions that skip the hammer path, such as a hand-placed last part. */
+    private fun hideStalePreview(
+        chunk: ArchetypeChunk<ChunkStore>,
+        index: Int,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val views = store.getResource(AssemblyViewIndex.type)
+        if (!views.hasAnyPreview()) return
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val position = Vector3i()
+        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        val controllerPos = BlockPos(position.x, position.y, position.z)
+        if (!views.hasPreview(controllerPos)) return
+        val world = store.externalData.world
+        world.execute { GhostPreviews.hide(world, controllerPos) }
     }
 
     private companion object {
@@ -397,11 +418,9 @@ internal object JunkHeartActions {
         val error = KickStartTiming.errorSeconds(phase)
         val quality = KickStartTiming.quality(error)
         if (!CraftoryCore.multiblocks().completeKickStart(store, controllerRef, quality)) return KickResult.NotReady
-        playEffects(
-            world,
-            CraftoryCore.multiblocks().controllerPosition(store, controllerRef) ?: return KickResult.NotReady,
-            null,
-        )
+        val position = CraftoryCore.multiblocks().controllerPosition(store, controllerRef) ?: return KickResult.NotReady
+        playEffects(world, position, null)
+        world.execute { GhostPreviews.hide(world, position) }
         return KickResult.Formed(quality, error)
     }
 
@@ -649,6 +668,8 @@ internal class AssemblyViewIndex : com.hypixel.hytale.component.Resource<ChunkSt
     fun removePreview(position: BlockPos): Preview? = previews.remove(position)
 
     fun hasPreview(position: BlockPos): Boolean = previews.containsKey(position)
+
+    fun hasAnyPreview(): Boolean = previews.isNotEmpty()
 
     data class Preview(
         val ref: Ref<EntityStore>,
