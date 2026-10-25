@@ -4,6 +4,7 @@ hytale-server = "0.7.4"
 hytale-tools = "1.0.51"
 junit = "5.14.4"
 junit-platform = "1.14.4"
+jmh = "0.7.3"
 ktlint = "1.8.0"
 kotlin = "2.4.21"
 spotless = "8.10.4"
@@ -17,4 +18,5 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 
 [plugins]
 hytale-workspace = { id = "com.azuredoom.hytale-workspace", version.ref = "hytale-tools" }
+jmh = { id = "me.champeau.jmh", version.ref = "jmh" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
