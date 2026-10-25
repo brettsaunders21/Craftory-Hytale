@@ -11,9 +11,10 @@ import studio.craftory.core.api.Inspectable
 class OvenPower(
     var accumulatedFizz: Long = 0,
     var lastFizzSolveTick: Long = Long.MIN_VALUE,
+    var lastDeliveredTick: Long? = null,
 ) : Component<ChunkStore>,
     Inspectable {
-    override fun clone(): Component<ChunkStore> = OvenPower(accumulatedFizz, lastFizzSolveTick)
+    override fun clone(): Component<ChunkStore> = OvenPower(accumulatedFizz, lastFizzSolveTick, lastDeliveredTick)
 
     override fun describe(): List<Pair<String, String>> =
         listOf(
@@ -81,4 +82,16 @@ internal object OvenFizzAccounting {
     const val FIZZ_PER_SOLVE_TICK = 30L
     const val FIZZ_PER_CHARGE = 120L
     const val MAX_CHARGES = 2
+}
+
+internal object OvenPowerMath {
+    fun shouldStopAfterPowerLoss(
+        lastDeliveredTick: Long?,
+        currentTick: Long,
+    ): Boolean =
+        lastDeliveredTick != null &&
+            currentTick >= lastDeliveredTick &&
+            currentTick - lastDeliveredTick >= POWER_LOSS_TIMEOUT_TICKS
+
+    const val POWER_LOSS_TIMEOUT_TICKS = 120L
 }

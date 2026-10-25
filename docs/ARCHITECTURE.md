@@ -88,8 +88,11 @@ machines, commands, UI and debugging to read.
    member changes. A large idle base then costs nearly nothing.
 4. **Query-driven systems.** Machine systems query their state, energy member and block-state components.
    The Core energy clock gates the solver cadence; there are no per-machine maps or custom schedulers.
-   A future Anchor machine may use a verified player-tracking API to keep an area ticking for unattended
-   production; keep-loaded references alone do not provide that behavior.
+   Machines in `NonTicking` sections are inactive unless covered by a charged Wakebell Anchor. The Core
+   keeps that coverage in a per-world chunk index, and the energy solve treats inactive members as having
+   no production or demand without changing their configured values or stored energy. Anchors refresh
+   chunk and section active timers and request `SET_TICKING`; loaded references alone do not provide
+   ticking.
 5. **World-thread ownership.** All mutation happens on the world's own thread through the ECS. Solver
    write-back and machine state updates remain serial because they mutate shared graph and component state.
 6. **No reflection on hot paths.** Tick intervals, capabilities and limits are resolved once at registration.

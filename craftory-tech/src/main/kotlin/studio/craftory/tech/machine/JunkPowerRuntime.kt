@@ -1,5 +1,6 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
@@ -29,9 +30,11 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.cli
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
 import org.joml.Vector3d
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
@@ -67,7 +70,7 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
     }
 
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -78,6 +81,7 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, CrankState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val tick = store.externalData.world.tick
         if (CrankMachine.advanceTo(state, tick)) member.unsaved = true
         member.production = CrankMachine.productionPerSolveTick(state)
@@ -122,6 +126,7 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, BurnerState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val tick = store.externalData.world.tick
         val world = store.externalData.world
         if (BurnerMachine.advanceTo(state, tick)) member.unsaved = true
@@ -186,8 +191,15 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         val power = chunk.getComponent(index, OvenPower.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val bench = chunk.getComponent(index, ProcessingBenchBlock.getComponentType()) ?: return
+        val benchBlock = chunk.getComponent(index, BenchBlock.getComponentType()) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val world = store.externalData.world
+        if (member.delivered > 0) {
+            power.lastDeliveredTick = world.tick
+        } else if (bench.isActive() && OvenPowerMath.shouldStopAfterPowerLoss(power.lastDeliveredTick, world.tick)) {
+            bench.setActive(false, benchBlock, blockState)
+        }
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val id = BlockPos.pack(position.x, position.y, position.z)
@@ -279,6 +291,7 @@ internal class GnasherSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, GnasherState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val world = store.externalData.world
         val position = blockState.worldPosition(commandBuffer) ?: return
         val id = BlockPos.pack(position.x, position.y, position.z)
@@ -410,7 +423,7 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
 }
 
 class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun interactWithBlock(
         world: World,
         commandBuffer: CommandBuffer<EntityStore>,
@@ -422,9 +435,23 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
     ) {
         val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
         val store = world.chunkStore.store
-        val member = store.getComponent(ref, EnergyMember.type) ?: return
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val tick = world.tick
+        val anchor = store.getComponent(ref, AnchorState.type)
+        if (anchor != null) {
+            val message =
+                context.useAnchor(
+                    world,
+                    anchor,
+                    blockState,
+                    store,
+                    BlockPos(position.x, position.y, position.z),
+                    heldItem,
+                )
+            commandBuffer.getComponent(context.entity, PlayerRef.getComponentType())?.sendMessage(Message.raw(message))
+            return
+        }
+        val member = store.getComponent(ref, EnergyMember.type) ?: return
         val gnasher = store.getComponent(ref, GnasherState.type)
         if (gnasher != null) {
             val message =
@@ -502,6 +529,56 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
 }
 
 internal object MachineActions {
+    @Suppress("NestedBlockDepth")
+    fun activateAnchor(
+        world: World,
+        state: AnchorState,
+        blockState: BlockModule.BlockStateInfo,
+        store: Store<ChunkStore>,
+        position: BlockPos,
+    ) {
+        if (state.chargeSeconds <= 0 || CraftoryCore.anchorMaxChargeMinutes() <= 0) return
+        val id = BlockPos.pack(position.x, position.y, position.z)
+        state.coverageId = id
+        state.coverageActive = true
+        CraftoryCore.setAnchorCoverage(store, id, position.x shr 5, position.z shr 5, true)
+        val grid = world.chunkStore
+        val chunkStore = grid.store
+        val nonTickingType = ChunkStore.REGISTRY.getNonTickingComponentType()
+        val centerX = position.x shr 5
+        val centerZ = position.z shr 5
+        for (chunkX in centerX - 1..centerX + 1) {
+            for (chunkZ in centerZ - 1..centerZ + 1) {
+                val chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ)
+                val chunkRef = grid.getChunkReference(chunkIndex)
+                if (chunkRef != null && chunkRef.isValid) {
+                    val worldChunk = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType())
+                    if (worldChunk != null) {
+                        if (state.keepLoadedChunks.add(chunkIndex)) worldChunk.addKeepLoaded()
+                        worldChunk.resetActiveTimer()
+                        if (chunkStore.getArchetype(chunkRef).contains(nonTickingType)) {
+                            grid.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING)
+                        }
+                    }
+                }
+                grid.getLoadedSectionReferences(chunkX, chunkZ).forEach { sectionRef ->
+                    if (!sectionRef.isValid) return@forEach
+                    val section = chunkStore.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return@forEach
+                    section.resetActiveTimer()
+                    if (chunkStore.getArchetype(sectionRef).contains(nonTickingType)) {
+                        grid.getChunkSectionReferenceAsync(
+                            section.x,
+                            section.y,
+                            section.z,
+                            GetChunkFlags.SET_TICKING,
+                        )
+                    }
+                }
+            }
+        }
+        blockState.markNeedsSaving(store)
+    }
+
     fun pulse(
         state: CrankState,
         member: EnergyMember,
@@ -700,6 +777,44 @@ private fun InteractionContext.addFuelTo(
         }
     if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
     MachineActions.addFuel(state, member, blockState, store, tick, heldItem.itemId)
+}
+
+private fun InteractionContext.useAnchor(
+    world: World,
+    state: AnchorState,
+    blockState: BlockModule.BlockStateInfo,
+    store: Store<ChunkStore>,
+    position: BlockPos,
+    heldItem: ItemStack?,
+): String {
+    if (heldItem == null) {
+        return "Wakebell Anchor: ${state.chargeSeconds} seconds remaining."
+    }
+    if (heldItem.itemId != CraftoryIds.FIZZ_CHARGE) {
+        return "Wakebell Anchor: ${state.chargeSeconds} seconds remaining."
+    }
+    val maxChargeMinutes = CraftoryCore.anchorMaxChargeMinutes()
+    val nextCharge = AnchorChargeMath.tryAddCharge(state.chargeSeconds, maxChargeMinutes)
+    if (nextCharge == null) {
+        return if (!AnchorChargeMath.canCharge(maxChargeMinutes)) {
+            "Wakebell Anchors are disabled."
+        } else {
+            "Wakebell Anchor is fully charged."
+        }
+    }
+    val container = heldItemContainer ?: return "Could not access the held Fizz Charge."
+    val slot = heldItemSlot.toShort()
+    val slotItem = container.getItemStack(slot) ?: return "Could not access the held Fizz Charge."
+    if (slotItem.itemId != CraftoryIds.FIZZ_CHARGE || slotItem.quantity != heldItem.quantity) {
+        return "Held Fizz Charge changed before it could be used."
+    }
+    val replacement = if (slotItem.quantity == 1) null else slotItem.withQuantity(slotItem.quantity - 1)
+    if (!container.setItemStackForSlot(slot, replacement).succeeded()) {
+        return "Could not consume the Fizz Charge."
+    }
+    state.chargeSeconds = nextCharge
+    MachineActions.activateAnchor(world, state, blockState, store, position)
+    return "Wakebell Anchor charged to ${state.chargeSeconds} seconds."
 }
 
 private const val SAVE_INTERVAL_TICKS = 20L

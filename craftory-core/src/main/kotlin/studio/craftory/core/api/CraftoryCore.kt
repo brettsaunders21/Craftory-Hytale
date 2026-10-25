@@ -3,25 +3,33 @@ package studio.craftory.core.api
 import com.hypixel.hytale.component.ComponentAccessor
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
+import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.command.system.CommandContext
+import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.EnergyMemberType
 import studio.craftory.core.api.energy.MemberSpec
+import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyWorld
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap
 
+@Suppress("TooManyFunctions")
 object CraftoryCore {
     private val modules = ConcurrentSkipListMap<String, String>()
     private val energyTypes = ConcurrentHashMap<String, EnergyMemberType>()
     private val commandHandlers = ConcurrentHashMap<String, (CommandContext) -> CompletableFuture<Void>>()
     private val inspectableComponents =
         ConcurrentHashMap<String, (ComponentAccessor<ChunkStore>, Ref<ChunkStore>) -> Inspectable?>()
+
+    @Volatile
+    private var currentAnchorMaxChargeMinutes = 240
 
     fun registerModule(
         name: String,
@@ -89,6 +97,47 @@ object CraftoryCore {
     fun isEnergyTick(store: Store<ChunkStore>): Boolean {
         val world = store.externalData.world
         return store.getResource(EnergyClock.type).isSolveTick(world.tick)
+    }
+
+    fun anchorMaxChargeMinutes(): Int = currentAnchorMaxChargeMinutes
+
+    fun setAnchorMaxChargeMinutes(minutes: Int) {
+        require(minutes >= 0) { "Anchor maximum charge must not be negative" }
+        currentAnchorMaxChargeMinutes = minutes
+    }
+
+    fun setAnchorCoverage(
+        store: Store<ChunkStore>,
+        id: Long,
+        chunkX: Int,
+        chunkZ: Int,
+        active: Boolean,
+    ) {
+        store.getResource(AnchorCoverageIndex.type).setAnchor(id, chunkX, chunkZ, active)
+    }
+
+    fun removeAnchorCoverage(
+        store: Store<ChunkStore>,
+        id: Long,
+    ) {
+        store.getResource(AnchorCoverageIndex.type).removeAnchor(id)
+    }
+
+    fun isAreaActive(
+        store: Store<ChunkStore>,
+        blockState: BlockModule.BlockStateInfo,
+    ): Boolean = isAreaActive(store, blockState.sectionRef)
+
+    fun isAreaActive(
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+    ): Boolean {
+        if (!sectionRef.isValid) return false
+        val nonTicking = ChunkStore.REGISTRY.getNonTickingComponentType()
+        if (!store.getArchetype(sectionRef).contains(nonTicking)) return true
+        val section = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return false
+        val chunkIndex = ChunkUtil.indexChunk(section.x, section.z)
+        return store.getResource(AnchorCoverageIndex.type).covers(chunkIndex)
     }
 
     private val ENERGY_ID = Regex("[a-z0-9_.-]+:[a-z0-9_./-]+")

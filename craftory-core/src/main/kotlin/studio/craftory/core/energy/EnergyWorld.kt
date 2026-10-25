@@ -122,10 +122,12 @@ internal class EnergyWorld : Resource<ChunkStore> {
         refsById.forEach { (id, ref) ->
             val member = currentStore.getComponent(ref, EnergyMember.type) ?: return@forEach
             val spec = CraftoryCore.energyType(member.typeId)?.spec ?: return@forEach
+            val blockState = currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
+            val active = blockState?.let { CraftoryCore.isAreaActive(currentStore, it) } ?: false
             if ((spec.role and MemberSpec.PRODUCER) != 0) {
-                runtime.setProduction(id, member.production, member.productionRank)
+                runtime.setProduction(id, if (active) member.production else 0, member.productionRank)
             }
-            if ((spec.role and MemberSpec.CONSUMER) != 0) runtime.setDemand(id, member.demand)
+            if ((spec.role and MemberSpec.CONSUMER) != 0) runtime.setDemand(id, if (active) member.demand else 0)
         }
         runtime.tick(events)
         lastSolveNanos = System.nanoTime() - started

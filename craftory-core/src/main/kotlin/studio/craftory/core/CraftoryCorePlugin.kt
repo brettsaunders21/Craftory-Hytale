@@ -9,11 +9,13 @@ import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
+import com.hypixel.hytale.server.core.util.Config
 import com.hypixel.hytale.server.core.util.TargetUtil
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
 import studio.craftory.core.energy.EnergyWorld
@@ -22,6 +24,8 @@ import java.util.concurrent.CompletableFuture
 class CraftoryCorePlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
+    private val config: Config<CraftoryCoreConfig> = withConfig("config", CraftoryCoreConfig.CODEC)
+
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
         CraftoryCore.registerModule("CraftoryCore", pluginVersion)
@@ -33,16 +37,27 @@ class CraftoryCorePlugin(
                 EnergyMember.CODEC,
             )
         EnergyWorld.type = chunkRegistry.registerResource(EnergyWorld::class.java, ::EnergyWorld)
+        AnchorCoverageIndex.type =
+            chunkRegistry.registerResource(
+                AnchorCoverageIndex::class.java,
+                ::AnchorCoverageIndex,
+            )
         EnergyClock.type = chunkRegistry.registerResource(EnergyClock::class.java, ::EnergyClock)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
-        val command = CraftoryCommand(pluginVersion)
+        val command = CraftoryCommand(pluginVersion, config)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
     }
 
+    override fun start() {
+        val minutes = config.get().anchorMaxChargeMinutes
+        CraftoryCore.setAnchorMaxChargeMinutes(minutes.coerceAtLeast(0))
+    }
+
     private class CraftoryCommand(
         private val pluginVersion: String,
+        config: Config<CraftoryCoreConfig>,
     ) : AbstractCommand("craftory", "Show Craftory plugin information") {
         init {
             addSubCommand(NetCommand())
@@ -50,12 +65,51 @@ class CraftoryCorePlugin(
             addSubCommand(InspectCommand())
             addSubCommand(SelfTestCommand())
             addSubCommand(SummonCommand())
+            addSubCommand(ConfigCommand(config))
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {
             val modules = CraftoryCore.loadedModules().ifEmpty { listOf("none") }.joinToString(", ")
             context.sendMessage(Message.raw("Craftory Core v$pluginVersion | Modules: $modules"))
             return CompletableFuture.completedFuture(null)
+        }
+    }
+
+    private class ConfigCommand(
+        config: Config<CraftoryCoreConfig>,
+    ) : AbstractCommand("config", "Configure Craftory") {
+        init {
+            addSubCommand(AnchorMaxCommand(config))
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> {
+            context.sendMessage(Message.raw("Usage: /craftory config anchor-max <minutes>"))
+            return CompletableFuture.completedFuture(null)
+        }
+    }
+
+    private class AnchorMaxCommand(
+        private val config: Config<CraftoryCoreConfig>,
+    ) : AbstractCommand("anchor-max", "Set the maximum Anchor charge in minutes") {
+        init {
+            setAllowsExtraArguments(true)
+            requirePermission("hytale.command.craftory.config")
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> {
+            val minutes =
+                context.inputString
+                    .substringAfter("anchor-max")
+                    .trim()
+                    .toIntOrNull()
+            if (minutes == null || minutes < 0) {
+                context.sendMessage(Message.raw("Usage: /craftory config anchor-max <minutes> (0 or greater)"))
+                return CompletableFuture.completedFuture(null)
+            }
+            config.get().anchorMaxChargeMinutes = minutes
+            CraftoryCore.setAnchorMaxChargeMinutes(minutes)
+            context.sendMessage(Message.raw("Anchor maximum charge set to $minutes minutes."))
+            return config.save()
         }
     }
 

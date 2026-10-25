@@ -324,6 +324,14 @@ Transmission links are in §7.1. Converters are boundary nodes between sub-netwo
 | Overpressure | Boiler above the red line | Whistle, then pop | Re-rivet |
 | Overcharge | Ungrounded Storm Vane is struck | Arcs to metal, then locks out | Pull the grounding lever |
 
+### 5.7 Unattended machine use
+
+Craftory machines pause with vanilla `NonTicking` sections so unattended farms do not run indefinitely.
+A fuelled Wakebell Anchor covers its chunk and eight neighbors, keeps those areas loaded and ticking, and
+drains while no player tracks a covered section. Its charge is capped by `anchorMaxChargeMinutes` (240 by
+default; 0 disables Anchors). Vanilla processing benches and item entities also tick when Hytale honors
+the Anchor's section-ticking request.
+
 ---
 
 ## 6. Inventions and machines

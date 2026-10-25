@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
@@ -47,7 +48,7 @@ internal class SelfTestRun : Resource<ChunkStore> {
         val sectionRef: Ref<ChunkStore>,
         var sectionEntityTicking: Boolean = true,
         var tickingStateReported: Boolean = false,
-        var ovenCompletionTickOffset: Long = 240,
+        var ovenCompletionTickOffset: Long = 360,
         var phase: Int = 0,
         var passed: Int = 0,
         var failed: Int = 0,
@@ -60,6 +61,18 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var ovenOutputAtSixSeconds: String? = null,
         var spawnedGritDrops: Int = 0,
         var spawnedGritQuantity: Int = 0,
+        var gnasherBaselineQuantity: Int = 0,
+        var gnasherBaselineParkedQuantity: Int = 0,
+        var crankSpinWithoutAnchor: Long = 0,
+        var anchorInitialCharge: Long = 0,
+        var anchorDisableTick: Long? = null,
+        var anchorDisableStartedTick: Long? = null,
+        var anchorDisabledReported: Boolean = false,
+        var anchorDisablePrepared: Boolean = false,
+        var anchorSpinAtInactive: Long? = null,
+        var anchorMaxChargeBeforeTest: Int = CraftoryCore.anchorMaxChargeMinutes(),
+        val testKeepLoadedChunks: MutableSet<Long> = mutableSetOf(),
+        var anchorStateForTest: AnchorState? = null,
     )
 
     var active: Run? = null
@@ -77,7 +90,7 @@ internal data class SelfTestCleanupResult(
     val chunkHolders: Int,
 )
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
@@ -99,6 +112,10 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         reportTickingState(run, tick)
         if (run.phase == 4) {
             tickPowerLossPhase(run, store, tick)
+            return
+        }
+        if (run.phase == 5) {
+            tickAnchorDisablePhase(run, store, tick)
             return
         }
         tickSelfTestPhase(run, store, tick)
@@ -143,16 +160,11 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             } else {
                 run.context.sendMessage(Message.raw("selftest: SKIP oven stop-after-power-loss check (NonTicking)"))
             }
-            run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
             run.stoppedReported = true
-            run.cleanupTick = tick + 12
-        }
-        if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
-            reportCleanup(
-                run,
-                CraftorySelfTest.cleanup(run.world, run.sectionRef),
-            )
-            store.getResource(SelfTestRun.type).active = null
+            run.anchorDisableTick = tick + 1
+            run.anchorDisableStartedTick = tick + 1
+            run.phase = 5
+            run.cleanupTick = tick + 100
         }
     }
 
@@ -192,13 +204,57 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 CraftorySelfTest.CRANK.z,
             )
         val member = ref?.let { store.getComponent(it, EnergyMember.type) }
+        val crank = ref?.let { store.getComponent(it, CrankState.type) }
+        val blockState = ref?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        if (run.sectionEntityTicking) {
+            run.context.sendMessage(Message.raw("selftest: SKIP crank pause without Anchor (section already ticking)"))
+        } else {
+            val paused =
+                blockState != null &&
+                    !CraftoryCore.isAreaActive(store, blockState) &&
+                    crank?.spinTicks == run.crankSpinWithoutAnchor
+            check(
+                run,
+                paused,
+                "crank paused without Anchor",
+                "sectionTicking=${run.sectionEntityTicking}, spin=${crank?.spinTicks}",
+            )
+        }
         check(
             run,
             member?.production?.let { it > 0 } == true,
             "crank pulse",
             "production=${member?.production}",
         )
+        val anchorRef =
+            BlockModule.getBlockEntity(
+                run.world,
+                CraftorySelfTest.ANCHOR.x,
+                CraftorySelfTest.ANCHOR.y,
+                CraftorySelfTest.ANCHOR.z,
+            ) ?: return
+        val anchor = store.getComponent(anchorRef, AnchorState.type) ?: return
+        run.anchorStateForTest = anchor
+        val anchorBlock = store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        anchor.chargeSeconds = 900
+        anchorInitialCharge(run, anchor.chargeSeconds)
+        MachineActions.activateAnchor(
+            run.world,
+            anchor,
+            anchorBlock,
+            store,
+            BlockPos(CraftorySelfTest.ANCHOR.x, CraftorySelfTest.ANCHOR.y, CraftorySelfTest.ANCHOR.z),
+        )
+        check(run, CraftoryCore.isAreaActive(store, blockState ?: anchorBlock), "anchor activates Craftory area")
         run.phase = 1
+        CraftorySelfTest.startGnasherSequence(run, store)
+    }
+
+    private fun anchorInitialCharge(
+        run: SelfTestRun.Run,
+        chargeSeconds: Long,
+    ) {
+        run.anchorInitialCharge = chargeSeconds
     }
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
@@ -229,6 +285,20 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             burner?.visualBurning == true,
             "burner visual",
             "visual=${burner?.visualBurning}, burning=${burner?.burning}",
+        )
+        val anchorRef =
+            BlockModule.getBlockEntity(
+                run.world,
+                CraftorySelfTest.ANCHOR.x,
+                CraftorySelfTest.ANCHOR.y,
+                CraftorySelfTest.ANCHOR.z,
+            )
+        val anchorCharge = anchorRef?.let { store.getComponent(it, AnchorState.type)?.chargeSeconds }
+        check(
+            run,
+            anchorCharge != null && anchorCharge < run.anchorInitialCharge,
+            "anchor drains while players are away",
+            "initial=${run.anchorInitialCharge}, remaining=$anchorCharge",
         )
         if (canisterRef != null) {
             val inspection =
@@ -432,6 +502,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         check(run, crank?.production == 0L, "crank expiry", "production=${crank?.production}")
         reportInspectable(run, store, CraftorySelfTest.OVEN, "oven")
         reportInspectable(run, store, CraftorySelfTest.GNASHER, "gnasher")
+        reportInspectable(run, store, CraftorySelfTest.ANCHOR, "anchor")
         run.phase = 4
         run.powerLossTick = run.world.tick
     }
@@ -449,8 +520,8 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         run.ovenOutputAtSixSeconds = stackDescription(bench?.outputContainer?.getItemStack(0.toShort()))
         check(
             run,
-            bench != null && bench.fuelTime <= 0.001f && !bench.isActive(),
-            "oven buffer exhausted after six seconds",
+            bench != null && !bench.isActive(),
+            "oven stops within six seconds after power loss",
             "active=${bench?.isActive()}, fuelTime=${bench?.fuelTime}",
         )
     }
@@ -468,7 +539,6 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val stopped =
             bench != null &&
                 !bench.isActive() &&
-                (bench.fuelTime <= 0.001f) &&
                 input == run.ovenInputAtSixSeconds &&
                 output == run.ovenOutputAtSixSeconds &&
                 progress != null &&
@@ -480,6 +550,166 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             "fuelTime=${bench?.fuelTime}, progress=$progress, input=$input, output=$output",
         )
     }
+
+    @Suppress("CyclomaticComplexMethod", "ComplexCondition", "LongMethod")
+    private fun tickAnchorDisablePhase(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        tick: Long,
+    ) {
+        val disableTick = run.anchorDisableTick ?: return
+        if (run.anchorDisabledReported) {
+            if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+                CraftoryCore.setAnchorMaxChargeMinutes(run.anchorMaxChargeBeforeTest)
+                reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
+                store.getResource(SelfTestRun.type).active = null
+            }
+            return
+        }
+        if (tick < disableTick) return
+        if (!run.anchorDisablePrepared) {
+            prepareAnchorDisable(run, store, tick)
+            return
+        }
+        val anchorRef =
+            blockEntityAt(
+                run.world,
+                CraftorySelfTest.ANCHOR.x,
+                CraftorySelfTest.ANCHOR.y,
+                CraftorySelfTest.ANCHOR.z,
+            )
+        val anchor = anchorRef?.let { store.getComponent(it, AnchorState.type) }
+        val crankRef =
+            blockEntityAt(
+                run.world,
+                CraftorySelfTest.CRANK.x,
+                CraftorySelfTest.CRANK.y,
+                CraftorySelfTest.CRANK.z,
+            )
+        val crank = crankRef?.let { store.getComponent(it, CrankState.type) }
+        val crankBlock = crankRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        val rejected = AnchorChargeMath.tryAddCharge(0, CraftoryCore.anchorMaxChargeMinutes()) == null
+        if (anchor == null || crank == null || crankBlock == null) {
+            if (tick < (run.anchorDisableStartedTick ?: tick) + 360) {
+                run.anchorDisableTick = tick + 20
+                return
+            }
+            val anchorForTest = run.anchorStateForTest
+            val areaActive = if (run.sectionRef.isValid) CraftoryCore.isAreaActive(store, run.sectionRef) else null
+            if (anchorForTest != null && areaActive == false) {
+                check(
+                    run,
+                    anchorForTest.chargeSeconds == 0L && anchorForTest.keepLoadedChunks.isEmpty(),
+                    "empty Anchor pauses machines again",
+                    "charge=${anchorForTest.chargeSeconds}, areaActive=$areaActive, " +
+                        "anchorKeepLoaded=${anchorForTest.keepLoadedChunks.size}",
+                )
+            } else {
+                run.context.sendMessage(
+                    Message.raw(
+                        "selftest: SKIP empty Anchor pause " +
+                            "(anchor=${anchorForTest?.chargeSeconds}, areaActive=$areaActive)",
+                    ),
+                )
+            }
+            check(run, rejected, "max 0 rejects Anchor charging")
+            finishAnchorDisable(run, tick)
+            return
+        }
+        if (CraftoryCore.isAreaActive(store, crankBlock)) {
+            if (tick < (run.anchorDisableStartedTick ?: tick) + 360) {
+                run.anchorDisableTick = tick + 20
+                return
+            }
+            run.context.sendMessage(Message.raw("selftest: SKIP empty Anchor pause (section stayed ticking)"))
+        } else {
+            val previousSpin = run.anchorSpinAtInactive
+            if (previousSpin == null) {
+                run.anchorSpinAtInactive = crank.spinTicks
+                run.anchorDisableTick = tick + 20
+                return
+            }
+            check(
+                run,
+                anchor.chargeSeconds == 0L &&
+                    crank.spinTicks == previousSpin &&
+                    anchor.keepLoadedChunks.isEmpty(),
+                "empty Anchor pauses machines again",
+                "spin=$previousSpin/${crank.spinTicks}, anchorKeepLoaded=${anchor.keepLoadedChunks.size}",
+            )
+        }
+        check(run, rejected, "max 0 rejects Anchor charging")
+        finishAnchorDisable(run, tick)
+    }
+
+    @Suppress("ComplexCondition")
+    private fun prepareAnchorDisable(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        tick: Long,
+    ) {
+        val anchorRef =
+            BlockModule.getBlockEntity(
+                run.world,
+                CraftorySelfTest.ANCHOR.x,
+                CraftorySelfTest.ANCHOR.y,
+                CraftorySelfTest.ANCHOR.z,
+            )
+        val anchor = anchorRef?.let { store.getComponent(it, AnchorState.type) }
+        val crankRef =
+            BlockModule.getBlockEntity(
+                run.world,
+                CraftorySelfTest.CRANK.x,
+                CraftorySelfTest.CRANK.y,
+                CraftorySelfTest.CRANK.z,
+            )
+        val crank = crankRef?.let { store.getComponent(it, CrankState.type) }
+        val crankMember = crankRef?.let { store.getComponent(it, EnergyMember.type) }
+        val crankBlock = crankRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        if (anchor == null || crank == null || crankMember == null || crankBlock == null) {
+            if (tick < (run.anchorDisableStartedTick ?: tick) + 360) {
+                run.anchorDisableTick = tick + 20
+                return
+            }
+            CraftoryCore.setAnchorMaxChargeMinutes(0)
+            run.anchorDisablePrepared = true
+            run.anchorDisableTick = tick + 1
+            return
+        }
+        CraftorySelfTest.retainTestKeepLoaded(run, store, anchor)
+        MachineActions.pulse(crank, crankMember, crankBlock, store, tick)
+        anchor.chargeSeconds = 0
+        anchorRef?.let {
+            store.getComponent(it, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        }
+        CraftoryCore.setAnchorMaxChargeMinutes(0)
+        run.anchorDisablePrepared = true
+        run.anchorDisableTick = tick + 20
+    }
+
+    private fun finishAnchorDisable(
+        run: SelfTestRun.Run,
+        tick: Long,
+    ) {
+        CraftoryCore.setAnchorMaxChargeMinutes(run.anchorMaxChargeBeforeTest)
+        CraftorySelfTest.releaseTestKeepLoaded(run)
+        run.anchorDisabledReported = true
+        run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+        run.cleanupTick = tick + 20
+    }
+
+    private fun blockEntityAt(
+        world: World,
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Ref<ChunkStore>? =
+        BlockModule.getBlockEntity(
+            world,
+            x,
+            y,
+            z,
+        )
 
     private fun reportCleanup(
         run: SelfTestRun.Run,
@@ -524,6 +754,34 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
 
 @Suppress("TooManyFunctions")
 object CraftorySelfTest {
+    internal fun retainTestKeepLoaded(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        anchor: AnchorState,
+    ) {
+        val grid = run.world.chunkStore
+        anchor.keepLoadedChunks.forEach { chunkIndex ->
+            val chunkRef = grid.getChunkReference(chunkIndex)
+            if (chunkRef != null && chunkRef.isValid) {
+                val worldChunk = store.getComponent(chunkRef, WorldChunk.getComponentType())
+                if (worldChunk != null && run.testKeepLoadedChunks.add(chunkIndex)) {
+                    worldChunk.addKeepLoaded()
+                }
+            }
+        }
+    }
+
+    internal fun releaseTestKeepLoaded(run: SelfTestRun.Run) {
+        val grid = run.world.chunkStore
+        run.testKeepLoadedChunks.forEach { chunkIndex ->
+            val chunkRef = grid.getChunkReference(chunkIndex)
+            if (chunkRef != null && chunkRef.isValid) {
+                grid.store.getComponent(chunkRef, WorldChunk.getComponentType())?.removeKeepLoaded()
+            }
+        }
+        run.testKeepLoadedChunks.clear()
+    }
+
     fun execute(context: CommandContext): CompletableFuture<Void> {
         val world = Universe.get().defaultWorld
         if (world == null) {
@@ -558,7 +816,7 @@ object CraftorySelfTest {
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")
-            GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
+            val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions())
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
@@ -568,6 +826,7 @@ object CraftorySelfTest {
             place(world, store, sectionRef, section, CraftoryIds.CRANK, CRANK, CrankState.type)
             place(world, store, sectionRef, section, CraftoryIds.SCORCH_OVEN, OVEN, OvenPower.type)
             place(world, store, sectionRef, section, CraftoryIds.GNASHER_PIT, GNASHER, GnasherState.type)
+            place(world, store, sectionRef, section, CraftoryIds.WAKEBELL_ANCHOR, ANCHOR, AnchorState.type)
             runPartCMachineProbes(world, store)
 
             fuelAndKickBurner(world, store)
@@ -580,8 +839,16 @@ object CraftorySelfTest {
                     ?: error("crank block state missing")
             check(MachineActions.pulse(crank, crankMember, crankBlock, store, world.tick))
             val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
+            run.crankSpinWithoutAnchor = crank.spinTicks
+            CraftoryCore.setAnchorMaxChargeMinutes(maxOf(run.anchorMaxChargeBeforeTest, 240))
             store.getResource(SelfTestRun.type).active = run
-            startGnasherSequence(run, store)
+            context.sendMessage(
+                Message.raw(
+                    "selftest: cleanup before run (liveGrit=${initialCleanup.liveDrops}, " +
+                        "sectionHolders=${initialCleanup.sectionHolders}, " +
+                        "chunkHolders=${initialCleanup.chunkHolders})",
+                ),
+            )
         } catch (failure: IllegalStateException) {
             context.sendMessage(
                 Message.raw("selftest: FAIL setup (${failure.message ?: failure.javaClass.simpleName})"),
@@ -643,13 +910,24 @@ object CraftorySelfTest {
         }
     }
 
-    private fun startGnasherSequence(
+    internal fun startGnasherSequence(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
         val ref = BlockModule.getBlockEntity(run.world, GNASHER.x, GNASHER.y, GNASHER.z) ?: return
         val state = store.getComponent(ref, GnasherState.type) ?: return
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val holders = GnasherSelfTestHolders.snapshot(store, run.sectionRef, GNASHER)
+        val liveQuantity = gritQuantityNear(run.world, GNASHER)
+        run.gnasherBaselineQuantity =
+            liveQuantity + holders.entityChunkGrit + holders.entitySectionGrit
+        run.gnasherBaselineParkedQuantity = holders.entityChunkGrit + holders.entitySectionGrit
+        run.context.sendMessage(
+            Message.raw(
+                "selftest: Gnasher baseline before manual pulses " +
+                    "(live=$liveQuantity, parked=${run.gnasherBaselineParkedQuantity})",
+            ),
+        )
         pulseGnasher(run, store, state, blockState, 1)
     }
 
@@ -740,7 +1018,10 @@ object CraftorySelfTest {
                         stack != null &&
                         stack.itemId == expectedGrit &&
                         stack.quantity == GnasherMachine.GRIT_OUTPUT_QUANTITY &&
-                        liveQuantity >= GnasherMachine.GRIT_OUTPUT_QUANTITY
+                        liveQuantity >=
+                        run.gnasherBaselineQuantity +
+                        run.spawnedGritQuantity +
+                        GnasherMachine.GRIT_OUTPUT_QUANTITY
                 if (verified) {
                     run.spawnedGritDrops++
                     run.spawnedGritQuantity += GnasherMachine.GRIT_OUTPUT_QUANTITY
@@ -784,6 +1065,8 @@ object CraftorySelfTest {
         val liveQuantity = gritQuantityNear(run.world, GNASHER)
         val parkedQuantity = holders.entityChunkGrit + holders.entitySectionGrit
         val totalQuantity = liveQuantity + parkedQuantity
+        val addedQuantity = totalQuantity - run.gnasherBaselineQuantity
+        val addedParkedQuantity = parkedQuantity - run.gnasherBaselineParkedQuantity
         GnasherSelfTestHolders.log(run, "after 4 ticks", holders)
         check(
             run,
@@ -793,16 +1076,18 @@ object CraftorySelfTest {
         )
         check(
             run,
-            totalQuantity == 4,
+            addedQuantity == 4,
             "gnasher live and parked grit accounting",
-            "live=$liveQuantity, parked=$parkedQuantity, total=$totalQuantity",
+            "baseline=${run.gnasherBaselineQuantity}, live=$liveQuantity, parked=$parkedQuantity, " +
+                "total=$totalQuantity, added=$addedQuantity",
         )
         if (holders.nonTicking) {
             check(
                 run,
-                parkedQuantity == 4,
+                addedParkedQuantity == 4,
                 "gnasher non-ticking parked grit",
-                "EntityChunk=${holders.entityChunkGrit}, EntitySection=${holders.entitySectionGrit}",
+                "addedParked=$addedParkedQuantity, EntityChunk=${holders.entityChunkGrit}, " +
+                    "EntitySection=${holders.entitySectionGrit}",
             )
             run.context.sendMessage(
                 Message.raw("selftest: SKIP live Gnasher drop visibility after N ticks (NonTicking)"),
@@ -810,9 +1095,10 @@ object CraftorySelfTest {
         } else {
             check(
                 run,
-                liveQuantity == 4 && parkedQuantity == 0,
+                addedParkedQuantity == 0 && addedQuantity == 4,
                 "gnasher live drops after 4 ticks",
-                "live=$liveQuantity, parked=$parkedQuantity",
+                "baseline=${run.gnasherBaselineQuantity}, live=$liveQuantity, parked=$parkedQuantity, " +
+                    "added=$addedQuantity",
             )
         }
         repeat(GnasherMachine.HOPPER_CAPACITY + 1) {
@@ -991,10 +1277,11 @@ object CraftorySelfTest {
     internal val OVEN = TestPosition(10_034, 150, 10_000)
     internal val OVEN_LINK_PIPE = TestPosition(10_034, 149, 10_000)
     internal val GNASHER = TestPosition(10_044, 150, 10_006)
+    internal val ANCHOR = TestPosition(10_040, 150, 10_012)
 
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
     private fun testPositions(): List<TestPosition> =
-        (listOf(BURNER) + pipePositions() + listOf(CANISTER, CRANK, OVEN, GNASHER)).distinct()
+        (listOf(BURNER) + pipePositions() + listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR)).distinct()
 }

@@ -8,6 +8,9 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.tech.command.SummonCommand
+import studio.craftory.tech.machine.AnchorLifecycle
+import studio.craftory.tech.machine.AnchorState
+import studio.craftory.tech.machine.AnchorSystem
 import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
@@ -83,6 +86,12 @@ class CraftoryTechPlugin(
                 CraftoryIds.OVEN_COMPONENT,
                 OvenPower.CODEC,
             )
+        AnchorState.type =
+            chunkRegistry.registerComponent(
+                AnchorState::class.java,
+                CraftoryIds.ANCHOR_COMPONENT,
+                AnchorState.CODEC,
+            )
         CraftoryCore.registerInspectableComponent(CraftoryIds.CRANK_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, CrankState.type)
         }
@@ -95,12 +104,17 @@ class CraftoryTechPlugin(
         CraftoryCore.registerInspectableComponent(CraftoryIds.OVEN_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, OvenPower.type)
         }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.ANCHOR_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, AnchorState.type)
+        }
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
         chunkRegistry.registerSystem(MachineClockLifecycle())
+        chunkRegistry.registerSystem(AnchorLifecycle())
         chunkRegistry.registerSystem(CrankSystem())
         chunkRegistry.registerSystem(BurnerSystem())
         chunkRegistry.registerSystem(GnasherSystem())
         chunkRegistry.registerSystem(ScorchOvenSystem())
+        chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         EnergyHudState.type =

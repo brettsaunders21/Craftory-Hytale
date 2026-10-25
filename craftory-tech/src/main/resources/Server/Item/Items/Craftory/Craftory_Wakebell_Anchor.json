@@ -1,0 +1,118 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Wakebell_Anchor.name",
+    "Description": "server.items.Craftory_Wakebell_Anchor.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "Categories": [
+    "Furniture.Lighting"
+  ],
+  "Recipe": {
+    "Input": [
+      {
+        "ItemId": "Ingredient_Bar_Iron",
+        "Quantity": 6
+      },
+      {
+        "ItemId": "Craftory_Fizz_Canister",
+        "Quantity": 1
+      }
+    ],
+    "Output": [
+      {
+        "ItemId": "Craftory_Wakebell_Anchor"
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Crafting"
+        ],
+        "Id": "Workbench"
+      }
+    ],
+    "TimeSeconds": 5
+  },
+  "PlayerAnimationsId": "Block",
+  "ItemLevel": 1,
+  "ItemSoundSetId": "ISS_Items_Metal",
+  "BlockType": {
+    "BlockParticleSetId": "Metal",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "GoblinMetal",
+        "DropList": "Empty"
+      },
+      "UseDefaultDropWhenPlaced": true
+    },
+    "HitboxType": "GoblinLab_Generator",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "InteractionSoundEventId": "SFX_Flame_Ignite",
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "State": {
+      "Definitions": {
+        "On": {
+          "DrawType": "Model",
+          "Light": {
+            "Color": "#6ee8ff"
+          },
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png",
+              "Weight": 1
+            }
+          ],
+          "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel"
+        },
+        "Off": {
+          "DrawType": "Model",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png",
+              "Weight": 1
+            }
+          ],
+          "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel"
+        }
+      }
+    },
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel",
+    "PhysicalMaterialId": "Metal",
+    "VariantRotation": "NESW",
+    "RotationYawPlacementOffset": "TwoSeventy",
+    "BlockEntity": {
+      "Components": {
+        "CraftoryWakebellAnchor": {
+          "ChargeSeconds": 0
+        }
+      }
+    }
+  },
+  "Tags": {
+    "Type": [
+      "Furniture",
+      "Fireproof"
+    ],
+    "Family": [
+      "Goblin"
+    ]
+  }
+}
