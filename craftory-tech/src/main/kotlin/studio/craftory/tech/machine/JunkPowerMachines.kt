@@ -1,4 +1,4 @@
-package studio.craftory.engine.machine
+package studio.craftory.tech.machine
 
 data class FuelDefinition(
     val itemId: String,

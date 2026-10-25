@@ -1,4 +1,4 @@
-package studio.craftory.engine.machine
+package studio.craftory.tech.machine
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -35,6 +35,7 @@ class JunkPowerMachinesTest {
                     ),
             )
 
+        assertFalse(burner.kick())
         assertEquals(0, burner.addFuel("unknown"))
         assertEquals(40, burner.addFuel("scraps"))
         assertEquals(0, burner.productionPerSolveTick())
@@ -51,6 +52,18 @@ class JunkPowerMachinesTest {
         assertEquals(0, burner.burnTicks)
         assertFalse(burner.isBurning)
         assertEquals(0, burner.productionPerSolveTick())
+    }
+
+    @Test
+    fun `burner kick consumes a hit only when ignition succeeds`() {
+        val fueled = BurnerMachine(fuelDefinitions = listOf(FuelDefinition("mushroom", 200)))
+        fueled.addFuel("mushroom")
+        assertTrue(fueled.kick())
+
+        val unfueled = BurnerMachine(fuelDefinitions = listOf(FuelDefinition("mushroom", 200)))
+        assertFalse(unfueled.kick())
+
+        assertFalse(fueled.kick())
     }
 
     @Test

@@ -30,9 +30,6 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.core.energy.BlockPos
 import studio.craftory.engine.energy.GradeTable
-import studio.craftory.engine.machine.BurnerMachine
-import studio.craftory.engine.machine.CrankMachine
-import studio.craftory.engine.machine.FuelDefinition
 import studio.craftory.engine.tick.Handle
 import studio.craftory.engine.tick.TickScheduler
 import studio.craftory.tech.CraftoryIds
@@ -332,12 +329,13 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
         event: DamageBlockEvent,
     ) {
         if (event.blockType.id != CraftoryIds.BURNER) return
-        event.isCancelled = true
         val world = store.externalData.world
         val position = event.targetBlock
-        world.chunkStore.store
-            .getResource(JunkPowerWorld.type)
-            .kick(BlockPos.pack(position.x, position.y, position.z), world.tick)
+        val consumed =
+            world.chunkStore.store
+                .getResource(JunkPowerWorld.type)
+                .kick(BlockPos.pack(position.x, position.y, position.z), world.tick)
+        if (consumed) event.isCancelled = true
     }
 }
 
