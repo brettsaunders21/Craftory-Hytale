@@ -9,21 +9,22 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import studio.craftory.core.api.CraftoryCore
 import java.util.concurrent.CompletableFuture
 
-private const val PLUGIN_VERSION = "0.1.0"
-
 class CraftoryCorePlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
     override fun setup() {
-        CraftoryCore.registerModule("CraftoryCore", PLUGIN_VERSION)
-        getCommandRegistry().registerCommand(CraftoryCommand())
-        LOGGER.atInfo().log("Craftory Core v%s loaded", PLUGIN_VERSION)
+        val pluginVersion = getManifest().getVersion().toString()
+        CraftoryCore.registerModule("CraftoryCore", pluginVersion)
+        getCommandRegistry().registerCommand(CraftoryCommand(pluginVersion))
+        LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
     }
 
-    private class CraftoryCommand : AbstractCommand("craftory", "Show Craftory plugin information") {
+    private class CraftoryCommand(
+        private val pluginVersion: String,
+    ) : AbstractCommand("craftory", "Show Craftory plugin information") {
         override fun execute(context: CommandContext): CompletableFuture<Void> {
             val modules = CraftoryCore.loadedModules().ifEmpty { listOf("none") }.joinToString(", ")
-            context.sendMessage(Message.raw("Craftory Core v$PLUGIN_VERSION | Modules: $modules"))
+            context.sendMessage(Message.raw("Craftory Core v$pluginVersion | Modules: $modules"))
             return CompletableFuture.completedFuture(null)
         }
     }

@@ -8,7 +8,9 @@ hytaleWorkspace {
     modProjects = listOf(":craftory-core", ":craftory-tech")
     hostProject = ":craftory-core"
     manifestGroup = "Craftory"
-    hytaleVersion = "0.+"
+    hytaleVersion =
+        libs.versions.hytale.server
+            .get()
     patchline = "release"
 }
 

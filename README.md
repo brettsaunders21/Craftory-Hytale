@@ -16,7 +16,7 @@ Craftory for Hytale is a Kotlin server-plugin workspace remaking the old Craftor
 ./gradlew runAllMods
 ```
 
-`setupHytaleDev` prompts you to authorize the development environment with your Hytale account so the tools can download `Assets.zip`. Once the server starts, connect the Hytale client to `localhost`.
+The first setup or server run prints a Hytale device-code link; open it and approve once to authorize asset downloads. `setupHytaleDev` can take several minutes the first time while it prepares the development environment. Once the server starts, connect the Hytale client to `localhost`.
 
 ## Debugging and hot swap
 

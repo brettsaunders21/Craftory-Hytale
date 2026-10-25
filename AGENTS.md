@@ -8,6 +8,10 @@
 - `./gradlew setupHytaleDev` prepares the authenticated local Hytale development environment.
 - `./gradlew runAllMods` launches both Hytale plugins in one server.
 
+## Versioning
+
+- Bump `version` in `gradle.properties`; the Hytale plugin's `updatePluginManifest` task syncs it to each manifest during the build. `CreateManifestIfMissingTask` only creates a manifest when it is absent.
+
 ## Module boundaries
 
 - `craftory-engine` is pure Kotlin/JVM and must not import or depend on Hytale APIs.
