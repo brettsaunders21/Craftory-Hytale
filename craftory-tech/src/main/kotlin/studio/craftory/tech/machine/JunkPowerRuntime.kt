@@ -433,6 +433,16 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
         val pos = event.targetBlock
         val ref = BlockModule.getBlockEntity(world, pos.x, pos.y, pos.z) ?: return
         val chunks = world.chunkStore.store
+        if (chunks.getComponent(ref, studio.craftory.core.api.multiblock.MultiblockController.type) != null) {
+            val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
+            val owner = chunks.getComponent(ref, MachineOwner.type)?.placerUuid
+            val mayOperate = MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())
+            val result = JunkHeartActions.kick(world, chunks, ref, world.tick, mayOperate)
+            val message = JunkHeartActions.kickMessage(result) ?: return
+            player.sendMessage(message)
+            event.isCancelled = true
+            return
+        }
         if (event.blockType.id == CraftoryIds.GNASHER_PIT) {
             val state = chunks.getComponent(ref, GnasherState.type) ?: return
             val blockState = chunks.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
@@ -479,6 +489,19 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
             return
         }
         val member = store.getComponent(ref, EnergyMember.type) ?: return
+        val heart = store.getComponent(ref, JunkHeartState.type)
+        val heartController = store.getComponent(ref, studio.craftory.core.api.multiblock.MultiblockController.type)
+        if (heart != null && heartController != null) {
+            val playerRef = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+            if (heldItem != null && JunkHeartActions.addFuel(context, heldItem, heart, blockState, store)) {
+                playerRef.sendMessage(
+                    Message.translation("server.craftory.heart.fuelled").param("fuel", heart.fuelCount),
+                )
+            } else {
+                playerRef.sendMessage(JunkHeartActions.readout(heart, heartController, member))
+            }
+            return
+        }
         val gnasher = store.getComponent(ref, GnasherState.type)
         if (gnasher != null) {
             val message =
@@ -726,7 +749,7 @@ internal object MachineActions {
         return WrenchActionResult.Learned("server.items.$itemId.name", page, scrapsDropped, pageGranted, burnTimeLost)
     }
 
-    private fun mayUseWrench(
+    internal fun mayUseWrench(
         ownerUuid: java.util.UUID?,
         playerUuid: java.util.UUID,
         playerRef: PlayerRef?,

@@ -16,10 +16,15 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.multiblock.MultiblockController
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
 import studio.craftory.core.energy.EnergyWorld
+import studio.craftory.core.multiblock.MultiblockBreakSystem
+import studio.craftory.core.multiblock.MultiblockIndex
+import studio.craftory.core.multiblock.MultiblockLifecycle
+import studio.craftory.core.multiblock.MultiblockPlaceSystem
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Level
 
@@ -49,7 +54,17 @@ class CraftoryCorePlugin(
                 ::AnchorCoverageIndex,
             )
         EnergyClock.type = chunkRegistry.registerResource(EnergyClock::class.java, ::EnergyClock)
+        MultiblockController.type =
+            chunkRegistry.registerComponent(
+                MultiblockController::class.java,
+                "Craftory_MultiblockController",
+                MultiblockController.CODEC,
+            )
+        MultiblockIndex.type = chunkRegistry.registerResource(MultiblockIndex::class.java, ::MultiblockIndex)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
+        chunkRegistry.registerSystem(MultiblockLifecycle())
+        getEntityStoreRegistry().registerSystem(MultiblockPlaceSystem())
+        getEntityStoreRegistry().registerSystem(MultiblockBreakSystem())
         chunkRegistry.registerSystem(EnergySolveSystem())
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)

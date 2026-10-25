@@ -48,6 +48,7 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.PIPE,
                 CraftoryIds.GNASHER_PIT,
                 CraftoryIds.SCORCH_OVEN,
+                CraftoryIds.JUNK_HEART,
             )
     }
 }

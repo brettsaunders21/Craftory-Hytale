@@ -14,6 +14,7 @@ import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.EnergyMemberType
 import studio.craftory.core.api.energy.MemberSpec
+import studio.craftory.core.api.multiblock.MultiblockRegistry
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyWorld
@@ -28,6 +29,8 @@ object CraftoryCore {
     private val commandHandlers = ConcurrentHashMap<String, (CommandContext) -> CompletableFuture<Void>>()
     private val inspectableComponents =
         ConcurrentHashMap<String, (ComponentAccessor<ChunkStore>, Ref<ChunkStore>) -> Inspectable?>()
+
+    private val multiblockRegistry = MultiblockRegistry()
 
     @Volatile
     private var currentCrewService: CrewService? = null
@@ -102,6 +105,8 @@ object CraftoryCore {
     fun unregisterCrewService(service: CrewService) {
         if (currentCrewService === service) currentCrewService = null
     }
+
+    fun multiblocks(): MultiblockRegistry = multiblockRegistry
 
     fun energyAccess(world: World): EnergyAccess {
         world.debugAssertInTickingThread()
