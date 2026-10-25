@@ -66,7 +66,7 @@ internal object LensScanner {
         val normalized = blockId.lowercase()
         val scanId = "craftory:scan/block/$normalized"
         val first = scanId !in crew.knowledge
-        if (normalized.contains("ore") || normalized.contains("crystal")) {
+        if (normalized.startsWith("ore_") || normalized.contains("_ore") || normalized.contains("crystal")) {
             val temperament = InsightRules.crystalTemperament(blockId)
             crews.grantKnowledge(playerRef.uuid, scanId)
             crews.addInsight(crew.id, temperament, InsightRules.oreCrystal(first))
@@ -105,11 +105,10 @@ internal object LensScanner {
         val scanId = "craftory:scan/machine/$id"
         val first = scanId !in crew.knowledge
         crews.grantKnowledge(playerRef.uuid, scanId)
-        val base = InsightRules.machineInsight(jank)
         crews.addInsight(
             crew.id,
             Temperament.CLANK,
-            if (first) base else maxOf(1L, base / 10),
+            InsightRules.machine(first, jank),
         )
         WellHud.showInsight(playerRef, player, crews)
     }

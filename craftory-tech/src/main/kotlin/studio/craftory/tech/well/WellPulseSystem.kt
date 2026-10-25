@@ -8,16 +8,19 @@ import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.hypixel.hytale.server.core.util.Config
 import org.joml.Vector3d
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.well.WellState
+import studio.craftory.core.api.well.WellStrength
 import kotlin.math.floor
 import kotlin.math.sin
 
 internal class WellPulseSystem(
-    private val config: com.hypixel.hytale.server.core.util.Config<WellConfig>,
+    private val config: Config<WellConfig>,
 ) : DelayedEntitySystem<EntityStore>(1.0f) {
     override fun getQuery(): Query<EntityStore> =
         Query.and(PlayerRef.getComponentType(), TransformComponent.getComponentType())
@@ -33,33 +36,46 @@ internal class WellPulseSystem(
         val state = store.getResource(WellPulseState.type)
         val tick = world.tick
         for (index in 0 until chunk.size()) {
-            val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: continue
-            val position = chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: continue
-            val origin = BlockPos(floor(position.x).toInt(), floor(position.y).toInt(), floor(position.z).toInt())
-            val activeSection = world.chunkStore.getChunkSectionReferenceAtBlock(origin.x, origin.y, origin.z)
-            if (activeSection == null || !CraftoryCore.isAreaActive(world.chunkStore.store, activeSection)) continue
-            val wells =
-                CraftoryCore
-                    .wells()
-                    .wellsNear(world.chunkStore.store, origin, config.get().pulseRadius.coerceAtLeast(0))
-            wells.forEach { well ->
-                if (well.well.state != WellState.WILD) return@forEach
-                val id = well.pos.pack()
-                if (tick - (state.lastPulseByPosition[id] ?: Long.MIN_VALUE) < 20L) return@forEach
-                state.lastPulseByPosition[id] = tick
-                val drift = sin(tick / 8.0) * 0.25
+            val player = chunk.getComponent(index, PlayerRef.getComponentType())
+            val position = chunk.getComponent(index, TransformComponent.getComponentType())?.position
+            if (player != null && position != null) {
+                val origin = BlockPos(floor(position.x).toInt(), floor(position.y).toInt(), floor(position.z).toInt())
+                val activeSection = world.chunkStore.getChunkSectionReferenceAtBlock(origin.x, origin.y, origin.z)
+                if (activeSection != null && CraftoryCore.isAreaActive(world.chunkStore.store, activeSection)) {
+                    pulseWells(world, origin, tick, state, store)
+                }
+            }
+        }
+    }
+
+    private fun pulseWells(
+        world: World,
+        origin: BlockPos,
+        tick: Long,
+        state: WellPulseState,
+        store: Store<EntityStore>,
+    ) {
+        val wells =
+            CraftoryCore
+                .wells()
+                .wellsNear(world.chunkStore.store, origin, config.get().pulseRadius.coerceAtLeast(0))
+        wells.forEach { well ->
+            if (well.well.state != WellState.WILD) return@forEach
+            val id = well.pos.pack()
+            if (tick - (state.lastPulseByPosition[id] ?: Long.MIN_VALUE) < 20L) return@forEach
+            state.lastPulseByPosition[id] = tick
+            val drift = sin(tick / 8.0) * 0.25
+            ParticleUtil.spawnParticleEffect(
+                "Impact_Spark",
+                Vector3d(well.pos.x + 0.5 + drift, well.pos.y + 1.2, well.pos.z + 0.5),
+                store,
+            )
+            if (well.well.strength == WellStrength.FLICKER) {
                 ParticleUtil.spawnParticleEffect(
                     "Impact_Spark",
-                    Vector3d(well.pos.x + 0.5 + drift, well.pos.y + 1.2, well.pos.z + 0.5),
+                    Vector3d(well.pos.x + 0.5 - drift, well.pos.y + 1.6, well.pos.z + 0.5),
                     store,
                 )
-                if (well.well.strength == studio.craftory.core.api.well.WellStrength.FLICKER) {
-                    ParticleUtil.spawnParticleEffect(
-                        "Impact_Spark",
-                        Vector3d(well.pos.x + 0.5 - drift, well.pos.y + 1.6, well.pos.z + 0.5),
-                        store,
-                    )
-                }
             }
         }
     }

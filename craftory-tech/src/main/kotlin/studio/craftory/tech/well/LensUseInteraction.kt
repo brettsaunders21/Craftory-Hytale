@@ -1,7 +1,9 @@
 package studio.craftory.tech.well
 
 import com.hypixel.hytale.codec.builder.BuilderCodec
+import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
+import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
@@ -11,7 +13,9 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.util.TargetUtil
 import com.hypixel.hytale.server.npc.entities.NPCEntity
@@ -33,17 +37,28 @@ class LensUseInteraction : SimpleInteraction() {
         val commandBuffer = context.commandBuffer ?: return
         val playerRef = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
         val player = commandBuffer.getComponent(context.entity, Player.getComponentType()) ?: return
-        val entityStore = commandBuffer.store
-        val world = commandBuffer.externalData.world
-        val targetEntity: Ref<EntityStore>? = TargetUtil.getTargetEntity(context.entity, 8.0f, commandBuffer)
-        val npc =
-            targetEntity?.let {
-                commandBuffer.getComponent(it, NPCEntity.getComponentType()!!)
-            }
-        if (npc != null) {
-            LensScanner.scanMob(playerRef, player, npc.roleName)
-            return
-        }
+        if (scanMob(context, commandBuffer, playerRef, player)) return
+        scanTargetBlock(context, commandBuffer, playerRef, player)
+    }
+
+    private fun scanMob(
+        context: InteractionContext,
+        commandBuffer: CommandBuffer<EntityStore>,
+        playerRef: PlayerRef,
+        player: Player,
+    ): Boolean {
+        val targetEntity = TargetUtil.getTargetEntity(context.entity, 8.0f, commandBuffer) ?: return false
+        val npc = commandBuffer.getComponent(targetEntity, NPCEntity.getComponentType()!!) ?: return false
+        LensScanner.scanMob(playerRef, player, npc.roleName)
+        return true
+    }
+
+    private fun scanTargetBlock(
+        context: InteractionContext,
+        commandBuffer: CommandBuffer<EntityStore>,
+        playerRef: PlayerRef,
+        player: Player,
+    ) {
         val target =
             TargetUtil
                 .getTargetBlock(context.entity, 8.0, commandBuffer)
@@ -52,6 +67,7 @@ class LensUseInteraction : SimpleInteraction() {
             playerRef.sendMessage(Message.raw("Target a block or creature to scan."))
             return
         }
+        val world = commandBuffer.externalData.world
         val blockStore = world.chunkStore.store
         val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(target.x, target.y, target.z)
         if (sectionRef == null) {
@@ -60,35 +76,12 @@ class LensUseInteraction : SimpleInteraction() {
         }
         val blockRef = BlockModule.getBlockEntity(blockStore, sectionRef, target.x, target.y, target.z)
         val well = blockRef?.let { blockStore.getComponent(it, Glimmerwell.type) }
-        if (well != null && blockRef != null) {
-            val state = entityStore.getResource(LensScanState.type)
-            val session = state.sessions[playerRef.uuid]
-            if (session == null || session.pos != target || session.ref != blockRef) {
-                val fresh = LensWellSession(target, blockRef, well, world.tick)
-                state.sessions[playerRef.uuid] = fresh
-                WellHud.showResonance(playerRef, player, 0, 600)
-                playerRef.sendMessage(Message.translation("server.craftory.lens.started"))
-                return
-            }
-            session.lockTicks.add(world.tick)
-            if (session.lockTicks.size < 3) {
-                WellHud.showResonance(playerRef, player, session.lockTicks.size, 600 - (world.tick - session.startTick))
-                return
-            }
-            val score =
-                ScanScoring.score(
-                    session.startTick,
-                    session.lockTicks,
-                    WellRuntimeConfig.current.scanPeriodTicks.toLong(),
-                    WellRuntimeConfig.current.scanWindowTicks.toLong(),
-                )
-            LensScanner.finish(playerRef, player, session, score.perfect, world, entityStore)
-            state.sessions.remove(playerRef.uuid)
-            WellHud.hideResonance(playerRef, player)
+        if (well != null) {
+            scanWell(playerRef, player, world, commandBuffer.store, target, blockRef, well)
             return
         }
         val member = blockRef?.let { blockStore.getComponent(it, EnergyMember.type) }
-        if (member != null && member.delivered > 0) {
+        if (member != null && isRunning(member)) {
             LensScanner.scanMachine(playerRef, player, member.typeId)
             return
         }
@@ -104,6 +97,43 @@ class LensUseInteraction : SimpleInteraction() {
             playerRef.sendMessage(Message.raw("No scan data is available for this target."))
         }
     }
+
+    private fun scanWell(
+        playerRef: PlayerRef,
+        player: Player,
+        world: World,
+        entityStore: Store<EntityStore>,
+        target: BlockPos,
+        blockRef: Ref<ChunkStore>,
+        well: Glimmerwell,
+    ) {
+        val state = entityStore.getResource(LensScanState.type)
+        val session = state.sessions[playerRef.uuid]
+        if (session == null || session.pos != target || session.ref != blockRef) {
+            state.sessions[playerRef.uuid] = LensWellSession(target, blockRef, well, world.tick)
+            WellHud.showResonance(playerRef, player, 0, 600)
+            playerRef.sendMessage(Message.translation("server.craftory.lens.started"))
+            return
+        }
+        session.lockTicks.add(world.tick)
+        if (session.lockTicks.size < 3) {
+            WellHud.showResonance(playerRef, player, session.lockTicks.size, 600 - (world.tick - session.startTick))
+            return
+        }
+        val score =
+            ScanScoring.score(
+                session.startTick,
+                session.lockTicks,
+                WellRuntimeConfig.current.scanPeriodTicks.toLong(),
+                WellRuntimeConfig.current.scanWindowTicks.toLong(),
+            )
+        LensScanner.finish(playerRef, player, session, score.perfect, world, entityStore)
+        state.sessions.remove(playerRef.uuid)
+        WellHud.hideResonance(playerRef, player)
+    }
+
+    private fun isRunning(member: EnergyMember): Boolean =
+        member.production > 0 || (member.demand > 0 && member.delivered > 0)
 
     override fun simulateTick0(
         firstRun: Boolean,

@@ -26,6 +26,14 @@ class WellLogicTest {
     }
 
     @Test
+    fun `repeat scans grant ten percent with minimum one insight`() {
+        assertEquals(4L, InsightRules.well(WellStrength.STEADY, false, false))
+        assertEquals(1L, InsightRules.mob(false))
+        assertEquals(1L, InsightRules.oreCrystal(false))
+        assertEquals(1L, InsightRules.machine(false, null))
+    }
+
+    @Test
     fun `birth rules support deterministic forced outcomes`() {
         val rules = WellBirthRules(Random(42))
         assertTrue(rules.stormcall(1.0))

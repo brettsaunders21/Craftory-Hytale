@@ -2,6 +2,7 @@ package studio.craftory.tech.well
 
 import com.hypixel.hytale.component.ComponentAccessor
 import com.hypixel.hytale.component.Ref
+import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
@@ -10,6 +11,8 @@ import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellStrength
+import studio.craftory.tech.CraftoryIds
+import java.util.UUID
 
 sealed interface JarCatchResult {
     data object NotWell : JarCatchResult
@@ -28,11 +31,17 @@ sealed interface JarCatchResult {
 object JarActions {
     const val FIRST_FLICKER_ID = "craftory:flicker/first"
 
+    fun filledJar(caught: JarCatchResult.Caught): ItemStack =
+        ItemStack(CraftoryIds.GOB_JAR_FILLED, 1)
+            .withMetadata(GobJarMetadata.TEMPERAMENT, caught.temperament.id)
+            .withMetadata(GobJarMetadata.STRENGTH, caught.strength.name)
+            .withMetadata(GobJarMetadata.TASTE, caught.taste)
+
     fun catchFlicker(
         world: World,
         ref: Ref<ChunkStore>,
         pos: BlockPos,
-        playerUuid: java.util.UUID,
+        playerUuid: UUID,
         crews: CrewService,
         store: ComponentAccessor<ChunkStore>,
     ): JarCatchResult {

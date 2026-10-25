@@ -49,6 +49,7 @@ import studio.craftory.tech.well.LensUseInteraction
 import studio.craftory.tech.well.WellBirthState
 import studio.craftory.tech.well.WellBirthSystem
 import studio.craftory.tech.well.WellConfig
+import studio.craftory.tech.well.WellKillBirthSystem
 import studio.craftory.tech.well.WellPulseState
 import studio.craftory.tech.well.WellPulseSystem
 import studio.craftory.tech.well.WellRuntimeConfig
@@ -168,6 +169,7 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(LensScanSystem(wellConfig))
         entityRegistry.registerSystem(WellPulseSystem(wellConfig))
         entityRegistry.registerSystem(WellBirthSystem(wellConfig))
+        entityRegistry.registerSystem(WellKillBirthSystem(wellConfig))
         OpenCustomUIInteraction.registerBlockEntityCustomPage(
             this,
             CanisterPage::class.java,

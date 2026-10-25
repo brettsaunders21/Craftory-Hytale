@@ -1,14 +1,22 @@
 package studio.craftory.tech.well
 
+import com.hypixel.hytale.component.ArchetypeChunk
+import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
+import com.hypixel.hytale.component.query.Query
+import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud
+import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder
+import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.hypixel.hytale.server.core.util.Config
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.tech.CraftoryIds
@@ -59,22 +67,14 @@ internal class InsightHud(
                     "#Orbs.Text",
                     values
                         .take(4)
-                        .mapIndexed {
-                            index,
-                            value,
-                            ->
-                            "${Temperament.entries[index].tint} $value"
-                        }.joinToString("  "),
+                        .mapIndexed { index, value -> "${Temperament.entries[index].tint} $value" }
+                        .joinToString("  "),
                 ).set(
                     "#Orbs2.Text",
                     values
                         .drop(4)
-                        .mapIndexed {
-                            index,
-                            value,
-                            ->
-                            "${Temperament.entries[index + 4].tint} $value"
-                        }.joinToString("  "),
+                        .mapIndexed { index, value -> "${Temperament.entries[index + 4].tint} $value" }
+                        .joinToString("  "),
                 ),
         )
     }
@@ -114,10 +114,10 @@ internal object WellHud {
 }
 
 internal class LensScanSystem(
-    private val config: com.hypixel.hytale.server.core.util.Config<WellConfig>,
-) : com.hypixel.hytale.component.system.tick.DelayedEntitySystem<EntityStore>(0.1f) {
-    override fun getQuery(): com.hypixel.hytale.component.query.Query<EntityStore> =
-        com.hypixel.hytale.component.query.Query.and(
+    private val config: Config<WellConfig>,
+) : DelayedEntitySystem<EntityStore>(0.1f) {
+    override fun getQuery(): Query<EntityStore> =
+        Query.and(
             PlayerRef.getComponentType(),
             Player.getComponentType(),
         )
@@ -125,24 +125,36 @@ internal class LensScanSystem(
     override fun tick(
         dt: Float,
         systemIndex: Int,
-        chunk: com.hypixel.hytale.component.ArchetypeChunk<EntityStore>,
+        chunk: ArchetypeChunk<EntityStore>,
         store: Store<EntityStore>,
-        commandBuffer: com.hypixel.hytale.component.CommandBuffer<EntityStore>,
+        commandBuffer: CommandBuffer<EntityStore>,
     ) {
         val state = store.getResource(LensScanState.type)
-        val tick = store.externalData.world.tick
+        val world = store.externalData.world
         for (index in 0 until chunk.size()) {
-            val playerRef = chunk.getComponent(index, PlayerRef.getComponentType()) ?: continue
-            val player = chunk.getComponent(index, Player.getComponentType()) ?: continue
-            val session = state.sessions[playerRef.uuid] ?: continue
-            val remaining = config.get().scanTimeoutTicks.coerceAtLeast(1) - (tick - session.startTick)
-            if (remaining <= 0) {
-                LensScanner.finish(playerRef, player, session, false, store.externalData.world, store)
-                state.sessions.remove(playerRef.uuid)
-                WellHud.hideResonance(playerRef, player)
-            } else {
-                WellHud.showResonance(playerRef, player, session.lockTicks.size, remaining)
+            val playerRef = chunk.getComponent(index, PlayerRef.getComponentType())
+            val player = chunk.getComponent(index, Player.getComponentType())
+            if (playerRef != null && player != null) {
+                updateSession(playerRef, player, state, world, store)
             }
+        }
+    }
+
+    private fun updateSession(
+        playerRef: PlayerRef,
+        player: Player,
+        state: LensScanState,
+        world: World,
+        store: Store<EntityStore>,
+    ) {
+        val session = state.sessions[playerRef.uuid] ?: return
+        val remaining = config.get().scanTimeoutTicks.coerceAtLeast(1) - (world.tick - session.startTick)
+        if (remaining <= 0) {
+            LensScanner.finish(playerRef, player, session, false, world, store)
+            state.sessions.remove(playerRef.uuid)
+            WellHud.hideResonance(playerRef, player)
+        } else {
+            WellHud.showResonance(playerRef, player, session.lockTicks.size, remaining)
         }
     }
 }
@@ -150,14 +162,14 @@ internal class LensScanSystem(
 internal class CodexPageUi(
     playerRef: PlayerRef,
     private val crews: CrewService,
-) : com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage(
+) : CustomUIPage(
         playerRef,
         CustomPageLifetime.CanDismissOrCloseThroughInteraction,
     ) {
     override fun build(
         ref: Ref<EntityStore>,
         commandBuilder: UICommandBuilder,
-        eventBuilder: com.hypixel.hytale.server.core.ui.builder.UIEventBuilder,
+        eventBuilder: UIEventBuilder,
         store: Store<EntityStore>,
     ) {
         commandBuilder.append("Craftory/Pages/Codex.ui")

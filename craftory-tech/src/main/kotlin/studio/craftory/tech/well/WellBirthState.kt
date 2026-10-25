@@ -3,6 +3,7 @@ package studio.craftory.tech.well
 import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import java.util.UUID
 
 internal class WellBirthState : Resource<ChunkStore> {
@@ -17,13 +18,13 @@ internal class WellBirthState : Resource<ChunkStore> {
     }
 }
 
-internal class WellPulseState : Resource<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> {
+internal class WellPulseState : Resource<EntityStore> {
     val lastPulseByPosition = HashMap<Long, Long>()
 
-    override fun clone(): Resource<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> = WellPulseState()
+    override fun clone(): Resource<EntityStore> = WellPulseState()
 
     companion object {
         lateinit var type:
-            ResourceType<com.hypixel.hytale.server.core.universe.world.storage.EntityStore, WellPulseState>
+            ResourceType<EntityStore, WellPulseState>
     }
 }
