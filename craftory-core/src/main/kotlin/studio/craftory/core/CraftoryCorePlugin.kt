@@ -16,6 +16,7 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockController
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
@@ -76,6 +77,7 @@ class CraftoryCorePlugin(
     override fun start() {
         val minutes = config.get().anchorMaxChargeMinutes
         CraftoryCore.setAnchorMaxChargeMinutes(minutes.coerceAtLeast(0))
+        CraftoryCore.setGhostMode(GhostMode.parse(config.get().ghostMode))
     }
 
     @Suppress("TooGenericExceptionCaught")

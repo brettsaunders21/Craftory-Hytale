@@ -14,6 +14,7 @@ import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.EnergyMemberType
 import studio.craftory.core.api.energy.MemberSpec
+import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockRegistry
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
@@ -120,6 +121,16 @@ object CraftoryCore {
     }
 
     fun anchorMaxChargeMinutes(): Int = currentAnchorMaxChargeMinutes
+
+    @Volatile
+    private var currentGhostMode: GhostMode = GhostMode.DEFAULT
+
+    /** Ghost frame display for unfinished multi-blocks, from the `GhostMode` config key. */
+    fun ghostMode(): GhostMode = currentGhostMode
+
+    fun setGhostMode(mode: GhostMode) {
+        currentGhostMode = mode
+    }
 
     fun setAnchorMaxChargeMinutes(minutes: Int) {
         setAnchorMaxChargeMinutesInMemory(minutes)

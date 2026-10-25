@@ -29,6 +29,7 @@ import studio.craftory.tech.machine.CraftoryWrenchUseInteraction
 import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.EnergyHudState
+import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
 import studio.craftory.tech.machine.JunkHeartKnowledge
@@ -168,6 +169,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(JunkHeartLifecycle())
         chunkRegistry.registerSystem(JunkHeartSystem())
         chunkRegistry.registerSystem(MultiblockAssemblySystem())
+        chunkRegistry.registerSystem(GhostPreviewLifecycle())
         chunkRegistry.registerSystem(SelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         EnergyHudState.type =

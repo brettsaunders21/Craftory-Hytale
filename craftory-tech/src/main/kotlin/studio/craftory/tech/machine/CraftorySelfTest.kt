@@ -102,7 +102,8 @@ private fun reportCleanup(
     run.context.sendMessage(
         Message.raw(
             "selftest: cleanup (liveGrit=${result.liveDrops}, " +
-                "sectionHolders=${result.sectionHolders}, chunkHolders=${result.chunkHolders})",
+                "sectionHolders=${result.sectionHolders}, chunkHolders=${result.chunkHolders}, " +
+                "previews=${GhostPreviews.liveCount(run.world)})",
         ),
     )
 }
@@ -893,7 +894,8 @@ object CraftorySelfTest {
                 Message.raw(
                     "selftest: cleanup before run (liveGrit=${initialCleanup.liveDrops}, " +
                         "sectionHolders=${initialCleanup.sectionHolders}, " +
-                        "chunkHolders=${initialCleanup.chunkHolders})",
+                        "chunkHolders=${initialCleanup.chunkHolders}, " +
+                        "previews=${GhostPreviews.liveCount(world)})",
                 ),
             )
         } catch (failure: Exception) {
@@ -1458,6 +1460,15 @@ object CraftorySelfTest {
                     registry.missingParts(store, ref).size == JunkHeartTemplate.template.parts.size,
                 "hammer without parts says Needs and places nothing",
             )
+            val ghostAt = BlockPos(HEART.x, HEART.y, HEART.z)
+            GhostPreviews.show(run.world, ghostAt, registry.missingParts(store, ref))
+            check(
+                run,
+                GhostPreviews.entries(run.world, ghostAt) == JunkHeartTemplate.template.parts.size,
+                "ghost preview entity lists every missing part",
+                "entries=${GhostPreviews.entries(run.world, ghostAt)}",
+            )
+            var ghostAfterFirstHit: Int? = null
             val inventory =
                 mutableMapOf(
                     CraftoryIds.SCRAP_PLATING to 8,
@@ -1479,7 +1490,17 @@ object CraftorySelfTest {
                         refund = { itemId -> inventory[itemId] = (inventory[itemId] ?: 0) + 1 },
                     )
                 if (result is HammerResult.Placed) placedOrder += result.part.position
+                GhostPreviews.sync(run.world, ref)
+                if (placedOrder.size == 1 && ghostAfterFirstHit == null) {
+                    ghostAfterFirstHit = GhostPreviews.entries(run.world, ghostAt)
+                }
             }
+            check(
+                run,
+                ghostAfterFirstHit == JunkHeartTemplate.template.parts.size - 1,
+                "ghost preview shrinks after a hammer hit",
+                "entries=$ghostAfterFirstHit",
+            )
             check(
                 run,
                 placedOrder == expectedOrder && inventory.values.all { it == 0 } &&
@@ -1510,6 +1531,12 @@ object CraftorySelfTest {
                     controller.quality == studio.craftory.core.api.multiblock.MultiblockQuality.STURDY,
                 "kick 0.3 s off the sweet spot forms a STURDY heart",
                 "result=$kicked",
+            )
+            check(
+                run,
+                GhostPreviews.entries(run.world, ghostAt) == null && GhostPreviews.liveCount(run.world) == 0,
+                "ghost preview entity is gone after the kick",
+                "live=${GhostPreviews.liveCount(run.world)}",
             )
             check(
                 run,
@@ -1720,6 +1747,7 @@ object CraftorySelfTest {
         world: World,
         sectionRef: Ref<ChunkStore>,
     ): SelfTestCleanupResult {
+        GhostPreviews.hide(world, BlockPos(HEART.x, HEART.y, HEART.z))
         val store = world.chunkStore.store
         if (
             !sectionRef.isValid ||

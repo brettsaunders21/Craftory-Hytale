@@ -86,6 +86,34 @@ internal class JunkHeartLifecycle : RefSystem<ChunkStore>() {
     }
 }
 
+/** Despawns a controller's ghost preview entity when the controller is broken or its chunk unloads. */
+internal class GhostPreviewLifecycle : RefSystem<ChunkStore>() {
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(MultiblockController.type, BlockModule.BlockStateInfo.getComponentType())
+
+    override fun onEntityAdded(
+        ref: Ref<ChunkStore>,
+        reason: AddReason,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) = Unit
+
+    override fun onEntityRemove(
+        ref: Ref<ChunkStore>,
+        reason: RemoveReason,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val blockState = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val position = Vector3i()
+        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        val controllerPos = BlockPos(position.x, position.y, position.z)
+        if (!store.getResource(AssemblyViewIndex.type).hasPreview(controllerPos)) return
+        val world = store.externalData.world
+        world.execute { GhostPreviews.hide(world, controllerPos) }
+    }
+}
+
 internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
         Query.and(
@@ -182,12 +210,16 @@ internal class MultiblockAssemblySystem : EntityTickingSystem<ChunkStore>() {
             }
         if (tick % interval != 0L) return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState)) return
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val controllerPos = BlockPos(position.x, position.y, position.z)
+        val views = store.getResource(AssemblyViewIndex.type)
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            if (views.hasPreview(controllerPos)) world.execute { GhostPreviews.hide(world, controllerPos) }
+            return
+        }
         val ref = chunk.getReferenceTo(index)
-        store.getResource(AssemblyViewIndex.type).seen(controllerPos, tick)
+        views.seen(controllerPos, tick)
         world.execute {
             if (!ref.isValid) return@execute
             JunkHeartActions.showAssembly(world, ref, controllerPos)
@@ -240,6 +272,7 @@ class CraftoryHammerUseInteraction : SimpleBlockInteraction() {
                 refund = { itemId -> inventory.addItemStack(ItemStack(itemId, 1)) },
             )
         player.sendMessage(JunkHeartActions.hammerMessage(result))
+        world.execute { if (ref.isValid) GhostPreviews.sync(world, ref) }
     }
 
     override fun simulateInteractWithBlock(
@@ -478,8 +511,9 @@ internal object JunkHeartActions {
                         ?: return@filter false
                 nearestController(store, position) == controllerPos
             }
-        if (viewers.isEmpty()) return
+        if (viewers.isEmpty()) return GhostPreviews.hide(world, controllerPos)
         if (controller.state == MultiblockState.READY_TO_START) {
+            GhostPreviews.hide(world, controllerPos)
             val phase = KickStartTiming.phaseSeconds(world.tick - controller.readySinceTick, world.tps)
             val gauge =
                 Message
@@ -489,7 +523,15 @@ internal object JunkHeartActions {
             viewers.forEach { entities.getComponent(it, PlayerRef.getComponentType())?.sendMessage(gauge) }
             return
         }
-        CraftoryCore.multiblocks().missingParts(store, controllerRef).forEach { part ->
+        val missing = CraftoryCore.multiblocks().missingParts(store, controllerRef)
+        val mode = CraftoryCore.ghostMode()
+        if (mode.showsPreview) {
+            GhostPreviews.show(world, controllerPos, missing)
+        } else {
+            GhostPreviews.hide(world, controllerPos)
+        }
+        if (!mode.showsParticles) return
+        missing.forEach { part ->
             ParticleUtil.spawnParticleEffect(
                 CraftoryIds.GHOST_PARTICLE,
                 part.position.x + HALF,
@@ -592,6 +634,26 @@ internal class AssemblyViewIndex : com.hypixel.hytale.component.Resource<ChunkSt
     ) {
         lastSeen[position] = tick
     }
+
+    private val previews = HashMap<BlockPos, Preview>()
+
+    fun preview(position: BlockPos): Preview? = previews[position]
+
+    fun putPreview(
+        position: BlockPos,
+        preview: Preview,
+    ) {
+        previews[position] = preview
+    }
+
+    fun removePreview(position: BlockPos): Preview? = previews.remove(position)
+
+    fun hasPreview(position: BlockPos): Boolean = previews.containsKey(position)
+
+    data class Preview(
+        val ref: Ref<EntityStore>,
+        val parts: Set<BlockPos>,
+    )
 
     fun controllers(tick: Long): List<BlockPos> {
         lastSeen.entries.removeIf { tick - it.value > STALE_TICKS }

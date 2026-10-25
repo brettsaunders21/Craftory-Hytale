@@ -3,9 +3,11 @@ package studio.craftory.core
 import com.hypixel.hytale.codec.Codec
 import com.hypixel.hytale.codec.KeyedCodec
 import com.hypixel.hytale.codec.builder.BuilderCodec
+import studio.craftory.core.api.multiblock.GhostMode
 
 class CraftoryCoreConfig(
     var anchorMaxChargeMinutes: Int = DEFAULT_ANCHOR_MAX_CHARGE_MINUTES,
+    var ghostMode: String = GhostMode.DEFAULT.configValue,
 ) {
     companion object {
         const val DEFAULT_ANCHOR_MAX_CHARGE_MINUTES = 240
@@ -17,6 +19,11 @@ class CraftoryCoreConfig(
                     KeyedCodec("AnchorMaxChargeMinutes", Codec.INTEGER),
                     { config, value -> config.anchorMaxChargeMinutes = value },
                     { it.anchorMaxChargeMinutes },
+                ).add()
+                .append(
+                    KeyedCodec("GhostMode", Codec.STRING),
+                    { config, value -> config.ghostMode = value },
+                    { it.ghostMode },
                 ).add()
                 .build()
     }

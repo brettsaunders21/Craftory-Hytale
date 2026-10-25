@@ -12,6 +12,6 @@ Replace these vanilla placeholders with Craftory Blockbench models and textures:
 - `Craftory_Junk_Heart_Firebox`: goblin brazier model and texture (same as the burner off state) with no fire state yet. Needs a firebox model, a lit state and a door animation.
 - `Craftory_Scrap_Plating`: grey developer cube textures from `Build_GreyDark_Cube` (`BlockTextures/Dev_Grey_Dark_Side.png`, `Dev_Grey_Dark_Top.png`). Needs riveted scrap textures.
 - Junk Heart chimney: the template uses the vanilla `Build_GreyDark_Pipe` block (grey developer tube, `VariantRotation: Pipe`) for (0,1,0) and (0,2,0). A goblin brick or pipe chimney block would fit better once one exists.
-- Ghost frame: `Dust_Sparkles_Fine` particles mark missing parts instead of ghost blocks. No documented ghost or preview block API was found.
+- Ghost frame: a documented `PrefabPreview` entity lists each missing part's placed block (preview mode), plus `Dust_Sparkles_Fine` particles at each missing part (particles mode). The Core config key `GhostMode` (`preview`, `particles` or `both`) picks one; the default is `both`. **Preview visuals are not yet verified in a real client** (translucency, tint and whether the offsets line up), so keep `both` until they are.
 - Junk Heart smoke: `Dungeon_Goblin_Smoke_Pipe_Small` particles at the chimney top.
 - Hammer clank: `SFX_Metal_Hit`. A goblin anvil clank would be better.
