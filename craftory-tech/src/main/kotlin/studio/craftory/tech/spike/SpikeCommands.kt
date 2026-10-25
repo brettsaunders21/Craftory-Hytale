@@ -169,21 +169,22 @@ object SpikeCommands {
         }
         if (args.isEmpty()) {
             val playerRef = ref ?: return respond(context, "weather", "requires a player to inspect world weather")
-            val store = playerRef.store
-            val weather = store.getResource(WeatherResource.getResourceType())
-            val tracker = store.getComponent(playerRef, WeatherTracker.getComponentType())
-            val envId = tracker?.environmentId
-            val environmentIndex =
-                if (envId != null) weather.getWeatherIndexForEnvironment(envId) else -1
-            val effectiveIndex = if (envId != null) weather.getEffectiveWeatherIndex(envId) else -1
-            return respond(
-                context,
-                "weather",
-                "forced=${weather.forcedWeatherIndex.let(::weatherId)} " +
-                    "environment=${envId?.let { "$it:${weatherId(environmentIndex)}" } ?: "unavailable"} " +
-                    "tracker=${tracker?.weatherIndex?.let(::weatherId) ?: "unavailable"} " +
-                    "effective=${weatherId(effectiveIndex)} assets=${Weather.getAssetMap().assetCount}",
-            )
+            return withWorld(context, playerRef) { store ->
+                val weather = store.getResource(WeatherResource.getResourceType())
+                val tracker = store.getComponent(playerRef, WeatherTracker.getComponentType())
+                val envId = tracker?.environmentId
+                val environmentIndex =
+                    if (envId != null) weather.getWeatherIndexForEnvironment(envId) else -1
+                val effectiveIndex = if (envId != null) weather.getEffectiveWeatherIndex(envId) else -1
+                respondNow(
+                    context,
+                    "weather",
+                    "forced=${weather.forcedWeatherIndex.let(::weatherId)} " +
+                        "environment=${envId?.let { "$it:${weatherId(environmentIndex)}" } ?: "unavailable"} " +
+                        "tracker=${tracker?.weatherIndex?.let(::weatherId) ?: "unavailable"} " +
+                        "effective=${weatherId(effectiveIndex)} assets=${Weather.getAssetMap().assetCount}",
+                )
+            }
         }
         return when (args[0].lowercase()) {
             "local" -> {
@@ -384,24 +385,36 @@ object SpikeCommands {
         val action = args.firstOrNull()?.lowercase()
         when (action) {
             "on" -> {
-                val movement =
-                    store.getComponent(ref, MovementManager.getComponentType())
-                        ?: return respondNow(context, "slow", "movement manager unavailable")
-                val player =
-                    store.getComponent(ref, PlayerRef.getComponentType())
-                        ?: return respondNow(context, "slow", "player ref unavailable")
-                if (store.getComponent(ref, SpikeSlowed.type) == null) {
-                    val slowed = store.addComponent(ref, SpikeSlowed.type)
-                    slowed.originalSpeed = movement.settings.baseSpeed
-                    movement.settings.baseSpeed *= 0.5f
+                val slowed = store.getComponent(ref, SpikeSlowed.type)
+                if (slowed == null) {
+                    val movement =
+                        store.getComponent(ref, MovementManager.getComponentType())
+                            ?: return respondNow(context, "slow", "movement manager unavailable")
+                    val player =
+                        store.getComponent(ref, PlayerRef.getComponentType())
+                            ?: return respondNow(context, "slow", "player ref unavailable")
+                    val newSlowed = store.addComponent(ref, SpikeSlowed.type)
+                    newSlowed.originalSpeed = movement.settings.baseSpeed
+                    newSlowed.manual = true
+                    movement.settings.baseSpeed = newSlowed.originalSpeed * 0.5f
+                    movement.update(player.packetHandler)
+                } else {
+                    slowed.manual = true
                 }
-                movement.update(player.packetHandler)
-                respondNow(context, "slow", "applied speed=${movement.settings.baseSpeed}")
+                val speed = store.getComponent(ref, MovementManager.getComponentType())?.settings?.baseSpeed
+                respondNow(context, "slow", "manual slow on speed=${speed ?: "unavailable"}")
             }
 
             "off" -> {
-                restoreSpeed(ref, store)
-                respondNow(context, "slow", "defaults restored; held-item rule removed")
+                val slowed =
+                    store.getComponent(ref, SpikeSlowed.type)
+                        ?: return respondNow(context, "slow", "not slowed")
+                slowed.manual = false
+                store.removeComponent(ref, SpikeHeldSlow.type)
+                slowed.held = false
+                restoreSpeedIfUnused(ref, store, slowed)
+                val speed = store.getComponent(ref, MovementManager.getComponentType())?.settings?.baseSpeed
+                respondNow(context, "slow", "restored speed=${speed ?: "unavailable"}")
             }
 
             "held" -> {
@@ -515,19 +528,22 @@ object SpikeCommands {
             }
         return withWorld(context, ref) { store ->
             val guard = store.getResource(SpikeClaimGuard.type)
-            guard.enabled = enabled
             if (enabled) {
-                val position =
-                    store.getComponent(ref, TransformComponent.getComponentType())?.position
-                        ?: return@withWorld respondNow(context, "claims", "player transform unavailable")
                 val player =
                     store.getComponent(ref, PlayerRef.getComponentType())
                         ?: return@withWorld respondNow(context, "claims", "player ref unavailable")
+                val ownerCrew = CraftoryCore.crewService().crewOf(player.uuid)
+                if (ownerCrew.solo) return@withWorld respondNow(context, "claims", "player has no crew")
+                val ownerCrewId = ownerCrew.id
+                val position =
+                    store.getComponent(ref, TransformComponent.getComponentType())?.position
+                        ?: return@withWorld respondNow(context, "claims", "player transform unavailable")
                 guard.centerX = position.x
                 guard.centerY = position.y
                 guard.centerZ = position.z
-                guard.ownerCrewId = CraftoryCore.crewService().crewOf(player.uuid)?.id
+                guard.ownerCrewId = ownerCrewId
             }
+            guard.enabled = enabled
             respondNow(context, "claims", "guard ${if (enabled) "on" else "off"} owner=${guard.ownerCrewId} radius=8")
         }
     }

@@ -44,12 +44,14 @@ import java.util.UUID
 
 internal class SpikeSlowed : Component<EntityStore> {
     var originalSpeed: Float = 0f
-    var heldItemRule: Boolean = false
+    var manual: Boolean = false
+    var held: Boolean = false
 
     override fun clone(): Component<EntityStore> =
         SpikeSlowed().also {
             it.originalSpeed = originalSpeed
-            it.heldItemRule = heldItemRule
+            it.manual = manual
+            it.held = held
         }
 
     companion object {
@@ -191,7 +193,7 @@ private class SpikeWeatherWatchSystem : TickingSystem<EntityStore>() {
         val weather = store.getResource(WeatherResource.getResourceType())
         weather.environmentWeather.int2IntEntrySet().forEach { entry ->
             val env = entry.intKey
-            val index = entry.intValue
+            val index = weather.getEffectiveWeatherIndex(env)
             val previous = watch.lastWeatherByEnvironment.put(env, index)
             if (previous != null && previous != index) {
                 val id =
@@ -222,10 +224,15 @@ private class SpikeHeldSlowSystem : EntityTickingSystem<EntityStore>() {
         val held = commandBuffer.getComponent(ref, SpikeHeldSlow.type) ?: return
         val item = InventoryComponent.getItemInHand(commandBuffer, ref)?.itemId
         val slowed = commandBuffer.getComponent(ref, SpikeSlowed.type)
-        if (item == held.itemId && slowed == null) {
-            applySlow(ref, commandBuffer, heldItemRule = true)
-        } else if (item != held.itemId && slowed?.heldItemRule == true) {
-            restoreHeldSlow(ref, commandBuffer)
+        if (item == held.itemId) {
+            if (slowed == null) {
+                applySlow(ref, commandBuffer, held = true)
+            } else {
+                slowed.held = true
+            }
+        } else if (slowed?.held == true) {
+            slowed.held = false
+            restoreSpeedIfUnused(ref, commandBuffer, slowed)
         }
     }
 }
@@ -233,35 +240,27 @@ private class SpikeHeldSlowSystem : EntityTickingSystem<EntityStore>() {
 internal fun applySlow(
     ref: Ref<EntityStore>,
     accessor: com.hypixel.hytale.component.ComponentAccessor<EntityStore>,
-    heldItemRule: Boolean = false,
+    held: Boolean,
 ) {
     val movement = accessor.getComponent(ref, MovementManager.getComponentType()) ?: return
     val playerRef = accessor.getComponent(ref, PlayerRef.getComponentType()) ?: return
     val slowed = accessor.addComponent(ref, SpikeSlowed.type)
     slowed.originalSpeed = movement.settings.baseSpeed
-    slowed.heldItemRule = heldItemRule
+    slowed.held = held
     movement.settings.baseSpeed = slowed.originalSpeed * 0.5f
     movement.update(playerRef.packetHandler)
 }
 
-internal fun restoreSpeed(
+internal fun restoreSpeedIfUnused(
     ref: Ref<EntityStore>,
     accessor: com.hypixel.hytale.component.ComponentAccessor<EntityStore>,
+    slowed: SpikeSlowed,
 ) {
+    if (slowed.manual || slowed.held) return
     val playerRef = accessor.getComponent(ref, PlayerRef.getComponentType()) ?: return
     val movement = accessor.getComponent(ref, MovementManager.getComponentType()) ?: return
-    movement.resetDefaultsAndUpdate(ref, accessor)
-    accessor.removeComponent(ref, SpikeSlowed.type)
-    accessor.removeComponent(ref, SpikeHeldSlow.type)
+    movement.settings.baseSpeed = slowed.originalSpeed
     movement.update(playerRef.packetHandler)
-}
-
-private fun restoreHeldSlow(
-    ref: Ref<EntityStore>,
-    accessor: com.hypixel.hytale.component.ComponentAccessor<EntityStore>,
-) {
-    val movement = accessor.getComponent(ref, MovementManager.getComponentType()) ?: return
-    movement.resetDefaultsAndUpdate(ref, accessor)
     accessor.removeComponent(ref, SpikeSlowed.type)
 }
 
@@ -325,9 +324,9 @@ private class SpikeClaimGuardSystem : EntityEventSystem<EntityStore, DamageBlock
             studio.craftory.core.api.CraftoryCore
                 .crewService()
                 .crewOf(player.uuid)
+                .takeUnless { it.solo }
                 ?.id
-        if (crewId == guard.ownerCrewId) return
-        event.isCancelled = true
+        if (crewId == null || crewId != guard.ownerCrewId) event.isCancelled = true
     }
 }
 

@@ -1,5 +1,5 @@
 Group {
-  Anchor: (Top: 24, Right: 24, Width: 360);
+  Anchor: (Top: 24, Left: 24, Width: 360);
   Background: #000000(0.55);
   Padding: (Full: 12);
 
