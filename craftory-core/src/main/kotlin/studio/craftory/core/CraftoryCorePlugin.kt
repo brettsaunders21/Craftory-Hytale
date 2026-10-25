@@ -20,6 +20,7 @@ import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
 import studio.craftory.core.energy.EnergyWorld
+import studio.craftory.core.transport.ItemTransportRegistration
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Level
 
@@ -51,6 +52,7 @@ class CraftoryCorePlugin(
         EnergyClock.type = chunkRegistry.registerResource(EnergyClock::class.java, ::EnergyClock)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
+        ItemTransportRegistration.register(this, config)
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
@@ -63,6 +65,7 @@ class CraftoryCorePlugin(
 
     @Suppress("TooGenericExceptionCaught")
     override fun shutdown() {
+        ItemTransportRegistration.shutdown()
         crewService?.let { crews ->
             try {
                 crews.close()
