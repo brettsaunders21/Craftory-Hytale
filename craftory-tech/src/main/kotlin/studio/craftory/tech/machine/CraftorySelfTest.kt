@@ -1239,14 +1239,14 @@ object CraftorySelfTest {
         try {
             clearWrenchDrops(run.world, WRENCH_TAKE_APART, WRENCH_PACK)
             place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, WRENCH_TAKE_APART, BurnerState.type)
-            val takeApartRef =
+            var takeApartRef =
                 BlockModule.getBlockEntity(
                     run.world,
                     WRENCH_TAKE_APART.x,
                     WRENCH_TAKE_APART.y,
                     WRENCH_TAKE_APART.z,
                 ) ?: error("wrench test burner was not placed")
-            val machineOwner = store.getComponent(takeApartRef, MachineOwner.type) ?: error("machine owner is missing")
+            var machineOwner = store.getComponent(takeApartRef, MachineOwner.type) ?: error("machine owner is missing")
             check(run, machineOwner.placerUuid == null, "programmatic machine placement is unowned")
             val unowned =
                 MachineActions.useWrench(
@@ -1264,6 +1264,52 @@ object CraftorySelfTest {
                     !blockEntityMissing(run.world, WRENCH_TAKE_APART) &&
                     itemQuantityNear(run.world, WRENCH_TAKE_APART, "Ingredient_Scraps") == 0,
                 "wrench refuses an unowned machine without permission",
+            )
+            val burnerType = BlockType.fromString(CraftoryIds.BURNER) ?: error("burner block type is missing")
+            val burnerOnType = burnerType.getBlockForState("On") ?: error("burner On state is missing")
+            val burnerOnIndex = BlockType.getAssetMap().getIndex(burnerOnType.id)
+            check(
+                BlockOperations.setBlock(
+                    run.world.chunkStore,
+                    run.sectionRef,
+                    WRENCH_TAKE_APART.x,
+                    WRENCH_TAKE_APART.y,
+                    WRENCH_TAKE_APART.z,
+                    burnerOnIndex,
+                    burnerOnType,
+                    0,
+                    0,
+                    SetBlockSettings.NO_UPDATE_STATE,
+                ),
+            ) { "failed to set burner On state" }
+            BlockEntity.ensureBlockEntity(
+                store,
+                run.sectionRef,
+                section,
+                WRENCH_TAKE_APART.x and 31,
+                WRENCH_TAKE_APART.y and 31,
+                WRENCH_TAKE_APART.z and 31,
+                burnerOnType,
+                0,
+            ) ?: error("burner On-state block entity is missing")
+            assignMachineOwner(
+                run.world,
+                org.joml.Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z),
+                CraftoryIds.BURNER,
+                playerUuid,
+            )
+            takeApartRef =
+                BlockModule.getBlockEntity(
+                    run.world,
+                    WRENCH_TAKE_APART.x,
+                    WRENCH_TAKE_APART.y,
+                    WRENCH_TAKE_APART.z,
+                ) ?: error("wrench test burner On-state block entity was removed")
+            machineOwner = store.getComponent(takeApartRef, MachineOwner.type) ?: error("machine owner is missing")
+            check(
+                run,
+                machineOwner.placerUuid == playerUuid,
+                "burner On-state placement receives owner",
             )
             machineOwner.placerUuid = UUID.randomUUID()
             val foreign =

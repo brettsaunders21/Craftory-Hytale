@@ -9,10 +9,12 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3i
 import studio.craftory.tech.CraftoryIds
+import java.util.UUID
 
 internal class MachineOwnerPlacementSystem :
     EntityEventSystem<EntityStore, PlaceBlockEvent>(PlaceBlockEvent::class.java) {
@@ -33,19 +35,7 @@ internal class MachineOwnerPlacementSystem :
         val position = Vector3i(event.targetBlock)
         val world = store.externalData.world
         world.execute {
-            val placedBlockType = BlockType.fromString(itemId) ?: return@execute
-            val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return@execute
-            val chunkStore = world.chunkStore.store
-            val blockState =
-                chunkStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return@execute
-            val blockSection =
-                chunkStore.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return@execute
-            val placedBlockId = BlockType.getAssetMap().getIndex(placedBlockType.id)
-            if (blockSection.get(blockState.index) != placedBlockId) return@execute
-            val owner = chunkStore.getComponent(ref, MachineOwner.type) ?: return@execute
-            if (owner.placerUuid != null) return@execute
-            owner.placerUuid = ownerUuid
-            blockState.markNeedsSaving(chunkStore)
+            assignMachineOwner(world, position, itemId, ownerUuid)
         }
     }
 
@@ -60,4 +50,30 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.SCORCH_OVEN,
             )
     }
+}
+
+internal fun assignMachineOwner(
+    world: World,
+    position: Vector3i,
+    itemId: String,
+    ownerUuid: UUID,
+) {
+    val placedBlockType = BlockType.fromString(itemId) ?: return
+    val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
+    val chunkStore = world.chunkStore.store
+    val blockState =
+        chunkStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+    val blockSection =
+        chunkStore.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return
+    val currentBlockType = BlockType.getAssetMap().getAsset(blockSection.get(blockState.index)) ?: return
+    if (
+        currentBlockType.id != placedBlockType.id &&
+        placedBlockType.getStateForBlock(currentBlockType.id) == null
+    ) {
+        return
+    }
+    val owner = chunkStore.getComponent(ref, MachineOwner.type) ?: return
+    if (owner.placerUuid != null) return
+    owner.placerUuid = ownerUuid
+    blockState.markNeedsSaving(chunkStore)
 }
