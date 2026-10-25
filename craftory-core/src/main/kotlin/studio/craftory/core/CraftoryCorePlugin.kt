@@ -31,7 +31,8 @@ class CraftoryCorePlugin(
         EnergyWorld.type = chunkRegistry.registerResource(EnergyWorld::class.java, ::EnergyWorld)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(EnergyWorldTickSystem())
-        getCommandRegistry().registerCommand(CraftoryCommand(pluginVersion))
+        val command = CraftoryCommand(pluginVersion)
+        getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
     }
 
@@ -41,6 +42,7 @@ class CraftoryCorePlugin(
         init {
             addSubCommand(NetCommand())
             addSubCommand(StatsCommand())
+            addSubCommand(SummonCommand())
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {
@@ -48,6 +50,15 @@ class CraftoryCorePlugin(
             context.sendMessage(Message.raw("Craftory Core v$pluginVersion | Modules: $modules"))
             return CompletableFuture.completedFuture(null)
         }
+    }
+
+    private class SummonCommand : AbstractCommand("summon", "Summon a Craftory trader") {
+        init {
+            setAllowsExtraArguments(true)
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> =
+            CraftoryCore.dispatchCommandHandler("summon", context)
     }
 
     private class NetCommand : AbstractCommand("net", "Show the energy network for a targeted block or coordinates") {

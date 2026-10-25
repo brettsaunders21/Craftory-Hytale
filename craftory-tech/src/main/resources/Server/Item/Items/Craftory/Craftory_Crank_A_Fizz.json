@@ -1,0 +1,92 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Crank_A_Fizz.name",
+    "Description": "server.items.Craftory_Crank_A_Fizz.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "PlayerAnimationsId": "Block",
+  "Quality": "Developer",
+  "IconProperties": {
+    "Scale": 0.4,
+    "Rotation": [
+      18,
+      52,
+      23
+    ],
+    "Translation": [
+      11,
+      -18
+    ]
+  },
+  "MaxStack": 1,
+  "BlockType": {
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Benches/Goblin_Workbench_Texture.png"
+      }
+    ],
+    "CustomModel": "Blocks/Benches/Goblin_Workbench.blockymodel",
+    "CustomModelAnimation": "Blocks/Benches/Goblin_Workbench_Off_Idle.blockyanim",
+    "Looping": true,
+    "DrawType": "Model",
+    "VariantRotation": "NESW",
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "Bench": {
+      "Type": "Crafting",
+      "Id": "GoblinLab_Workbench",
+      "CompletedSoundEventId": "SFX_Workbench_Craft",
+      "FailedSoundEventId": "SFX_Generic_Crafting_Failed",
+      "Categories": [
+        {
+          "Id": "GoblinLab_Gadgets",
+          "Name": "server.benchCategories.goblinLab.gadgets",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Gadgets.png"
+        },
+        {
+          "Id": "GoblinLab_Fragments",
+          "Name": "server.benchCategories.goblinLab.fragments",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Fragments.png"
+        },
+        {
+          "Id": "GoblinLab_Decoration",
+          "Name": "server.benchCategories.goblinLab.decoration",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Decoration.png"
+        },
+        {
+          "Id": "GoblinLab_Runes",
+          "Name": "server.benchCategories.goblinLab.runes",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Runes.png"
+        }
+      ],
+      "TierLevels": [
+        {}
+      ]
+    },
+    "HitboxType": "Bench_Workbench3",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:crank_a_fizz",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "Craftory_JunkPowerMachine": {
+          "Machine": "Crank",
+          "SpinTicks": 0,
+          "BurnTicks": 0,
+          "Burning": false
+        }
+      }
+    }
+  }
+}

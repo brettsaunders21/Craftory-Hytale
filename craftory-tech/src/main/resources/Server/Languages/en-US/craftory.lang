@@ -1,0 +1,10 @@
+server.items.Craftory_Crank_A_Fizz.name = Squeak-crank
+server.items.Craftory_Crank_A_Fizz.description = Turn it, goblin. Get fizz.
+server.items.Craftory_Boomshroom_Burner.name = Boomshroom burner
+server.items.Craftory_Boomshroom_Burner.description = Feed mush. Kick hard. Make fizz.
+server.items.Craftory_Fizz_Canister.name = Fizz canister
+server.items.Craftory_Fizz_Canister.description = Keep fizz safe. No spilling.
+server.items.Craftory_Gutterpipe.name = Gutterpipe
+server.items.Craftory_Gutterpipe.description = Fizz goes through. Goblin says so.
+server.barter.craftory_grizzlecog.title = Grizzlecog's junk
+server.npcRoles.Craftory_Grizzlecog.name = Grizzlecog

@@ -1,0 +1,85 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Fizz_Canister.name",
+    "Description": "server.items.Craftory_Fizz_Canister.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "PlayerAnimationsId": "Block",
+  "Quality": "Developer",
+  "IconProperties": {
+    "Scale": 0.25,
+    "Rotation": [
+      345,
+      211,
+      341
+    ],
+    "Translation": [
+      8,
+      -48
+    ]
+  },
+  "MaxStack": 1,
+  "BlockType": {
+    "Group": "GoblinLab_Power_Switch_Unpowered",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png"
+      }
+    ],
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full",
+          "Support": "Ignored"
+        }
+      ]
+    },
+    "VariantRotation": "NESW",
+    "HitboxType": "GoblinLab_Generator",
+    "AmbientSoundEventId": "SFX_GoblinLab_Broken_Device",
+    "Particles": [
+      {
+        "SystemId": "Goblin_Decorative_Broken",
+        "PositionOffset": {
+          "Z": -1,
+          "X": 0.8
+        },
+        "RotationOffset": {
+          "Yaw": 180
+        }
+      }
+    ],
+    "Material": "Solid",
+    "CustomModelAnimation": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Idle_Off_New.blockyanim",
+    "Looping": true,
+    "RequiresAlphaBlending": true,
+    "InteractionHint": "server.interactionHints.repair",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:fizz_canister",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "Craftory_JunkPowerMachine": {
+          "Machine": "Canister",
+          "SpinTicks": 0,
+          "BurnTicks": 0,
+          "Burning": false
+        }
+      }
+    }
+  }
+}

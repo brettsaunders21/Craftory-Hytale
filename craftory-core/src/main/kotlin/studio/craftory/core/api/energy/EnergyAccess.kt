@@ -44,6 +44,16 @@ class EnergyAccess internal constructor(
         return energy.networkOf(pos)
     }
 
+    fun networkMembers(pos: Long): Int {
+        assertWorldThread()
+        return energy.diagnostics(pos)?.members ?: 0
+    }
+
+    fun networkGrade(pos: Long): Int {
+        assertWorldThread()
+        return energy.diagnostics(pos)?.grade ?: 0
+    }
+
     private fun assertWorldThread() {
         world.debugAssertInTickingThread()
     }

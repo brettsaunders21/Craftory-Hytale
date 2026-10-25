@@ -1,16 +1,19 @@
 package studio.craftory.core.api
 
+import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.universe.world.World
 import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMemberType
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.core.energy.EnergyWorld
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap
 
 object CraftoryCore {
     private val modules = ConcurrentSkipListMap<String, String>()
     private val energyTypes = ConcurrentHashMap<String, EnergyMemberType>()
+    private val commandHandlers = ConcurrentHashMap<String, (CommandContext) -> CompletableFuture<Void>>()
 
     fun registerModule(
         name: String,
@@ -36,6 +39,19 @@ object CraftoryCore {
     fun energyType(id: String): EnergyMemberType? = energyTypes[id]
 
     fun registeredEnergyTypes(): List<EnergyMemberType> = energyTypes.values.sortedBy(EnergyMemberType::id)
+
+    fun registerCommandHandler(
+        key: String,
+        handler: (CommandContext) -> CompletableFuture<Void>,
+    ) {
+        require(key.isNotBlank())
+        check(commandHandlers.putIfAbsent(key, handler) == null) { "Command handler already registered: $key" }
+    }
+
+    fun dispatchCommandHandler(
+        key: String,
+        context: CommandContext,
+    ): CompletableFuture<Void> = commandHandlers[key]?.invoke(context) ?: CompletableFuture.completedFuture(null)
 
     fun energyAccess(world: World): EnergyAccess {
         world.debugAssertInTickingThread()

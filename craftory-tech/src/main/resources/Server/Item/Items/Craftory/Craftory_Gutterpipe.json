@@ -1,0 +1,92 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Gutterpipe.name",
+    "Description": "server.items.Craftory_Gutterpipe.description"
+  },
+  "ItemLevel": 10,
+  "Icon": "Icons/ItemsGenerated/Build_Grey_Pipe.png",
+  "Categories": [
+    "Tool.TechnicalBlocks"
+  ],
+  "SubCategory": "BlockSets",
+  "PlayerAnimationsId": "Block",
+  "Set": "Build",
+  "Quality": "Technical",
+  "ItemSoundSetId": "ISS_Blocks_Stone",
+  "IconProperties": {
+    "Scale": 0.58823,
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ],
+    "Translation": [
+      0,
+      -13.5
+    ]
+  },
+  "MaxStack": 100,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Structures/Tubes/Dev_Long.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Structures/Tubes/Dev_Textures/Dev_Grey.png",
+        "Weight": 1
+      }
+    ],
+    "Group": "Dev",
+    "HitboxType": "Branch",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "Rocks"
+      }
+    },
+    "VariantRotation": "Pipe",
+    "BlockParticleSetId": "Dust",
+    "Supporting": {
+      "Down": [
+        {
+          "FaceType": "Branch"
+        }
+      ],
+      "Up": [
+        {
+          "FaceType": "Branch"
+        }
+      ]
+    },
+    "ParticleColor": "#969696",
+    "BlockSoundSetId": "Soft",
+    "PhysicalMaterialId": "Wool",
+    "MaxSupportDistance": 4,
+    "TextureComputedColor": "#717171",
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:gutterpipe",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "Craftory_JunkPowerMachine": {
+          "Machine": "Pipe",
+          "SpinTicks": 0,
+          "BurnTicks": 0,
+          "Burning": false
+        }
+      }
+    }
+  }
+}
