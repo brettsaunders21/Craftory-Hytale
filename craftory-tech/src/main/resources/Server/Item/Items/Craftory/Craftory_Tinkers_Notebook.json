@@ -1,0 +1,22 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Tinkers_Notebook.name",
+    "Description": "server.items.Craftory_Tinkers_Notebook.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Console.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Developer",
+  "Interactions": {
+    "Use": {
+      "Interactions": [
+        {
+          "Type": "OpenCustomUI",
+          "Page": {
+            "Id": "Craftory_Tinkers_Notebook"
+          }
+        }
+      ]
+    }
+  }
+}

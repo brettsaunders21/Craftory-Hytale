@@ -11,6 +11,9 @@ object CraftoryIds {
     const val SQUINT_GOGGLES = "Craftory_Squint_Goggles"
     const val FIZZ_CHARGE = "Craftory_Fizz_Charge"
     const val GRIZZLECOG = "Craftory_Grizzlecog"
+    const val TINKERS_NOTEBOOK = "Craftory_Tinkers_Notebook"
+    const val TINKERS_WRENCH = "Craftory_Tinkers_Wrench"
+    const val GRIZZLECOG_RECEIPT = "Craftory_Grizzlecog_Receipt"
 
     const val CRANK_TYPE = "craftory:crank_a_fizz"
     const val BURNER_TYPE = "craftory:boomshroom_burner"
@@ -28,4 +31,6 @@ object CraftoryIds {
     const val CANISTER_PAGE = "Craftory_Canister"
     const val MACHINE_HUD = "Craftory_EnergyHud"
     const val BLOCK_USE_INTERACTION = "Craftory_BlockUse"
+    const val RECEIPT_USE_INTERACTION = "Craftory_ReceiptUse"
+    const val NOTEBOOK_PAGE = "Craftory_Tinkers_Notebook"
 }

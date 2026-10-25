@@ -332,6 +332,16 @@ drains while no player tracks a covered section. Its charge is capped by `anchor
 default; 0 disables Anchors). Vanilla processing benches and item entities also tick when Hytale honors
 the Anchor's section-ticking request.
 
+### 5.8 Crews and the Tinker's Notebook
+
+Crew membership is explicit and opt-in; otherwise each player has a solo crew. Crew knowledge is shared.
+Joining merges the player's solo pages into the destination, while leaving or being kicked copies the
+departing crew's knowledge into a fresh solo crew. The eight first-slice pages cover six machines and
+two Grizzlecog jobs. A Cracked Tinker's Wrench trades an undiscovered machine for Scraps and its Notebook
+page; after that page is known, the wrench packs the machine intact but loses stored energy. The delivery
+receipt records its job page. Finding all eight pages advances the crew once to tier 2, Tinkered; tiers
+do not gate other features yet.
+
 ---
 
 ## 6. Inventions and machines

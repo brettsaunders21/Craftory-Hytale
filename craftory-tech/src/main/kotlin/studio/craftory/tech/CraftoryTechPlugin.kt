@@ -1,10 +1,12 @@
 package studio.craftory.tech
 
 import com.hypixel.hytale.logger.HytaleLogger
+import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
+import com.hypixel.hytale.server.core.universe.Universe
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.tech.command.SummonCommand
@@ -27,13 +29,18 @@ import studio.craftory.tech.machine.JunkPowerHudSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
 import studio.craftory.tech.machine.MachineClockLifecycle
 import studio.craftory.tech.machine.OvenPower
+import studio.craftory.tech.machine.ReceiptUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
+import studio.craftory.tech.notebook.NotebookPageUi
+import studio.craftory.tech.notebook.NotebookPages
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
+    private var crewKnowledgeSubscription: AutoCloseable? = null
+
     @Suppress("LongMethod")
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
@@ -134,15 +141,49 @@ class CraftoryTechPlugin(
             CraftoryIds.CANISTER_PAGE,
             CanisterPage::tryCreate,
         )
+        OpenCustomUIInteraction.registerSimple(
+            this,
+            NotebookPageUi::class.java,
+            CraftoryIds.NOTEBOOK_PAGE,
+        ) { playerRef ->
+            NotebookPageUi(playerRef, CraftoryCore.crewService())
+        }
         getCodecRegistry(Interaction.CODEC)
             .register(
                 CraftoryIds.BLOCK_USE_INTERACTION,
                 CraftoryBlockUseInteraction::class.java,
                 CraftoryBlockUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.RECEIPT_USE_INTERACTION,
+                ReceiptUseInteraction::class.java,
+                ReceiptUseInteraction.CODEC,
             )
+        crewKnowledgeSubscription =
+            CraftoryCore.crewService().onKnowledgeGranted { crew, _ ->
+                val allPagesFound = NotebookPages.pages.all { it.id in crew.knowledge }
+                if (allPagesFound && crew.tier < 2 && CraftoryCore.crewService().setTier(crew.id, 2)) {
+                    Universe
+                        .get()
+                        .getPlayers()
+                        .filter { it.uuid in crew.members }
+                        .forEach { playerRef ->
+                            playerRef.sendMessage(
+                                Message
+                                    .translation("server.craftory.crew.tier-advanced")
+                                    .param("name", crew.name)
+                                    .param("tier", 2),
+                            )
+                        }
+                }
+            }
         CraftoryCore.registerCommandHandler("summon", SummonCommand::execute)
         CraftoryCore.registerCommandHandler("selftest", CraftorySelfTest::execute)
         LOGGER.atInfo().log("Craftory Tech v%s loaded", pluginVersion)
+    }
+
+    override fun shutdown() {
+        crewKnowledgeSubscription?.close()
+        crewKnowledgeSubscription = null
     }
 
     private companion object {

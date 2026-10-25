@@ -14,21 +14,27 @@ import com.hypixel.hytale.server.core.util.TargetUtil
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
+import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
 import studio.craftory.core.energy.EnergyWorld
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Level
 
 class CraftoryCorePlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
     private val config: Config<CraftoryCoreConfig> = withConfig("config", CraftoryCoreConfig.CODEC)
+    private var crewService: CrewService? = null
 
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
         CraftoryCore.registerModule("CraftoryCore", pluginVersion)
+        val crews = CrewService(getDataDirectory().resolve("crews.json"))
+        crewService = crews
+        CraftoryCore.registerCrewService(crews)
         val chunkRegistry = getChunkStoreRegistry()
         EnergyMember.type =
             chunkRegistry.registerComponent(
@@ -45,7 +51,7 @@ class CraftoryCorePlugin(
         EnergyClock.type = chunkRegistry.registerResource(EnergyClock::class.java, ::EnergyClock)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
-        val command = CraftoryCommand(pluginVersion, config)
+        val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
     }
@@ -55,9 +61,24 @@ class CraftoryCorePlugin(
         CraftoryCore.setAnchorMaxChargeMinutes(minutes.coerceAtLeast(0))
     }
 
+    @Suppress("TooGenericExceptionCaught")
+    override fun shutdown() {
+        crewService?.let { crews ->
+            try {
+                crews.close()
+            } catch (exception: Exception) {
+                LOGGER.at(Level.SEVERE).log("Could not flush Craftory crew data: %s", exception.message)
+            } finally {
+                CraftoryCore.unregisterCrewService(crews)
+                crewService = null
+            }
+        }
+    }
+
     private class CraftoryCommand(
         private val pluginVersion: String,
         config: Config<CraftoryCoreConfig>,
+        crews: CrewService,
     ) : AbstractCommand("craftory", "Show Craftory plugin information") {
         init {
             addSubCommand(NetCommand())
@@ -66,6 +87,8 @@ class CraftoryCorePlugin(
             addSubCommand(SelfTestCommand())
             addSubCommand(SummonCommand())
             addSubCommand(ConfigCommand(config))
+            addSubCommand(CraftoryCrewCommand(crews))
+            addSubCommand(CraftoryGrantCommand(crews))
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {

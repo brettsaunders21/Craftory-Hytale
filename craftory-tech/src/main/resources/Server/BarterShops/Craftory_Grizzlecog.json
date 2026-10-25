@@ -84,6 +84,54 @@
         ],
         "Stock": 1
       }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Tinkers_Notebook",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 5
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Grizzlecog_Receipt",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 20
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Tinkers_Wrench",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 15
+          }
+        ],
+        "Stock": 1
+      }
     }
   ]
 }

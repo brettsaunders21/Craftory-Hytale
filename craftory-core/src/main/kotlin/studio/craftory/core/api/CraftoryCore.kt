@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.EnergyMemberType
@@ -27,6 +28,9 @@ object CraftoryCore {
     private val commandHandlers = ConcurrentHashMap<String, (CommandContext) -> CompletableFuture<Void>>()
     private val inspectableComponents =
         ConcurrentHashMap<String, (ComponentAccessor<ChunkStore>, Ref<ChunkStore>) -> Inspectable?>()
+
+    @Volatile
+    private var currentCrewService: CrewService? = null
 
     @Volatile
     private var currentAnchorMaxChargeMinutes = 240
@@ -87,6 +91,17 @@ object CraftoryCore {
         key: String,
         context: CommandContext,
     ): CompletableFuture<Void> = commandHandlers[key]?.invoke(context) ?: CompletableFuture.completedFuture(null)
+
+    fun registerCrewService(service: CrewService) {
+        check(currentCrewService == null) { "Crew service is already registered" }
+        currentCrewService = service
+    }
+
+    fun crewService(): CrewService = checkNotNull(currentCrewService) { "Crew service is unavailable" }
+
+    fun unregisterCrewService(service: CrewService) {
+        if (currentCrewService === service) currentCrewService = null
+    }
 
     fun energyAccess(world: World): EnergyAccess {
         world.debugAssertInTickingThread()

@@ -1,0 +1,19 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Tinkers_Wrench.name",
+    "Description": "server.items.Craftory_Tinkers_Wrench.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Developer",
+  "Interactions": {
+    "Use": {
+      "Interactions": [
+        {
+          "Type": "Craftory_BlockUse"
+        }
+      ]
+    }
+  }
+}

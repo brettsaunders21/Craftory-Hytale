@@ -12,6 +12,7 @@ hytaleTools {
 
 dependencies {
     api(project(":craftory-engine"))
+    testRuntimeOnly("com.hypixel.hytale:Server:0.7.4")
 }
 
 tasks.named<Jar>("jar") {

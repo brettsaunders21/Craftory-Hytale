@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
+import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
 import com.hypixel.hytale.component.Store
@@ -34,8 +35,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
+import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.notebook.NotebookPages
+import java.nio.file.Files
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
@@ -554,6 +559,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         reportInspectable(run, store, CraftorySelfTest.OVEN, "oven")
         reportInspectable(run, store, CraftorySelfTest.GNASHER, "gnasher")
         reportInspectable(run, store, CraftorySelfTest.ANCHOR, "anchor")
+        CraftorySelfTest.testWrench(run, store)
         run.phase = 4
         run.powerLossTick = run.world.tick
     }
@@ -791,7 +797,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     }
 }
 
-@Suppress("TooManyFunctions")
+@Suppress("LargeClass", "TooManyFunctions")
 object CraftorySelfTest {
     internal fun retainTestKeepLoaded(
         run: SelfTestRun.Run,
@@ -1219,6 +1225,155 @@ object CraftorySelfTest {
         return quantity
     }
 
+    @Suppress("LongMethod")
+    internal fun testWrench(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val section = store.getComponent(run.sectionRef, BlockComponentSection.getComponentType()) ?: return
+        val testDirectory = Files.createTempDirectory("craftory-wrench-selftest-")
+        val testFile = testDirectory.resolve("crews.json")
+        val crews = CrewService(testFile)
+        val playerUuid = UUID.randomUUID()
+        val page = NotebookPages.forMachineType(CraftoryIds.BURNER_TYPE) ?: error("burner page is missing")
+        try {
+            clearWrenchDrops(run.world, WRENCH_TAKE_APART, WRENCH_PACK)
+            place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, WRENCH_TAKE_APART, BurnerState.type)
+            val takeApartRef =
+                BlockModule.getBlockEntity(
+                    run.world,
+                    WRENCH_TAKE_APART.x,
+                    WRENCH_TAKE_APART.y,
+                    WRENCH_TAKE_APART.z,
+                ) ?: error("wrench test burner was not placed")
+            val takeApart =
+                MachineActions.useWrench(
+                    run.world,
+                    takeApartRef,
+                    org.joml.Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z),
+                    playerUuid,
+                    null,
+                    crews,
+                    store,
+                )
+            check(
+                run,
+                takeApart is WrenchActionResult.Learned && takeApart.pageGranted && takeApart.scrapsDropped &&
+                    crews.hasKnowledge(playerUuid, page.id),
+                "wrench take-apart grants crew page",
+            )
+            check(
+                run,
+                blockEntityMissing(run.world, WRENCH_TAKE_APART) &&
+                    itemQuantityNear(run.world, WRENCH_TAKE_APART, CraftoryIds.BURNER) == 0,
+                "wrench removes machine without machine drop",
+            )
+            check(
+                run,
+                itemQuantityNear(run.world, WRENCH_TAKE_APART, "Ingredient_Scraps") >= 3,
+                "wrench drops Scraps",
+            )
+
+            place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, WRENCH_PACK, BurnerState.type)
+            val packRef =
+                BlockModule.getBlockEntity(run.world, WRENCH_PACK.x, WRENCH_PACK.y, WRENCH_PACK.z)
+                    ?: error("wrench pack test burner was not placed")
+            val packed =
+                MachineActions.useWrench(
+                    run.world,
+                    packRef,
+                    org.joml.Vector3i(WRENCH_PACK.x, WRENCH_PACK.y, WRENCH_PACK.z),
+                    playerUuid,
+                    null,
+                    crews,
+                    store,
+                )
+            check(
+                run,
+                packed is WrenchActionResult.Packed && packed.itemDropped &&
+                    itemQuantityNear(run.world, WRENCH_PACK, CraftoryIds.BURNER) >= 1 &&
+                    blockEntityMissing(run.world, WRENCH_PACK),
+                "wrench packs known machine intact",
+            )
+        } finally {
+            clearWrenchDrops(run.world, WRENCH_TAKE_APART, WRENCH_PACK)
+            try {
+                crews.close()
+            } finally {
+                Files.deleteIfExists(testFile)
+                Files.deleteIfExists(testDirectory)
+            }
+        }
+        check(run, !Files.exists(testDirectory), "wrench test crew cleanup")
+    }
+
+    private fun blockEntityMissing(
+        world: World,
+        position: TestPosition,
+    ): Boolean = BlockModule.getBlockEntity(world, position.x, position.y, position.z)?.isValid != true
+
+    private fun check(
+        run: SelfTestRun.Run,
+        passed: Boolean,
+        name: String,
+    ) {
+        if (passed) run.passed++ else run.failed++
+        run.context.sendMessage(Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $name"))
+    }
+
+    @Suppress("LoopWithTooManyJumpStatements")
+    private fun itemQuantityNear(
+        world: World,
+        position: TestPosition,
+        itemId: String,
+    ): Int {
+        var quantity = 0
+        world.entityStore.store.forEachChunk(
+            Query.and(ItemComponent.getComponentType(), TransformComponent.getComponentType()),
+            BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, _ ->
+                for (index in 0 until chunk.size()) {
+                    val stack = chunk.getComponent(index, ItemComponent.getComponentType())?.itemStack ?: continue
+                    val point = chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: continue
+                    if (
+                        stack.itemId == itemId &&
+                        kotlin.math.abs(point.x - (position.x + 0.5)) < 2.0 &&
+                        kotlin.math.abs(point.z - (position.z + 0.5)) < 2.0
+                    ) {
+                        quantity += stack.quantity
+                    }
+                }
+            },
+        )
+        return quantity
+    }
+
+    @Suppress("LoopWithTooManyJumpStatements")
+    private fun clearWrenchDrops(
+        world: World,
+        vararg positions: TestPosition,
+    ) {
+        val centers = positions.map { it.x + 0.5 to it.z + 0.5 }
+        world.entityStore.store.forEachChunk(
+            Query.and(ItemComponent.getComponentType(), TransformComponent.getComponentType()),
+            BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, commandBuffer ->
+                for (index in 0 until chunk.size()) {
+                    val itemId =
+                        chunk.getComponent(index, ItemComponent.getComponentType())?.itemStack?.itemId ?: continue
+                    val point =
+                        chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: continue
+                    if (
+                        itemId in setOf("Ingredient_Scraps", CraftoryIds.BURNER) &&
+                        centers.any { (x, z) ->
+                            kotlin.math.abs(point.x - x) < 2.0 && kotlin.math.abs(point.z - z) < 2.0
+                        }
+                    ) {
+                        commandBuffer.removeEntity(chunk.getReferenceTo(index), RemoveReason.REMOVE)
+                    }
+                }
+            },
+        )
+    }
+
     private fun place(
         world: World,
         store: Store<ChunkStore>,
@@ -1338,10 +1493,15 @@ object CraftorySelfTest {
     internal val OVEN_LINK_PIPE = TestPosition(10_034, 149, 10_000)
     internal val GNASHER = TestPosition(10_044, 150, 10_006)
     internal val ANCHOR = TestPosition(10_040, 150, 10_012)
+    private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
+    private val WRENCH_PACK = TestPosition(10_022, 148, 10_004)
 
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
     private fun testPositions(): List<TestPosition> =
-        (listOf(BURNER) + pipePositions() + listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR)).distinct()
+        (
+            listOf(BURNER) + pipePositions() +
+                listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK)
+        ).distinct()
 }
