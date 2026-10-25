@@ -14,6 +14,16 @@ hytaleWorkspace {
     patchline = "release"
 }
 
+gradle.projectsEvaluated {
+    val assetDownloads = subprojects.mapNotNull { it.tasks.findByName("downloadAssetsZip") }
+    subprojects.forEach { project ->
+        val generateAssetsBinary = project.tasks.findByName("generateAssetsBinary") ?: return@forEach
+        assetDownloads
+            .filter { it.project != project }
+            .forEach { downloadTask -> generateAssetsBinary.mustRunAfter(downloadTask) }
+    }
+}
+
 spotless {
     kotlin {
         target("build-logic/src/**/*.kt", "craftory-*/src/**/*.kt")
