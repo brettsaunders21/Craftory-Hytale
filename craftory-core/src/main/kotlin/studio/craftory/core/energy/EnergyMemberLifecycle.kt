@@ -7,12 +7,12 @@ import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.RefSystem
-import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyMember
 
 internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
@@ -24,20 +24,20 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
+        if (reason != AddReason.LOAD && reason != AddReason.SPAWN) return
         val member = commandBuffer.getComponent(ref, EnergyMember.type) ?: return
         val type = CraftoryCore.energyType(member.typeId) ?: return
         val blockState = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val id = BlockPos.pack(position.x, position.y, position.z)
-        val chunks = store.externalData
         val energy = store.getResource(EnergyWorld.type)
-        energy.bind(chunks.world, store)
+        energy.bind(store)
         val neighbours =
-            findNeighbours(store, blockState, position)
+            findNeighbours(store, position)
                 .filter(energy::contains)
                 .toLongArray()
-        energy.addMember(id, type.spec, neighbours, member, blockState)
+        energy.addMember(id, type.spec, neighbours, member, ref)
     }
 
     override fun onEntityRemove(
@@ -52,7 +52,7 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val energy = store.getResource(EnergyWorld.type)
         val id = BlockPos.pack(position.x, position.y, position.z)
-        if (energy.contains(id)) energy.removeMember(id, member, blockState, commandBuffer)
+        if (energy.contains(id)) energy.removeMember(id, member, blockState, reason, commandBuffer)
     }
 
     private companion object {
@@ -69,13 +69,12 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
 
     private fun findNeighbours(
         store: Store<ChunkStore>,
-        blockState: BlockModule.BlockStateInfo,
         position: Vector3i,
     ): LongArray {
         val neighbours = LongArray(FACES.size)
         var count = 0
         FACES.forEach { face ->
-            val id = findNeighbourId(store, blockState, position, face) ?: return@forEach
+            val id = findNeighbourId(store, position, face) ?: return@forEach
             neighbours[count++] = id
         }
         return neighbours.copyOf(count)
@@ -83,17 +82,22 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
 
     private fun findNeighbourId(
         store: Store<ChunkStore>,
-        blockState: BlockModule.BlockStateInfo,
         position: Vector3i,
         face: IntArray,
     ): Long? {
+        val x = position.x + face[0]
+        val y = position.y + face[1]
+        val z = position.z + face[2]
+        val sectionRef =
+            store.externalData.world.chunkStore
+                .getChunkSectionReferenceAtBlock(x, y, z) ?: return null
         val neighbourRef =
             BlockModule.getBlockEntity(
                 store,
-                blockState.sectionRef,
-                position.x + face[0],
-                position.y + face[1],
-                position.z + face[2],
+                sectionRef,
+                x,
+                y,
+                z,
             ) ?: return null
         val neighbour = store.getComponent(neighbourRef, EnergyMember.type) ?: return null
         if (CraftoryCore.energyType(neighbour.typeId) == null) return null
@@ -102,16 +106,5 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         val neighbourPosition = Vector3i()
         if (!neighbourState.fillWorldPos(store, neighbourPosition)) return null
         return BlockPos.pack(neighbourPosition.x, neighbourPosition.y, neighbourPosition.z)
-    }
-}
-
-internal class EnergyWorldTickSystem : TickingSystem<ChunkStore>() {
-    override fun tick(
-        dt: Float,
-        systemIndex: Int,
-        store: Store<ChunkStore>,
-    ) {
-        val chunks = store.externalData
-        store.getResource(EnergyWorld.type).tick(chunks.world, store)
     }
 }

@@ -39,8 +39,7 @@ Craftory Core (rewrite):
 - Capabilities as interfaces (`EnergyInput`, `EnergyOutput`, `EnergyStorage`, fluid equivalents), with limits declared in annotations.
 - Persistent data and volatile data held separately for each block.
 
-Carried forward: per-network solving, tick-rate buckets, capabilities instead of class hierarchies,
-and the core/addon split.
+Carried forward: per-network solving, capabilities instead of class hierarchies, and the core/addon split.
 Dropped: location hash lookups on the hot path, reflection in tick loops, our own thread pools that
 mutate world state, and side-car save files.
 
@@ -61,8 +60,8 @@ mutate world state, and side-car save files.
 ## 4. Module layout
 
 ```
-craftory-engine/   Pure Kotlin, no Hytale dependency. Energy network solver, tick scheduler,
-                   registries and math. Unit tested and benchmarked in isolation.
+craftory-engine/   Pure Kotlin, no Hytale dependency. Generic energy-network solver and math,
+                   unit tested and benchmarked in isolation.
 craftory-core/     Hytale plugin "CraftoryCore". Bridges the engine to Hytale ECS: block
                    components, systems, persistence codecs, UI kit, debug tooling and the public
                    addon API.
@@ -74,19 +73,22 @@ Third-party addons depend on `CraftoryCore` the same way `CraftoryTech` does.
 
 ## 5. Performance design
 
+Block-entity components are the source of truth for gameplay state. The Core energy graph is a derived
+solver/index cache rebuilt from loaded components; solver output is written back to components for
+machines, commands, UI and debugging to read.
+
 1. **Data-oriented networks.** Each energy network keeps its members in dense index-addressed arrays
    (`LongArray` stored/capacity, `IntArray` max in/out, a role bitmask). The per-tick solve is a few linear
-   passes with no allocation, hashing or virtual dispatch. ECS components hold a stable
-   `(networkId, slot)` handle.
+   passes with no allocation, hashing or virtual dispatch. Persisted gameplay state lives in block-entity
+   components; `EnergyGraph` is a derived cache rebuilt as members load.
 2. **Incremental topology.** Placing a block merges networks (union-find). Only breaking a block can split a
    network, and only then do we flood-fill that one network. Placing or breaking never triggers a global rebuild.
 3. **Sleeping networks.** A network with no production and no demand is marked idle and skipped until a
    member changes. A large idle base then costs nearly nothing.
-4. **Tick buckets and staggering.** Each component type declares an interval (e.g. a machine every 4 ticks,
-   solar every 20). Blocks are spread across ticks by a hash of their position so work stays flat instead of spiking.
-5. **World-thread ownership.** All mutation happens on the world's own thread through the ECS. Independent
-   networks can be solved in parallel through the ECS parallel task API. We never run our own thread pools
-   against world state.
+4. **Query-driven systems.** Machine systems query their state, energy member and block-state components.
+   The Core energy clock gates the solver cadence; there are no per-machine maps or custom schedulers.
+5. **World-thread ownership.** All mutation happens on the world's own thread through the ECS. Solver
+   write-back and machine state updates remain serial because they mutate shared graph and component state.
 6. **No reflection on hot paths.** Tick intervals, capabilities and limits are resolved once at registration.
 7. **Measured, not assumed.**
    - JMH benchmarks for the engine solver.
@@ -133,14 +135,14 @@ crystal-and-scrap hybrid tiers, then pure arcane magic. It builds on Hytale Upda
   effect-event bus. Content defines the particles, sounds and animations in data, and the core
   throttles them per player.
 - **Golems on Hytale NPCs.** Tinklings use Hytale's NPC/role system with Craftory job sigils as
-  world markers. Job logic runs on the world thread through the scheduler's tick buckets.
+   world markers. Job logic runs on the world thread through query-based systems.
 
 ## 8. Milestones
 
 0. **Repository & dev environment**
    - Gradle multi-project build, local dev server, debugging and hot swap, CI, lint and tests.
 1. **Engine**
-   - Tick scheduler and graded energy network solver.
+   - Generic graded energy network solver.
    - Transport graph with item/fluid channels.
    - Unit tests and benchmarks.
 2. **Core integration**

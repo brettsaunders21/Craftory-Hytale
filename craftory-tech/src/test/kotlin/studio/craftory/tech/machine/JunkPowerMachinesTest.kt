@@ -4,140 +4,86 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import studio.craftory.core.api.energy.EnergyMember
 
 class JunkPowerMachinesTest {
     @Test
-    fun `crank clamps pulse rate and restores decaying spin`() {
-        val crank = CrankMachine()
-
-        assertTrue(crank.pulse(100))
-        assertFalse(crank.pulse(109))
-        assertTrue(crank.pulse(110))
+    fun `crank pulse rate and spin decay are tick based`() {
+        val crank = CrankState()
+        assertTrue(CrankMachine.pulse(crank, 100))
+        assertFalse(CrankMachine.pulse(crank, 109))
+        assertTrue(CrankMachine.pulse(crank, 110))
         assertEquals(80, crank.spinTicks)
-        assertEquals(CrankMachine.FIZZ_PER_SOLVE_TICK, crank.productionPerSolveTick())
+        assertEquals(CrankMachine.FIZZ_PER_SOLVE_TICK, CrankMachine.productionPerSolveTick(crank))
 
-        val restored = CrankMachine(initialSpinTicks = crank.spinTicks)
-        restored.advanceTo(200)
-        assertEquals(20, restored.productionPerSolveTick())
-        restored.advanceTo(280)
-        assertEquals(0, restored.spinTicks)
-        assertEquals(0, restored.productionPerSolveTick())
-    }
-
-    @Test
-    fun `burner uses data fuel and requires a kick before burning`() {
-        val burner =
-            BurnerMachine(
-                fuelDefinitions =
-                    listOf(
-                        FuelDefinition("mushroom", 200),
-                        FuelDefinition("scraps", 40),
-                    ),
-            )
-
-        assertFalse(burner.kick(0))
-        assertEquals(0, burner.addFuel("unknown"))
-        assertEquals(40, burner.addFuel("scraps"))
-        assertEquals(0, burner.productionPerSolveTick())
-        assertTrue(burner.kick(0))
-        assertFalse(burner.kick(0))
-        assertEquals(BurnerMachine.FIZZ_PER_SOLVE_TICK, burner.productionPerSolveTick())
-
-        burner.advanceTo(10)
-        burner.advanceTo(30)
-        assertEquals(10, burner.burnTicks)
-        assertEquals(40, burner.productionPerSolveTick())
-
-        burner.advanceTo(50)
-        assertEquals(0, burner.burnTicks)
-        assertFalse(burner.isBurning)
-        assertEquals(0, burner.productionPerSolveTick())
-    }
-
-    @Test
-    fun `burner kick consumes a hit only when ignition succeeds`() {
-        val fueled = BurnerMachine(fuelDefinitions = listOf(FuelDefinition("mushroom", 200)))
-        fueled.addFuel("mushroom")
-        assertTrue(fueled.kick(0))
-
-        val unfueled = BurnerMachine(fuelDefinitions = listOf(FuelDefinition("mushroom", 200)))
-        assertFalse(unfueled.kick(0))
-
-        assertFalse(fueled.kick(0))
-    }
-
-    @Test
-    fun `burner fuel can be added while burning`() {
-        val burner = BurnerMachine(fuelDefinitions = listOf(FuelDefinition("mushroom", 200)))
-
-        burner.addFuel("mushroom")
-        burner.kick(0)
-        burner.advanceTo(10)
-        burner.addFuel("mushroom")
-        burner.advanceTo(20)
-
-        assertEquals(380, burner.burnTicks)
-        assertTrue(burner.isBurning)
-    }
-
-    @Test
-    fun `idle crank remains clean while advancing`() {
-        val crank = CrankMachine()
-
-        assertFalse(crank.advanceTo(100))
-        assertFalse(crank.advanceTo(110))
+        CrankMachine.advanceTo(crank, 150)
+        assertEquals(30, crank.spinTicks)
+        CrankMachine.advanceTo(crank, 200)
         assertEquals(0, crank.spinTicks)
+        assertEquals(0, CrankMachine.productionPerSolveTick(crank))
     }
 
     @Test
-    fun `fresh crank spin starts aging at its pulse tick`() {
-        val crank = CrankMachine()
-
-        assertFalse(crank.advanceTo(100))
-        assertTrue(crank.pulse(103))
-        assertTrue(crank.advanceTo(104))
+    fun `idle crank stays clean and fresh spin starts aging at activation`() {
+        val crank = CrankState()
+        assertFalse(CrankMachine.advanceTo(crank, 100))
+        assertFalse(CrankMachine.advanceTo(crank, 110))
+        assertEquals(0, crank.lastAdvancedTick)
+        assertTrue(CrankMachine.pulse(crank, 103))
+        assertTrue(CrankMachine.advanceTo(crank, 104))
         assertEquals(39, crank.spinTicks)
     }
 
     @Test
-    fun `fresh burner fuel starts aging at its kick tick`() {
-        val burner = BurnerMachine(fuelDefinitions = listOf(FuelDefinition("mushroom", 200)))
-        burner.addFuel("mushroom")
+    fun `burner fuel requires a successful kick and expires`() {
+        val burner = BurnerState()
+        assertFalse(BurnerMachine.kick(burner, 0))
+        assertEquals(0, BurnerMachine.addFuel(burner, "unknown"))
+        assertEquals(40, BurnerMachine.addFuel(burner, "Ingredient_Scraps"))
+        assertEquals(0, BurnerMachine.productionPerSolveTick(burner))
+        assertTrue(BurnerMachine.kick(burner, 0))
+        assertFalse(BurnerMachine.kick(burner, 0))
+        assertEquals(BurnerMachine.FIZZ_PER_SOLVE_TICK, BurnerMachine.productionPerSolveTick(burner))
+        BurnerMachine.advanceTo(burner, 30)
+        assertEquals(10, burner.burnTicks)
+        BurnerMachine.advanceTo(burner, 50)
+        assertEquals(0, burner.burnTicks)
+        assertFalse(burner.burning)
+    }
 
-        assertFalse(burner.advanceTo(100))
-        assertTrue(burner.kick(103))
-        assertTrue(burner.advanceTo(104))
+    @Test
+    fun `kick is consumed only for a fueled unlit burner`() {
+        val fueled = BurnerState(burnTicks = 200)
+        assertTrue(BurnerMachine.kick(fueled, 103))
+        assertFalse(BurnerMachine.kick(fueled, 104))
+        assertFalse(BurnerMachine.kick(BurnerState(), 103))
+    }
+
+    @Test
+    fun `fresh burner fuel starts aging at kick tick`() {
+        val burner = BurnerState()
+        BurnerMachine.advanceTo(burner, 100)
+        BurnerMachine.addFuel(burner, "Plant_Crop_Mushroom_Common_Brown")
+        assertTrue(BurnerMachine.kick(burner, 103))
+        assertTrue(BurnerMachine.advanceTo(burner, 104))
         assertEquals(199, burner.burnTicks)
     }
 
     @Test
-    fun `dirty crank saves after the throttle interval and stays clean`() {
-        val crank = CrankMachine(initialSpinTicks = 12)
-        assertFalse(crank.advanceTo(172))
-        assertTrue(crank.advanceTo(184))
+    fun `throttled crank persistence retries until saved`() {
+        val crank = CrankState(spinTicks = 12, lastAdvancedTick = 172)
+        assertTrue(CrankMachine.advanceTo(crank, 184))
         assertEquals(0, crank.spinTicks)
-
-        var lastSavedTick = 172L
-        var unsaved = true
-
-        fun persist(currentTick: Long) {
-            if (!MachineSaveThrottle.shouldPersist(unsaved, currentTick, lastSavedTick, 20, immediate = false)) {
-                return
-            }
-            lastSavedTick = currentTick
-            unsaved = false
-        }
-
-        persist(184)
-        assertTrue(unsaved)
-        assertEquals(172, lastSavedTick)
-        persist(188)
-        assertTrue(unsaved)
-        persist(192)
-        assertFalse(unsaved)
-        assertEquals(192, lastSavedTick)
-        persist(200)
-        assertFalse(unsaved)
-        assertEquals(192, lastSavedTick)
+        val member = EnergyMember(lastSavedTick = 172, unsaved = true)
+        assertFalse(member.shouldPersist(184, 20, immediate = false))
+        assertTrue(member.unsaved)
+        assertFalse(member.shouldPersist(188, 20, immediate = false))
+        assertTrue(member.unsaved)
+        assertTrue(member.shouldPersist(192, 20, immediate = false))
+        member.markSaved(192)
+        assertFalse(member.unsaved)
+        assertEquals(192, member.lastSavedTick)
+        assertFalse(member.shouldPersist(200, 20, immediate = false))
+        assertFalse(member.unsaved)
     }
 }

@@ -104,11 +104,10 @@
           "Stored": 0,
           "StoreRank": -1
         },
-        "Craftory_JunkPowerMachine": {
-          "Machine": "Burner",
-          "SpinTicks": 0,
+        "CraftoryBurner": {
           "BurnTicks": 0,
-          "Burning": false
+          "Burning": false,
+          "LastAdvancedTick": 0
         }
       }
     }

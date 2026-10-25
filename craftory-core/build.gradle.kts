@@ -24,4 +24,5 @@ tasks.named<Jar>("jar") {
     })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+    exclude("studio/craftory/core/api/tick/**", "studio/craftory/engine/tick/**")
 }

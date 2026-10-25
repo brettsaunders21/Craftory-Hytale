@@ -79,12 +79,6 @@
           "TypeId": "craftory:gutterpipe",
           "Stored": 0,
           "StoreRank": -1
-        },
-        "Craftory_JunkPowerMachine": {
-          "Machine": "Pipe",
-          "SpinTicks": 0,
-          "BurnTicks": 0,
-          "Burning": false
         }
       }
     }

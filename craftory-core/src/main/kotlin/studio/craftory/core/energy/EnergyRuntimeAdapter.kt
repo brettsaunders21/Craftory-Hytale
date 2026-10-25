@@ -76,8 +76,9 @@ internal class EnergyRuntimeAdapter {
         amount: Long,
         rank: Int,
     ) {
-        graph.setProduction(id, amount, rank)
         nodes.getValue(id).also {
+            if (it.production == amount && it.productionRank == rank) return
+            graph.setProduction(id, amount, rank)
             it.production = amount
             it.productionRank = rank
         }
@@ -87,8 +88,10 @@ internal class EnergyRuntimeAdapter {
         id: Long,
         amount: Long,
     ) {
+        val node = nodes.getValue(id)
+        if (node.demand == amount) return
         graph.setDemand(id, amount)
-        nodes.getValue(id).demand = amount
+        node.demand = amount
     }
 
     fun tick(sink: EnergyEventSink) {

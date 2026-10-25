@@ -1,58 +1,32 @@
 package studio.craftory.core.energy
 
+import com.hypixel.hytale.component.Ref
+import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.server.core.modules.block.BlockModule
-import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.MemberSpec
-import studio.craftory.engine.tick.TickScheduler
+import kotlin.math.abs
 
 @Suppress("TooManyFunctions")
 internal class EnergyWorld : Resource<ChunkStore> {
-    private data class Entry(
-        val member: EnergyMember,
-        val blockState: BlockModule.BlockStateInfo,
-        val capacity: Long,
-        var savedAmount: Long,
-        var savedRank: Int,
-        var savedTick: Long,
-    )
-
     private val runtime = EnergyRuntimeAdapter()
-    private val scheduler = TickScheduler()
-    private val entries = HashMap<Long, Entry>()
+    private val refsById = HashMap<Long, Ref<ChunkStore>>()
     private val events = EnergyEventBuffer()
-    private var world: World? = null
     private var store: Store<ChunkStore>? = null
-    private var schedulerRegistered = false
     var lastSolveNanos: Long = 0
         private set
 
     override fun clone(): Resource<ChunkStore> = EnergyWorld()
 
-    fun bind(
-        world: World,
-        store: Store<ChunkStore>,
-    ) {
-        world.debugAssertInTickingThread()
-        check(this.world == null || this.world === world) { "EnergyWorld cannot be shared between worlds" }
-        this.world = world
-        this.store = store
-        if (!schedulerRegistered) {
-            scheduler.register(world.name.hashCode().toLong(), SOLVE_INTERVAL_TICKS, ::solve)
-            schedulerRegistered = true
-        }
-    }
-
-    fun tick(
-        world: World,
-        store: Store<ChunkStore>,
-    ) {
-        bind(world, store)
-        scheduler.tick(world.tick)
+    fun bind(currentStore: Store<ChunkStore>) {
+        currentStore.externalData.world.debugAssertInTickingThread()
+        store = currentStore
     }
 
     fun addMember(
@@ -60,91 +34,121 @@ internal class EnergyWorld : Resource<ChunkStore> {
         spec: MemberSpec,
         neighbours: LongArray,
         member: EnergyMember,
-        blockState: BlockModule.BlockStateInfo,
+        ref: Ref<ChunkStore>,
     ) {
-        world?.debugAssertInTickingThread()
-        if (entries.containsKey(id)) return
+        if (refsById.containsKey(id)) return
         runtime.add(id, spec, neighbours, member.stored, member.storeRank)
-        entries[id] =
-            Entry(
-                member,
-                blockState,
-                spec.capacity,
-                member.stored,
-                member.storeRank,
-                world?.tick ?: 0,
-            )
+        refsById[id] = ref
+        member.networkId = runtime.graph.networkOf(id)
     }
+
+    fun contains(id: Long): Boolean = refsById.containsKey(id)
 
     fun removeMember(
         id: Long,
         member: EnergyMember,
         blockState: BlockModule.BlockStateInfo,
+        reason: RemoveReason,
         accessor: com.hypixel.hytale.component.ComponentAccessor<ChunkStore>,
     ) {
-        world?.debugAssertInTickingThread()
+        if (!refsById.containsKey(id)) return
         val saved = runtime.remove(id)
-        member.stored = saved.amount
-        member.storeRank = saved.rank
-        blockState.markNeedsSaving(accessor)
-        entries.remove(id)
+        refsById.remove(id)
+        member.networkId = -1
+        if (reason == RemoveReason.UNLOAD) {
+            member.stored = saved.amount
+            member.storeRank = saved.rank
+            member.persist(blockState, accessor, store?.externalData?.world?.tick ?: 0, 0, immediate = true)
+        }
     }
 
-    fun contains(id: Long): Boolean = runtime.graph.networkOf(id) >= 0
+    fun member(id: Long): EnergyMember? = refsById[id]?.let { ref -> store?.getComponent(ref, EnergyMember.type) }
 
     fun setProduction(
         id: Long,
         amount: Long,
         rank: Int,
-    ) = runtime.setProduction(id, amount, rank)
+    ) {
+        member(id)?.let {
+            it.production = amount
+            it.productionRank = rank
+        }
+    }
 
     fun setDemand(
         id: Long,
         amount: Long,
-    ) = runtime.setDemand(id, amount)
+    ) {
+        member(id)?.demand = amount
+    }
 
-    fun stored(id: Long): Long = runtime.graph.stored(id)
+    fun stored(id: Long): Long = member(id)?.stored ?: 0
 
-    fun delivered(id: Long): Long = runtime.graph.delivered(id)
+    fun delivered(id: Long): Long = member(id)?.delivered ?: 0
 
-    fun deliveredRank(id: Long): Int = runtime.graph.deliveredRank(id)
+    fun deliveredRank(id: Long): Int = member(id)?.deliveredRank ?: -1
 
-    fun networkOf(id: Long): Int = runtime.graph.networkOf(id)
+    fun networkOf(id: Long): Int = member(id)?.networkId ?: -1
 
     fun diagnostics(id: Long): EnergyNetworkDiagnostics? = runtime.diagnostics(id)
 
     val networkCount: Int get() = runtime.graph.networkCount
     val awakeNetworkCount: Int get() = runtime.graph.awakeNetworkCount
 
-    private fun solve(tick: Long) {
-        val currentStore = store ?: return
+    @Suppress("CyclomaticComplexMethod")
+    fun solve(
+        currentStore: Store<ChunkStore>,
+        tick: Long,
+    ) {
+        store = currentStore
         val started = System.nanoTime()
+        refsById.forEach { (id, ref) ->
+            val member = currentStore.getComponent(ref, EnergyMember.type) ?: return@forEach
+            val spec = CraftoryCore.energyType(member.typeId)?.spec ?: return@forEach
+            if ((spec.role and MemberSpec.PRODUCER) != 0) {
+                runtime.setProduction(id, member.production, member.productionRank)
+            }
+            if ((spec.role and MemberSpec.CONSUMER) != 0) runtime.setDemand(id, member.demand)
+        }
         runtime.tick(events)
         lastSolveNanos = System.nanoTime() - started
-        entries.forEach { (id, entry) ->
+        refsById.forEach { (id, ref) ->
+            val member = currentStore.getComponent(ref, EnergyMember.type) ?: return@forEach
             val amount = runtime.graph.stored(id)
             val rank = runtime.graph.storedRank(id)
-            entry.member.stored = amount
-            entry.member.storeRank = rank
-            val threshold = maxOf(1L, entry.capacity / 100)
-            if (
-                tick - entry.savedTick >= SAVE_INTERVAL_TICKS ||
-                kotlin.math.abs(amount - entry.savedAmount) >= threshold ||
-                rank != entry.savedRank
-            ) {
-                entry.blockState.markNeedsSaving(currentStore)
-                entry.savedAmount = amount
-                entry.savedRank = rank
-                entry.savedTick = tick
+            if (member.stored != amount || member.storeRank != rank) {
+                member.stored = amount
+                member.storeRank = rank
+                member.unsaved = true
+            }
+            val delivered = runtime.graph.delivered(id)
+            val deliveredRank = runtime.graph.deliveredRank(id)
+            val networkId = runtime.graph.networkOf(id)
+            if (member.delivered != delivered) member.delivered = delivered
+            if (member.deliveredRank != deliveredRank) member.deliveredRank = deliveredRank
+            if (member.networkId != networkId) member.networkId = networkId
+            val spec = CraftoryCore.energyType(member.typeId)?.spec
+            val threshold = maxOf(1L, (spec?.capacity ?: 0L) / 100)
+            val significant =
+                abs(amount - member.lastSavedStored) >= threshold || rank != member.lastSavedStoreRank
+            val intervalElapsed = tick - member.lastSavedTick >= SAVE_INTERVAL_TICKS
+            if (member.unsaved) {
+                val blockState =
+                    currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return@forEach
+                member.persist(
+                    blockState,
+                    currentStore,
+                    tick,
+                    SAVE_INTERVAL_TICKS,
+                    immediate = significant || intervalElapsed,
+                )
             }
         }
         events.drain()
     }
 
     companion object {
-        const val SOLVE_INTERVAL_TICKS = 4
         private const val SAVE_INTERVAL_TICKS = 100L
-
         lateinit var type: ResourceType<ChunkStore, EnergyWorld>
     }
 }

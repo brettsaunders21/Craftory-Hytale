@@ -11,6 +11,7 @@ object CraftoryIds {
     const val BURNER_TYPE = "craftory:boomshroom_burner"
     const val CANISTER_TYPE = "craftory:fizz_canister"
     const val PIPE_TYPE = "craftory:gutterpipe"
-    const val MACHINE_COMPONENT = "Craftory_JunkPowerMachine"
+    const val CRANK_COMPONENT = "CraftoryCrank"
+    const val BURNER_COMPONENT = "CraftoryBurner"
     const val BLOCK_USE_INTERACTION = "Craftory_BlockUse"
 }

@@ -7,12 +7,15 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.tech.command.SummonCommand
+import studio.craftory.tech.machine.BurnerState
+import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CraftoryBlockUseInteraction
+import studio.craftory.tech.machine.CraftorySelfTest
+import studio.craftory.tech.machine.CrankState
+import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
-import studio.craftory.tech.machine.JunkPowerLifecycle
-import studio.craftory.tech.machine.JunkPowerState
-import studio.craftory.tech.machine.JunkPowerTickSystem
-import studio.craftory.tech.machine.JunkPowerWorld
+import studio.craftory.tech.machine.SelfTestRun
+import studio.craftory.tech.machine.SelfTestSystem
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
@@ -37,15 +40,28 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.LINK, 0, 0, 0, 0, 1, lossPerMillion = 5_000),
         )
         val chunkRegistry = getChunkStoreRegistry()
-        JunkPowerState.type =
+        CrankState.type =
             chunkRegistry.registerComponent(
-                JunkPowerState::class.java,
-                CraftoryIds.MACHINE_COMPONENT,
-                JunkPowerState.CODEC,
+                CrankState::class.java,
+                CraftoryIds.CRANK_COMPONENT,
+                CrankState.CODEC,
             )
-        JunkPowerWorld.type = chunkRegistry.registerResource(JunkPowerWorld::class.java, ::JunkPowerWorld)
-        chunkRegistry.registerSystem(JunkPowerLifecycle())
-        chunkRegistry.registerSystem(JunkPowerTickSystem())
+        BurnerState.type =
+            chunkRegistry.registerComponent(
+                BurnerState::class.java,
+                CraftoryIds.BURNER_COMPONENT,
+                BurnerState.CODEC,
+            )
+        CraftoryCore.registerInspectableComponent(CraftoryIds.CRANK_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, CrankState.type)
+        }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.BURNER_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, BurnerState.type)
+        }
+        SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
+        chunkRegistry.registerSystem(CrankSystem())
+        chunkRegistry.registerSystem(BurnerSystem())
+        chunkRegistry.registerSystem(SelfTestSystem())
         getEntityStoreRegistry().registerSystem(JunkPowerKickSystem())
         getCodecRegistry(Interaction.CODEC)
             .register(
@@ -54,6 +70,7 @@ class CraftoryTechPlugin(
                 CraftoryBlockUseInteraction.CODEC,
             )
         CraftoryCore.registerCommandHandler("summon", SummonCommand::execute)
+        CraftoryCore.registerCommandHandler("selftest", CraftorySelfTest::execute)
         LOGGER.atInfo().log("Craftory Tech v%s loaded", pluginVersion)
     }
 

@@ -72,12 +72,6 @@
           "TypeId": "craftory:fizz_canister",
           "Stored": 0,
           "StoreRank": -1
-        },
-        "Craftory_JunkPowerMachine": {
-          "Machine": "Canister",
-          "SpinTicks": 0,
-          "BurnTicks": 0,
-          "Burning": false
         }
       }
     }
