@@ -41,6 +41,8 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
+import studio.craftory.tech.machine.TransportSelfTestRun
+import studio.craftory.tech.machine.TransportSelfTestSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
@@ -142,6 +144,8 @@ class CraftoryTechPlugin(
             accessor.getComponent(ref, AnchorState.type)
         }
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
+        TransportSelfTestRun.type =
+            chunkRegistry.registerResource(TransportSelfTestRun::class.java, ::TransportSelfTestRun)
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -152,6 +156,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(SnatcherClawSystem())
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
+        chunkRegistry.registerSystem(TransportSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         EnergyHudState.type =
             entityRegistry.registerComponent(

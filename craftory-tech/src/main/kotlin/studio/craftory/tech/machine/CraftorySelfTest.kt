@@ -620,6 +620,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
                 reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
                 store.getResource(SelfTestRun.type).active = null
+                TransportSelfTest.start(run.context, run.world)
             }
             return
         }

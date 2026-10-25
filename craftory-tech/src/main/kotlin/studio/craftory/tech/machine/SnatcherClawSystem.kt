@@ -13,6 +13,7 @@ import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem
 import com.hypixel.hytale.protocol.SoundCategory
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock
@@ -30,6 +31,10 @@ import studio.craftory.core.api.transport.ItemTransport
 import studio.craftory.tech.CraftoryIds
 
 internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
+    private val position = Vector3i()
+    private val sourcePosition = Vector3i()
+    private val targetPosition = Vector3i()
+
     override fun getQuery(): Query<ChunkStore> =
         Query.and(
             SnatcherClawState.type,
@@ -61,9 +66,8 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
         val completedSolveTick = energy.lastSolveTick()
         if (!CraftoryCore.isAreaActive(store, blockState)) {
             state.lastFizzSolveTick = completedSolveTick
-            val blockPosition = Vector3i()
-            if (blockState.fillWorldPos(commandBuffer, blockPosition)) {
-                energy.setDemand(BlockPos.pack(blockPosition.x, blockPosition.y, blockPosition.z), 0)
+            if (blockState.fillWorldPos(commandBuffer, position)) {
+                energy.setDemand(BlockPos.pack(position.x, position.y, position.z), 0)
             }
             return
         }
@@ -85,7 +89,6 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
             state.lastFizzSolveTick = completedSolveTick
         }
 
-        val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val packedPosition = BlockPos.pack(position.x, position.y, position.z)
         val demand = (SnatcherClawState.FIZZ_PER_ITEM - state.fizzBuffer).coerceAtLeast(0)
@@ -99,17 +102,17 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
             return
         }
 
-        val direction = frontDirection(blockState, commandBuffer) ?: return
-        val sourcePosition = Vector3i(position.x + direction.x(), position.y, position.z + direction.z())
+        val direction = snatcherClawFrontDirection(blockState, commandBuffer) ?: return
+        sourcePosition.set(position.x + direction.x(), position.y, position.z + direction.z())
         val sourceRef =
             BlockModule.getBlockEntity(world, sourcePosition.x, sourcePosition.y, sourcePosition.z) ?: return
         val sourceStore = world.chunkStore.store
         val sourceContainer =
-            sourceStore.getComponent(sourceRef, ItemContainerBlock.getComponentType())?.itemContainer
+            sourceStore.getComponent(sourceRef, ItemContainerBlock.getComponentType())?.getItemContainer()
                 ?: sourceStore.getComponent(sourceRef, ProcessingBenchBlock.getComponentType())?.outputContainer
                 ?: return
 
-        val target = findTargetPipe(world, position, direction) ?: return
+        if (!findTargetPipe(world, position, direction, targetPosition)) return
         val transport = ItemTransport.of(world)
         var slot = 0.toShort()
         while (slot < sourceContainer.capacity) {
@@ -125,22 +128,27 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
                 slot++
                 continue
             }
-            if (
-                transport.insert(
-                    target.x,
-                    target.y,
-                    target.z,
-                    item.itemId,
-                    1,
-                    studio.craftory.core.api.transport.TransportColour
-                        .fromValue(state.filterColour),
-                    sourcePosition.x,
-                    sourcePosition.y,
-                    sourcePosition.z,
-                )
-            ) {
-                val transaction = sourceContainer.removeItemStackFromSlot(slot, 1, true, false)
-                if (transaction.succeeded()) {
+            if (!transport.canInsert(targetPosition.x, targetPosition.y, targetPosition.z)) {
+                slot++
+                continue
+            }
+            val removal = sourceContainer.removeItemStackFromSlot(slot, 1, true, false)
+            if (removal.succeeded()) {
+                val removedItem = removal.output ?: item.withQuantity(1) ?: ItemStack(item.itemId, 1)
+                val inserted =
+                    transport.insert(
+                        targetPosition.x,
+                        targetPosition.y,
+                        targetPosition.z,
+                        removedItem.itemId,
+                        1,
+                        studio.craftory.core.api.transport.TransportColour
+                            .fromValue(state.filterColour),
+                        sourcePosition.x,
+                        sourcePosition.y,
+                        sourcePosition.z,
+                    )
+                if (inserted) {
                     state.fizzBuffer -= SnatcherClawState.FIZZ_PER_ITEM
                     state.lastExtractTick = tick
                     changed = true
@@ -154,7 +162,17 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
                         position.z,
                         false,
                     )
-                    SoundUtil.playSoundEvent2dToWorld(world, "SFX_GoblinLab_Broken_Device", SoundCategory.SFX)
+                    val soundIndex = SoundEvent.getAssetMap().getIndex(CLAW_SOUND_EVENT)
+                    SoundUtil.playSoundEvent3d(
+                        soundIndex,
+                        SoundCategory.SFX,
+                        position.x + 0.5,
+                        position.y + 0.5,
+                        position.z + 0.5,
+                        world.entityStore.store,
+                    )
+                } else {
+                    sourceContainer.setItemStackForSlot(slot, removal.slotBefore ?: item)
                 }
             }
             break
@@ -162,36 +180,62 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
         if (changed) blockState.markNeedsSaving(commandBuffer)
     }
 
-    private fun frontDirection(
-        blockState: BlockModule.BlockStateInfo,
-        accessor: com.hypixel.hytale.component.ComponentAccessor<ChunkStore>,
-    ): org.joml.Vector3ic? {
-        val section = accessor.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return null
-        return section
-            .getRotation(blockState.index)
-            .yaw
-            .axisDirection
-    }
-
     private fun findTargetPipe(
         world: com.hypixel.hytale.server.core.universe.world.World,
         position: Vector3i,
         front: Vector3ic,
-    ): Vector3i? {
-        val candidates =
-            arrayOf(
-                Vector3i(position.x - front.x(), position.y, position.z - front.z()),
-                Vector3i(position.x + 1, position.y, position.z),
-                Vector3i(position.x - 1, position.y, position.z),
-                Vector3i(position.x, position.y + 1, position.z),
-                Vector3i(position.x, position.y - 1, position.z),
-                Vector3i(position.x, position.y, position.z + 1),
-                Vector3i(position.x, position.y, position.z - 1),
-            )
+        target: Vector3i,
+    ): Boolean {
         val transport = ItemTransport.of(world)
-        for (candidate in candidates) {
-            if (transport.isPipe(candidate.x, candidate.y, candidate.z)) return candidate
+        var x = position.x - front.x()
+        var y = position.y
+        var z = position.z - front.z()
+        if (transport.isPipe(x, y, z)) {
+            target.set(x, y, z)
+            return true
         }
-        return null
+        if (transport.isPipe(position.x + 1, position.y, position.z)) {
+            target.set(position.x + 1, position.y, position.z)
+            return true
+        }
+        if (transport.isPipe(position.x - 1, position.y, position.z)) {
+            target.set(position.x - 1, position.y, position.z)
+            return true
+        }
+        if (transport.isPipe(position.x, position.y + 1, position.z)) {
+            target.set(position.x, position.y + 1, position.z)
+            return true
+        }
+        if (transport.isPipe(position.x, position.y - 1, position.z)) {
+            target.set(position.x, position.y - 1, position.z)
+            return true
+        }
+        x = position.x
+        y = position.y
+        z = position.z + 1
+        if (transport.isPipe(x, y, z)) {
+            target.set(x, y, z)
+            return true
+        }
+        z = position.z - 1
+        if (transport.isPipe(x, y, z)) {
+            target.set(x, y, z)
+            return true
+        }
+        return false
     }
+
+    companion object {
+        private const val CLAW_SOUND_EVENT = "SFX_GoblinLab_Broken_Device"
+    }
+}
+
+internal fun snatcherClawFrontDirection(
+    blockState: BlockModule.BlockStateInfo,
+    accessor: com.hypixel.hytale.component.ComponentAccessor<ChunkStore>,
+): Vector3ic? {
+    val section = accessor.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return null
+    val blockType = BlockType.fromString(CraftoryIds.SNATCHER_CLAW) ?: return null
+    val yaw = section.getRotation(blockState.index).yaw.add(blockType.rotationYawPlacementOffset)
+    return yaw.axisDirection
 }
