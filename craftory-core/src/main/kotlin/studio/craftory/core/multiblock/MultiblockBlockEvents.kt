@@ -43,7 +43,7 @@ internal class MultiblockBreakSystem :
     }
 }
 
-/** The world changes after the event, so the one affected controller is re-checked on the next world task. */
+/** The world changes after the event, so the affected controllers are re-checked on the next world task. */
 private fun recheckFootprint(
     store: Store<EntityStore>,
     target: Vector3ic,
@@ -51,10 +51,11 @@ private fun recheckFootprint(
     val world = store.externalData.world
     val position = BlockPos(target.x(), target.y(), target.z())
     val chunks = world.chunkStore.store
-    if (chunks.getResource(MultiblockIndex.type).controllerFor(position.pack()) == null) return
+    if (chunks.getResource(MultiblockIndex.type).controllersFor(position.pack()).isEmpty()) return
     world.execute {
         val store = world.chunkStore.store
-        val controller = CraftoryCore.multiblocks().controllerAt(store, position) ?: return@execute
-        CraftoryCore.multiblocks().recheck(store, controller)
+        CraftoryCore.multiblocks().controllersAt(store, position).forEach {
+            CraftoryCore.multiblocks().recheck(store, it)
+        }
     }
 }

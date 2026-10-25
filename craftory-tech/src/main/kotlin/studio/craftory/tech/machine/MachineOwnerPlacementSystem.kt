@@ -13,6 +13,8 @@ import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3i
+import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.multiblock.MultiblockState
 import studio.craftory.tech.CraftoryIds
 import java.util.UUID
 
@@ -77,4 +79,8 @@ internal fun assignMachineOwner(
     if (owner.placerUuid != null) return
     owner.placerUuid = ownerUuid
     blockState.markNeedsSaving(chunkStore)
+    val controller = chunkStore.getComponent(ref, MultiblockController.type) ?: return
+    if (controller.state == MultiblockState.FORMED || controller.state == MultiblockState.DAMAGED) {
+        JunkHeartKnowledge.onFormed(chunkStore, ref, controller)
+    }
 }

@@ -4,9 +4,9 @@ import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 
-/** Derived per-world cache: footprint position to controller position. Rebuilt from controllers on load. */
+/** Derived per-world cache: footprint position to controller positions. Rebuilt from controllers on load. */
 internal class MultiblockIndex : Resource<ChunkStore> {
-    private val controllerByPart = HashMap<Long, Long>()
+    private val controllersByPart = HashMap<Long, LongArray>()
     private val partsByController = HashMap<Long, LongArray>()
 
     override fun clone(): Resource<ChunkStore> = MultiblockIndex()
@@ -17,20 +17,26 @@ internal class MultiblockIndex : Resource<ChunkStore> {
     ) {
         remove(controller)
         partsByController[controller] = parts
-        parts.forEach { controllerByPart[it] = controller }
+        parts.forEach { part ->
+            val current = controllersByPart[part]
+            controllersByPart[part] = if (current == null) longArrayOf(controller) else current + controller
+        }
     }
 
     fun remove(controller: Long) {
         partsByController.remove(controller)?.forEach { part ->
-            if (controllerByPart[part] == controller) controllerByPart.remove(part)
+            val rest = controllersByPart[part]?.filter { it != controller }
+            if (rest.isNullOrEmpty()) controllersByPart.remove(part) else controllersByPart[part] = rest.toLongArray()
         }
     }
 
-    fun controllerFor(position: Long): Long? = controllerByPart[position]
+    fun controllersFor(position: Long): LongArray = controllersByPart[position] ?: EMPTY
 
     fun controllerCount(): Int = partsByController.size
 
     companion object {
+        private val EMPTY = LongArray(0)
+
         lateinit var type: ResourceType<ChunkStore, MultiblockIndex>
     }
 }

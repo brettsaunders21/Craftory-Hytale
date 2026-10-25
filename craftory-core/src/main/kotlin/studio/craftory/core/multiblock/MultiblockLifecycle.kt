@@ -46,6 +46,8 @@ internal class MultiblockLifecycle : RefSystem<ChunkStore>() {
         store.getResource(MultiblockIndex.type).add(controllerPos.pack(), parts)
         val world = store.externalData.world
         controller.readySinceTick = world.tick
+        controller.nextValidationTick =
+            world.tick + Math.floorMod(controllerPos.pack(), MultiblockValidationSystem.INTERVAL_TICKS)
         world.execute {
             if (ref.isValid) CraftoryCore.multiblocks().recheck(world.chunkStore.store, ref)
         }

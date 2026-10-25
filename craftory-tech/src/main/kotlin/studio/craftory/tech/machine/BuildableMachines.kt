@@ -9,8 +9,10 @@ import com.hypixel.hytale.component.system.EntityEventSystem
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.event.events.ecs.CraftRecipeEvent
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.multiblock.MultiblockController
@@ -18,6 +20,7 @@ import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.notebook.NotebookPage
 import studio.craftory.tech.notebook.NotebookPages
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 internal object BuildableMachines {
     private val machineTypeByItem =
@@ -71,9 +74,28 @@ internal class BuildableMachineCraftGate :
 }
 
 internal object JunkHeartKnowledge {
-    /** Crew service the grant goes to; the selftest swaps in a throwaway one. */
-    @Volatile
-    var crews: () -> CrewService = CraftoryCore::crewService
+    /** Selftest hearts (keyed by world and controller position) grant into a throwaway crew service. */
+    private val testCrews = ConcurrentHashMap<String, CrewService>()
+
+    fun redirectForTest(
+        world: World,
+        position: BlockPos,
+        crews: CrewService,
+    ) {
+        testCrews[key(world, position)] = crews
+    }
+
+    fun clearTestRedirect(
+        world: World,
+        position: BlockPos,
+    ) {
+        testCrews.remove(key(world, position))
+    }
+
+    private fun key(
+        world: World,
+        position: BlockPos,
+    ) = "${world.name}@${position.pack()}"
 
     fun onFormed(
         store: Store<ChunkStore>,
@@ -82,6 +104,8 @@ internal object JunkHeartKnowledge {
     ) {
         if (controller.templateId != CraftoryIds.JUNK_HEART_TEMPLATE) return
         val owner = store.getComponent(controllerRef, MachineOwner.type)?.placerUuid ?: return
-        crews().grantKnowledge(owner, CraftoryIds.JUNK_HEART_KNOWLEDGE)
+        val position = CraftoryCore.multiblocks().controllerPosition(store, controllerRef)
+        val crews = position?.let { testCrews[key(store.externalData.world, it)] } ?: CraftoryCore.crewService()
+        crews.grantKnowledge(owner, CraftoryIds.JUNK_HEART_KNOWLEDGE)
     }
 }

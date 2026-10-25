@@ -42,6 +42,9 @@ class MultiblockController(
     @Transient
     var readySinceTick: Long = 0L
 
+    @Transient
+    var nextValidationTick: Long = 0L
+
     val isFormed: Boolean get() = state == MultiblockState.FORMED
 
     override fun clone(): Component<ChunkStore> =

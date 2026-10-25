@@ -1431,10 +1431,9 @@ object CraftorySelfTest {
         val testDirectory = Files.createTempDirectory("craftory-heart-selftest-")
         val testFile = testDirectory.resolve("crews.json")
         val crews = CrewService(testFile)
-        val previousCrews = JunkHeartKnowledge.crews
-        JunkHeartKnowledge.crews = { crews }
         val playerUuid = UUID.randomUUID()
         val position = org.joml.Vector3i(HEART.x, HEART.y, HEART.z)
+        JunkHeartKnowledge.redirectForTest(run.world, BlockPos(HEART.x, HEART.y, HEART.z), crews)
         try {
             clear(run.world, run.sectionRef, heartPositions())
             place(run.world, store, run.sectionRef, section, CraftoryIds.JUNK_HEART, HEART, JunkHeartState.type)
@@ -1569,7 +1568,7 @@ object CraftorySelfTest {
                     fuelItemId = ""
                 }
             clear(run.world, run.sectionRef, heartPositions())
-            JunkHeartKnowledge.crews = previousCrews
+            JunkHeartKnowledge.clearTestRedirect(run.world, BlockPos(HEART.x, HEART.y, HEART.z))
             try {
                 crews.close()
             } finally {

@@ -87,11 +87,18 @@ class MultiblockRegistry internal constructor() {
     fun controllerAt(
         store: Store<ChunkStore>,
         position: BlockPos,
-    ): Ref<ChunkStore>? {
-        val controller = store.getResource(MultiblockIndex.type).controllerFor(position.pack()) ?: return null
+    ): Ref<ChunkStore>? = controllersAt(store, position).firstOrNull()
+
+    /** Every loaded controller whose footprint covers [position]; frames may overlap. */
+    fun controllersAt(
+        store: Store<ChunkStore>,
+        position: BlockPos,
+    ): List<Ref<ChunkStore>> {
         val world = store.externalData.world
-        val at = BlockPos.unpack(controller)
-        return BlockModule.getBlockEntity(world, at.x, at.y, at.z)
+        return store.getResource(MultiblockIndex.type).controllersFor(position.pack()).toList().mapNotNull { packed ->
+            val at = BlockPos.unpack(packed)
+            BlockModule.getBlockEntity(world, at.x, at.y, at.z)
+        }
     }
 
     /**

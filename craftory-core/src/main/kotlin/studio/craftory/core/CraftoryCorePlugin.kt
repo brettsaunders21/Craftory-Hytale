@@ -25,6 +25,7 @@ import studio.craftory.core.multiblock.MultiblockBreakSystem
 import studio.craftory.core.multiblock.MultiblockIndex
 import studio.craftory.core.multiblock.MultiblockLifecycle
 import studio.craftory.core.multiblock.MultiblockPlaceSystem
+import studio.craftory.core.multiblock.MultiblockValidationSystem
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Level
 
@@ -63,6 +64,7 @@ class CraftoryCorePlugin(
         MultiblockIndex.type = chunkRegistry.registerResource(MultiblockIndex::class.java, ::MultiblockIndex)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(MultiblockLifecycle())
+        chunkRegistry.registerSystem(MultiblockValidationSystem())
         getEntityStoreRegistry().registerSystem(MultiblockPlaceSystem())
         getEntityStoreRegistry().registerSystem(MultiblockBreakSystem())
         chunkRegistry.registerSystem(EnergySolveSystem())
