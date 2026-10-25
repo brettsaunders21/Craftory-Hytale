@@ -15,7 +15,7 @@
         "Craftory:CraftoryCore": "*"
     },
     "OptionalDependencies": {
-
+        
     },
     "DisabledByDefault": false,
     "Main": "studio.craftory.tech.CraftoryTechPlugin",

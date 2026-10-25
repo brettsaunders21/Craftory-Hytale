@@ -14,7 +14,7 @@
         "Hytale:AssetModule": "*"
     },
     "OptionalDependencies": {
-
+        
     },
     "DisabledByDefault": false,
     "Main": "studio.craftory.core.CraftoryCorePlugin",

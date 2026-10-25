@@ -15,3 +15,7 @@ max_line_length = off
 
 [*.yml]
 indent_size = 2
+
+[**/src/main/resources/manifest.json]
+insert_final_newline = false
+trim_trailing_whitespace = false
