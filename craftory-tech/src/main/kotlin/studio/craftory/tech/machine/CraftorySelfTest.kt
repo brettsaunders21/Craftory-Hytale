@@ -1248,6 +1248,23 @@ object CraftorySelfTest {
                 ) ?: error("wrench test burner was not placed")
             val machineOwner = store.getComponent(takeApartRef, MachineOwner.type) ?: error("machine owner is missing")
             check(run, machineOwner.placerUuid == null, "programmatic machine placement is unowned")
+            val unowned =
+                MachineActions.useWrench(
+                    run.world,
+                    takeApartRef,
+                    org.joml.Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z),
+                    playerUuid,
+                    null,
+                    crews,
+                    store,
+                )
+            check(
+                run,
+                unowned == WrenchActionResult.ForeignCrew &&
+                    !blockEntityMissing(run.world, WRENCH_TAKE_APART) &&
+                    itemQuantityNear(run.world, WRENCH_TAKE_APART, "Ingredient_Scraps") == 0,
+                "wrench refuses an unowned machine without permission",
+            )
             machineOwner.placerUuid = UUID.randomUUID()
             val foreign =
                 MachineActions.useWrench(
@@ -1318,6 +1335,7 @@ object CraftorySelfTest {
                     null,
                     crews,
                     store,
+                    bypassOwnership = true,
                 )
             check(
                 run,

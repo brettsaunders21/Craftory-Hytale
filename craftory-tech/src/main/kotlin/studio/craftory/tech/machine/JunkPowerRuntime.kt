@@ -673,7 +673,16 @@ internal object MachineActions {
         playerRef: PlayerRef,
         store: Store<ChunkStore>,
     ): WrenchActionResult =
-        useWrench(world, blockRef, position, playerRef.uuid, playerRef, CraftoryCore.crewService(), store)
+        useWrench(
+            world,
+            blockRef,
+            position,
+            playerRef.uuid,
+            playerRef,
+            CraftoryCore.crewService(),
+            store,
+            bypassOwnership = false,
+        )
 
     fun useWrench(
         world: World,
@@ -683,12 +692,15 @@ internal object MachineActions {
         playerRef: PlayerRef?,
         crews: CrewService,
         store: Store<ChunkStore>,
+        bypassOwnership: Boolean = false,
     ): WrenchActionResult {
         val member = store.getComponent(blockRef, EnergyMember.type) ?: return WrenchActionResult.NotMachine
         val page = NotebookPages.forMachineType(member.typeId) ?: return WrenchActionResult.NotMachine
         val itemId = machineItemId(member.typeId) ?: return WrenchActionResult.NotMachine
         val ownerUuid = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
-        if (!mayUseWrench(ownerUuid, playerUuid, playerRef, crews)) return WrenchActionResult.ForeignCrew
+        if (!bypassOwnership && !mayUseWrench(ownerUuid, playerUuid, playerRef, crews)) {
+            return WrenchActionResult.ForeignCrew
+        }
         val blockState =
             store.getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType())
                 ?: return WrenchActionResult.NotMachine
@@ -720,7 +732,10 @@ internal object MachineActions {
         playerRef: PlayerRef?,
         crews: CrewService,
     ): Boolean {
-        if (ownerUuid == null || ownerUuid == playerUuid) return true
+        if (ownerUuid == playerUuid) return true
+        if (ownerUuid == null) {
+            return playerRef?.hasPermission("hytale.command.craftory.wrench.any") == true
+        }
         if (playerRef?.hasPermission("hytale.command.craftory.wrench.any") == true) return true
         return ownerUuid in crews.crewOf(playerUuid).members
     }
