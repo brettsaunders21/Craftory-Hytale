@@ -121,6 +121,12 @@ while real block removal still splits routes and triggers mid-ride ejection. Aft
 never-loaded chunks are not indexed until loaded. Energy caches remain loaded-member-only so
 debits never target unloaded storage components. Ride clones share lease state and lifetime flags,
 including pending load callbacks, so cleanup releases each lease once.
+On section LOAD/SPAWN or NonTicking removal, a deferred world-thread reconciliation checks retained nodes against both
+live block entities and serialized block holders after vanilla block registration has finished.
+Missing TubeNodes are removed from that section's index without scanning the world.
+Pending launch activation returns a warming-up result and resumes via `world.execute` when the
+section future completes. Boarding then rechecks rider, permissions, topology, ticking state and
+energy before spawning and debiting; failed activation never consumes energy.
 
 The primary driver is the official `MountedComponent(capsuleRef, Vector3f(), MountController.Minecart)`
 with a `MountedByComponent` passenger list. Capsules copy vanilla minecart spawn's model, persistent-model

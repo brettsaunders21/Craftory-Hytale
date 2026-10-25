@@ -4,6 +4,8 @@ import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
+import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
@@ -13,7 +15,7 @@ import studio.craftory.core.api.transport.HurlArc
 import studio.craftory.core.api.transport.HurlPoint
 import java.util.UUID
 
-enum class HurlStartFailure { NO_ROUTE, ALREADY_RIDING, INSUFFICIENT_ENERGY, SPAWN_FAILED, FORBIDDEN }
+enum class HurlStartFailure { NO_ROUTE, ALREADY_RIDING, INSUFFICIENT_ENERGY, SPAWN_FAILED, FORBIDDEN, PENDING }
 
 data class HurlStartResult(
     val capsule: Ref<EntityStore>? = null,
@@ -29,6 +31,7 @@ internal object HurlRides {
         to: Long,
         rider: Ref<EntityStore>? = null,
         riderUuid: UUID? = null,
+        completed: ((HurlStartResult) -> Unit)? = null,
     ): HurlStartResult {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
@@ -59,7 +62,15 @@ internal object HurlRides {
                 it.speed = config.speed
             }
         route.positionAt(0.0, ride.output)
-        return HurlBoarding.spawn(world, ride) { energy.drawStored(from, cost, rank) }
+        return HurlBoarding.spawn(world, ride, resume = { ready ->
+            val result =
+                if (ready) {
+                    start(world, from, to, rider, identity, completed)
+                } else {
+                    HurlStartResult(failure = HurlStartFailure.SPAWN_FAILED)
+                }
+            completePending(world, rider, result, completed)
+        }) { energy.drawStored(from, cost, rank) }
     }
 
     fun startArc(
@@ -68,6 +79,7 @@ internal object HurlRides {
         landing: HurlPoint,
         rider: Ref<EntityStore>? = null,
         riderUuid: UUID? = null,
+        completed: ((HurlStartResult) -> Unit)? = null,
     ): HurlStartResult {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
@@ -83,7 +95,32 @@ internal object HurlRides {
                 it.riderUuid = riderUuid
                 trajectory.positionAt(0.0, it.output)
             }
-        return HurlBoarding.spawn(world, ride)
+        return HurlBoarding.spawn(world, ride, resume = { ready ->
+            val result =
+                if (ready) {
+                    startArc(world, launch, landing, rider, riderUuid, completed)
+                } else {
+                    HurlStartResult(failure = HurlStartFailure.SPAWN_FAILED)
+                }
+            completePending(world, rider, result, completed)
+        })
+    }
+
+    private fun completePending(
+        world: World,
+        rider: Ref<EntityStore>?,
+        result: HurlStartResult,
+        completed: ((HurlStartResult) -> Unit)?,
+    ) {
+        if (result.failure == HurlStartFailure.PENDING) return
+        if (rider != null && rider.isValid) {
+            result.failure?.let {
+                world.entityStore.store
+                    .getComponent(rider, PlayerRef.getComponentType())
+                    ?.sendMessage(Message.translation(it.messageKey()))
+            }
+        }
+        completed?.invoke(result)
     }
 
     fun advance(

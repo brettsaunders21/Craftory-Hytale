@@ -3,6 +3,7 @@ package studio.craftory.tech.transport
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
+import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
@@ -11,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
 import studio.craftory.core.api.BlockPos
+import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 internal object HurlBoarding {
@@ -18,12 +20,22 @@ internal object HurlBoarding {
     fun spawn(
         world: World,
         ride: HurlRide,
+        resume: ((Boolean) -> Unit)? = null,
         pay: () -> Boolean = { true },
     ): HurlStartResult {
         val store = world.entityStore.store
         var capsule: Ref<EntityStore>? = null
         try {
-            if (!activateLaunch(world, ride)) return failed(world, ride, capsule, HurlStartFailure.SPAWN_FAILED)
+            val section = activateLaunch(world, ride)
+            if (!section.isDone && resume != null) {
+                section.whenComplete { ref, failure ->
+                    world.execute { resume(failure == null && isTicking(world, ref)) }
+                }
+                return HurlStartResult(failure = HurlStartFailure.PENDING)
+            }
+            if (!section.isDone || !isTicking(world, section.getNow(null))) {
+                return failed(world, ride, capsule, HurlStartFailure.SPAWN_FAILED)
+            }
             val holder = EntityStore.REGISTRY.newHolder()
             holder.addComponent(HurlRide.type, ride)
             holder.ensureComponent(EntityStore.REGISTRY.nonSerializedComponentType)
@@ -52,20 +64,29 @@ internal object HurlBoarding {
     private fun activateLaunch(
         world: World,
         ride: HurlRide,
-    ): Boolean {
+    ): CompletableFuture<Ref<ChunkStore>> {
         val pos = BlockPos.unpack(ride.currentBlock())
         val grid = world.chunkStore
-        val ref =
-            grid
-                .getChunkSectionReferenceAsync(
+        return grid
+            .getChunkReferenceAsync(ChunkUtil.indexChunk(pos.x shr 5, pos.z shr 5), GetChunkFlags.SET_TICKING)
+            .thenCompose {
+                grid.getChunkSectionReferenceAsync(
                     pos.x shr 5,
                     pos.y shr 5,
                     pos.z shr 5,
                     GetChunkFlags.SET_TICKING,
-                ).getNow(null) ?: return false
-        return ref.isValid &&
-            !grid.store.getArchetype(ref).contains(ChunkStore.REGISTRY.nonTickingComponentType)
+                )
+            }
     }
+
+    private fun isTicking(
+        world: World,
+        ref: Ref<ChunkStore>?,
+    ): Boolean =
+        ref != null && ref.isValid &&
+            !world.chunkStore.store
+                .getArchetype(ref)
+                .contains(ChunkStore.REGISTRY.nonTickingComponentType)
 
     private fun failed(
         world: World,

@@ -22,6 +22,8 @@ import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
 import studio.craftory.core.energy.EnergyWorld
 import studio.craftory.core.transport.TubeNodeLifecycle
+import studio.craftory.core.transport.TubeSectionActivation
+import studio.craftory.core.transport.TubeSectionLifecycle
 import studio.craftory.core.transport.TubeWorld
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Level
@@ -49,6 +51,8 @@ class CraftoryCorePlugin(
         TubeNode.type = chunkRegistry.registerComponent(TubeNode::class.java, "CraftoryTubeNode", TubeNode.CODEC)
         TubeWorld.type = chunkRegistry.registerResource(TubeWorld::class.java, ::TubeWorld)
         chunkRegistry.registerSystem(TubeNodeLifecycle())
+        chunkRegistry.registerSystem(TubeSectionLifecycle())
+        chunkRegistry.registerSystem(TubeSectionActivation())
         AnchorCoverageIndex.type =
             chunkRegistry.registerResource(
                 AnchorCoverageIndex::class.java,

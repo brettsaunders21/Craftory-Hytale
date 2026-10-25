@@ -157,7 +157,10 @@ class HurlStationPage(
                 if (destination !in destinations) return@execute
                 val block = stationRef(world, destination) ?: return@execute
                 if (!mayVisit(block)) return@execute
-                val result = HurlRides.start(world, source, destination, ref, playerRef.uuid)
+                val result =
+                    HurlRides.start(world, source, destination, ref, playerRef.uuid) {
+                        if (it.failure == null) close()
+                    }
                 if (result.failure == null) {
                     close()
                 } else {
@@ -200,11 +203,12 @@ class HurlStationPage(
     }
 }
 
-private fun HurlStartFailure.messageKey(): String =
+internal fun HurlStartFailure.messageKey(): String =
     when (this) {
         HurlStartFailure.INSUFFICIENT_ENERGY -> "server.craftory.hurl.insufficient-energy"
         HurlStartFailure.ALREADY_RIDING -> "server.craftory.hurl.already-riding"
         HurlStartFailure.FORBIDDEN -> "server.craftory.wrench.foreign-crew"
         HurlStartFailure.SPAWN_FAILED -> "server.craftory.hurl.spawn-failed"
         HurlStartFailure.NO_ROUTE -> "server.craftory.hurl.no-route"
+        HurlStartFailure.PENDING -> "server.craftory.hurl.warming-up"
     }

@@ -20,6 +20,30 @@ import studio.craftory.engine.transport.TubeBlock
 
 class CoreTransportTest {
     @Test
+    fun `section reconciliation removes stale nodes without affecting other unloaded sections`() {
+        val tubes = TubeWorld()
+        val start = BlockPos.pack(30, 2, 3)
+        val middle = BlockPos.pack(31, 2, 3)
+        val end = BlockPos.pack(32, 2, 3)
+        tubes.add(start, TubeNode(TubeNode.STATION))
+        tubes.add(middle, TubeNode())
+        tubes.add(end, TubeNode(TubeNode.STATION))
+        tubes.reconcileSection(5, 0, 0) { error("empty sections have no nodes to validate") }
+        assertEquals(3, tubes.nodeCount)
+        tubes.reconcileSection(0, 0, 0) { it == start }
+        assertEquals(2, tubes.nodeCount)
+        assertTrue(tubes.isPresent(start))
+        assertTrue(tubes.isPresent(end))
+        assertFalse(tubes.isPresent(middle))
+        assertNull(tubes.route(start, end))
+        tubes.reconcileSection(0, 0, 0) { true }
+        assertEquals(2, tubes.nodeCount)
+        tubes.add(middle, TubeNode())
+        assertEquals(3, tubes.nodeCount)
+        assertEquals(2.0, requireNotNull(tubes.route(start, end)).lengthBlocks)
+    }
+
+    @Test
     fun `tube cache tracks presence splits routes and excludes origin from stations`() {
         val tubes = TubeWorld()
         val start = BlockPos.pack(-1, 2, 3)

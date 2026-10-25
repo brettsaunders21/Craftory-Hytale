@@ -24,6 +24,7 @@ import studio.craftory.tech.transport.HurlMode
 import studio.craftory.tech.transport.HurlRide
 import studio.craftory.tech.transport.HurlRides
 import studio.craftory.tech.transport.HurlStartFailure
+import studio.craftory.tech.transport.HurlStartResult
 import studio.craftory.tech.transport.HurlStation
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -222,6 +223,34 @@ internal class HurlSelfTest(
                     "hurl broken tube ejects at last present block",
                     "exit=${ride.exitPosition} expected=$expected",
                 )
+                pendingRide()
+            }
+        }
+    }
+
+    private fun pendingRide() {
+        val launch = HurlPoint(100_000.5, 155.0, 100_000.5)
+        val target = HurlPoint(100_001.5, 155.0, 100_000.5)
+        val before = CraftoryCore.energyAccess(world).stored(storage)
+        var completed: HurlStartResult? = null
+        var resumed: HurlRide? = null
+        val result =
+            HurlRides.startArc(world, launch, target, completed = { ready ->
+                completed = ready
+                ready.capsule?.let {
+                    capsules.add(it)
+                    if (it.isValid) resumed = world.entityStore.store.getComponent(it, HurlRide.type)
+                }
+            })
+        check(
+            result.failure == HurlStartFailure.PENDING && CraftoryCore.energyAccess(world).stored(storage) == before,
+            "hurl pending launch warms without debit",
+        )
+        await(400, { completed != null }) {
+            val capsule = requireNotNull(completed?.capsule) { "pending launch ${completed?.failure}" }
+            check(completed?.failure == null && resumed != null, "hurl pending launch resumes on world thread")
+            await(100, { !capsule.isValid }) {
+                check(resumed?.exitPosition == target, "hurl resumed pending ride arrives")
                 arcRide()
             }
         }
