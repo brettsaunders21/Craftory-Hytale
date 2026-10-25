@@ -1,0 +1,18 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Paint_Daub_Green.name",
+    "Description": "server.items.Craftory_Paint_Daub_Green.description"
+  },
+  "Icon": "Icons/Items/EditorTools/Paint.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_DaubUse"
+        }
+      ]
+    }
+  }
+}

@@ -698,7 +698,7 @@ internal object MachineActions {
         val page = NotebookPages.forMachineType(member.typeId) ?: return WrenchActionResult.NotMachine
         val itemId = machineItemId(member.typeId) ?: return WrenchActionResult.NotMachine
         val ownerUuid = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
-        if (!bypassOwnership && !mayUseWrench(ownerUuid, playerUuid, playerRef, crews)) {
+        if (!bypassOwnership && !mayUseMachine(ownerUuid, playerUuid, playerRef, crews)) {
             return WrenchActionResult.ForeignCrew
         }
         val blockState =
@@ -724,20 +724,6 @@ internal object MachineActions {
         val scrapsDropped = spawnDrops(world, position, dropHolders, null, playerRef)
         val pageGranted = crews.grantKnowledge(playerUuid, page.id)
         return WrenchActionResult.Learned("server.items.$itemId.name", page, scrapsDropped, pageGranted, burnTimeLost)
-    }
-
-    private fun mayUseWrench(
-        ownerUuid: java.util.UUID?,
-        playerUuid: java.util.UUID,
-        playerRef: PlayerRef?,
-        crews: CrewService,
-    ): Boolean {
-        if (ownerUuid == playerUuid) return true
-        if (ownerUuid == null) {
-            return playerRef?.hasPermission("hytale.command.craftory.wrench.any") == true
-        }
-        if (playerRef?.hasPermission("hytale.command.craftory.wrench.any") == true) return true
-        return ownerUuid in crews.crewOf(playerUuid).members
     }
 
     private fun hasNonEmptyMachineContents(

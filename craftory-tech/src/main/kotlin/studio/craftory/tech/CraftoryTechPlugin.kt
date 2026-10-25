@@ -19,11 +19,13 @@ import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CanisterPageRefreshSystem
+import studio.craftory.tech.machine.ClawUseInteraction
 import studio.craftory.tech.machine.CraftoryBlockUseInteraction
 import studio.craftory.tech.machine.CraftorySelfTest
 import studio.craftory.tech.machine.CraftoryWrenchUseInteraction
 import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
+import studio.craftory.tech.machine.DaubUseInteraction
 import studio.craftory.tech.machine.EnergyHudState
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
@@ -37,6 +39,8 @@ import studio.craftory.tech.machine.ReceiptUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
+import studio.craftory.tech.machine.SnatcherClawState
+import studio.craftory.tech.machine.SnatcherClawSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
@@ -75,6 +79,10 @@ class CraftoryTechPlugin(
             CraftoryIds.GNASHER_TYPE,
             MemberSpec(MemberSpec.CONSUMER, 0, 15, 0, 0, 1),
         )
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.SNATCHER_CLAW_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 4, 0, 0, 1),
+        )
         val chunkRegistry = getChunkStoreRegistry()
         CrankState.type =
             chunkRegistry.registerComponent(
@@ -99,6 +107,12 @@ class CraftoryTechPlugin(
                 OvenPower::class.java,
                 CraftoryIds.OVEN_COMPONENT,
                 OvenPower.CODEC,
+            )
+        SnatcherClawState.type =
+            chunkRegistry.registerComponent(
+                SnatcherClawState::class.java,
+                CraftoryIds.SNATCHER_CLAW_COMPONENT,
+                SnatcherClawState.CODEC,
             )
         AnchorState.type =
             chunkRegistry.registerComponent(
@@ -135,6 +149,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(BurnerSystem())
         chunkRegistry.registerSystem(GnasherSystem())
         chunkRegistry.registerSystem(ScorchOvenSystem())
+        chunkRegistry.registerSystem(SnatcherClawSystem())
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
@@ -174,6 +189,14 @@ class CraftoryTechPlugin(
                 CraftoryIds.RECEIPT_USE_INTERACTION,
                 ReceiptUseInteraction::class.java,
                 ReceiptUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.CLAW_USE_INTERACTION,
+                ClawUseInteraction::class.java,
+                ClawUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.DAUB_USE_INTERACTION,
+                DaubUseInteraction::class.java,
+                DaubUseInteraction.CODEC,
             )
         val crews = CraftoryCore.crewService()
         crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }

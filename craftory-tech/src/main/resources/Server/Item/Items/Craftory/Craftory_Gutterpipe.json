@@ -75,6 +75,7 @@
     },
     "BlockEntity": {
       "Components": {
+        "Craftory_ItemPipe": {},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:gutterpipe",
           "Stored": 0,
