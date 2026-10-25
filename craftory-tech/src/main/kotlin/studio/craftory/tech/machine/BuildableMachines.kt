@@ -71,6 +71,10 @@ internal class BuildableMachineCraftGate :
 }
 
 internal object JunkHeartKnowledge {
+    /** Crew service the grant goes to; the selftest swaps in a throwaway one. */
+    @Volatile
+    var crews: () -> CrewService = CraftoryCore::crewService
+
     fun onFormed(
         store: Store<ChunkStore>,
         controllerRef: Ref<ChunkStore>,
@@ -78,6 +82,6 @@ internal object JunkHeartKnowledge {
     ) {
         if (controller.templateId != CraftoryIds.JUNK_HEART_TEMPLATE) return
         val owner = store.getComponent(controllerRef, MachineOwner.type)?.placerUuid ?: return
-        CraftoryCore.crewService().grantKnowledge(owner, CraftoryIds.JUNK_HEART_KNOWLEDGE)
+        crews().grantKnowledge(owner, CraftoryIds.JUNK_HEART_KNOWLEDGE)
     }
 }

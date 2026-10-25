@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import studio.craftory.core.api.crew.CrewService
+import studio.craftory.tech.CraftoryIds
 import java.nio.file.Path
 import java.util.UUID
 
@@ -13,7 +14,7 @@ class NotebookTierProgressionTest {
     lateinit var temporaryDirectory: Path
 
     @Test
-    fun `merging all notebook pages advances the destination crew`() {
+    fun `merging all notebook pages with a junk heart advances the destination crew`() {
         val service = CrewService(temporaryDirectory.resolve("crews.json"))
         val owner = UUID.randomUUID()
         val joiningPlayer = UUID.randomUUID()
@@ -28,6 +29,7 @@ class NotebookTierProgressionTest {
         try {
             val crew = service.create(owner, "Notebook Crew")
             NotebookPages.pages.take(6).forEach { service.grantKnowledge(owner, it.id) }
+            service.grantKnowledge(owner, CraftoryIds.JUNK_HEART_KNOWLEDGE)
             NotebookPages.pages.drop(6).forEach { service.grantKnowledge(joiningPlayer, it.id) }
 
             assertEquals(1, service.tierOf(owner))

@@ -28,6 +28,11 @@ $C.@PageOverlay {
 
       Label #Progress {
         Text: "0/8 pages";
+        Anchor: (Bottom: 4);
+      }
+
+      Label #Heart {
+        Text: "Junk Heart not built yet";
         Anchor: (Bottom: 12);
       }
 

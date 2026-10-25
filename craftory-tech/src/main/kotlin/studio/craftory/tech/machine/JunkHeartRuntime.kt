@@ -292,6 +292,7 @@ internal sealed interface KickResult {
     ) : KickResult
 }
 
+@Suppress("TooManyFunctions")
 internal object JunkHeartActions {
     private const val VIEW_RADIUS = 16.0
     private const val HALF = 0.5

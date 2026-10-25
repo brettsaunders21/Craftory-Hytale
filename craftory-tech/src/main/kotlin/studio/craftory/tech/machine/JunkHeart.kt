@@ -72,13 +72,16 @@ internal object JunkHeartTemplate {
                 for (x in -1..1) {
                     for (z in -1..1) {
                         if (x == 0 && z == 0) continue
-                        add(TemplatePart(BlockPos(x, 0, z), setOf(CraftoryIds.SCRAP_PLATING), CraftoryIds.SCRAP_PLATING))
+                        add(plating(BlockPos(x, 0, z)))
                     }
                 }
                 add(TemplatePart(BlockPos(0, 1, 0), setOf(CraftoryIds.CHIMNEY_BLOCK), CraftoryIds.CHIMNEY_BLOCK))
                 add(TemplatePart(BlockPos(0, 2, 0), setOf(CraftoryIds.CHIMNEY_BLOCK), CraftoryIds.CHIMNEY_BLOCK))
             },
         )
+
+    private fun plating(offset: BlockPos) =
+        TemplatePart(offset, setOf(CraftoryIds.SCRAP_PLATING), CraftoryIds.SCRAP_PLATING)
 }
 
 internal object JunkHeartMachine {

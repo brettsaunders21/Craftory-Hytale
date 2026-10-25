@@ -121,6 +121,17 @@ machines, commands, UI and debugging to read.
 - **Events.** For example network formed/split, machine started/finished, and energy produced, so addons can react.
 - **Stable public API surface.** Kept in `studio.craftory.core.api` and versioned with the plugin.
 
+### Multi-block framework (Slice 2b)
+
+Core owns the framework in `studio.craftory.core.api.multiblock`; content only registers templates and reacts to listeners.
+
+- **Templates.** `MultiblockTemplate(id, parts)` lists `TemplatePart(offset, blockIds, itemId)` offsets around the controller at (0,0,0), north-facing. `CraftoryCore.multiblocks().register` rejects templates wider or deeper than 7×7 in plan. The controller block's placed yaw picks one of four rotations, using the same `rotateY` mapping as Hytale's `Rotation`.
+- **State is a component.** `MultiblockController` is a persisted `ChunkStore` block-entity component on the controller only: template id, rotation, state (`ASSEMBLING`, `READY_TO_START`, `FORMED`, `DAMAGED`) and quality. Whether the structure is complete is never stored; it is rescanned from world blocks. The missing-part set is a transient cache.
+- **Shells are plain blocks.** Shell parts carry no components, so vanilla blocks work as parts.
+- **`MultiblockIndex` is a derived cache.** A per-world `ChunkStore` resource maps footprint positions to controller positions. A `RefSystem` adds controllers on LOAD/SPAWN and removes them on REMOVE/UNLOAD, so it is rebuilt from components whenever chunks load. It is never the source of truth.
+- **Event-driven formation.** `PlaceBlockEvent` and `BreakBlockEvent` systems look up the index and recheck only the one affected controller, on the world thread after the block change lands. Losing a part moves `FORMED` to `DAMAGED` (quality and contents kept); restoring it moves back to `FORMED` without a new kick-start.
+- **Hooks.** `missingParts`, `isFormed`, `recheck`, `completeKickStart`, `onFormed` and `onDamaged` let content add assembly verbs (Tech's Tinker's Hammer and kick-start) and react to formation (the Junk Heart knowledge grant).
+
 ## 7. Gameplay direction
 
 The gameplay and art direction lives in [DESIGN.md](DESIGN.md): a goblin junk-tech start, then

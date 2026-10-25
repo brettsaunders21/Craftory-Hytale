@@ -560,6 +560,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         reportInspectable(run, store, CraftorySelfTest.GNASHER, "gnasher")
         reportInspectable(run, store, CraftorySelfTest.ANCHOR, "anchor")
         CraftorySelfTest.testWrench(run, store)
+        CraftorySelfTest.testMultiblock(run, store)
         run.phase = 4
         run.powerLossTick = run.world.tick
     }
@@ -1402,6 +1403,187 @@ object CraftorySelfTest {
         check(run, !Files.exists(testDirectory), "wrench test crew cleanup")
     }
 
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
+    internal fun testMultiblock(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val section = store.getComponent(run.sectionRef, BlockComponentSection.getComponentType()) ?: return
+        val registry = CraftoryCore.multiblocks()
+        val testTemplate =
+            studio.craftory.core.api.multiblock.MultiblockTemplate(
+                "craftory:selftest/frame",
+                listOf(
+                    studio.craftory.core.api.multiblock.TemplatePart(
+                        BlockPos(0, 1, 0),
+                        setOf(CraftoryIds.SCRAP_PLATING),
+                        CraftoryIds.SCRAP_PLATING,
+                    ),
+                ),
+            )
+        registry.register(testTemplate)
+        check(run, registry.template(testTemplate.id) == testTemplate, "multiblock test template registered")
+        check(
+            run,
+            registry.unregister(testTemplate.id) && registry.template(testTemplate.id) == null,
+            "multiblock test template removed",
+        )
+        val testDirectory = Files.createTempDirectory("craftory-heart-selftest-")
+        val testFile = testDirectory.resolve("crews.json")
+        val crews = CrewService(testFile)
+        val previousCrews = JunkHeartKnowledge.crews
+        JunkHeartKnowledge.crews = { crews }
+        val playerUuid = UUID.randomUUID()
+        val position = org.joml.Vector3i(HEART.x, HEART.y, HEART.z)
+        try {
+            clear(run.world, run.sectionRef, heartPositions())
+            place(run.world, store, run.sectionRef, section, CraftoryIds.JUNK_HEART, HEART, JunkHeartState.type)
+            assignMachineOwner(run.world, position, CraftoryIds.JUNK_HEART, playerUuid)
+            val ref =
+                BlockModule.getBlockEntity(run.world, HEART.x, HEART.y, HEART.z) ?: error("junk heart was not placed")
+            val controller =
+                store.getComponent(ref, studio.craftory.core.api.multiblock.MultiblockController.type)
+                    ?: error("junk heart controller is missing")
+            val heart = store.getComponent(ref, JunkHeartState.type) ?: error("junk heart state is missing")
+            registry.recheck(store, ref)
+            check(
+                run,
+                controller.state == studio.craftory.core.api.multiblock.MultiblockState.ASSEMBLING &&
+                    registry.missingParts(store, ref).size == JunkHeartTemplate.template.parts.size,
+                "junk heart starts ASSEMBLING",
+            )
+            val empty = JunkHeartActions.hammer(run.world, store, ref, take = { false }, refund = {})
+            check(
+                run,
+                empty is HammerResult.Needs && empty.part.part.itemId == CraftoryIds.SCRAP_PLATING &&
+                    registry.missingParts(store, ref).size == JunkHeartTemplate.template.parts.size,
+                "hammer without parts says Needs and places nothing",
+            )
+            val inventory =
+                mutableMapOf(
+                    CraftoryIds.SCRAP_PLATING to 8,
+                    CraftoryIds.CHIMNEY_BLOCK to 2,
+                )
+            val expectedOrder = registry.worldParts(store, ref).map { it.position }
+            val placedOrder = mutableListOf<BlockPos>()
+            repeat(JunkHeartTemplate.template.parts.size) {
+                val result =
+                    JunkHeartActions.hammer(
+                        run.world,
+                        store,
+                        ref,
+                        take = { itemId ->
+                            val count = inventory[itemId] ?: 0
+                            if (count > 0) inventory[itemId] = count - 1
+                            count > 0
+                        },
+                        refund = { itemId -> inventory[itemId] = (inventory[itemId] ?: 0) + 1 },
+                    )
+                if (result is HammerResult.Placed) placedOrder += result.part.position
+            }
+            check(
+                run,
+                placedOrder == expectedOrder && inventory.values.all { it == 0 } &&
+                    expectedOrder.map { it.y }.zipWithNext().all { (a, b) -> a <= b },
+                "hammer places parts lowest y first and debits each item",
+                "placed=${placedOrder.size} inventory=$inventory",
+            )
+            check(
+                run,
+                controller.state == studio.craftory.core.api.multiblock.MultiblockState.READY_TO_START,
+                "complete frame is READY_TO_START",
+                "state=${controller.state}",
+            )
+            JunkHeartMachine.addFuel(heart, JunkPowerFuels.definitions.first().itemId)
+            JunkHeartMachine.advanceTo(heart, run.world.tick, controller.state)
+            check(
+                run,
+                JunkHeartMachine.productionPerSolveTick(heart, controller.state, controller.quality) == 0L,
+                "junk heart makes no fizz before kick-start",
+            )
+            val tps = run.world.tps
+            val kickTick = controller.readySinceTick + tps * KICK_OFFSET_TENTHS / 10
+            val kicked = JunkHeartActions.kick(run.world, store, ref, kickTick, mayOperate = true)
+            check(
+                run,
+                kicked is KickResult.Formed &&
+                    controller.state == studio.craftory.core.api.multiblock.MultiblockState.FORMED &&
+                    controller.quality == studio.craftory.core.api.multiblock.MultiblockQuality.STURDY,
+                "kick 0.3 s off the sweet spot forms a STURDY heart",
+                "result=$kicked",
+            )
+            check(
+                run,
+                crews.hasKnowledge(playerUuid, CraftoryIds.JUNK_HEART_KNOWLEDGE),
+                "first FORMED grants craftory:heart/junk to the placer's crew",
+            )
+            JunkHeartMachine.advanceTo(heart, run.world.tick + 1, controller.state)
+            val formedFizz = JunkHeartMachine.productionPerSolveTick(heart, controller.state, controller.quality)
+            check(
+                run,
+                formedFizz == BurnerMachine.FIZZ_PER_SOLVE_TICK * JunkHeartMachine.OUTPUT_MULTIPLIER,
+                "formed sturdy heart makes 4x burner fizz",
+                "production=$formedFizz",
+            )
+            val plating = heartPositions()[1]
+            clear(run.world, run.sectionRef, listOf(plating))
+            registry.recheck(store, ref)
+            check(
+                run,
+                controller.state == studio.craftory.core.api.multiblock.MultiblockState.DAMAGED &&
+                    controller.quality == studio.craftory.core.api.multiblock.MultiblockQuality.STURDY &&
+                    JunkHeartMachine.productionPerSolveTick(heart, controller.state, controller.quality) == 0L,
+                "breaking plating makes the heart DAMAGED and stalls it",
+                "state=${controller.state}",
+            )
+            val platingType = BlockType.fromString(CraftoryIds.SCRAP_PLATING) ?: error("scrap plating block is missing")
+            BlockOperations.setBlock(
+                run.world.chunkStore,
+                run.sectionRef,
+                plating.x,
+                plating.y,
+                plating.z,
+                BlockType.getAssetMap().getIndex(platingType.id),
+                platingType,
+                0,
+                0,
+                SetBlockSettings.NONE,
+            )
+            registry.recheck(store, ref)
+            check(
+                run,
+                controller.state == studio.craftory.core.api.multiblock.MultiblockState.FORMED &&
+                    controller.quality == studio.craftory.core.api.multiblock.MultiblockQuality.STURDY,
+                "replacing plating re-forms the heart with its quality",
+                "state=${controller.state} quality=${controller.quality}",
+            )
+            heart.fuelCount = 0
+            heart.fuelItemId = ""
+        } finally {
+            BlockModule
+                .getBlockEntity(run.world, HEART.x, HEART.y, HEART.z)
+                ?.takeIf { it.isValid }
+                ?.let { store.getComponent(it, JunkHeartState.type) }
+                ?.apply {
+                    fuelCount = 0
+                    fuelItemId = ""
+                }
+            clear(run.world, run.sectionRef, heartPositions())
+            JunkHeartKnowledge.crews = previousCrews
+            try {
+                crews.close()
+            } finally {
+                Files.deleteIfExists(testFile)
+                Files.deleteIfExists(testDirectory)
+            }
+        }
+        check(
+            run,
+            BlockModule.getBlockEntity(run.world, HEART.x, HEART.y, HEART.z)?.isValid != true,
+            "junk heart test cleanup",
+        )
+    }
+
     private fun blockEntityMissing(
         world: World,
         position: TestPosition,
@@ -1590,6 +1772,14 @@ object CraftorySelfTest {
     internal val ANCHOR = TestPosition(10_040, 150, 10_012)
     private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
     private val WRENCH_PACK = TestPosition(10_022, 148, 10_004)
+    private val HEART = TestPosition(10_028, 148, 10_010)
+    private const val KICK_OFFSET_TENTHS = 18
+
+    private fun heartPositions(): List<TestPosition> =
+        listOf(HEART) +
+            JunkHeartTemplate.template.hammerOrder.map {
+                TestPosition(HEART.x + it.offset.x, HEART.y + it.offset.y, HEART.z + it.offset.z)
+            }
 
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
@@ -1597,6 +1787,7 @@ object CraftorySelfTest {
     private fun testPositions(): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
-                listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK)
+                listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK) +
+                heartPositions()
         ).distinct()
 }

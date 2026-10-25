@@ -108,13 +108,7 @@ class MultiblockRegistry internal constructor() {
         if (!scan.complete) return null
         val complete = scan.missing.isEmpty()
         val previous = controller.state
-        val next =
-            when (previous) {
-                MultiblockState.ASSEMBLING -> if (complete) MultiblockState.READY_TO_START else previous
-                MultiblockState.READY_TO_START -> if (complete) previous else MultiblockState.ASSEMBLING
-                MultiblockState.FORMED -> if (complete) previous else MultiblockState.DAMAGED
-                MultiblockState.DAMAGED -> if (complete) MultiblockState.FORMED else previous
-            }
+        val next = nextState(previous, complete)
         if (next != previous) {
             controller.state = next
             if (next == MultiblockState.READY_TO_START) {
@@ -129,6 +123,17 @@ class MultiblockRegistry internal constructor() {
         }
         return next
     }
+
+    private fun nextState(
+        previous: MultiblockState,
+        complete: Boolean,
+    ): MultiblockState =
+        when (previous) {
+            MultiblockState.ASSEMBLING -> if (complete) MultiblockState.READY_TO_START else previous
+            MultiblockState.READY_TO_START -> if (complete) previous else MultiblockState.ASSEMBLING
+            MultiblockState.FORMED -> if (complete) previous else MultiblockState.DAMAGED
+            MultiblockState.DAMAGED -> if (complete) MultiblockState.FORMED else previous
+        }
 
     /** Finishes a READY_TO_START structure with the kick-start [quality]. */
     fun completeKickStart(

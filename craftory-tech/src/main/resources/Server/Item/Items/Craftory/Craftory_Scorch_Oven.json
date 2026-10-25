@@ -8,31 +8,27 @@
     "Furniture.Benches"
   ],
   "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
     "Input": [
       {
-        "ResourceTypeId": "Wood_Trunk",
-        "Quantity": 6
+        "ItemId": "Ingredient_Scraps",
+        "Quantity": 24
       },
       {
-        "ResourceTypeId": "Rock",
-        "Quantity": 6
-      }
-    ],
-    "Output": [
-      {
-        "ItemId": "Craftory_Scorch_Oven"
+        "ItemId": "Ingredient_Bar_Copper",
+        "Quantity": 2
       }
     ],
     "BenchRequirement": [
       {
+        "Id": "Workbench",
         "Type": "Crafting",
         "Categories": [
-          "Workbench_Crafting"
-        ],
-        "Id": "Workbench"
+          "Workbench_Tinkering"
+        ]
       }
-    ],
-    "TimeSeconds": 3
+    ]
   },
   "PlayerAnimationsId": "Block",
   "IconProperties": {

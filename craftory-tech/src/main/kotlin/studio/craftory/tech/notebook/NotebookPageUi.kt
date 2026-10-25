@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import studio.craftory.core.api.crew.CrewService
+import studio.craftory.tech.CraftoryIds
 
 class NotebookPageUi(
     playerRef: PlayerRef,
@@ -29,6 +30,15 @@ class NotebookPageUi(
             .set("#Crew.Text", Message.translation("server.craftory.notebook.crew").param("name", crew.name))
             .set("#Members.Text", Message.translation("server.craftory.notebook.members").param("count", members))
             .set(
+                "#Heart.Text",
+                Message.translation(
+                    if (CraftoryIds.JUNK_HEART_KNOWLEDGE in crew.knowledge) {
+                        "server.craftory.notebook.heart.built"
+                    } else {
+                        "server.craftory.notebook.heart.missing"
+                    },
+                ),
+            ).set(
                 "#Progress.Text",
                 Message
                     .translation("server.craftory.notebook.progress")
