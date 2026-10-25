@@ -46,6 +46,8 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.BURNER,
                 CraftoryIds.CANISTER,
                 CraftoryIds.PIPE,
+                CraftoryIds.HURL_STATION,
+                CraftoryIds.HURL_CANNON,
                 CraftoryIds.GNASHER_PIT,
                 CraftoryIds.SCORCH_OVEN,
             )

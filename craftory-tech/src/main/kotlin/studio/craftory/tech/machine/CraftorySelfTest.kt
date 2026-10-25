@@ -78,6 +78,8 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var anchorMaxChargeBeforeTest: Int = CraftoryCore.anchorMaxChargeMinutes(),
         val testKeepLoadedChunks: MutableSet<Long> = mutableSetOf(),
         var anchorStateForTest: AnchorState? = null,
+        var hurlFinished: Boolean = false,
+        var hurlCleanup: (() -> Unit)? = null,
     )
 
     var active: Run? = null
@@ -113,6 +115,7 @@ private fun abort(
 ) {
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
+    runCatching { run.hurlCleanup?.invoke() }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -616,7 +619,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val disableTick = run.anchorDisableTick ?: return
         if (run.anchorDisabledReported) {
-            if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+            if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
                 CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
                 reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
                 store.getResource(SelfTestRun.type).active = null
@@ -751,8 +754,14 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
         CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
-        run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
-        run.cleanupTick = tick + 20
+        run.cleanupTick = tick + 400
+        run.world.execute {
+            HurlSelfTest(run).start {
+                run.hurlFinished = true
+                run.cleanupTick = run.world.tick + 20
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+            }
+        }
     }
 
     private fun blockEntityAt(

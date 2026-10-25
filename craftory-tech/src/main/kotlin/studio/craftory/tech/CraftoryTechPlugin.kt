@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
+import com.hypixel.hytale.server.core.util.Config
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.Crew
 import studio.craftory.core.api.energy.MemberSpec
@@ -40,10 +41,21 @@ import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
+import studio.craftory.tech.transport.HurlConfig
+import studio.craftory.tech.transport.HurlCounters
+import studio.craftory.tech.transport.HurlFallDamageSystem
+import studio.craftory.tech.transport.HurlFallGuard
+import studio.craftory.tech.transport.HurlRide
+import studio.craftory.tech.transport.HurlRideLifecycle
+import studio.craftory.tech.transport.HurlRideSystem
+import studio.craftory.tech.transport.HurlRider
+import studio.craftory.tech.transport.HurlRiderLifecycle
+import studio.craftory.tech.transport.HurlStation
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
+    private val hurlConfig: Config<HurlConfig> = withConfig("hurl", HurlConfig.CODEC)
     private var crewKnowledgeSubscription: AutoCloseable? = null
     private var crewChangedSubscription: AutoCloseable? = null
 
@@ -76,6 +88,16 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.CONSUMER, 0, 15, 0, 0, 1),
         )
         val chunkRegistry = getChunkStoreRegistry()
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.HURL_STATION_TYPE,
+            MemberSpec(MemberSpec.LINK, 0, 0, 0, 0, 1),
+        )
+        HurlStation.type =
+            chunkRegistry.registerComponent(
+                HurlStation::class.java,
+                CraftoryIds.HURL_STATION_COMPONENT,
+                HurlStation.CODEC,
+            )
         CrankState.type =
             chunkRegistry.registerComponent(
                 CrankState::class.java,
@@ -138,6 +160,14 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
+        HurlRide.type = entityRegistry.registerComponent(HurlRide::class.java, ::HurlRide)
+        HurlRider.type = entityRegistry.registerComponent(HurlRider::class.java, ::HurlRider)
+        HurlFallGuard.type = entityRegistry.registerComponent(HurlFallGuard::class.java, ::HurlFallGuard)
+        HurlCounters.type = entityRegistry.registerResource(HurlCounters::class.java) { HurlCounters(hurlConfig.get()) }
+        entityRegistry.registerSystem(HurlRideSystem())
+        entityRegistry.registerSystem(HurlRideLifecycle())
+        entityRegistry.registerSystem(HurlRiderLifecycle())
+        entityRegistry.registerSystem(HurlFallDamageSystem())
         EnergyHudState.type =
             entityRegistry.registerComponent(
                 EnergyHudState::class.java,

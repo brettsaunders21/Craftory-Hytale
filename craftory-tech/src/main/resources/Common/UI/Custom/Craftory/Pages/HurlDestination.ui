@@ -1,0 +1,5 @@
+$C = "../../Common.ui";
+Group {
+  Anchor: (Height: 44, Bottom: 4);
+  $C.@TextButton #Go { @Text = "Station"; Anchor: (Full: 0); }
+}

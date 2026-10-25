@@ -13,10 +13,13 @@ import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.EnergyMemberType
+import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.core.api.energy.MemberSpec
+import studio.craftory.core.api.transport.TubeAccess
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyWorld
+import studio.craftory.core.transport.TubeWorld
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap
@@ -108,6 +111,13 @@ object CraftoryCore {
         val energy = world.chunkStore.store.getResource(EnergyWorld.type)
         return EnergyAccess(energy, world)
     }
+
+    fun tubeAccess(world: World): TubeAccess {
+        world.debugAssertInTickingThread()
+        return TubeAccess(world.chunkStore.store.getResource(TubeWorld.type), world)
+    }
+
+    fun gradeRank(id: String): Int? = GradeTable.DEFAULT.rankOf(id)
 
     fun isEnergyTick(store: Store<ChunkStore>): Boolean {
         val world = store.externalData.world

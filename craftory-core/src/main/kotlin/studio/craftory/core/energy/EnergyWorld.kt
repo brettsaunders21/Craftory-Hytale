@@ -99,6 +99,32 @@ internal class EnergyWorld : Resource<ChunkStore> {
 
     fun stored(id: Long): Long = member(id)?.stored ?: 0
 
+    fun networkStored(
+        id: Long,
+        minRank: Int,
+    ): Long = runtime.graph.networkStored(id, minRank)
+
+    fun drawStored(
+        id: Long,
+        amount: Long,
+        minGradeRank: Int,
+    ): Boolean {
+        if (!runtime.graph.drawStored(id, amount, minGradeRank)) return false
+        if (amount == 0L) return true
+        val network = runtime.graph.networkOf(id)
+        refsById.forEach { (memberId, ref) ->
+            if (runtime.graph.networkOf(memberId) != network) return@forEach
+            val member = member(memberId) ?: return@forEach
+            val changed = member.updateStored(runtime.graph.stored(memberId), runtime.graph.storedRank(memberId))
+            if (!changed) return@forEach
+            val currentStore = store ?: return@forEach
+            val blockState =
+                currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return@forEach
+            member.persist(blockState, currentStore, currentStore.externalData.world.tick, 0, immediate = true)
+        }
+        return true
+    }
+
     fun delivered(id: Long): Long = member(id)?.delivered ?: 0
 
     fun deliveredRank(id: Long): Int = member(id)?.deliveredRank ?: -1
@@ -136,11 +162,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
             val member = currentStore.getComponent(ref, EnergyMember.type) ?: return@forEach
             val amount = runtime.graph.stored(id)
             val rank = runtime.graph.storedRank(id)
-            if (member.stored != amount || member.storeRank != rank) {
-                member.stored = amount
-                member.storeRank = rank
-                member.unsaved = true
-            }
+            member.updateStored(amount, rank)
             val delivered = runtime.graph.delivered(id)
             val deliveredRank = runtime.graph.deliveredRank(id)
             val networkId = runtime.graph.networkOf(id)

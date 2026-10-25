@@ -74,6 +74,17 @@ class EnergyMember(
         immediate: Boolean,
     ): Boolean = immediate || (unsaved && currentTick - lastSavedTick >= intervalTicks)
 
+    internal fun updateStored(
+        amount: Long,
+        rank: Int,
+    ): Boolean {
+        if (stored == amount && storeRank == rank) return false
+        stored = amount
+        storeRank = rank
+        unsaved = true
+        return true
+    }
+
     fun markSaved(currentTick: Long) {
         lastSavedTick = currentTick
         lastSavedStored = stored
