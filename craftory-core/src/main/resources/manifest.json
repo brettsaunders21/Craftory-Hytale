@@ -1,0 +1,25 @@
+{
+    "Group": "Craftory",
+    "Name": "CraftoryCore",
+    "Version": "0.1.0",
+    "Description": "Core services for Craftory Hytale plugins.",
+    "Authors": [
+        {
+            "Name": "Brett_Saunders"
+        }
+    ],
+    "Website": "https://github.com/brettsaunders21/Craftory-Hytale",
+    "ServerVersion": ">=0.7.0 <0.8.0",
+    "Dependencies": {
+        "Hytale:AssetModule": "*"
+    },
+    "OptionalDependencies": {
+
+    },
+    "DisabledByDefault": false,
+    "Main": "studio.craftory.core.CraftoryCorePlugin",
+    "IncludesAssetPack": true,
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}

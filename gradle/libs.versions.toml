@@ -1,0 +1,19 @@
+[versions]
+detekt = "2.0.0-alpha.6"
+hytale-tools = "1.0.51"
+junit = "5.14.4"
+junit-platform = "1.14.4"
+ktlint = "1.8.0"
+kotlin = "2.4.21"
+spotless = "8.10.4"
+
+[libraries]
+detekt-gradle-plugin = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
+hytale-tools-gradle-plugin = { module = "com.azuredoom.hytale-tools:com.azuredoom.hytale-tools.gradle.plugin", version.ref = "hytale-tools" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+
+[plugins]
+hytale-workspace = { id = "com.azuredoom.hytale-workspace", version.ref = "hytale-tools" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
