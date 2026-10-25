@@ -33,8 +33,12 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
+import com.hypixel.hytale.server.npc.entities.NPCEntity
+import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
@@ -52,6 +56,7 @@ import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Random
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -72,6 +77,7 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var failed: Int = 0,
         var finalReported: Boolean = false,
         var stoppedReported: Boolean = false,
+        var scrapRushProbePending: Boolean = false,
         var cleanupTick: Long? = null,
         var powerLossTick: Long? = null,
         var ovenProgressAtSixSeconds: Float? = null,
@@ -90,6 +96,7 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var anchorSpinAtInactive: Long? = null,
         var anchorMaxChargeBeforeTest: Int = CraftoryCore.anchorMaxChargeMinutes(),
         val testKeepLoadedChunks: MutableSet<Long> = mutableSetOf(),
+        val testTickingSections: MutableSet<Triple<Int, Int, Int>> = mutableSetOf(),
         var anchorStateForTest: AnchorState? = null,
     )
 
@@ -106,6 +113,17 @@ internal data class SelfTestCleanupResult(
     val liveDrops: Int,
     val sectionHolders: Int,
     val chunkHolders: Int,
+)
+
+private data class ScrapRushFloorSnapshot(
+    val sectionRef: Ref<ChunkStore>,
+    val x: Int,
+    val y: Int,
+    val z: Int,
+    val blockId: Int,
+    val blockType: BlockType,
+    val rotation: Int,
+    val filler: Int,
 )
 
 private fun reportCleanup(
@@ -150,8 +168,14 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
+        CraftorySelfTest.keepTestSectionsTicking(run, store)
         if (tick >= run.startTick + 2_400L) {
             abort(run, "timed out")
+            return
+        }
+        if (run.scrapRushProbePending) return
+        if (!run.sectionRef.isValid) {
+            abort(run, "test section reference expired")
             return
         }
         run.sectionEntityTicking =
@@ -631,8 +655,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         if (run.anchorDisabledReported) {
             if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
                 CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
-                reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
-                store.getResource(SelfTestRun.type).active = null
+                try {
+                    reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
+                } finally {
+                    CraftorySelfTest.releaseTestKeepLoaded(run)
+                    store.getResource(SelfTestRun.type).active = null
+                }
             }
             return
         }
@@ -762,7 +790,6 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         tick: Long,
     ) {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
-        CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
         run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
         run.cleanupTick = tick + 20
@@ -840,6 +867,24 @@ object CraftorySelfTest {
         run.testKeepLoadedChunks.clear()
     }
 
+    internal fun keepTestSectionsTicking(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val grid = run.world.chunkStore
+        run.testTickingSections.forEach { (x, y, z) ->
+            runCatching {
+                val sectionRef =
+                    grid
+                        .getChunkSectionReferenceAsync(x, y, z, GetChunkFlags.SET_TICKING)
+                        .getNow(null)
+                if (sectionRef != null && sectionRef.isValid) {
+                    store.getComponent(sectionRef, ChunkSection.getComponentType())?.resetActiveTimer()
+                }
+            }
+        }
+    }
+
     fun execute(context: CommandContext): CompletableFuture<Void> {
         val world = Universe.get().defaultWorld
         if (world == null) {
@@ -847,20 +892,23 @@ object CraftorySelfTest {
             return CompletableFuture.completedFuture(null)
         }
         context.sendMessage(Message.raw("selftest: loading isolated area in ${world.name}"))
-        world.chunkStore.getChunkSectionReferenceAtBlockAsync(BURNER.x, BURNER.y, BURNER.z).whenComplete {
-            sectionRef,
-            error,
-            ->
-            world.execute {
-                if (error != null || sectionRef == null) {
-                    context.sendMessage(
-                        Message.raw("selftest: FAIL chunk load (${error?.cause?.message ?: "chunk load failed"})"),
-                    )
-                    return@execute
+        world.chunkStore
+            .getChunkSectionReferenceAsync(
+                BURNER.x shr 5,
+                BURNER.y shr 5,
+                BURNER.z shr 5,
+                GetChunkFlags.SET_TICKING,
+            ).whenComplete { sectionRef, error ->
+                world.execute {
+                    if (error != null || sectionRef == null) {
+                        context.sendMessage(
+                            Message.raw("selftest: FAIL chunk load (${error?.cause?.message ?: "chunk load failed"})"),
+                        )
+                        return@execute
+                    }
+                    setup(context, world, sectionRef)
                 }
-                setup(context, world, sectionRef)
             }
-        }
         return CompletableFuture.completedFuture(null)
     }
 
@@ -872,7 +920,13 @@ object CraftorySelfTest {
     ) {
         val store = world.chunkStore.store
         val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
+        run.testTickingSections.add(Triple(BURNER.x shr 5, BURNER.y shr 5, BURNER.z shr 5))
         try {
+            val testChunkIndex = ChunkUtil.indexChunk(BURNER.x shr 5, BURNER.z shr 5)
+            val testChunkRef = world.chunkStore.getChunkReference(testChunkIndex) ?: error("test chunk is missing")
+            val testWorldChunk =
+                store.getComponent(testChunkRef, WorldChunk.getComponentType()) ?: error("test world chunk is missing")
+            if (run.testKeepLoadedChunks.add(testChunkIndex)) testWorldChunk.addKeepLoaded()
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")
@@ -1657,66 +1711,218 @@ object CraftorySelfTest {
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
-        val section = store.getComponent(run.sectionRef, BlockComponentSection.getComponentType()) ?: return
-        val testDirectory = Files.createTempDirectory("craftory-scrap-rush-selftest-")
-        val testFile = testDirectory.resolve("crews.json")
-        val crews = CrewService(testFile)
-        val owner = UUID.randomUUID()
-        var ref: Ref<ChunkStore>? = null
-        var spawnedIds: List<String> = emptyList()
-        var naturalSpawnedIds: List<String> = emptyList()
-        var testSystem: ScrapRushSystem? = null
         try {
-            place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, SCRAP_RUSH_TEST, BurnerState.type)
-            ref =
-                BlockModule.getBlockEntity(run.world, SCRAP_RUSH_TEST.x, SCRAP_RUSH_TEST.y, SCRAP_RUSH_TEST.z)
-                    ?: error("Scrap Rush test burner was not placed")
-            val blockRef = ref
-            (store.getComponent(blockRef, MachineOwner.type) ?: error("Scrap Rush machine owner is missing"))
-                .placerUuid = owner
-            val system =
-                ScrapRushSystem(
-                    ScrapRushSettings(minGoblins = 3, maxGoblins = 3),
-                    crews,
-                    requireOnlineCrew = false,
-                    directSpawnForSelfTest = true,
-                    evaluationIntervalTicks = 1,
-                    areaIsActive = { _, _ -> true },
-                )
-            testSystem = system
-            val soloCrew = crews.crewOf(owner)
-            check(
-                run,
-                soloCrew.solo && soloCrew.members == setOf(owner),
-                "Scrap Rush solo owner membership",
+            val section =
+                store.getComponent(run.sectionRef, BlockComponentSection.getComponentType())
+                    ?: error("test section is missing")
+            place(
+                run.world,
+                store,
+                run.sectionRef,
+                section,
+                CraftoryIds.BURNER,
+                SCRAP_RUSH_TEST,
+                BurnerState.type,
             )
-            var started = false
-            var callbackInvoked = false
-            store.forEachChunk(
-                Query.and(BlockModule.BlockStateInfo.getComponentType()),
-                BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
-                    for (index in 0 until chunk.size()) {
-                        if (chunk.getReferenceTo(index) != blockRef) continue
-                        callbackInvoked = true
-                        commandBuffer.ensureComponent(blockRef, Jank.type)
-                        commandBuffer.ensureComponent(blockRef, BodgeSlots.type)
-                        started = system.startForSelfTest(blockRef, run.world, commandBuffer)
+            val blockRef =
+                BlockModule.getBlockEntity(
+                    run.world,
+                    SCRAP_RUSH_TEST.x,
+                    SCRAP_RUSH_TEST.y,
+                    SCRAP_RUSH_TEST.z,
+                ) ?: error("Scrap Rush test machine is missing")
+            run.scrapRushProbePending = true
+            ScrapRushProbeSession(
+                run,
+                store,
+                blockRef,
+                Vector3i(SCRAP_RUSH_TEST.x, SCRAP_RUSH_TEST.y, SCRAP_RUSH_TEST.z),
+            ) { passed, name, detail ->
+                check(run, passed, name, detail)
+            }.begin()
+        } catch (failure: Exception) {
+            run.scrapRushProbePending = false
+            check(run, false, "Scrap Rush setup", failure.message ?: failure.javaClass.simpleName)
+        }
+    }
+
+    private class ScrapRushProbeSession(
+        private val run: SelfTestRun.Run,
+        private val store: Store<ChunkStore>,
+        private val blockRef: Ref<ChunkStore>,
+        private val position: Vector3i,
+        private val report: (Boolean, String, String) -> Unit,
+    ) {
+        private val world = run.world
+        private val testDirectory: Path = Files.createTempDirectory("craftory-scraprush-selftest")
+        private val testFile: Path = testDirectory.resolve("crews.json")
+        private val crews = CrewService(testFile)
+        private val system =
+            ScrapRushSystem(
+                ScrapRushSettings(minGoblins = 3, maxGoblins = 3),
+                crews,
+                requireOnlineCrew = false,
+                directSpawnForSelfTest = true,
+                evaluationIntervalTicks = 1,
+                areaIsActive = { _, _ -> true },
+            )
+        private val owner = UUID.randomUUID()
+        private val spawnPoints = system.selfTestSpawnPoints(position, 3)
+        private val floorSnapshots = mutableListOf<ScrapRushFloorSnapshot>()
+        private val spawnedIds = mutableListOf<String>()
+        private var finished = false
+
+        fun begin() {
+            val crew = crews.crewOf(owner)
+            report(crew.solo && crew.members == setOf(owner), "Scrap Rush solo owner membership", "$crew")
+            requestChunks()
+        }
+
+        private fun requestChunks() {
+            val grid = world.chunkStore
+            val points = listOf(position) + spawnPoints
+            val chunkIndexes =
+                points
+                    .map { ChunkUtil.indexChunk(it.x shr 5, it.z shr 5) }
+                    .distinct()
+            val chunkLoads =
+                chunkIndexes.map { chunkIndex ->
+                    grid.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING)
+                }
+            CompletableFuture
+                .allOf(*chunkLoads.toTypedArray())
+                .orTimeout(10, TimeUnit.SECONDS)
+                .whenComplete { _, failure ->
+                    world.execute {
+                        if (failure != null) {
+                            fail("Scrap Rush chunks load", "failure=$failure chunks=$chunkIndexes")
+                            return@execute
+                        }
+                        val loaded = chunkLoads.mapNotNull { it.getNow(null) }
+                        if (loaded.size != chunkIndexes.size || loaded.any { !it.isValid }) {
+                            fail("Scrap Rush chunks load", "loaded=${loaded.size}/${chunkIndexes.size}")
+                            return@execute
+                        }
+                        loaded.forEachIndexed { index, ref ->
+                            val chunk = grid.store.getComponent(ref, WorldChunk.getComponentType())
+                            if (chunk == null) {
+                                fail("Scrap Rush chunks load", "WorldChunk missing for $ref")
+                                return@execute
+                            }
+                            if (run.testKeepLoadedChunks.add(chunkIndexes[index])) chunk.addKeepLoaded()
+                        }
+                        requestSections(points)
                     }
-                },
-            )
-            spawnedIds =
-                store
-                    .getComponent(blockRef, ScrapRushRaid.type)
-                    ?.npcIds
-                    ?.toList()
-                    .orEmpty()
-            check(
-                run,
-                started && spawnedIds.size in 3..5,
-                "Scrap Rush spawns 3–5 goblins",
-                "callback=$callbackInvoked count=${spawnedIds.size} " +
-                    "${system.lastStartDiagnostic} ${system.lastSpawnDiagnostic}",
-            )
+                }
+        }
+
+        private fun requestSections(points: List<Vector3i>) {
+            val grid = world.chunkStore
+            val chunkCount = points.map { Pair(it.x shr 5, it.z shr 5) }.distinct().size
+            val sectionCoordinates =
+                points
+                    .map { Triple(it.x shr 5, it.y shr 5, it.z shr 5) }
+                    .distinct()
+            val sectionLoads =
+                sectionCoordinates.map { (x, y, z) ->
+                    grid.getChunkSectionReferenceAsync(x, y, z, GetChunkFlags.SET_TICKING)
+                }
+            CompletableFuture
+                .allOf(*sectionLoads.toTypedArray())
+                .orTimeout(10, TimeUnit.SECONDS)
+                .whenComplete { _, failure ->
+                    world.execute {
+                        if (failure != null) {
+                            fail("Scrap Rush sections load", "failure=$failure sections=$sectionCoordinates")
+                            return@execute
+                        }
+                        val sections = sectionLoads.mapNotNull { it.getNow(null) }
+                        val nonTicking = ChunkStore.REGISTRY.getNonTickingComponentType()
+                        run.testTickingSections.addAll(sectionCoordinates)
+                        val ticking =
+                            sections.size == sectionCoordinates.size &&
+                                sections.all { it.isValid && grid.store.getComponent(it, nonTicking) == null }
+                        if (!ticking) {
+                            fail(
+                                "Scrap Rush sections load",
+                                "sections=${sections.size}/${sectionCoordinates.size} " +
+                                    "ticking=${sections.map { grid.store.getComponent(it, nonTicking) == null }}",
+                            )
+                            return@execute
+                        }
+                        report(
+                            true,
+                            "Scrap Rush test chunks loaded and ticking",
+                            "chunks=$chunkCount sections=${sections.size}",
+                        )
+                        try {
+                            placeFloors()
+                            startFirstRaid()
+                        } catch (error: IllegalStateException) {
+                            fail("Scrap Rush setup", error.message ?: error.javaClass.simpleName)
+                        }
+                    }
+                }
+        }
+
+        private fun placeFloors() {
+            val grid = world.chunkStore
+            val solidFloor = BlockType.fromString("Rock_Stone") ?: error("Rock_Stone block type is missing")
+            val solidFloorId = BlockType.getAssetMap().getIndex(solidFloor.id)
+            spawnPoints.forEach { point ->
+                val floorY = point.y - 1
+                val sectionRef =
+                    grid.getChunkSectionReferenceAtBlock(point.x, floorY, point.z)
+                        ?: error("spawn floor section missing at ${point.x},$floorY,${point.z}")
+                val section =
+                    grid.store.getComponent(sectionRef, BlockSection.getComponentType())
+                        ?: error("spawn floor block section missing at ${point.x},$floorY,${point.z}")
+                val blockId = section.get(point.x and 31, floorY and 31, point.z and 31)
+                val blockType = BlockType.getAssetMap().getAsset(blockId) ?: BlockType.EMPTY
+                floorSnapshots.add(
+                    ScrapRushFloorSnapshot(sectionRef, point.x, floorY, point.z, blockId, blockType, 0, 0),
+                )
+                if (blockId != solidFloorId) {
+                    check(
+                        BlockOperations.setBlock(
+                            grid,
+                            sectionRef,
+                            point.x,
+                            floorY,
+                            point.z,
+                            solidFloorId,
+                            solidFloor,
+                            0,
+                            0,
+                            SetBlockSettings.NO_DROP_ITEMS,
+                        ),
+                    ) {
+                        "failed to place Rock_Stone at ${point.x},$floorY,${point.z} " +
+                            "(existing=${blockType.id})"
+                    }
+                }
+            }
+        }
+
+        private fun startFirstRaid() {
+            if (!spawnSectionsAreTicking()) {
+                fail("Scrap Rush spawn sections are not ticking", system.selfTestSpawnDiagnostics(world))
+                return
+            }
+            val ids = startRaid(owner)
+            if (ids.size !in 3..5) {
+                fail(
+                    "Scrap Rush spawns 3–5 goblins",
+                    "started=${ids.isNotEmpty()} count=${ids.size} ${system.lastStartDiagnostic} " +
+                        "${system.lastSpawnDiagnostic}",
+                )
+                return
+            }
+            spawnedIds.addAll(ids)
+            waitForSpawned(ids) { forceCompleteFirstRaid(ids) }
+        }
+
+        private fun forceCompleteFirstRaid(ids: List<String>) {
             var completed = false
             store.forEachChunk(
                 Query.and(BlockModule.BlockStateInfo.getComponentType()),
@@ -1726,116 +1932,289 @@ object CraftorySelfTest {
                         commandBuffer.ensureComponent(blockRef, Jank.type)
                         commandBuffer.ensureComponent(blockRef, BodgeSlots.type)
                         commandBuffer.getComponent(blockRef, Jank.type)?.stolen = true
-                        completed = ScrapRushSystem.forceComplete(blockRef, run.world, commandBuffer, crews)
+                        completed = ScrapRushSystem.forceComplete(blockRef, world, commandBuffer, crews)
                     }
                 },
             )
-            val cleared =
-                store.getComponent(blockRef, ScrapRushRaid.type) == null &&
-                    store.getComponent(blockRef, Jank.type)?.stolen == false
+            val cleared = store.getComponent(blockRef, ScrapRushRaid.type) == null
             val pageGranted = crews.hasKnowledge(owner, NotebookPages.SCRAP_RUSH_PAGE_ID)
             val npcsRemoved =
-                spawnedIds.none { id ->
-                    runCatching { UUID.fromString(id) }
-                        .getOrNull()
-                        ?.let {
-                            run.world.entityStore
-                                .getRefFromUUID(it)
-                                ?.isValid == true
-                        } == true
+                ids.none { id ->
+                    world.entityStore.getRefFromUUID(UUID.fromString(id))?.isValid == true
                 }
-            check(
-                run,
+            report(
                 completed && cleared && pageGranted && npcsRemoved,
                 "Scrap Rush force-completion",
                 "cleared=$cleared page=$pageGranted npcsRemoved=$npcsRemoved",
             )
+            startNaturalDefeat()
+        }
 
+        private fun startNaturalDefeat() {
+            if (!spawnSectionsAreTicking()) {
+                fail(
+                    "Scrap Rush natural-defeat sections are not ticking",
+                    system.selfTestSpawnDiagnostics(world),
+                )
+                return
+            }
             val naturalOwner = UUID.randomUUID()
-            (store.getComponent(blockRef, MachineOwner.type) ?: error("Scrap Rush machine owner is missing"))
-                .placerUuid = naturalOwner
-            val naturalCrew = crews.crewOf(naturalOwner)
-            var naturalStarted = false
+            val ids = startRaid(naturalOwner)
+            if (ids.size !in 3..5) {
+                fail(
+                    "Scrap Rush natural-defeat spawn",
+                    "started=${ids.isNotEmpty()} count=${ids.size} ${system.lastStartDiagnostic} " +
+                        system.lastSpawnDiagnostic,
+                )
+                return
+            }
+            spawnedIds.addAll(ids)
+            waitForSpawned(ids) { despawnForNaturalDefeat(ids, naturalOwner) }
+        }
+
+        private fun despawnForNaturalDefeat(
+            ids: List<String>,
+            naturalOwner: UUID,
+        ) {
+            store.getComponent(blockRef, Jank.type)?.stolen = true
+            store.getComponent(blockRef, EnergyMember.type)?.apply {
+                production = 0
+                delivered = 0
+            }
+            system.despawnForSelfTest(ids, world)
+            val despawnTick = world.tick
+            scheduleAfterTicks(1) {
+                val ticked = tickNaturalDefeatMachine()
+                val currentRef =
+                    BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+                val cleared =
+                    currentRef != null &&
+                        currentRef.isValid &&
+                        store.getComponent(currentRef, Jank.type)?.stolen == false
+                val raidRemoved =
+                    currentRef != null &&
+                        currentRef.isValid &&
+                        store.getComponent(currentRef, ScrapRushRaid.type) == null
+                val pageGranted = crews.hasKnowledge(naturalOwner, NotebookPages.SCRAP_RUSH_PAGE_ID)
+                report(
+                    ticked && world.tick > despawnTick && cleared && raidRemoved && pageGranted,
+                    "Scrap Rush natural defeat clears Stolen",
+                    "ticked=$ticked elapsed=${world.tick - despawnTick} cleared=$cleared " +
+                        "raidRemoved=$raidRemoved page=$pageGranted",
+                )
+                finish()
+            }
+        }
+
+        private fun tickNaturalDefeatMachine(): Boolean {
+            var ticked = false
+            store.forEachChunk(
+                Query.and(BlockModule.BlockStateInfo.getComponentType()),
+                BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
+                    for (index in 0 until chunk.size()) {
+                        val currentRef = chunk.getReferenceTo(index)
+                        if (currentRef != blockRef) continue
+                        commandBuffer.ensureComponent(currentRef, Jank.type)
+                        commandBuffer.ensureComponent(currentRef, BodgeSlots.type)
+                        system.tick(0f, index, chunk, store, commandBuffer)
+                        ticked = true
+                    }
+                },
+            )
+            return ticked
+        }
+
+        private fun startRaid(owner: UUID): List<String> {
+            store.getComponent(blockRef, MachineOwner.type)?.placerUuid = owner
+            var started = false
             store.forEachChunk(
                 Query.and(BlockModule.BlockStateInfo.getComponentType()),
                 BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
                     for (index in 0 until chunk.size()) {
                         if (chunk.getReferenceTo(index) != blockRef) continue
+                        commandBuffer.ensureComponent(blockRef, MachineOwner.type)
                         commandBuffer.ensureComponent(blockRef, Jank.type)
                         commandBuffer.ensureComponent(blockRef, BodgeSlots.type)
-                        naturalStarted = system.startForSelfTest(blockRef, run.world, commandBuffer)
+                        commandBuffer.getComponent(blockRef, MachineOwner.type)?.placerUuid = owner
+                        started = system.startForSelfTest(blockRef, world, commandBuffer)
                     }
                 },
             )
-            naturalSpawnedIds =
+            return if (started) {
                 store
                     .getComponent(blockRef, ScrapRushRaid.type)
                     ?.npcIds
                     ?.toList()
                     .orEmpty()
-            var naturalTicked = false
+            } else {
+                emptyList()
+            }
+        }
+
+        private fun waitForSpawned(
+            ids: List<String>,
+            after: () -> Unit,
+        ) {
+            val startTick = world.tick
+
+            fun poll() {
+                scheduleAfterTicks(1) {
+                    val spawns = system.selfTestSpawnResults()
+                    val npcType = NPCEntity.getComponentType()
+                    val ticking = spawnSectionsAreTicking()
+                    val valid =
+                        ticking &&
+                            npcType != null &&
+                            spawns.size == ids.size &&
+                            spawns.all { spawn ->
+                                val uuid = UUID.fromString(spawn.id)
+                                spawn.ref.isValid &&
+                                    world.entityStore.getRefFromUUID(uuid) == spawn.ref &&
+                                    world.entityStore.store.getComponent(spawn.ref, npcType) != null
+                            }
+                    if (valid) {
+                        report(
+                            true,
+                            "Scrap Rush NPC refs valid after tick",
+                            "count=${spawns.size} ${system.selfTestSpawnDiagnostics(world)}",
+                        )
+                        after()
+                    } else if (world.tick - startTick >= 100L) {
+                        fail(
+                            "Scrap Rush NPC spawn timeout",
+                            "tick=${world.tick} ${system.selfTestSpawnDiagnostics(world)}",
+                        )
+                    } else {
+                        poll()
+                    }
+                }
+            }
+            poll()
+        }
+
+        private fun spawnSectionsAreTicking(): Boolean {
+            val grid = world.chunkStore
+            val nonTicking = ChunkStore.REGISTRY.getNonTickingComponentType()
+            return spawnPoints.all { point ->
+                val sectionRef =
+                    grid.getChunkSectionReferenceAtBlock(point.x, point.y, point.z)
+                sectionRef != null &&
+                    sectionRef.isValid &&
+                    grid.store.getComponent(sectionRef, nonTicking) == null
+            }
+        }
+
+        private fun scheduleAfterTicks(
+            ticks: Int,
+            action: () -> Unit,
+        ) {
+            val targetTick = world.tick + ticks
+
+            fun poll() {
+                if (world.tick >= targetTick) {
+                    action()
+                } else {
+                    world.scheduleAfter({ poll() }, 50, TimeUnit.MILLISECONDS)
+                }
+            }
+            world.scheduleAfter({ poll() }, 50, TimeUnit.MILLISECONDS)
+        }
+
+        private fun fail(
+            name: String,
+            detail: String,
+        ) {
+            report(false, name, detail)
+            finish()
+        }
+
+        private fun finish() {
+            if (finished) return
+            finished = true
+            try {
+                val raidResult = runCatching { clearRaid() }
+                val despawnResult =
+                    runCatching {
+                        if (spawnedIds.isNotEmpty()) system.despawnForSelfTest(spawnedIds, world)
+                    }
+                val floorResult = runCatching { restoreTestArea() }
+                val raidCleared = raidResult.getOrDefault(false)
+                val floorsRestored = floorResult.getOrDefault(false)
+                val errors =
+                    listOfNotNull(
+                        raidResult.exceptionOrNull()?.message,
+                        floorResult.exceptionOrNull()?.message,
+                    ).joinToString()
+                report(
+                    floorsRestored && raidCleared && despawnResult.isSuccess,
+                    "Scrap Rush test area restored",
+                    "floors=$floorsRestored raid=$raidCleared errors=$errors",
+                )
+            } finally {
+                releaseResources()
+            }
+        }
+
+        private fun clearRaid(): Boolean {
+            val currentRef =
+                BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return true
+            if (store.getComponent(currentRef, ScrapRushRaid.type) == null) return true
+            var cleared = false
             store.forEachChunk(
                 Query.and(BlockModule.BlockStateInfo.getComponentType()),
                 BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
                     for (index in 0 until chunk.size()) {
-                        if (chunk.getReferenceTo(index) != blockRef) continue
-                        commandBuffer.getComponent(blockRef, Jank.type)?.stolen = true
-                        val energyMember = chunk.getComponent(index, EnergyMember.type)
-                        energyMember?.production = 0
-                        energyMember?.delivered = 0
-                        system.despawnForSelfTest(naturalSpawnedIds, run.world)
-                        system.tick(0f, index, chunk, store, commandBuffer)
-                        naturalTicked = true
+                        val ref = chunk.getReferenceTo(index)
+                        if (ref != currentRef) continue
+                        commandBuffer.ensureComponent(ref, Jank.type)
+                        commandBuffer.ensureComponent(ref, BodgeSlots.type)
+                        cleared = ScrapRushSystem.forceComplete(ref, world, commandBuffer, crews)
                     }
                 },
             )
-            val naturalCleared =
-                store.getComponent(blockRef, ScrapRushRaid.type) == null &&
-                    store.getComponent(blockRef, Jank.type)?.stolen == false
-            val naturalPageGranted = crews.hasKnowledge(naturalOwner, NotebookPages.SCRAP_RUSH_PAGE_ID)
-            check(
-                run,
-                naturalCrew.solo &&
-                    naturalStarted &&
-                    naturalSpawnedIds.size in 3..5 &&
-                    naturalTicked &&
-                    naturalCleared &&
-                    naturalPageGranted,
-                "Scrap Rush natural defeat clears Stolen",
-                "solo=${naturalCrew.solo} started=$naturalStarted count=${naturalSpawnedIds.size} " +
-                    "ticked=$naturalTicked cleared=$naturalCleared page=$naturalPageGranted",
+            return cleared
+        }
+
+        private fun restoreTestArea(): Boolean {
+            BlockOperations.setBlock(
+                world.chunkStore,
+                run.sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                BlockType.EMPTY_ID,
+                BlockType.EMPTY,
+                0,
+                0,
+                SetBlockSettings.NO_DROP_ITEMS,
             )
-        } catch (failure: Exception) {
-            check(run, false, "Scrap Rush runtime probe", failure.message ?: failure.javaClass.simpleName)
-        } finally {
-            ref?.let { blockRef ->
-                store.forEachChunk(
-                    Query.and(BlockModule.BlockStateInfo.getComponentType()),
-                    BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
-                        for (index in 0 until chunk.size()) {
-                            if (chunk.getReferenceTo(index) != blockRef) continue
-                            ScrapRushSystem.forceComplete(blockRef, run.world, commandBuffer, crews)
-                        }
-                    },
-                )
+            floorSnapshots.forEach { floor ->
                 BlockOperations.setBlock(
-                    run.world.chunkStore,
-                    run.sectionRef,
-                    SCRAP_RUSH_TEST.x,
-                    SCRAP_RUSH_TEST.y,
-                    SCRAP_RUSH_TEST.z,
-                    BlockType.EMPTY_ID,
-                    BlockType.EMPTY,
-                    0,
-                    0,
+                    world.chunkStore,
+                    floor.sectionRef,
+                    floor.x,
+                    floor.y,
+                    floor.z,
+                    floor.blockId,
+                    floor.blockType,
+                    floor.rotation,
+                    floor.filler,
                     SetBlockSettings.NO_DROP_ITEMS,
                 )
             }
-            testSystem?.despawnForSelfTest(spawnedIds + naturalSpawnedIds, run.world)
-            crews.close()
-            Files.deleteIfExists(testFile)
-            Files.deleteIfExists(testDirectory)
-            check(run, !Files.exists(testDirectory), "Scrap Rush test crew/page cleanup")
+            return floorSnapshots.all { floor ->
+                val section =
+                    world.chunkStore.store.getComponent(floor.sectionRef, BlockSection.getComponentType())
+                section?.get(floor.x and 31, floor.y and 31, floor.z and 31) == floor.blockId
+            }
+        }
+
+        private fun releaseResources() {
+            runCatching { crews.close() }
+            runCatching { Files.deleteIfExists(testFile) }
+            runCatching { Files.deleteIfExists(testDirectory) }
+            report(!Files.exists(testDirectory), "Scrap Rush test crew/page cleanup", "directory=$testDirectory")
+            run.scrapRushProbePending = false
         }
     }
 

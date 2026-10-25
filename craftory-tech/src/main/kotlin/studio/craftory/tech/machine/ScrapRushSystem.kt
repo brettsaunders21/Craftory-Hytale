@@ -11,8 +11,10 @@ import com.hypixel.hytale.component.dependency.SystemDependency
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem
 import com.hypixel.hytale.function.consumer.TriConsumer
+import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
@@ -20,6 +22,7 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.path.IPath
 import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
@@ -64,7 +67,14 @@ internal class ScrapRushSystem(
         var lastGameTimeNanos: Long = Long.MIN_VALUE,
     )
 
+    internal data class SelfTestSpawn(
+        val id: String,
+        val ref: Ref<EntityStore>,
+        val position: Vector3i,
+    )
+
     private val schedules = mutableMapOf<UUID, ScheduleState>()
+    private val selfTestSpawns = mutableListOf<SelfTestSpawn>()
 
     override fun getQuery(): Query<ChunkStore> =
         Query.and(
@@ -263,12 +273,42 @@ internal class ScrapRushSystem(
         despawn(ids, world)
     }
 
+    internal fun selfTestSpawnPoints(
+        position: Vector3i,
+        count: Int,
+    ): List<Vector3i> =
+        SELF_TEST_SPAWN_OFFSETS.take(count).map { (x, z) ->
+            Vector3i(position.x + x, position.y, position.z + z)
+        }
+
+    internal fun selfTestSpawnResults(): List<SelfTestSpawn> = selfTestSpawns.toList()
+
+    internal fun selfTestSpawnDiagnostics(world: World): String =
+        selfTestSpawns.joinToString("; ") { spawn ->
+            spawnEnvironmentDiagnostic(world, spawn.position, spawn.ref)
+        }
+
     @Suppress("LongMethod")
     private fun spawnGoblins(
         world: World,
         position: Vector3i,
         count: Int,
     ): List<String> {
+        if (directSpawnForSelfTest) {
+            selfTestSpawns.clear()
+            val spawned = mutableListOf<String>()
+            selfTestSpawnPoints(position, count).forEach { spawnPosition ->
+                val result = spawnNpcDirectlyForSelfTest(world, position, spawnPosition)
+                if (result == null) {
+                    lastSpawnDiagnostic = spawnEnvironmentDiagnostic(world, spawnPosition, null)
+                    return spawned
+                }
+                selfTestSpawns.add(result)
+                spawned.add(result.id)
+            }
+            lastSpawnDiagnostic = "direct selftest spawns=${spawned.size}"
+            return spawned
+        }
         val spawned = mutableListOf<String>()
         for (goblin in 0 until count) {
             for (attempt in 0 until SPAWN_ATTEMPTS) {
@@ -289,28 +329,18 @@ internal class ScrapRushSystem(
                         )
                     }
                 val result =
-                    if (directSpawnForSelfTest) {
-                        id = spawnNpcDirectlyForSelfTest(world, position, x, z)
-                        if (id != null) SpawnTestResult.TEST_OK else SpawnTestResult.FAIL_INVALID_POSITION
-                    } else {
-                        NPCPlugin.get().spawnNPCWithColumnProbe(
-                            world.entityStore.store,
-                            GOBLIN_ROLE,
-                            null,
-                            world,
-                            x,
-                            z,
-                            position.y.toDouble(),
-                            Rotation3f(0f, 0f, 0f),
-                            onSpawn,
-                        )
-                    }
-                lastSpawnDiagnostic =
-                    if (directSpawnForSelfTest) {
-                        "direct test spawn uuid=${id != null}"
-                    } else {
-                        "result=$result uuid=${id != null} at=$x,${position.y},$z"
-                    }
+                    NPCPlugin.get().spawnNPCWithColumnProbe(
+                        world.entityStore.store,
+                        GOBLIN_ROLE,
+                        null,
+                        world,
+                        x,
+                        z,
+                        position.y.toDouble(),
+                        Rotation3f(0f, 0f, 0f),
+                        onSpawn,
+                    )
+                lastSpawnDiagnostic = "result=$result uuid=${id != null} at=$x,${position.y},$z"
                 if (result == SpawnTestResult.TEST_OK && id != null) {
                     spawned.add(id)
                     break
@@ -322,30 +352,66 @@ internal class ScrapRushSystem(
 
     private fun spawnNpcDirectlyForSelfTest(
         world: World,
-        position: Vector3i,
-        x: Int,
-        z: Int,
-    ): String? {
+        machinePosition: Vector3i,
+        spawnPosition: Vector3i,
+    ): SelfTestSpawn? {
         val spawnedNpc =
             NPCPlugin.get().spawnNPC(
                 world.entityStore.store,
                 GOBLIN_ROLE,
                 null,
-                Vector3d(x + 0.5, position.y.toDouble(), z + 0.5),
+                Vector3d(spawnPosition.x + 0.5, spawnPosition.y.toDouble(), spawnPosition.z + 0.5),
                 Rotation3f(0f, 0f, 0f),
             ) ?: return null
-        val npc = spawnedNpc.right() as? NPCEntity ?: return null
+        val ref = spawnedNpc.left()
+        val npc =
+            spawnedNpc.right() as? NPCEntity
+                ?: run {
+                    world.entityStore.store.removeEntity(ref, RemoveReason.REMOVE)
+                    return null
+                }
         val uuid =
             world.entityStore.store
-                .getComponent(
-                    spawnedNpc.left(),
-                    UUIDComponent.getComponentType(),
-                )?.uuid ?: return null
-        npc.leashPoint = Vector3d(position.x + 0.5, position.y + 0.5, position.z + 0.5)
+                .getComponent(ref, UUIDComponent.getComponentType())
+                ?.uuid ?: run {
+                world.entityStore.store.removeEntity(ref, RemoveReason.REMOVE)
+                return null
+            }
+        npc.leashPoint =
+            Vector3d(machinePosition.x + 0.5, machinePosition.y + 0.5, machinePosition.z + 0.5)
         npc.pathManager.setTransientPath(
-            RaidPath(Vector3d(position.x + 0.5, position.y + 0.5, position.z + 0.5)),
+            RaidPath(Vector3d(machinePosition.x + 0.5, machinePosition.y + 0.5, machinePosition.z + 0.5)),
         )
-        return uuid.toString()
+        return SelfTestSpawn(uuid.toString(), ref, spawnPosition)
+    }
+
+    private fun spawnEnvironmentDiagnostic(
+        world: World,
+        position: Vector3i,
+        ref: Ref<EntityStore>?,
+    ): String {
+        val chunkIndex = ChunkUtil.indexChunk(position.x shr 5, position.z shr 5)
+        val grid = world.chunkStore
+        val chunkRef = grid.getChunkReference(chunkIndex)
+        val sectionRef = grid.getChunkSectionReferenceAtBlock(position.x, position.y - 1, position.z)
+        val nonTicking = ChunkStore.REGISTRY.getNonTickingComponentType()
+        val ticking = sectionRef != null && grid.store.getComponent(sectionRef, nonTicking) == null
+        val floorBlock =
+            sectionRef
+                ?.let { grid.store.getComponent(it, BlockSection.getComponentType()) }
+                ?.get(position.x and 31, (position.y - 1) and 31, position.z and 31)
+                ?.let { BlockType.getAssetMap().getAsset(it)?.id }
+        val uuidRef =
+            ref
+                ?.takeIf { it.isValid }
+                ?.let {
+                    world.entityStore.store
+                        .getComponent(it, UUIDComponent.getComponentType())
+                        ?.uuid
+                }?.let { world.entityStore.getRefFromUUID(it) }
+        return "at=${position.x},${position.y},${position.z} chunk=$chunkIndex " +
+            "loaded=${chunkRef != null} sectionLoaded=${sectionRef != null} ticking=$ticking " +
+            "floor=${floorBlock ?: "unloaded"} refValid=${ref?.isValid} uuidRefValid=${uuidRef?.isValid}"
     }
 
     @Suppress("CyclomaticComplexMethod", "LongMethod", "LoopWithTooManyJumpStatements")
@@ -553,6 +619,7 @@ internal class ScrapRushSystem(
         private const val TICKS_PER_SECOND = 20
         private const val STEAL_DISTANCE_SQUARED = 4.0
         private const val SPAWN_ATTEMPTS = 12
+        private val SELF_TEST_SPAWN_OFFSETS = listOf(3 to 0, 0 to 3, -3 to 0, 0 to -3, 3 to 3)
         private const val GOBLIN_ROLE = "Coffer_Goblin_Scrapper"
         private val RAIDABLE_MACHINE_TYPES =
             setOf(
