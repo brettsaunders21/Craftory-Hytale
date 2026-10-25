@@ -108,8 +108,6 @@
       }
     ],
     "Material": "Solid",
-    "CustomModelAnimation": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Idle_Off_New.blockyanim",
-    "Looping": true,
     "RequiresAlphaBlending": true,
     "InteractionHint": "server.interactionHints.repair",
     "BlockEntity": {

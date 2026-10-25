@@ -91,7 +91,8 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, CrankState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        val tick = store.externalData.world.tick
+        val world = store.externalData.world
+        val tick = world.tick
         if (!CraftoryCore.isAreaActive(store, blockState)) {
             MachineClock.pause(state, tick)
             return
@@ -100,6 +101,26 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         if (CrankMachine.advanceTo(state, tick)) member.unsaved = true
         member.production = CrankMachine.productionPerSolveTick(state)
         member.persist(blockState, commandBuffer, tick, SAVE_INTERVAL_TICKS, immediate = false)
+        val spinning = state.spinTicks > 0
+        if (state.visualSpinning != spinning) {
+            state.visualSpinning = spinning
+            val position = Vector3i()
+            if (blockState.fillWorldPos(commandBuffer, position)) {
+                world.execute {
+                    BlockOperations.setBlockInteractionState(
+                        world.chunkStore,
+                        blockState.sectionRef,
+                        position.x,
+                        position.y,
+                        position.z,
+                        BlockType.fromString(CraftoryIds.CRANK) ?: return@execute,
+                        if (spinning) "On" else "Off",
+                        true,
+                    )
+                }
+                member.persist(blockState, commandBuffer, tick, SAVE_INTERVAL_TICKS, immediate = true)
+            }
+        }
     }
 }
 

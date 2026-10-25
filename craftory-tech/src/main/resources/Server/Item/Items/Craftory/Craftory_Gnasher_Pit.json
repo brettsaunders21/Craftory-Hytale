@@ -30,6 +30,7 @@
     },
     "Material": "Solid",
     "Opacity": "Transparent",
+    "HitboxType": "Bench_Workbench3",
     "BlockEntity": {
       "Components": {
         "Craftory_EnergyMember": {

@@ -12,15 +12,17 @@ class CrankState(
     var spinTicks: Long = 0,
     var lastAdvancedTick: Long = 0,
     var lastPulseTick: Long? = null,
+    var visualSpinning: Boolean? = null,
 ) : Component<ChunkStore>,
     Inspectable {
-    override fun clone(): Component<ChunkStore> = CrankState(spinTicks, lastAdvancedTick, lastPulseTick)
+    override fun clone(): Component<ChunkStore> = CrankState(spinTicks, lastAdvancedTick, lastPulseTick, visualSpinning)
 
     override fun describe(): List<Pair<String, String>> =
         listOf(
             "spinTicks" to spinTicks.toString(),
             "lastAdvancedTick" to lastAdvancedTick.toString(),
             "lastPulseTick" to lastPulseTick.toString(),
+            "visualSpinning" to visualSpinning.toString(),
         )
 
     companion object {

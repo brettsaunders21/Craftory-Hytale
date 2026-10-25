@@ -27,10 +27,34 @@
       }
     ],
     "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
-    "CustomModelAnimation": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Crank.blockyanim",
-    "Looping": true,
     "DrawType": "Model",
     "VariantRotation": "NESW",
+    "State": {
+      "Definitions": {
+        "Off": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "On": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",
+              "Weight": 1
+            }
+          ],
+          "CustomModelAnimation": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Crank.blockyanim",
+          "Looping": true
+        }
+      }
+    },
     "Interactions": {
       "Use": {
         "Interactions": [
@@ -73,7 +97,6 @@
         {}
       ]
     },
-    "HitboxType": "Bench_Workbench3",
     "BlockEntity": {
       "Components": {
         "Craftory_EnergyMember": {

@@ -331,6 +331,16 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
         val burner = burnerRef?.let { store.getComponent(it, BurnerState.type) }
         val canister = canisterRef?.let { store.getComponent(it, EnergyMember.type) }
+        val crankRef =
+            BlockModule.getBlockEntity(
+                run.world,
+                CraftorySelfTest.CRANK.x,
+                CraftorySelfTest.CRANK.y,
+                CraftorySelfTest.CRANK.z,
+            )
+        val crank = crankRef?.let { store.getComponent(it, CrankState.type) }
+        val crankMember = crankRef?.let { store.getComponent(it, EnergyMember.type) }
+        val crankBlock = crankRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
         reportEnergyTopology(run, store)
         check(
             run,
@@ -344,6 +354,17 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             burner?.visualBurning == true,
             "burner visual",
             "visual=${burner?.visualBurning}, burning=${burner?.burning}",
+        )
+        check(
+            run,
+            crank != null &&
+                crankBlock != null &&
+                CraftoryCore.isAreaActive(store, crankBlock) &&
+                crank.spinTicks > 0 &&
+                crank.visualSpinning == true &&
+                crankMember?.production?.let { it > 0 } == true,
+            "crank visual state follows spin",
+            "visual=${crank?.visualSpinning}, spin=${crank?.spinTicks}, production=${crankMember?.production}",
         )
         val anchorRef =
             BlockModule.getBlockEntity(
