@@ -9,7 +9,9 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
+import com.hypixel.hytale.protocol.BlockMaterial
 import com.hypixel.hytale.protocol.SoundCategory
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage
@@ -19,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.util.Config
@@ -41,8 +44,8 @@ object WellBirths {
         random: Random = Random.Default,
     ): Ref<ChunkStore>? {
         world.debugAssertInTickingThread()
-        val temperament = Temperament.entries[random.nextInt(Temperament.entries.size)]
-        return CraftoryCore.wells().spawn(world, playerOrPos, temperament, WellStrength.STEADY, WellState.WILD)
+        val strength = WellBirthRules(random).flickerStrength()
+        return CraftoryCore.wells().spawn(world, playerOrPos, Temperament.SPARK, strength, WellState.WILD)
     }
 
     internal fun spawnStormcall(
@@ -50,10 +53,15 @@ object WellBirths {
         position: BlockPos,
         rules: WellBirthRules,
         random: Random,
-    ): Ref<ChunkStore>? {
-        val strength = listOf(WellStrength.STEADY, WellStrength.ROARING, WellStrength.PRIMAL)[random.nextInt(3)]
-        return spawnNear(world, position, rules.stormTemperament(), strength, rules.surfaceOffset(), random)
-    }
+    ): Ref<ChunkStore>? =
+        spawnNear(
+            world,
+            position,
+            Temperament.SPARK,
+            rules.flickerStrength(),
+            rules.surfaceOffset(),
+            random,
+        )
 
     internal fun spawnNear(
         world: World,
@@ -64,14 +72,38 @@ object WellBirths {
         random: Random,
     ): Ref<ChunkStore>? {
         val angle = random.nextDouble() * Math.PI * 2
-        val target =
-            BlockPos(
-                position.x + (cos(angle) * offset).toInt(),
-                position.y,
-                position.z + (sin(angle) * offset).toInt(),
-            )
-        if (world.chunkStore.getChunkSectionReferenceAtBlock(target.x, target.y, target.z) == null) return null
+        val x = position.x + (cos(angle) * offset).toInt()
+        val z = position.z + (sin(angle) * offset).toInt()
+        val target = findSurface(world, x, z, position.y) ?: return null
         return CraftoryCore.wells().spawn(world, target, temperament, strength, WellState.WILD)
+    }
+
+    private fun findSurface(
+        world: World,
+        x: Int,
+        z: Int,
+        originY: Int,
+    ): BlockPos? {
+        for (y in originY + 8 downTo originY - 8) {
+            val targetIndex = blockIndexAt(world, x, y, z)
+            val belowIndex = blockIndexAt(world, x, y - 1, z)
+            val below = belowIndex?.let { BlockType.getAssetMap().getAsset(it) }
+            if (targetIndex == BlockType.EMPTY_ID && below?.material == BlockMaterial.Solid) {
+                return BlockPos(x, y, z)
+            }
+        }
+        return null
+    }
+
+    private fun blockIndexAt(
+        world: World,
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Int? {
+        val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(x, y, z) ?: return null
+        val section = world.chunkStore.store.getComponent(sectionRef, BlockSection.getComponentType()) ?: return null
+        return section.get(x and 31, y and 31, z and 31)
     }
 }
 
@@ -147,10 +179,10 @@ internal class WellBirthSystem(
     ) {
         val now = world.tick
         val interval = settings.stormcallIntervalSeconds.coerceAtLeast(1) * 20L
-        if (now - (state.lastStormcallByPlayer[player.uuid] ?: 0L) < interval) return
+        if (!WellBirthRules.cooldownElapsed(state.lastStormcallByPlayer[player.uuid], now, interval)) return
         state.lastStormcallByPlayer[player.uuid] = now
         val region = regionId(playerPos.x shr 9, playerPos.z shr 9)
-        if (now - (state.lastStormcallByRegion[region] ?: Long.MIN_VALUE) < interval) return
+        if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
         if (!rules.stormcall(settings.stormcallChance) || !noStrongWellInRegion(world, playerPos)) return
         if (WellBirths.spawnStormcall(world, playerPos, rules, Random) != null) {
             state.lastStormcallByRegion[region] = now
@@ -171,8 +203,7 @@ internal class WellBirthSystem(
         if (!weatherId.contains("rain") && !weatherId.contains("storm")) return
         val now = world.tick
         val cooldown = settings.playerFlickerCooldownSeconds.coerceAtLeast(0) * 20L
-        val previous = state.lastFlickerByPlayer[player.uuid]
-        if (previous != null && now - previous < cooldown) return
+        if (!WellBirthRules.cooldownElapsed(state.lastFlickerByPlayer[player.uuid], now, cooldown)) return
         if (!rules.rainFlicker(settings.rainFlickerChance)) return
         state.lastFlickerByPlayer[player.uuid] = now
         val spawned =
@@ -242,8 +273,7 @@ internal class WellKillBirthSystem(
         val now = world.tick
         val birthState = world.chunkStore.store.getResource(WellBirthState.type)
         val cooldown = config.get().playerFlickerCooldownSeconds.coerceAtLeast(0) * 20L
-        val previous = birthState.lastFlickerByPlayer[player.uuid]
-        if (previous != null && now - previous < cooldown) return
+        if (!WellBirthRules.cooldownElapsed(birthState.lastFlickerByPlayer[player.uuid], now, cooldown)) return
         if (!rules.killFlicker(config.get().killFlickerChance)) return
         birthState.lastFlickerByPlayer[player.uuid] = now
         WellBirths.spawnNear(

@@ -37,6 +37,10 @@ class LensUseInteraction : SimpleInteraction() {
         val commandBuffer = context.commandBuffer ?: return
         val playerRef = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
         val player = commandBuffer.getComponent(context.entity, Player.getComponentType()) ?: return
+        if (CraftoryCore.crewService().crewOf(playerRef.uuid).tier < 2) {
+            playerRef.sendMessage(Message.translation("server.craftory.tier.locked"))
+            return
+        }
         if (scanMob(context, commandBuffer, playerRef, player)) return
         scanTargetBlock(context, commandBuffer, playerRef, player)
     }
@@ -110,14 +114,20 @@ class LensUseInteraction : SimpleInteraction() {
         val state = entityStore.getResource(LensScanState.type)
         val session = state.sessions[playerRef.uuid]
         if (session == null || session.pos != target || session.ref != blockRef) {
-            state.sessions[playerRef.uuid] = LensWellSession(target, blockRef, well, world.tick)
-            WellHud.showResonance(playerRef, player, 0, 600)
+            val newSession = LensWellSession(target, blockRef, well, world.tick)
+            state.sessions[playerRef.uuid] = newSession
+            WellHud.showResonance(playerRef, player, newSession, world.tick)
             playerRef.sendMessage(Message.translation("server.craftory.lens.started"))
             return
         }
         session.lockTicks.add(world.tick)
         if (session.lockTicks.size < 3) {
-            WellHud.showResonance(playerRef, player, session.lockTicks.size, 600 - (world.tick - session.startTick))
+            WellHud.showResonance(
+                playerRef,
+                player,
+                session,
+                world.tick,
+            )
             return
         }
         val score =

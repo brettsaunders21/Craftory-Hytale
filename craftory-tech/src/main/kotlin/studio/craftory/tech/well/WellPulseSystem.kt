@@ -62,7 +62,7 @@ internal class WellPulseSystem(
         wells.forEach { well ->
             if (well.well.state != WellState.WILD) return@forEach
             val id = well.pos.pack()
-            if (tick - (state.lastPulseByPosition[id] ?: Long.MIN_VALUE) < 20L) return@forEach
+            if (!WellBirthRules.cooldownElapsed(state.lastPulseByPosition[id], tick, 20L)) return@forEach
             state.lastPulseByPosition[id] = tick
             val drift = sin(tick / 8.0) * 0.25
             ParticleUtil.spawnParticleEffect(

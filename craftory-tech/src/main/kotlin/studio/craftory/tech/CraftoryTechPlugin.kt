@@ -42,6 +42,7 @@ import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
 import studio.craftory.tech.well.CodexPageUi
+import studio.craftory.tech.well.CodexUseInteraction
 import studio.craftory.tech.well.GobJarUseInteraction
 import studio.craftory.tech.well.LensScanState
 import studio.craftory.tech.well.LensScanSystem
@@ -211,6 +212,10 @@ class CraftoryTechPlugin(
                 CraftoryIds.JAR_USE_INTERACTION,
                 GobJarUseInteraction::class.java,
                 GobJarUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.CODEX_USE_INTERACTION,
+                CodexUseInteraction::class.java,
+                CodexUseInteraction.CODEC,
             )
         val crews = CraftoryCore.crewService()
         crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }

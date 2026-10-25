@@ -2,18 +2,23 @@ package studio.craftory.tech.well
 
 import com.hypixel.hytale.codec.builder.BuilderCodec
 import com.hypixel.hytale.component.CommandBuffer
+import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.entity.InteractionContext
+import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.util.TargetUtil
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.crew.CrewService
 import studio.craftory.tech.CraftoryIds
 
 class GobJarUseInteraction : SimpleInteraction() {
@@ -43,36 +48,59 @@ class GobJarUseInteraction : SimpleInteraction() {
         container: ItemContainer,
         slot: Short,
     ) {
-        val position =
-            TargetUtil
-                .getTargetBlock(context.entity, 8.0, commandBuffer)
-                ?.let { BlockPos(it.x, it.y, it.z) }
+        val originalStack = container.getItemStack(slot) ?: return
+        if (originalStack.itemId != CraftoryIds.GOB_JAR || originalStack.quantity != 1) return
+        val position = targetPosition(context, commandBuffer)
         if (position == null) {
             playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
             return
         }
         val world = commandBuffer.externalData.world
+        val ref = wellRef(world, position)
+        if (ref == null) {
+            playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
+            return
+        }
+        val crews = CraftoryCore.crewService()
+        val result = JarActions.checkCatch(ref, playerRef.uuid, crews, world.chunkStore.store)
+        handleCatchResult(result, world, position, ref, playerRef, crews, container, slot, originalStack)
+    }
+
+    private fun targetPosition(
+        context: InteractionContext,
+        commandBuffer: CommandBuffer<EntityStore>,
+    ): BlockPos? =
+        TargetUtil
+            .getTargetBlock(context.entity, 8.0, commandBuffer)
+            ?.let { BlockPos(it.x, it.y, it.z) }
+
+    private fun wellRef(
+        world: World,
+        position: BlockPos,
+    ): Ref<ChunkStore>? {
         val sectionRef =
-            world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: run {
-                playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
-                return
-            }
-        val ref =
-            BlockModule.getBlockEntity(world.chunkStore.store, sectionRef, position.x, position.y, position.z) ?: run {
-                playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
-                return
-            }
-        when (
-            val result =
-                JarActions.catchFlicker(
-                    world,
-                    ref,
-                    position,
-                    playerRef.uuid,
-                    CraftoryCore.crewService(),
-                    world.chunkStore.store,
-                )
-        ) {
+            world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return null
+        return BlockModule.getBlockEntity(
+            world.chunkStore.store,
+            sectionRef,
+            position.x,
+            position.y,
+            position.z,
+        )
+    }
+
+    private fun handleCatchResult(
+        result: JarCatchResult,
+        world: World,
+        position: BlockPos,
+        ref: Ref<ChunkStore>,
+        playerRef: PlayerRef,
+        crews: CrewService,
+        container: ItemContainer,
+        slot: Short,
+        originalStack: ItemStack,
+    ) {
+        when (result) {
             JarCatchResult.NotWell -> {
                 playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
             }
@@ -86,16 +114,33 @@ class GobJarUseInteraction : SimpleInteraction() {
             }
 
             is JarCatchResult.Caught -> {
-                val filled = JarActions.filledJar(result)
-                if (container.setItemStackForSlot(slot, filled).succeeded()) {
-                    playerRef.sendMessage(
-                        Message
-                            .translation("server.craftory.jar.caught")
-                            .param("temperament", result.temperament.name),
-                    )
-                }
+                commitJarCatch(result, world, position, ref, playerRef, crews, container, slot, originalStack)
             }
         }
+    }
+
+    private fun commitJarCatch(
+        caught: JarCatchResult.Caught,
+        world: World,
+        position: BlockPos,
+        ref: Ref<ChunkStore>,
+        playerRef: PlayerRef,
+        crews: CrewService,
+        container: ItemContainer,
+        slot: Short,
+        originalStack: ItemStack,
+    ) {
+        if (!container.setItemStackForSlot(slot, JarActions.filledJar(caught)).succeeded()) return
+        if (!JarActions.commitCatch(world, ref, position, playerRef.uuid, caught, crews)) {
+            container.setItemStackForSlot(slot, originalStack)
+            playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
+            return
+        }
+        playerRef.sendMessage(
+            Message
+                .translation("server.craftory.jar.caught")
+                .param("temperament", caught.temperament.name),
+        )
     }
 
     override fun simulateTick0(

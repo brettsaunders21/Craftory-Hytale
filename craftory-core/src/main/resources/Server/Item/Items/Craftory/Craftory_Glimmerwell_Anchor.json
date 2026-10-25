@@ -17,8 +17,8 @@
       },
       "UseDefaultDropWhenPlaced": false
     },
-    "HitboxType": "Empty",
-    "Material": "Solid",
+    "HitboxType": "Plant_Small",
+    "Material": "Empty",
     "Opacity": "Transparent",
     "BlockEntity": {
       "Components": {

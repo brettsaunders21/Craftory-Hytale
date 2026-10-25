@@ -19,6 +19,14 @@ class WellLogicTest {
     }
 
     @Test
+    fun `ring timing helpers share scan scoring periods and phase errors`() {
+        assertEquals(40L, ScanScoring.ringPeriod(0, 40))
+        assertEquals(50L, ScanScoring.ringPeriod(1, 40))
+        assertEquals(60L, ScanScoring.ringPeriod(2, 40))
+        assertEquals(10L, ScanScoring.phaseError(100, 110, 0, 40))
+    }
+
+    @Test
     fun `insight values use strength and perfect well bonus`() {
         assertEquals(20L, InsightRules.well(WellStrength.FLICKER, true, false))
         assertEquals(30L, InsightRules.well(WellStrength.FLICKER, true, true))
@@ -39,5 +47,12 @@ class WellLogicTest {
         assertTrue(rules.stormcall(1.0))
         assertFalse(rules.rainFlicker(0.0))
         assertTrue(rules.surfaceOffset() in 8..24)
+    }
+
+    @Test
+    fun `cooldown helper handles missing and elapsed timestamps`() {
+        assertTrue(WellBirthRules.cooldownElapsed(null, 100, 20))
+        assertFalse(WellBirthRules.cooldownElapsed(100, 119, 20))
+        assertTrue(WellBirthRules.cooldownElapsed(100, 120, 20))
     }
 }

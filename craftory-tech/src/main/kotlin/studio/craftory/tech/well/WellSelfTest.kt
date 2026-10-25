@@ -65,8 +65,11 @@ internal object WellSelfTest {
         try {
             val crew = crews.crewOf(player)
             crews.setTier(crew.id, 2)
-            val result = JarActions.catchFlicker(world, spawned, CAUGHT_POS, player, crews, store)
+            val result = JarActions.checkCatch(spawned, player, crews, store)
             check(result is JarCatchResult.Caught) { "Flicker catch failed: $result" }
+            check(JarActions.commitCatch(world, spawned, CAUGHT_POS, player, result, crews)) {
+                "Flicker catch commit failed"
+            }
             check(crews.insight(crew.id)[Temperament.SPARK] == 15L) { "Flicker Insight missing" }
             check(crews.hasKnowledge(player, JarActions.FIRST_FLICKER_ID)) { "first Flicker knowledge missing" }
             val filled = JarActions.filledJar(result)

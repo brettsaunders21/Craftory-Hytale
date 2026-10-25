@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
 import java.util.concurrent.CopyOnWriteArrayList
@@ -62,6 +63,8 @@ class WellAccess internal constructor() {
         val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(pos.x, pos.y, pos.z) ?: return null
         val store = world.chunkStore.store
         val section = store.getComponent(sectionRef, BlockComponentSection.getComponentType()) ?: return null
+        val blockSection = store.getComponent(sectionRef, BlockSection.getComponentType()) ?: return null
+        if (blockSection.get(pos.x and 31, pos.y and 31, pos.z and 31) != BlockType.EMPTY_ID) return null
         val blockType = BlockType.fromString(ANCHOR_BLOCK_ID) ?: return null
         val blockIndex = BlockType.getAssetMap().getIndex(blockType.id)
         if (

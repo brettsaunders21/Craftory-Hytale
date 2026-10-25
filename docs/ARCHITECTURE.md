@@ -140,6 +140,8 @@ crystal-and-scrap hybrid tiers, then pure arcane magic. It builds on Hytale Upda
   simulation.
 - **Per-player progression.** Knowledge, the Tinker's Notebook, Insight and Codex state are stored
   as player components with the save hook, and can be optionally shared per team or server.
+- **Glimmerwell targeting.** The anchor uses `HitboxType: Plant_Small` with `Material: Empty`,
+  following vanilla `Plant_Grass_Lush`'s targetable foliage hitbox without solid collision.
 - **Machine state machine.** Machines move through Frame → Assembling → Running/Stalled/Overloaded
   → Fizzled. Assembly progress, build quality, Jank and upgrade slots are machine components that
   the UI and block-state animations read.

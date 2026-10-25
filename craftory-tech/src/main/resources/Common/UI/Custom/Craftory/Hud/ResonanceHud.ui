@@ -10,9 +10,21 @@ Group {
     Anchor: (Bottom: 6);
   }
 
-  Label #Rings {
-    Text: "Temperament: ◯   Strength: ◯   State: ◯";
-    Style: (FontSize: 16);
+  Label #RingTemperament {
+    Text: "Temperament: 0%";
+    Style: (FontSize: 16, TextColor: #96a9be);
+    Anchor: (Bottom: 4);
+  }
+
+  Label #RingStrength {
+    Text: "Strength: 0%";
+    Style: (FontSize: 16, TextColor: #96a9be);
+    Anchor: (Bottom: 4);
+  }
+
+  Label #RingState {
+    Text: "State: 0%";
+    Style: (FontSize: 16, TextColor: #96a9be);
     Anchor: (Bottom: 4);
   }
 

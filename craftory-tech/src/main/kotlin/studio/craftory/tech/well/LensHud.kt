@@ -26,7 +26,13 @@ import studio.craftory.tech.well.WellConfig
 internal class ResonanceHud(
     playerRef: PlayerRef,
 ) : CustomUIHud(playerRef, CraftoryIds.LENS_HUD, 30) {
-    private var lastState: Pair<Int, Int>? = null
+    private data class RenderState(
+        val locked: Int,
+        val phases: List<Int>,
+        val pulseWindows: List<Boolean>,
+    )
+
+    private var lastState: RenderState? = null
 
     override fun build(commandBuilder: UICommandBuilder) {
         commandBuilder.append("Craftory/Hud/ResonanceHud.ui")
@@ -34,16 +40,27 @@ internal class ResonanceHud(
 
     fun render(
         locked: Int,
-        remainingTicks: Long,
+        phases: List<Int>,
+        pulseWindows: List<Boolean>,
     ) {
-        val state = locked to remainingTicks.toInt()
+        val state = RenderState(locked, phases, pulseWindows)
         if (state == lastState) return
         lastState = state
-        update(
-            false,
-            UICommandBuilder()
-                .set("#Progress.Text", Message.translation("server.craftory.scan.progress").param("ring", locked + 1)),
-        )
+        val commandBuilder =
+            UICommandBuilder().set(
+                "#Progress.Text",
+                Message.translation("server.craftory.scan.progress").param("ring", locked + 1),
+            )
+        val selectors = listOf("#RingTemperament", "#RingStrength", "#RingState")
+        val labels = listOf("Temperament", "Strength", "State")
+        selectors.forEachIndexed { index, selector ->
+            val pulsing = index == locked && pulseWindows[index]
+            val text = "${labels[index]}: ${phases[index]}%" + if (pulsing) " PULSE" else ""
+            commandBuilder
+                .set("$selector.Text", text)
+                .set("$selector.Style.TextColor", if (pulsing) "#a6f08f" else "#96a9be")
+        }
+        update(false, commandBuilder)
     }
 }
 
@@ -84,13 +101,30 @@ internal object WellHud {
     fun showResonance(
         playerRef: PlayerRef,
         player: Player,
-        locked: Int,
-        remainingTicks: Long,
+        session: LensWellSession,
+        now: Long,
     ) {
         val hud =
             (player.hudManager.getCustomHud(CraftoryIds.LENS_HUD) as? ResonanceHud)
                 ?: ResonanceHud(playerRef).also { player.hudManager.addCustomHud(playerRef, it) }
-        hud.render(locked, remainingTicks)
+        val basePeriod =
+            WellRuntimeConfig.current.scanPeriodTicks
+                .toLong()
+                .coerceAtLeast(1L)
+        val windowTicks =
+            WellRuntimeConfig.current.scanWindowTicks
+                .toLong()
+                .coerceAtLeast(0L)
+        val phases =
+            (0..2).map { index ->
+                val period = ScanScoring.ringPeriod(index, basePeriod)
+                (Math.floorMod(now - session.startTick, period) * 100 / period).toInt()
+            }
+        val pulseWindows =
+            (0..2).map { index ->
+                ScanScoring.phaseError(session.startTick, now, index, basePeriod) <= windowTicks
+            }
+        hud.render(session.lockTicks.size, phases, pulseWindows)
     }
 
     fun hideResonance(
@@ -154,7 +188,7 @@ internal class LensScanSystem(
             state.sessions.remove(playerRef.uuid)
             WellHud.hideResonance(playerRef, player)
         } else {
-            WellHud.showResonance(playerRef, player, session.lockTicks.size, remaining)
+            WellHud.showResonance(playerRef, player, session, world.tick)
         }
     }
 }
@@ -208,6 +242,5 @@ internal class CodexPageUi(
                     if (JarActions.FIRST_FLICKER_ID in crew.knowledge) "yes" else "no",
                 ),
             )
-        if (crew.tier < 2) playerRef.sendMessage(Message.translation("server.craftory.tier.locked"))
     }
 }
