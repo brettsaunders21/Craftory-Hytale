@@ -5,6 +5,8 @@ import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.npc.NPCPlugin
 import com.hypixel.hytale.server.npc.entities.NPCEntity
+import com.hypixel.hytale.server.spawning.ISpawnableWithModel
+import com.hypixel.hytale.server.spawning.SpawningContext
 import org.joml.Vector3d
 import studio.craftory.core.api.BlockPos
 import java.util.concurrent.ConcurrentHashMap
@@ -25,17 +27,8 @@ object CraftoryMobs {
         world.debugAssertInTickingThread()
         val resolvedRoleId = aliases[roleId] ?: roleId
         val npcPlugin = NPCPlugin.get()
-        if (!npcPlugin.hasRoleName(resolvedRoleId)) return null
+        val ref = spawnRole(npcPlugin, world, resolvedRoleId, position) ?: return null
         val store = world.entityStore.store
-        val spawned =
-            npcPlugin.spawnNPC(
-                store,
-                resolvedRoleId,
-                null,
-                position,
-                Rotation3f(0f, 0f, 0f),
-            ) ?: return null
-        val ref = spawned.left()
         store.addComponent(
             ref,
             MobHome.type,
@@ -54,6 +47,38 @@ object CraftoryMobs {
             }
         }
         return ref
+    }
+
+    private fun spawnRole(
+        npcPlugin: NPCPlugin,
+        world: World,
+        roleId: String,
+        position: Vector3d,
+    ): com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>? {
+        val roleIndex = npcPlugin.getIndex(roleId)
+        if (roleIndex < 0) return null
+        val roleInfo = npcPlugin.getRoleBuilderInfo(roleIndex) ?: return null
+        npcPlugin.forceValidation(roleIndex)
+        if (!npcPlugin.testAndValidateRole(roleInfo)) return null
+        val roleBuilder = npcPlugin.tryGetCachedValidRole(roleIndex) ?: return null
+        if (!roleBuilder.isSpawnable) return null
+        val spawnable = roleBuilder as? ISpawnableWithModel ?: return null
+        val spawningContext = SpawningContext()
+        if (!spawningContext.setSpawnable(spawnable)) return null
+        val model = spawningContext.model ?: return null
+        val boundingBox = model.boundingBox ?: return null
+        val store = world.entityStore.store
+        val spawnPosition = Vector3d(position).also { it.y -= boundingBox.min.y }
+        val spawned =
+            npcPlugin.spawnEntity(
+                store,
+                roleIndex,
+                spawnPosition,
+                Rotation3f(0f, 0f, 0f),
+                model,
+                null,
+            ) ?: return null
+        return spawned.left()
     }
 
     fun registerRoleAlias(

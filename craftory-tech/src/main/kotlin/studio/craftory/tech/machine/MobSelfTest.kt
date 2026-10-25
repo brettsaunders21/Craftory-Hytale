@@ -8,15 +8,18 @@ import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.mob.CraftoryMobKill
 import studio.craftory.core.api.mob.CraftoryMobs
 import studio.craftory.core.api.mob.MobHome
@@ -24,7 +27,7 @@ import studio.craftory.tech.CraftoryIds
 import java.util.concurrent.TimeUnit
 import java.util.function.BiConsumer
 
-@Suppress("TooManyFunctions", "TooGenericExceptionCaught")
+@Suppress("TooManyFunctions", "TooGenericExceptionCaught", "ComplexCondition")
 internal object MobSelfTest {
     internal class State(
         val run: SelfTestRun.Run,
@@ -37,6 +40,7 @@ internal object MobSelfTest {
         var killPolls = 0
         var expectedKilledRoleId: String? = null
         var drainStart = 0L
+        var drainChargePolls = 0
     }
 
     fun start(run: SelfTestRun.Run) {
@@ -54,6 +58,7 @@ internal object MobSelfTest {
                     run.mobSelfTest = state
                     try {
                         placeFloor(state)
+                        prepareMobArea(state)
                         spawnRoles(state)
                         pollSpawns(state)
                     } catch (failure: Exception) {
@@ -67,6 +72,63 @@ internal object MobSelfTest {
 
     fun cleanup(run: SelfTestRun.Run) {
         run.mobSelfTest?.let(::cleanup)
+    }
+
+    private fun prepareMobArea(state: State) {
+        val world = state.run.world
+        val store = world.chunkStore.store
+        val section =
+            store.getComponent(state.sectionRef, BlockComponentSection.getComponentType())
+                ?: error("mob test block section is missing")
+        CraftorySelfTest.place(
+            world,
+            store,
+            state.sectionRef,
+            section,
+            CraftoryIds.WAKEBELL_ANCHOR,
+            MOB_ANCHOR,
+            AnchorState.type,
+        )
+        CraftorySelfTest.place(
+            world,
+            store,
+            state.sectionRef,
+            section,
+            CraftoryIds.BURNER,
+            MOB_BURNER,
+            BurnerState.type,
+        )
+        CraftorySelfTest.place(world, store, state.sectionRef, section, CraftoryIds.PIPE, MOB_PIPE, EnergyMember.type)
+        CraftorySelfTest.place(
+            world,
+            store,
+            state.sectionRef,
+            section,
+            CraftoryIds.CANISTER,
+            MOB_CANISTER,
+            EnergyMember.type,
+        )
+        CraftorySelfTest.fuelAndKickBurner(world, store, MOB_BURNER)
+        val anchorPosition = MOB_ANCHOR
+        val anchorRef =
+            BlockModule.getBlockEntity(world, anchorPosition.x, anchorPosition.y, anchorPosition.z)
+                ?: error("mob test Anchor is missing")
+        val anchor = store.getComponent(anchorRef, AnchorState.type) ?: error("mob test Anchor state is missing")
+        val anchorBlock =
+            store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("mob test Anchor block state is missing")
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(maxOf(state.run.anchorMaxChargeBeforeTest, 1))
+        anchor.chargeSeconds = maxOf(anchor.chargeSeconds, DRAIN_AREA_CHARGE_SECONDS)
+        MachineActions.activateAnchor(
+            world,
+            anchor,
+            anchorBlock,
+            store,
+            BlockPos(anchorPosition.x, anchorPosition.y, anchorPosition.z),
+        )
+        val areaActive = CraftoryCore.isAreaActive(store, state.sectionRef)
+        check(state.run, areaActive, "mob test area active")
+        check(areaActive) { "mob test area is inactive" }
     }
 
     private fun placeFloor(state: State) {
@@ -197,43 +259,116 @@ internal object MobSelfTest {
     }
 
     private fun beginDrainTest(state: State) {
-        val world = state.run.world
-        val canisterPosition =
-            BlockPos(CraftorySelfTest.CANISTER.x, CraftorySelfTest.CANISTER.y, CraftorySelfTest.CANISTER.z)
-        CraftorySelfTest.detachCanisterProducers(world, state.run.sectionRef)
-        afterTicks(world, POLL_INTERVAL) {
-            val energy = CraftoryCore.energyAccess(world)
-            state.drainStart = energy.stored(canisterPosition.pack())
-            val supply = energy.networkSupply(canisterPosition.pack())
-            check(
-                state.run,
-                state.drainStart > 0 && supply == 0L,
-                "riftmoth drain canister isolated",
-                "stored=${state.drainStart}, supply=$supply",
-            )
-            if (state.drainStart <= 0 || supply != 0L) {
+        val canisterPosition = BlockPos(MOB_CANISTER.x, MOB_CANISTER.y, MOB_CANISTER.z)
+        try {
+            if (!prepareCanisterDrain(state, canisterPosition)) {
                 finishMobs(state)
-                return@afterTicks
+                return
             }
-            val moth =
-                CraftoryMobs.spawn(
-                    world,
-                    CraftoryIds.RIFTMOTH,
-                    Vector3d(canisterPosition.x + 1.5, canisterPosition.y + 1.0, canisterPosition.z + 0.5),
-                    canisterPosition,
-                )
-            if (moth != null) state.refs += moth
-            afterTicks(world, DRAIN_TEST_TICKS) {
-                val remaining = CraftoryCore.energyAccess(world).stored(canisterPosition.pack())
+            pollCanisterCharge(state, canisterPosition)
+        } catch (failure: Exception) {
+            check(state.run, false, "riftmoth drain setup", failure.message ?: failure.javaClass.simpleName)
+            finishMobs(state)
+        }
+    }
+
+    private fun prepareCanisterDrain(
+        state: State,
+        canisterPosition: BlockPos,
+    ): Boolean {
+        val world = state.run.world
+        val store = world.chunkStore.store
+        val canisterRef =
+            BlockModule.getBlockEntity(world, canisterPosition.x, canisterPosition.y, canisterPosition.z)
+                ?: error("mob test canister is missing")
+        val canisterBlock =
+            store.getComponent(canisterRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("mob test canister block state is missing")
+        val areaActive = CraftoryCore.isAreaActive(store, canisterBlock)
+        check(state.run, areaActive, "riftmoth drain area active")
+        return areaActive
+    }
+
+    private fun pollCanisterCharge(
+        state: State,
+        canisterPosition: BlockPos,
+    ) {
+        val world = state.run.world
+        val energy = CraftoryCore.energyAccess(world)
+        if (energy.stored(canisterPosition.pack()) >= DRAIN_PER_SECOND) {
+            val producerStopped = stopMobCanisterProducer(state)
+            CraftorySelfTest.detachCanisterProducers(world, state.sectionRef, listOf(MOB_BURNER, MOB_PIPE))
+            afterTicks(world, NETWORK_SETTLE_TICKS) {
+                state.drainStart = energy.stored(canisterPosition.pack())
+                val supply = energy.networkSupply(canisterPosition.pack())
                 check(
                     state.run,
-                    moth != null && state.drainStart - remaining >= DRAIN_PER_SECOND,
-                    "riftmoth drains adjacent canister",
-                    "stored=${state.drainStart}, remaining=$remaining",
+                    state.drainStart >= DRAIN_PER_SECOND && producerStopped,
+                    "riftmoth drain canister isolated",
+                    "stored=${state.drainStart}, producerStopped=$producerStopped, networkSupply=$supply",
                 )
-                finishMobs(state)
+                if (state.drainStart < DRAIN_PER_SECOND || !producerStopped) {
+                    finishMobs(state)
+                    return@afterTicks
+                }
+                val moth =
+                    CraftoryMobs.spawn(
+                        world,
+                        CraftoryIds.RIFTMOTH,
+                        Vector3d(canisterPosition.x + 1.5, canisterPosition.y + 1.0, canisterPosition.z + 0.5),
+                        canisterPosition,
+                    )
+                if (moth != null) state.refs += moth
+                afterTicks(world, DRAIN_TEST_TICKS) {
+                    val remaining = CraftoryCore.energyAccess(world).stored(canisterPosition.pack())
+                    check(
+                        state.run,
+                        moth != null && state.drainStart - remaining >= DRAIN_PER_SECOND,
+                        "riftmoth drains adjacent canister",
+                        "stored=${state.drainStart}, remaining=$remaining",
+                    )
+                    finishMobs(state)
+                }
             }
+            return
         }
+        if (state.drainChargePolls >= MAX_POLLS) {
+            check(
+                state.run,
+                false,
+                "riftmoth canister charges",
+                "stored=${energy.stored(canisterPosition.pack())}",
+            )
+            finishMobs(state)
+            return
+        }
+        state.drainChargePolls++
+        afterTicks(world, POLL_INTERVAL) { pollCanisterCharge(state, canisterPosition) }
+    }
+
+    private fun stopMobCanisterProducer(state: State): Boolean {
+        val world = state.run.world
+        val store = world.chunkStore.store
+        val producerRef =
+            BlockModule.getBlockEntity(world, MOB_BURNER.x, MOB_BURNER.y, MOB_BURNER.z)
+                ?: error("mob test burner is missing")
+        val burner =
+            store.getComponent(producerRef, BurnerState.type)
+                ?: error("mob test burner state is missing")
+        burner.apply {
+            burnTicks = 0
+            burning = false
+        }
+        val producer =
+            store.getComponent(producerRef, EnergyMember.type)
+                ?: error("mob test producer energy is missing")
+        producer.apply {
+            production = 0L
+            productionRank = 0
+            unsaved = true
+        }
+        store.getComponent(producerRef, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        return !burner.burning && burner.burnTicks == 0L && producer.production == 0L
     }
 
     private fun finishMobs(state: State) {
@@ -275,6 +410,11 @@ internal object MobSelfTest {
                 )
             }
         }
+        CraftorySelfTest.clear(
+            state.run.world,
+            state.sectionRef,
+            listOf(MOB_ANCHOR, MOB_BURNER, MOB_PIPE, MOB_CANISTER),
+        )
     }
 
     private fun countMobs(world: com.hypixel.hytale.server.core.universe.world.World): Int {
@@ -314,6 +454,8 @@ internal object MobSelfTest {
     private const val POLL_INTERVAL = 5L
     private const val DRAIN_TEST_TICKS = 60L
     private const val DRAIN_PER_SECOND = 20L
+    private const val NETWORK_SETTLE_TICKS = 25L
+    private const val DRAIN_AREA_CHARGE_SECONDS = 60L
     private const val FLOOR_Y = 149
     private const val FLOOR_MIN_X = 10_060
     private const val FLOOR_MAX_X = 10_064
@@ -321,6 +463,10 @@ internal object MobSelfTest {
     private const val FLOOR_MAX_Z = 10_004
     private val MOB_AREA = BlockPos(10_062, 150, 10_002)
     private val HOME = BlockPos(10_062, FLOOR_Y, 10_002)
+    private val MOB_ANCHOR = CraftorySelfTest.TestPosition(10_060, 150, 10_004)
+    private val MOB_BURNER = CraftorySelfTest.TestPosition(10_064, 150, 10_004)
+    private val MOB_PIPE = CraftorySelfTest.TestPosition(10_064, 151, 10_004)
+    private val MOB_CANISTER = CraftorySelfTest.TestPosition(10_064, 152, 10_004)
     private val ROLE_IDS =
         listOf(
             CraftoryIds.GLIMMER_WISP,

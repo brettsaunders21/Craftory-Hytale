@@ -802,8 +802,8 @@ object CraftorySelfTest {
     internal fun detachCanisterProducers(
         world: World,
         sectionRef: Ref<ChunkStore>,
+        sources: List<TestPosition> = (listOf(BURNER, CRANK) + pipePositions()).distinct(),
     ) {
-        val sources = (listOf(BURNER, CRANK) + pipePositions()).distinct()
         sources.forEach { position ->
             BlockOperations.setBlock(
                 world.chunkStore,
@@ -827,6 +827,7 @@ object CraftorySelfTest {
             .onFailure { failure ->
                 run.context.sendMessage(Message.raw("selftest: cleanup failed (${failure.message})"))
             }
+        releaseTestKeepLoaded(run)
         run.world.chunkStore.store
             .getResource(SelfTestRun.type)
             .active = null
@@ -933,12 +934,13 @@ object CraftorySelfTest {
         }
     }
 
-    private fun fuelAndKickBurner(
+    internal fun fuelAndKickBurner(
         world: World,
         store: Store<ChunkStore>,
+        position: TestPosition = BURNER,
     ) {
         val burnerRef =
-            BlockModule.getBlockEntity(world, BURNER.x, BURNER.y, BURNER.z)
+            BlockModule.getBlockEntity(world, position.x, position.y, position.z)
                 ?: error("burner entity missing")
         val burner = store.getComponent(burnerRef, BurnerState.type) ?: error("burner component missing")
         val member = store.getComponent(burnerRef, EnergyMember.type) ?: error("burner energy component missing")
@@ -1502,7 +1504,7 @@ object CraftorySelfTest {
         )
     }
 
-    private fun place(
+    internal fun place(
         world: World,
         store: Store<ChunkStore>,
         sectionRef: Ref<ChunkStore>,
@@ -1547,7 +1549,7 @@ object CraftorySelfTest {
         }
     }
 
-    private fun clear(
+    internal fun clear(
         world: World,
         sectionRef: Ref<ChunkStore>,
         positions: List<TestPosition>,

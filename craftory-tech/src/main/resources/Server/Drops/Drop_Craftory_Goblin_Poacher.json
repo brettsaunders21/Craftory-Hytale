@@ -4,6 +4,7 @@
     "Containers": [
       {
         "Type": "Single",
+        "Weight": 90,
         "Item": {
           "ItemId": "Ingredient_Scraps",
           "QuantityMin": 1,

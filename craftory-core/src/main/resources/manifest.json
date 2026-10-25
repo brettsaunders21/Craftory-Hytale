@@ -11,7 +11,8 @@
     "Website": "https://github.com/brettsaunders21/Craftory-Hytale",
     "ServerVersion": ">=0.7.0 <0.8.0",
     "Dependencies": {
-        "Hytale:AssetModule": "*"
+        "Hytale:AssetModule": "*",
+        "Hytale:NPC": "*"
     },
     "OptionalDependencies": {
         

@@ -8,6 +8,7 @@ hytaleTools {
     modId = "CraftoryCore"
     modDescription = "Core services for Craftory Hytale plugins."
     mainClass = "studio.craftory.core.CraftoryCorePlugin"
+    manifestDependencies = "Hytale:AssetModule=*,Hytale:NPC=*"
 }
 
 dependencies {
