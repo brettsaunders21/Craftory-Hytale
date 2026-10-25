@@ -10,6 +10,16 @@ data class FuelDefinition(
     }
 }
 
+internal object MachineSaveThrottle {
+    fun shouldPersist(
+        unsaved: Boolean,
+        currentTick: Long,
+        lastSavedTick: Long,
+        intervalTicks: Long,
+        immediate: Boolean,
+    ): Boolean = immediate || (unsaved && currentTick - lastSavedTick >= intervalTicks)
+}
+
 class CrankMachine(
     initialSpinTicks: Long = 0,
     private val pulseIntervalTicks: Long = PULSE_INTERVAL_TICKS,

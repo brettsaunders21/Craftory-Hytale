@@ -109,4 +109,35 @@ class JunkPowerMachinesTest {
         assertTrue(burner.advanceTo(104))
         assertEquals(199, burner.burnTicks)
     }
+
+    @Test
+    fun `dirty crank saves after the throttle interval and stays clean`() {
+        val crank = CrankMachine(initialSpinTicks = 12)
+        assertFalse(crank.advanceTo(172))
+        assertTrue(crank.advanceTo(184))
+        assertEquals(0, crank.spinTicks)
+
+        var lastSavedTick = 172L
+        var unsaved = true
+
+        fun persist(currentTick: Long) {
+            if (!MachineSaveThrottle.shouldPersist(unsaved, currentTick, lastSavedTick, 20, immediate = false)) {
+                return
+            }
+            lastSavedTick = currentTick
+            unsaved = false
+        }
+
+        persist(184)
+        assertTrue(unsaved)
+        assertEquals(172, lastSavedTick)
+        persist(188)
+        assertTrue(unsaved)
+        persist(192)
+        assertFalse(unsaved)
+        assertEquals(192, lastSavedTick)
+        persist(200)
+        assertFalse(unsaved)
+        assertEquals(192, lastSavedTick)
+    }
 }

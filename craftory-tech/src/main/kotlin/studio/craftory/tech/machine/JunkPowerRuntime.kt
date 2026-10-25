@@ -43,6 +43,7 @@ internal class JunkPowerWorld : Resource<ChunkStore> {
         val schedulerHandle: Handle?,
         var lastProduction: Long = 0,
         var lastSavedTick: Long = 0,
+        var unsaved: Boolean = false,
         var visualBurning: Boolean? = null,
     ) {
         fun persist(
@@ -50,10 +51,22 @@ internal class JunkPowerWorld : Resource<ChunkStore> {
             currentTick: Long,
             immediate: Boolean,
         ) {
-            if (!immediate && currentTick - lastSavedTick < SAVE_INTERVAL_TICKS) return
+            if (immediate) unsaved = true
+            if (
+                !MachineSaveThrottle.shouldPersist(
+                    unsaved,
+                    currentTick,
+                    lastSavedTick,
+                    SAVE_INTERVAL_TICKS,
+                    immediate,
+                )
+            ) {
+                return
+            }
             val currentStore = store ?: return
             blockState.markNeedsSaving(currentStore)
             lastSavedTick = currentTick
+            unsaved = false
         }
     }
 
@@ -184,7 +197,8 @@ internal class JunkPowerWorld : Resource<ChunkStore> {
             setBurnerState(entry, entry.state.burning)
             entry.visualBurning = entry.state.burning
         }
-        if (dirty || visualChanged) entry.persist(store, currentTick, immediate = visualChanged)
+        if (dirty) entry.unsaved = true
+        if (entry.unsaved || visualChanged) entry.persist(store, currentTick, immediate = visualChanged)
     }
 
     private fun updateProduction(
