@@ -11,11 +11,16 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.util.Config
 import com.hypixel.hytale.server.core.util.TargetUtil
+import org.joml.Vector3d
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.mob.CraftoryMobDeathSystem
+import studio.craftory.core.api.mob.CraftoryMobs
+import studio.craftory.core.api.mob.MobHome
+import studio.craftory.core.api.mob.MobLeashSystem
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
@@ -51,6 +56,15 @@ class CraftoryCorePlugin(
         EnergyClock.type = chunkRegistry.registerResource(EnergyClock::class.java, ::EnergyClock)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
+        val entityRegistry = getEntityStoreRegistry()
+        MobHome.type =
+            entityRegistry.registerComponent(
+                MobHome::class.java,
+                "Craftory_MobHome",
+                MobHome.CODEC,
+            )
+        entityRegistry.registerSystem(CraftoryMobDeathSystem())
+        entityRegistry.registerSystem(MobLeashSystem())
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
@@ -89,6 +103,7 @@ class CraftoryCorePlugin(
             addSubCommand(ConfigCommand(config))
             addSubCommand(CraftoryCrewCommand(crews))
             addSubCommand(CraftoryGrantCommand(crews))
+            addSubCommand(MobCommand())
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {
@@ -144,6 +159,64 @@ class CraftoryCorePlugin(
 
         override fun execute(context: CommandContext): CompletableFuture<Void> =
             CraftoryCore.dispatchCommandHandler("summon", context)
+    }
+
+    private class MobCommand : AbstractCommand("mob", "Spawn a Craftory mob") {
+        init {
+            addSubCommand(SpawnMobCommand())
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> {
+            context.sendMessage(Message.raw("Usage: /craftory mob spawn <role>"))
+            return CompletableFuture.completedFuture(null)
+        }
+    }
+
+    private class SpawnMobCommand : AbstractCommand("spawn", "Spawn a Craftory mob at the targeted block") {
+        init {
+            setAllowsExtraArguments(true)
+            requirePermission(HytalePermissions.fromCommand("craftory.mob"))
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> {
+            val roleId = context.inputString.substringAfter("spawn").trim()
+            val aliases = CraftoryMobs.registeredRoleAliases()
+            val usage = "Usage: /craftory mob spawn <role> (aliases: ${aliases.joinToString(", ")})"
+            if (roleId.isEmpty()) {
+                context.sendMessage(Message.raw(usage))
+                return CompletableFuture.completedFuture(null)
+            }
+            val playerRef = context.senderAsPlayerRef()
+            if (playerRef == null) {
+                context.sendMessage(Message.raw("Run /craftory mob spawn as a player."))
+                return CompletableFuture.completedFuture(null)
+            }
+            val entityStore = playerRef.store
+            val world = entityStore.externalData.world
+            return CompletableFuture.runAsync(
+                {
+                    val target = TargetUtil.getTargetBlock(playerRef, 8.0, entityStore)
+                    if (target == null) {
+                        context.sendMessage(Message.raw("Look at a block within 8 blocks to spawn a mob."))
+                        return@runAsync
+                    }
+                    val home = BlockPos(target.x, target.y, target.z)
+                    val mob =
+                        CraftoryMobs.spawn(
+                            world,
+                            roleId,
+                            Vector3d(target.x + 0.5, target.y + 1.0, target.z + 0.5),
+                            home,
+                        )
+                    if (mob == null) {
+                        context.sendMessage(Message.raw(usage))
+                    } else {
+                        context.sendMessage(Message.raw("Spawned Craftory mob '$roleId'."))
+                    }
+                },
+                world,
+            )
+        }
     }
 
     private class NetCommand : AbstractCommand("net", "Show the energy network for a targeted block or coordinates") {

@@ -1,0 +1,24 @@
+{
+  "Container": {
+    "Type": "Multiple",
+    "Containers": [
+      {
+        "Type": "Single",
+        "Item": {
+          "ItemId": "Ingredient_Scraps",
+          "QuantityMin": 1,
+          "QuantityMax": 2
+        }
+      },
+      {
+        "Type": "Single",
+        "Weight": 10,
+        "Item": {
+          "ItemId": "Craftory_Gob_Jar_Filled",
+          "QuantityMin": 1,
+          "QuantityMax": 1
+        }
+      }
+    ]
+  }
+}

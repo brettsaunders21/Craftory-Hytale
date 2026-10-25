@@ -78,6 +78,7 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var anchorMaxChargeBeforeTest: Int = CraftoryCore.anchorMaxChargeMinutes(),
         val testKeepLoadedChunks: MutableSet<Long> = mutableSetOf(),
         var anchorStateForTest: AnchorState? = null,
+        var mobSelfTest: MobSelfTest.State? = null,
     )
 
     var active: Run? = null
@@ -113,6 +114,7 @@ private fun abort(
 ) {
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
+    runCatching { MobSelfTest.cleanup(run) }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -164,6 +166,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             }
             return
         }
+        if (run.phase == 6) return
         try {
             tickSelfTestPhase(run, store, tick)
         } catch (failure: Exception) {
@@ -670,7 +673,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 )
             }
             check(run, rejected, "max 0 rejects Anchor charging")
-            finishAnchorDisable(run, tick)
+            finishAnchorDisable(run)
             return
         }
         if (CraftoryCore.isAreaActive(store, crankBlock)) {
@@ -696,7 +699,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
         }
         check(run, rejected, "max 0 rejects Anchor charging")
-        finishAnchorDisable(run, tick)
+        finishAnchorDisable(run)
     }
 
     @Suppress("ComplexCondition")
@@ -744,15 +747,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         run.anchorDisableTick = tick + 20
     }
 
-    private fun finishAnchorDisable(
-        run: SelfTestRun.Run,
-        tick: Long,
-    ) {
+    private fun finishAnchorDisable(run: SelfTestRun.Run) {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
         CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
-        run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
-        run.cleanupTick = tick + 20
+        run.phase = 6
+        MobSelfTest.start(run)
     }
 
     private fun blockEntityAt(
@@ -799,6 +799,39 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
 
 @Suppress("LargeClass", "TooManyFunctions")
 object CraftorySelfTest {
+    internal fun detachCanisterProducers(
+        world: World,
+        sectionRef: Ref<ChunkStore>,
+    ) {
+        val sources = (listOf(BURNER, CRANK) + pipePositions()).distinct()
+        sources.forEach { position ->
+            BlockOperations.setBlock(
+                world.chunkStore,
+                sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                BlockType.EMPTY_ID,
+                BlockType.EMPTY,
+                0,
+                0,
+                SetBlockSettings.NO_DROP_ITEMS,
+            )
+        }
+    }
+
+    internal fun finishAfterMobTest(run: SelfTestRun.Run) {
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+        runCatching { cleanup(run.world, run.sectionRef) }
+            .onSuccess { reportCleanup(run, it) }
+            .onFailure { failure ->
+                run.context.sendMessage(Message.raw("selftest: cleanup failed (${failure.message})"))
+            }
+        run.world.chunkStore.store
+            .getResource(SelfTestRun.type)
+            .active = null
+    }
+
     internal fun retainTestKeepLoaded(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,

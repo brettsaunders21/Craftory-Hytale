@@ -149,6 +149,14 @@ crystal-and-scrap hybrid tiers, then pure arcane magic. It builds on Hytale Upda
 - **Golems on Hytale NPCs.** Tinklings use Hytale's NPC/role system with Craftory job sigils as
    world markers. Job logic runs on the world thread through query-based systems.
 
+### Mobs
+
+Core's persisted `MobHome` entity component marks Craftory mobs and stores their role and optional home.
+`CraftoryMobs.spawn` adds that marker and initializes the vanilla NPC leash point; the Core kill hook reports
+deaths to listeners. Core refreshes leash points periodically and relies on role leash behavior for movement.
+Tech's Riftmoth drain finds adjacent energy storage and debits it through the public
+`EnergyAccess.requestDebit` API.
+
 ## 8. Milestones
 
 0. **Repository & dev environment**

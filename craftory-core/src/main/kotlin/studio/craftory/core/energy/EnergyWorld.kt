@@ -99,6 +99,29 @@ internal class EnergyWorld : Resource<ChunkStore> {
 
     fun stored(id: Long): Long = member(id)?.stored ?: 0
 
+    fun requestDebit(
+        id: Long,
+        amount: Long,
+    ): Long {
+        if (amount <= 0) return 0
+        val currentStore = store ?: return 0
+        val ref = refsById[id] ?: return 0
+        val member = currentStore.getComponent(ref, EnergyMember.type) ?: return 0
+        val spec = CraftoryCore.energyType(member.typeId)?.spec ?: return 0
+        if ((spec.role and MemberSpec.STORAGE) == 0) return 0
+        val blockState =
+            currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return 0
+        if (!CraftoryCore.isAreaActive(currentStore, blockState)) return 0
+
+        val removed = runtime.requestDebit(id, amount)
+        if (removed > 0) {
+            member.stored = runtime.graph.stored(id)
+            member.storeRank = runtime.graph.storedRank(id)
+            member.unsaved = true
+        }
+        return removed
+    }
+
     fun delivered(id: Long): Long = member(id)?.delivered ?: 0
 
     fun deliveredRank(id: Long): Int = member(id)?.deliveredRank ?: -1

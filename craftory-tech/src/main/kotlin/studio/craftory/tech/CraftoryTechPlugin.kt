@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.Universe
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.Crew
 import studio.craftory.core.api.energy.MemberSpec
+import studio.craftory.core.api.mob.CraftoryMobs
 import studio.craftory.tech.command.SummonCommand
 import studio.craftory.tech.machine.AnchorLifecycle
 import studio.craftory.tech.machine.AnchorRefreshIndex
@@ -37,6 +38,7 @@ import studio.craftory.tech.machine.ReceiptUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
+import studio.craftory.tech.mob.RiftmothDrainSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
@@ -51,6 +53,10 @@ class CraftoryTechPlugin(
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
         CraftoryCore.registerModule("CraftoryTech", pluginVersion)
+        CraftoryMobs.registerRoleAlias("glimmer_wisp", CraftoryIds.GLIMMER_WISP)
+        CraftoryMobs.registerRoleAlias("sparkjaw", CraftoryIds.SPARKJAW)
+        CraftoryMobs.registerRoleAlias("riftmoth", CraftoryIds.RIFTMOTH)
+        CraftoryMobs.registerRoleAlias("goblin_poacher", CraftoryIds.GOBLIN_POACHER)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CRANK_TYPE,
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
@@ -148,6 +154,7 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(CanisterPageRefreshSystem())
         entityRegistry.registerSystem(JunkPowerKickSystem())
         entityRegistry.registerSystem(MachineOwnerPlacementSystem())
+        entityRegistry.registerSystem(RiftmothDrainSystem())
         OpenCustomUIInteraction.registerBlockEntityCustomPage(
             this,
             CanisterPage::class.java,

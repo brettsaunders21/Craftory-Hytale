@@ -1,0 +1,6 @@
+{
+  "TranslationProperties": { "Name": "server.items.Craftory_Gob_Jar_Filled.name" },
+  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Copper.png",
+  "Categories": ["Items.Ingredients"],
+  "MaxStack": 100
+}
