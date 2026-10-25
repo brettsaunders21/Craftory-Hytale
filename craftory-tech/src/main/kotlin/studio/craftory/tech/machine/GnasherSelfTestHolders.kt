@@ -33,6 +33,7 @@ internal object GnasherSelfTestHolders {
         position: CraftorySelfTest.TestPosition,
     ): SelfTestCleanupResult {
         val liveDrops = clearLiveDrops(world.entityStore.store, position)
+        if (!sectionRef.isValid) return SelfTestCleanupResult(liveDrops, 0, 0)
         val sectionHolders = clearSectionHolders(world.chunkStore.store, sectionRef, position)
         val chunkHolders = clearChunkHolders(world.chunkStore.store, sectionRef, position)
         return SelfTestCleanupResult(liveDrops, sectionHolders, chunkHolders)

@@ -90,6 +90,35 @@ internal data class SelfTestCleanupResult(
     val chunkHolders: Int,
 )
 
+private fun reportCleanup(
+    run: SelfTestRun.Run,
+    result: SelfTestCleanupResult,
+) {
+    run.context.sendMessage(
+        Message.raw(
+            "selftest: cleanup (liveGrit=${result.liveDrops}, " +
+                "sectionHolders=${result.sectionHolders}, chunkHolders=${result.chunkHolders})",
+        ),
+    )
+}
+
+private fun abort(
+    run: SelfTestRun.Run,
+    reason: String,
+) {
+    CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+    runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
+    runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
+        .onSuccess { reportCleanup(run, it) }
+        .onFailure { failure ->
+            run.context.sendMessage(Message.raw("selftest: cleanup failed (${failure.message})"))
+        }
+    run.world.chunkStore.store
+        .getResource(SelfTestRun.type)
+        .active = null
+    run.context.sendMessage(Message.raw("selftest: FAIL $reason"))
+}
+
 @Suppress("TooManyFunctions", "LargeClass")
 internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
@@ -104,10 +133,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
         if (tick >= run.startTick + 2_400L) {
-            run.context.sendMessage(Message.raw("selftest: FAIL timed out"))
-            CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
-            CraftorySelfTest.releaseTestKeepLoaded(run)
-            store.getResource(SelfTestRun.type).active = null
+            abort(run, "timed out")
             return
         }
         run.sectionEntityTicking =
@@ -121,7 +147,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             try {
                 tickPowerLossPhase(run, store, tick)
             } catch (failure: Exception) {
-                abortRun(run, store, failure)
+                abort(run, "exception (${failure.message})")
             }
             return
         }
@@ -129,26 +155,15 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             try {
                 tickAnchorDisablePhase(run, store, tick)
             } catch (failure: Exception) {
-                abortRun(run, store, failure)
+                abort(run, "exception (${failure.message})")
             }
             return
         }
         try {
             tickSelfTestPhase(run, store, tick)
         } catch (failure: Exception) {
-            abortRun(run, store, failure)
+            abort(run, "exception (${failure.message})")
         }
-    }
-
-    private fun abortRun(
-        run: SelfTestRun.Run,
-        store: Store<ChunkStore>,
-        failure: Throwable,
-    ) {
-        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
-        runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
-        store.getResource(SelfTestRun.type).active = null
-        run.context.sendMessage(Message.raw("selftest: FAIL exception (${failure.message})"))
     }
 
     private fun reportTickingState(
@@ -747,18 +762,6 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             z,
         )
 
-    private fun reportCleanup(
-        run: SelfTestRun.Run,
-        result: SelfTestCleanupResult,
-    ) {
-        run.context.sendMessage(
-            Message.raw(
-                "selftest: cleanup (liveGrit=${result.liveDrops}, " +
-                    "sectionHolders=${result.sectionHolders}, chunkHolders=${result.chunkHolders})",
-            ),
-        )
-    }
-
     private fun stackDescription(stack: ItemStack?): String? = stack?.let { "${it.itemId}x${it.quantity}" }
 
     private fun check(
@@ -849,7 +852,7 @@ object CraftorySelfTest {
         sectionRef: Ref<ChunkStore>,
     ) {
         val store = world.chunkStore.store
-        var previousAnchorMax: Int? = null
+        val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
         try {
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
@@ -876,9 +879,7 @@ object CraftorySelfTest {
                 store.getComponent(crankRef, BlockModule.BlockStateInfo.getComponentType())
                     ?: error("crank block state missing")
             check(MachineActions.pulse(crank, crankMember, crankBlock, store, world.tick))
-            val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
             run.crankSpinWithoutAnchor = crank.spinTicks
-            previousAnchorMax = run.anchorMaxChargeBeforeTest
             CraftoryCore.setAnchorMaxChargeMinutesInMemory(maxOf(run.anchorMaxChargeBeforeTest, 240))
             store.getResource(SelfTestRun.type).active = run
             context.sendMessage(
@@ -889,11 +890,7 @@ object CraftorySelfTest {
                 ),
             )
         } catch (failure: Exception) {
-            previousAnchorMax?.let { CraftoryCore.setAnchorMaxChargeMinutesInMemory(it) }
-            context.sendMessage(
-                Message.raw("selftest: FAIL setup (${failure.message ?: failure.javaClass.simpleName})"),
-            )
-            runCatching { clear(world, sectionRef, testPositions()) }
+            abort(run, "setup (${failure.message ?: failure.javaClass.simpleName})")
         }
     }
 
@@ -1293,6 +1290,12 @@ object CraftorySelfTest {
         sectionRef: Ref<ChunkStore>,
     ): SelfTestCleanupResult {
         val store = world.chunkStore.store
+        if (
+            !sectionRef.isValid ||
+            store.getComponent(sectionRef, BlockComponentSection.getComponentType()) == null
+        ) {
+            return GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
+        }
         BlockModule
             .getBlockEntity(world, GNASHER.x, GNASHER.y, GNASHER.z)
             ?.takeIf { it.isValid }

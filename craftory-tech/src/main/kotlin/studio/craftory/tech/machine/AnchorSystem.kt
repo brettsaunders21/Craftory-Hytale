@@ -198,7 +198,7 @@ internal class AnchorSystem : EntityTickingSystem<ChunkStore>() {
         }
     }
 
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught")
     private fun requestAreaNow(
         world: World,
         state: AnchorState,
@@ -211,33 +211,46 @@ internal class AnchorSystem : EntityTickingSystem<ChunkStore>() {
         for (chunkX in centerChunkX - 1..centerChunkX + 1) {
             for (chunkZ in centerChunkZ - 1..centerChunkZ + 1) {
                 val chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ)
-                val future = grid.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING)
                 if (!state.pendingChunkLoads.add(chunkIndex)) continue
-                future.whenComplete { chunkRef, failure ->
-                    world.execute {
-                        state.pendingChunkLoads.remove(chunkIndex)
-                        if (failure != null || chunkRef == null || !chunkRef.isValid) {
-                            LOGGER.atWarning().log("Anchor chunk load failed for $chunkIndex: $failure")
-                            return@execute
-                        }
-                        val currentStore = grid.store
-                        val anchorRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
-                        val currentState =
-                            anchorRef?.takeIf { it.isValid }?.let { currentStore.getComponent(it, AnchorState.type) }
-                        if (currentState !== state || state.coverageActive != true || state.chargeSeconds <= 0) {
-                            return@execute
-                        }
-                        val worldChunk = currentStore.getComponent(chunkRef, WorldChunk.getComponentType())
-                        if (worldChunk == null) {
-                            LOGGER.atWarning().log("Anchor chunk load completed without WorldChunk for $chunkIndex")
-                            return@execute
-                        }
-                        if (state.keepLoadedChunks.add(chunkIndex)) worldChunk.addKeepLoaded()
-                        if (store.getResource(AnchorRefreshIndex.type).markRefreshed(chunkIndex, world.tick)) {
-                            worldChunk.resetActiveTimer()
-                            refreshChunkSections(world, chunkX, chunkZ)
+                try {
+                    val future =
+                        grid.getChunkReferenceAsync(
+                            chunkIndex,
+                            GetChunkFlags.SET_TICKING,
+                        )
+                    future.whenComplete { chunkRef, failure ->
+                        world.execute {
+                            state.pendingChunkLoads.remove(chunkIndex)
+                            if (failure != null || chunkRef == null || !chunkRef.isValid) {
+                                LOGGER.atWarning().log("Anchor chunk load failed for $chunkIndex: $failure")
+                                return@execute
+                            }
+                            val currentStore = grid.store
+                            val anchorRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+                            val currentState =
+                                anchorRef
+                                    ?.takeIf { it.isValid }
+                                    ?.let { currentStore.getComponent(it, AnchorState.type) }
+                            if (currentState !== state || state.coverageActive != true || state.chargeSeconds <= 0) {
+                                return@execute
+                            }
+                            val worldChunk = currentStore.getComponent(chunkRef, WorldChunk.getComponentType())
+                            if (worldChunk == null) {
+                                LOGGER
+                                    .atWarning()
+                                    .log("Anchor chunk load completed without WorldChunk for $chunkIndex")
+                                return@execute
+                            }
+                            if (state.keepLoadedChunks.add(chunkIndex)) worldChunk.addKeepLoaded()
+                            if (store.getResource(AnchorRefreshIndex.type).markRefreshed(chunkIndex, world.tick)) {
+                                worldChunk.resetActiveTimer()
+                                refreshChunkSections(world, chunkX, chunkZ)
+                            }
                         }
                     }
+                } catch (failure: Exception) {
+                    state.pendingChunkLoads.remove(chunkIndex)
+                    LOGGER.atWarning().log("Anchor chunk load request failed for $chunkIndex: $failure")
                 }
             }
         }

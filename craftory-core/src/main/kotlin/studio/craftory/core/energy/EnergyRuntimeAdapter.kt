@@ -33,12 +33,14 @@ internal class EnergyRuntimeAdapter {
         var demand: Long = 0,
         var stored: Long = 0,
         var storeRank: Int = -1,
+        var storageEnabled: Boolean = true,
         var lastSolveNetworkId: Int = -1,
         var lastSolveProduction: Long = 0,
         var lastSolveProductionRank: Int = 0,
         var lastSolveDemand: Long = 0,
         var lastSolveStored: Long = 0,
         var lastSolveStoreRank: Int = -1,
+        var lastSolveStorageEnabled: Boolean = true,
         var lastSolveTopologyGeneration: Int = -1,
     )
 
@@ -101,6 +103,7 @@ internal class EnergyRuntimeAdapter {
         val node = nodes.getValue(id)
         require((node.spec.role and MemberSpec.STORAGE) != 0) { "Member $id is not storage" }
         graph.setStorageEnabled(id, enabled)
+        node.storageEnabled = enabled
     }
 
     fun tick(sink: EnergyEventSink) {
@@ -111,6 +114,7 @@ internal class EnergyRuntimeAdapter {
             node.lastSolveDemand = minOf(node.demand, node.spec.maxInput)
             node.lastSolveStored = graph.stored(id)
             node.lastSolveStoreRank = graph.storedRank(id)
+            node.lastSolveStorageEnabled = node.storageEnabled
             node.lastSolveTopologyGeneration = topologyGeneration
         }
         graph.tick(sink)
@@ -163,12 +167,13 @@ internal class EnergyRuntimeAdapter {
         val productionRank = if (useLastSolve) node.lastSolveProductionRank else node.productionRank
         val stored = if (useLastSolve) node.lastSolveStored else node.stored
         val storeRank = if (useLastSolve) node.lastSolveStoreRank else node.storeRank
+        val storageEnabled = if (useLastSolve) node.lastSolveStorageEnabled else node.storageEnabled
         metrics.members++
         if (production > 0) {
             metrics.grade = maxOf(metrics.grade, productionRank)
             metrics.supply += production
         }
-        if (stored > 0) {
+        if (storageEnabled && stored > 0) {
             metrics.grade = maxOf(metrics.grade, storeRank)
             metrics.supply += minOf(stored, node.spec.maxOutput)
         }

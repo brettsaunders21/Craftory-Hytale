@@ -71,6 +71,24 @@ class CoreEnergyTest {
     }
 
     @Test
+    fun `disabled storage is excluded from network diagnostics after the next solve`() {
+        val adapter = EnergyRuntimeAdapter()
+        val storage = MemberSpec(MemberSpec.STORAGE, 100, 100, 100, 0, 5)
+        adapter.add(41, storage, longArrayOf(), stored = 40, storeRank = 2)
+        adapter.tick(EnergyEventSink.NONE)
+
+        adapter.setStorageEnabled(41, false)
+        assertEquals(40, adapter.diagnostics(41)?.supply)
+        assertEquals(2, adapter.diagnostics(41)?.grade)
+
+        adapter.tick(EnergyEventSink.NONE)
+        val diagnostics = adapter.diagnostics(41)
+        assertEquals(0, diagnostics?.supply)
+        assertEquals(0, diagnostics?.grade)
+        assertEquals(40, adapter.graph.stored(41))
+    }
+
+    @Test
     fun `fake adapter restores stored energy and rank`() {
         val adapter = EnergyRuntimeAdapter()
         val storage = MemberSpec(MemberSpec.STORAGE, 100, 100, 100, 0, 5)
