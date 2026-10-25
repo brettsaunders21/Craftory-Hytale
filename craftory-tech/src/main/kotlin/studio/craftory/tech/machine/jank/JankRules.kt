@@ -53,6 +53,14 @@ fun fizzleChance(value: Double): Double {
 fun repairWithScraps(value: Double): Double =
     (value - JankTuning.SCRAP_REPAIR_AMOUNT).coerceAtLeast(JankTuning.MIN_VALUE)
 
+fun isRunning(
+    production: Long,
+    demand: Long,
+    delivered: Long,
+    overGraded: Boolean,
+    overloaded: Boolean,
+): Boolean = production > 0 || (demand > 0 && (delivered > 0 || overGraded || overloaded))
+
 fun step(
     state: JankState,
     running: Boolean,

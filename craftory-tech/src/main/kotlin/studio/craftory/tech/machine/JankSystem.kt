@@ -26,9 +26,16 @@ import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.tech.machine.jank.BodgeSlots
 import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.machine.jank.JankTuning
+import studio.craftory.tech.machine.jank.isRunning
 import studio.craftory.tech.machine.jank.step
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.random.RandomGenerator
+
+private data class WorldMemberId(
+    val worldUuid: UUID,
+    val memberId: Long,
+)
 
 internal class JankSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
@@ -73,15 +80,23 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val memberId = BlockPos.pack(position.x, position.y, position.z)
+        val worldUuid = store.externalData.world.worldConfig.uuid
         var dirty = false
 
         if (store.externalData.world.tick % JankTuning.CYCLE_TICKS == 0L) {
             val before = jank.pureState()
-            val flags = EnergyConditionFlags.forMember(memberId)
+            val flags = EnergyConditionFlags.forMember(worldUuid, memberId)
             val result =
                 step(
                     before,
-                    running = member.production > 0 || (member.demand > 0 && member.delivered > 0),
+                    running =
+                        isRunning(
+                            member.production,
+                            member.demand,
+                            member.delivered,
+                            flags.overGraded,
+                            flags.overloaded,
+                        ),
                     overGraded = flags.overGraded,
                     overloaded = flags.overloaded,
                     mods = slots.modifiers(),
@@ -186,8 +201,9 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
 
     companion object EnergyConditionFlags {
         const val FLAG_TTL_NANOS = 2_000_000_000L
-        private val overGraded = ConcurrentHashMap<Long, Long>()
-        private val overloaded = ConcurrentHashMap<Long, Long>()
+        private val overGraded = ConcurrentHashMap<WorldMemberId, Long>()
+        private val overloaded = ConcurrentHashMap<WorldMemberId, Long>()
+
         const val EFFECT_INTERVAL_TICKS = 60
         const val RATTLE_SOUND = "SFX_GoblinLab_Broken_Device"
         const val FIZZLE_PARTICLE = "Cosmetic/Goblin/Cosmetic_Stink"
@@ -196,25 +212,31 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
         val random: RandomGenerator = RandomGenerator.getDefault()
 
         fun recordOverGraded(
+            worldUuid: UUID,
             memberId: Long,
             expiresAt: Long,
         ) {
-            overGraded[memberId] = expiresAt
+            overGraded[WorldMemberId(worldUuid, memberId)] = expiresAt
         }
 
         fun recordOverloaded(
+            worldUuid: UUID,
             memberId: Long,
             expiresAt: Long,
         ) {
-            overloaded[memberId] = expiresAt
+            overloaded[WorldMemberId(worldUuid, memberId)] = expiresAt
         }
 
-        fun forMember(memberId: Long): Flags {
+        fun forMember(
+            worldUuid: UUID,
+            memberId: Long,
+        ): Flags {
             val now = System.nanoTime()
-            val gradeExpires = overGraded[memberId]
-            val overloadExpires = overloaded[memberId]
-            if (gradeExpires != null && gradeExpires <= now) overGraded.remove(memberId, gradeExpires)
-            if (overloadExpires != null && overloadExpires <= now) overloaded.remove(memberId, overloadExpires)
+            val key = WorldMemberId(worldUuid, memberId)
+            val gradeExpires = overGraded[key]
+            val overloadExpires = overloaded[key]
+            if (gradeExpires != null && gradeExpires <= now) overGraded.remove(key, gradeExpires)
+            if (overloadExpires != null && overloadExpires <= now) overloaded.remove(key, overloadExpires)
             return Flags(gradeExpires != null && gradeExpires > now, overloadExpires != null && overloadExpires > now)
         }
     }

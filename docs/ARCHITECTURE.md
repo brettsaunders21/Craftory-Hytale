@@ -159,6 +159,8 @@ Oven is a bench. Jank evaluation runs after energy solving and pauses in inactiv
 use their item `Secondary` interaction; Scrap repairs Jank through the machine block interaction so
 vanilla Scrap assets are not overridden. The Core energy-condition facade exposes under-grade and
 overload events to Tech without exposing Core internals.
+The oven interaction repairs with Scrap and otherwise delegates to
+`OpenProcessingBenchInteraction`; the server selftest checks that the vanilla interaction resolves.
 Boom Valve speed currently scales generators and the Gnasher; vanilla ProcessingBench timing
 does not expose a safe per-machine speed multiplier, so Scorch Oven processing speed is unchanged.
 Scrap Rush raids persist their goblin UUIDs and theft timer on the target machine. A game-time

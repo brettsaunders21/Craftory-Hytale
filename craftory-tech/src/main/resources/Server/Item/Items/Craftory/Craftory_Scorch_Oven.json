@@ -154,7 +154,13 @@
       ]
     },
     "Interactions": {
-      "Use": "Open_Processing_Bench"
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_OvenUse"
+          }
+        ]
+      }
     }
   }
 }

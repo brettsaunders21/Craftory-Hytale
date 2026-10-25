@@ -1,6 +1,7 @@
 package studio.craftory.core.energy
 
 import studio.craftory.engine.energy.EnergyEventSink
+import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 
 sealed interface CraftoryEnergyEvent
@@ -23,16 +24,33 @@ fun interface CraftoryEnergyListener {
     fun onEnergyEvent(event: CraftoryEnergyEvent)
 }
 
+fun interface CraftoryWorldEnergyListener {
+    fun onEnergyEvent(
+        worldUuid: UUID,
+        event: CraftoryEnergyEvent,
+    )
+}
+
 object CraftoryEnergyEvents {
     private val listeners = CopyOnWriteArrayList<CraftoryEnergyListener>()
+    private val worldListeners = CopyOnWriteArrayList<CraftoryWorldEnergyListener>()
 
     fun subscribe(listener: CraftoryEnergyListener): AutoCloseable {
         listeners.add(listener)
         return AutoCloseable { listeners.remove(listener) }
     }
 
-    internal fun dispatch(event: CraftoryEnergyEvent) {
+    fun subscribeWithWorld(listener: CraftoryWorldEnergyListener): AutoCloseable {
+        worldListeners.add(listener)
+        return AutoCloseable { worldListeners.remove(listener) }
+    }
+
+    internal fun dispatch(
+        worldUuid: UUID,
+        event: CraftoryEnergyEvent,
+    ) {
         listeners.forEach { it.onEnergyEvent(event) }
+        worldListeners.forEach { it.onEnergyEvent(worldUuid, event) }
     }
 }
 
@@ -63,7 +81,7 @@ internal class EnergyEventBuffer(
         satisfiedFraction: Double,
     ) = enqueue(BROWNOUT, networkId.toLong(), 0, satisfiedFraction)
 
-    internal fun drain() {
+    internal fun drain(worldUuid: UUID) {
         while (size > 0) {
             val kind = eventKinds[readIndex]
             val id = eventIds[readIndex]
@@ -77,8 +95,12 @@ internal class EnergyEventBuffer(
                     UNDER_GRADE -> UnderGradeEvent(id)
                     else -> BrownoutEvent(id.toInt(), fraction)
                 }
-            CraftoryEnergyEvents.dispatch(event)
+            CraftoryEnergyEvents.dispatch(worldUuid, event)
         }
+    }
+
+    internal fun drain() {
+        drain(UUID(0L, 0L))
     }
 
     private fun enqueue(

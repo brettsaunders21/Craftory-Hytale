@@ -23,14 +23,19 @@ object ScrapRushCommand {
                 context.sendMessage(Message.translation("server.craftory.scraprush.disabled"))
             } else if (context.inputString.substringAfter("scraprush").trim() != "start") {
                 context.sendMessage(Message.translation("server.craftory.scraprush.usage"))
-            } else if (!ScrapRushSystem.startNearest(player, settings)) {
-                context.sendMessage(
-                    Message
-                        .translation("server.craftory.scraprush.no-machine")
-                        .param("radius", settings.crewRadius),
-                )
             } else {
-                context.sendMessage(Message.translation("server.craftory.scraprush.started"))
+                return ScrapRushSystem
+                    .startNearest(player, settings) { started, diagnostic ->
+                        context.sendMessage(
+                            if (started) {
+                                Message.translation("server.craftory.scraprush.started")
+                            } else {
+                                Message
+                                    .translation("server.craftory.scraprush.start-failed")
+                                    .param("reason", diagnostic)
+                            },
+                        )
+                    }.thenApply { null }
             }
         }
         return CompletableFuture.completedFuture(null)

@@ -265,8 +265,9 @@ internal object GnasherMachine {
         currentTick: Long,
         deliveredFizz: Long,
         speed: Double = 1.0,
+        requiredDelivery: Long = FIZZ_PER_SOLVE_TICK,
     ): GnasherPulseResult {
-        if (state.jammed || GritTable.queuedOreCount(state.oreQueue) == 0 || deliveredFizz < FIZZ_PER_SOLVE_TICK) {
+        if (state.jammed || GritTable.queuedOreCount(state.oreQueue) == 0 || deliveredFizz < requiredDelivery) {
             return GnasherPulseResult(false)
         }
         val previous = state.lastAutoCrankTick

@@ -2,6 +2,7 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
+import com.hypixel.hytale.builtin.crafting.interaction.OpenProcessingBenchInteraction
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
@@ -23,6 +24,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
@@ -1594,6 +1596,14 @@ object CraftorySelfTest {
         val baseTicks = ticksToProcess(1.0)
         val valveTicks = ticksToProcess(bodgeModifiers(listOf(BodgePart.BOOM_VALVE)).speed)
         check(run, valveTicks < baseTicks, "Boom Valve Gnasher speed", "base=$baseTicks valve=$valveTicks")
+        val benchInteraction = Interaction.getAssetMap().getAsset("Open_Processing_Bench")
+        check(
+            run,
+            benchInteraction is OpenProcessingBenchInteraction &&
+                CraftoryOvenUseInteraction::class.java.superclass == OpenProcessingBenchInteraction::class.java,
+            "Scorch oven repair keeps processing-bench interaction",
+            "resolved=${benchInteraction?.javaClass?.simpleName}",
+        )
         runScrapRushProbe(run, store)
     }
 

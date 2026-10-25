@@ -25,6 +25,7 @@ import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CanisterPageRefreshSystem
 import studio.craftory.tech.machine.CraftoryBlockUseInteraction
+import studio.craftory.tech.machine.CraftoryOvenUseInteraction
 import studio.craftory.tech.machine.CraftorySelfTest
 import studio.craftory.tech.machine.CraftoryWrenchUseInteraction
 import studio.craftory.tech.machine.CrankState
@@ -219,6 +220,10 @@ class CraftoryTechPlugin(
                 CraftoryIds.BODGE_USE_INTERACTION,
                 BodgeUseInteraction::class.java,
                 BodgeUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.OVEN_USE_INTERACTION,
+                CraftoryOvenUseInteraction::class.java,
+                CraftoryOvenUseInteraction.CODEC,
             )
         val crews = CraftoryCore.crewService()
         crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }
@@ -229,11 +234,11 @@ class CraftoryTechPlugin(
                     val expiresAt = System.nanoTime() + JankSystem.FLAG_TTL_NANOS
                     when (event.condition) {
                         MachineEnergyCondition.OVER_GRADED -> {
-                            JankSystem.recordOverGraded(event.memberId, expiresAt)
+                            JankSystem.recordOverGraded(event.worldUuid, event.memberId, expiresAt)
                         }
 
                         MachineEnergyCondition.OVERLOADED -> {
-                            JankSystem.recordOverloaded(event.memberId, expiresAt)
+                            JankSystem.recordOverloaded(event.worldUuid, event.memberId, expiresAt)
                         }
                     }
                 },

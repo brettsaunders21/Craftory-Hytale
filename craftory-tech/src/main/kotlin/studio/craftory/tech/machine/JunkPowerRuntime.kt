@@ -2,6 +2,7 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
+import com.hypixel.hytale.builtin.crafting.interaction.OpenProcessingBenchInteraction
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
@@ -385,6 +386,7 @@ internal class GnasherSystem : EntityTickingSystem<ChunkStore>() {
                 member.delivered,
                 position,
                 modifiers.speed,
+                demand,
             )
         if (!result.pulse.accepted) return
     }
@@ -468,6 +470,7 @@ internal fun dropGrit(
 internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockEvent>(DamageBlockEvent::class.java) {
     override fun getQuery(): Query<EntityStore> = Query.and(PlayerRef.getComponentType())
 
+    @Suppress("CyclomaticComplexMethod")
     override fun handle(
         index: Int,
         chunk: ArchetypeChunk<EntityStore>,
@@ -482,6 +485,13 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
         if (event.blockType.id == CraftoryIds.GNASHER_PIT) {
             val state = chunks.getComponent(ref, GnasherState.type) ?: return
             val blockState = chunks.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+            val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
+            val jank = chunks.getComponent(ref, Jank.type)
+            if (jank?.isStalled == true) {
+                player.sendMessage(stalledMachineMessage(jank))
+                event.isCancelled = true
+                return
+            }
             if (!MachineActions.kickGnasher(state, blockState, chunks)) return
             event.isCancelled = true
             return
@@ -490,6 +500,13 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
         val state = chunks.getComponent(ref, BurnerState.type) ?: return
         val member = chunks.getComponent(ref, EnergyMember.type) ?: return
         val blockState = chunks.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
+        val jank = chunks.getComponent(ref, Jank.type)
+        if (jank?.isStalled == true) {
+            player.sendMessage(stalledMachineMessage(jank))
+            event.isCancelled = true
+            return
+        }
         if (!MachineActions.kick(state, member, blockState, chunks, world.tick)) return
         event.isCancelled = true
     }
@@ -511,7 +528,14 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val tick = world.tick
         val jank = store.getComponent(ref, Jank.type)
+        val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType())
         if (heldItem?.itemId == "Ingredient_Scraps" && jank != null && jank.value > 0.0) {
+            if (player == null) return
+            val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+            if (!MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())) {
+                player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+                return
+            }
             val container = context.heldItemContainer ?: return
             val slot = context.heldItemSlot.toShort()
             val held = container.getItemStack(slot) ?: return
@@ -520,9 +544,7 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
             if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
             jank.value = repairWithScraps(jank.value)
             blockState.markNeedsSaving(store)
-            commandBuffer
-                .getComponent(context.entity, PlayerRef.getComponentType())
-                ?.sendMessage(Message.translation("server.craftory.bodge.repair").param("jank", jank.value.toInt()))
+            player.sendMessage(Message.translation("server.craftory.bodge.repair").param("jank", jank.value.toInt()))
             return
         }
         val anchor = store.getComponent(ref, AnchorState.type)
@@ -542,6 +564,10 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val member = store.getComponent(ref, EnergyMember.type) ?: return
         val gnasher = store.getComponent(ref, GnasherState.type)
         if (gnasher != null) {
+            if (heldItem == null && jank?.isStalled == true) {
+                player?.sendMessage(stalledMachineMessage(jank))
+                return
+            }
             val message =
                 if (heldItem == null) {
                     val action =
@@ -572,7 +598,11 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
                 store.getComponent(ref, CrankState.type) != null -> {
                     val state = store.getComponent(ref, CrankState.type)!!
                     if (heldItem == null) {
-                        MachineActions.pulse(state, member, blockState, store, tick)
+                        if (jank?.isStalled == true) {
+                            player?.sendMessage(stalledMachineMessage(jank))
+                        } else {
+                            MachineActions.pulse(state, member, blockState, store, tick)
+                        }
                     }
                     machineReadout("Crank", member)
                 }
@@ -615,6 +645,55 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
                 ).build()
     }
 }
+
+class CraftoryOvenUseInteraction : OpenProcessingBenchInteraction() {
+    override fun interactWithBlock(
+        world: World,
+        commandBuffer: CommandBuffer<EntityStore>,
+        type: InteractionType,
+        context: InteractionContext,
+        heldItem: ItemStack?,
+        position: Vector3i,
+        cooldownHandler: CooldownHandler,
+    ) {
+        val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
+        val store = world.chunkStore.store
+        val jank = store.getComponent(ref, Jank.type)
+        if (heldItem?.itemId != "Ingredient_Scraps" || jank == null || jank.value <= 0.0) {
+            super.interactWithBlock(world, commandBuffer, type, context, heldItem, position, cooldownHandler)
+            return
+        }
+        val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+        if (!MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())) {
+            player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+            return
+        }
+        val container = context.heldItemContainer ?: return
+        val slot = context.heldItemSlot.toShort()
+        val held = container.getItemStack(slot) ?: return
+        if (held.itemId != "Ingredient_Scraps") return
+        val replacement = if (held.quantity == 1) null else held.withQuantity(held.quantity - 1)
+        if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
+        jank.value = repairWithScraps(jank.value)
+        store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        player.sendMessage(Message.translation("server.craftory.bodge.repair").param("jank", jank.value.toInt()))
+    }
+
+    companion object {
+        @JvmField
+        val CODEC =
+            com.hypixel.hytale.codec.builder.BuilderCodec
+                .builder(
+                    CraftoryOvenUseInteraction::class.java,
+                    ::CraftoryOvenUseInteraction,
+                    OpenProcessingBenchInteraction.CODEC,
+                ).build()
+    }
+}
+
+private fun stalledMachineMessage(jank: Jank): Message =
+    Message.translation(if (jank.stolen) "server.craftory.machine.stolen" else "server.craftory.machine.stalled")
 
 class CraftoryWrenchUseInteraction : SimpleBlockInteraction() {
     @Suppress("CyclomaticComplexMethod")
@@ -1023,11 +1102,12 @@ internal object MachineActions {
         deliveredFizz: Long,
         position: BlockPos?,
         speed: Double = 1.0,
+        requiredDelivery: Long = GnasherMachine.FIZZ_PER_SOLVE_TICK,
     ): GnasherPulseActionResult =
         persistGnasherPulse(
             world,
             state,
-            GnasherMachine.autoCrank(state, tick, deliveredFizz, speed),
+            GnasherMachine.autoCrank(state, tick, deliveredFizz, speed, requiredDelivery),
             blockState,
             store,
             position,

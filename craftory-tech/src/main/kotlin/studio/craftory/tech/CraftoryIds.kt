@@ -43,5 +43,6 @@ object CraftoryIds {
     const val WRENCH_USE_INTERACTION = "Craftory_WrenchUse"
     const val RECEIPT_USE_INTERACTION = "Craftory_ReceiptUse"
     const val BODGE_USE_INTERACTION = "Craftory_BodgeUse"
+    const val OVEN_USE_INTERACTION = "Craftory_OvenUse"
     const val NOTEBOOK_PAGE = "Craftory_Tinkers_Notebook"
 }

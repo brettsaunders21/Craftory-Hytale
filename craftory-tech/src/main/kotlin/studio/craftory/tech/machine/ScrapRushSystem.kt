@@ -39,6 +39,7 @@ import studio.craftory.tech.machine.jank.BodgeSlots
 import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.notebook.NotebookPages
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.function.BiConsumer
 
@@ -592,9 +593,31 @@ internal class ScrapRushSystem(
         fun startNearest(
             player: PlayerRef,
             settings: ScrapRushSettings,
-        ): Boolean {
-            if (!settings.enabled) return false
-            val world = Universe.get().getWorld(player.worldUuid ?: return false) ?: return false
+            onComplete: (Boolean, String) -> Unit = { _, _ -> },
+        ): CompletableFuture<Boolean> {
+            val future = CompletableFuture<Boolean>()
+
+            fun complete(
+                started: Boolean,
+                diagnostic: String,
+            ) {
+                future.complete(started)
+                onComplete(started, diagnostic)
+            }
+            if (!settings.enabled) {
+                complete(false, "Scrap Rush is disabled")
+                return future
+            }
+            val world =
+                Universe.get().getWorld(
+                    player.worldUuid ?: run {
+                        complete(false, "player has no world")
+                        return future
+                    },
+                ) ?: run {
+                    complete(false, "player world is unavailable")
+                    return future
+                }
             val ownerCrew = CraftoryCore.crewService().crewOf(player.uuid)
             val playerPosition = player.transform.position
             val activeCrews = mutableSetOf<UUID>()
@@ -642,12 +665,20 @@ internal class ScrapRushSystem(
                     }
                 },
             )
-            val (ref, position) = closest ?: return false
+            val (ref, position) =
+                closest ?: run {
+                    complete(false, "no eligible owned machine within ${settings.crewRadius} blocks")
+                    return future
+                }
             val blockState =
                 world.chunkStore.store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
-                    ?: return false
+                    ?: run {
+                        complete(false, "machine block state is unavailable")
+                        return future
+                    }
             val system = ScrapRushSystem(settings)
             world.execute {
+                var started = false
                 world.chunkStore.store.forEachChunk(
                     ref,
                     Query.and(
@@ -658,11 +689,12 @@ internal class ScrapRushSystem(
                         BlockModule.BlockStateInfo.getComponentType(),
                     ),
                     BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { _, commandBuffer ->
-                        system.startRaid(ref, blockState, position, world, commandBuffer)
+                        started = system.startRaid(ref, blockState, position, world, commandBuffer)
                     },
                 )
+                complete(started, system.lastStartDiagnostic)
             }
-            return true
+            return future
         }
     }
 }

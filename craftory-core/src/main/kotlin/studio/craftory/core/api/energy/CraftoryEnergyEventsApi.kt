@@ -4,6 +4,7 @@ import studio.craftory.core.energy.CraftoryEnergyEvent
 import studio.craftory.core.energy.CraftoryEnergyEvents
 import studio.craftory.core.energy.OverloadEvent
 import studio.craftory.core.energy.UnderGradeEvent
+import java.util.UUID
 
 enum class MachineEnergyCondition {
     OVER_GRADED,
@@ -13,6 +14,7 @@ enum class MachineEnergyCondition {
 data class MachineEnergyConditionEvent(
     val memberId: Long,
     val condition: MachineEnergyCondition,
+    val worldUuid: UUID,
 )
 
 fun interface MachineEnergyConditionListener {
@@ -21,14 +23,14 @@ fun interface MachineEnergyConditionListener {
 
 object CraftoryEnergyEventsApi {
     fun subscribe(listener: MachineEnergyConditionListener): AutoCloseable =
-        CraftoryEnergyEvents.subscribe { event ->
-            event.toMachineCondition()?.let(listener::onCondition)
+        CraftoryEnergyEvents.subscribeWithWorld { worldUuid, event ->
+            event.toMachineCondition(worldUuid)?.let(listener::onCondition)
         }
 
-    private fun CraftoryEnergyEvent.toMachineCondition(): MachineEnergyConditionEvent? =
+    private fun CraftoryEnergyEvent.toMachineCondition(worldUuid: UUID): MachineEnergyConditionEvent? =
         when (this) {
-            is UnderGradeEvent -> MachineEnergyConditionEvent(memberId, MachineEnergyCondition.OVER_GRADED)
-            is OverloadEvent -> MachineEnergyConditionEvent(memberId, MachineEnergyCondition.OVERLOADED)
+            is UnderGradeEvent -> MachineEnergyConditionEvent(memberId, MachineEnergyCondition.OVER_GRADED, worldUuid)
+            is OverloadEvent -> MachineEnergyConditionEvent(memberId, MachineEnergyCondition.OVERLOADED, worldUuid)
             else -> null
         }
 }

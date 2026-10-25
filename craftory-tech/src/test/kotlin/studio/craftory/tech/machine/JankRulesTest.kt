@@ -9,12 +9,22 @@ import studio.craftory.tech.machine.jank.JankState
 import studio.craftory.tech.machine.jank.JankTuning
 import studio.craftory.tech.machine.jank.bodgeModifiers
 import studio.craftory.tech.machine.jank.fizzleChance
+import studio.craftory.tech.machine.jank.isRunning
 import studio.craftory.tech.machine.jank.repairWithScraps
 import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import java.util.Random
 
 class JankRulesTest {
+    @Test
+    fun `blocked demand is running when energy condition flags are active`() {
+        assertTrue(isRunning(1, 0, 0, false, false))
+        assertTrue(isRunning(0, 15, 15, false, false))
+        assertTrue(isRunning(0, 15, 0, true, false))
+        assertTrue(isRunning(0, 15, 0, false, true))
+        assertFalse(isRunning(0, 15, 0, false, false))
+    }
+
     @Test
     fun `running accrues base jank and modifiers`() {
         assertEquals(0.25, step(JankState(), true, false, false, bodgeModifiers(emptyList()), Random(1)).state.value)
