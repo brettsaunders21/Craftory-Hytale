@@ -406,11 +406,16 @@ object SpikeCommands {
             }
 
             "off" -> {
+                val heldRule = store.getComponent(ref, SpikeHeldSlow.type)
+                if (heldRule != null) store.removeComponent(ref, SpikeHeldSlow.type)
                 val slowed =
                     store.getComponent(ref, SpikeSlowed.type)
-                        ?: return respondNow(context, "slow", "not slowed")
+                        ?: return respondNow(
+                            context,
+                            "slow",
+                            if (heldRule != null) "held-item rule removed" else "not slowed",
+                        )
                 slowed.manual = false
-                store.removeComponent(ref, SpikeHeldSlow.type)
                 slowed.held = false
                 restoreSpeedIfUnused(ref, store, slowed)
                 val speed = store.getComponent(ref, MovementManager.getComponentType())?.settings?.baseSpeed
