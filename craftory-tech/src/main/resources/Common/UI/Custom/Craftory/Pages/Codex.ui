@@ -1,0 +1,43 @@
+Group {
+  Anchor: (Center: 0, Width: 620, Height: 520);
+  Background: #171523(0.96);
+  Padding: (Full: 18);
+  LayoutMode: Top;
+
+  Label #Title {
+    Text: "Codex";
+    Style: (FontSize: 24, RenderBold: true);
+    Anchor: (Bottom: 8);
+  }
+
+  Label #Tier {
+    Text: "Current tier: Scrapjank";
+    Style: (FontSize: 18);
+    Anchor: (Bottom: 8);
+  }
+
+  Label #Bands {
+    Text: "Scrapjank  •  Tinkered  •  Sparkbound  •  Glimmerforged  •  Resonant  •  Arcanum  •  Ascendant";
+    Anchor: (Bottom: 14);
+  }
+
+  Label #Discoveries {
+    Text: "Temperament discoveries";
+    Style: (FontSize: 18, RenderBold: true);
+    Anchor: (Bottom: 6);
+  }
+
+  Label #Temperaments {
+    Text: "Spark  •  Ember  •  Tide  •  Growth  •  Stone  •  Gale  •  Clank  •  Hollow";
+    Anchor: (Bottom: 6);
+  }
+
+  Label #Insight {
+    Text: "Insight";
+    Anchor: (Bottom: 6);
+  }
+
+  Label #Flicker {
+    Text: "First Flicker caught: no";
+  }
+}

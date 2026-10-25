@@ -1,0 +1,29 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Glimmerwell_Anchor.name",
+    "Description": "server.items.Craftory_Glimmerwell_Anchor.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "Categories": [
+    "Furniture.Miscellaneous"
+  ],
+  "PlayerAnimationsId": "Block",
+  "BlockType": {
+    "DrawType": "Empty",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {
+        "DropList": "Empty"
+      },
+      "UseDefaultDropWhenPlaced": false
+    },
+    "HitboxType": "Empty",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_Glimmerwell": {}
+      }
+    }
+  }
+}

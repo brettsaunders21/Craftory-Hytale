@@ -39,6 +39,7 @@ import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.well.WellSelfTest
 import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -865,6 +866,7 @@ object CraftorySelfTest {
                     ?: error("block component section is missing")
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions())
+            WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
                 place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)

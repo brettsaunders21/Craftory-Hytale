@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
+import com.hypixel.hytale.server.core.util.Config
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.Crew
 import studio.craftory.core.api.energy.MemberSpec
@@ -40,16 +41,29 @@ import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
+import studio.craftory.tech.well.CodexPageUi
+import studio.craftory.tech.well.GobJarUseInteraction
+import studio.craftory.tech.well.LensScanState
+import studio.craftory.tech.well.LensScanSystem
+import studio.craftory.tech.well.LensUseInteraction
+import studio.craftory.tech.well.WellBirthState
+import studio.craftory.tech.well.WellBirthSystem
+import studio.craftory.tech.well.WellConfig
+import studio.craftory.tech.well.WellPulseState
+import studio.craftory.tech.well.WellPulseSystem
+import studio.craftory.tech.well.WellRuntimeConfig
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
+    private val wellConfig: Config<WellConfig> = withConfig("wells", WellConfig.CODEC)
     private var crewKnowledgeSubscription: AutoCloseable? = null
     private var crewChangedSubscription: AutoCloseable? = null
 
     @Suppress("LongMethod")
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
+        WellRuntimeConfig.current = wellConfig.get()
         CraftoryCore.registerModule("CraftoryTech", pluginVersion)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CRANK_TYPE,
@@ -128,6 +142,7 @@ class CraftoryTechPlugin(
             accessor.getComponent(ref, AnchorState.type)
         }
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
+        WellBirthState.type = chunkRegistry.registerResource(WellBirthState::class.java, ::WellBirthState)
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -138,6 +153,8 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
+        LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
+        WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)
         EnergyHudState.type =
             entityRegistry.registerComponent(
                 EnergyHudState::class.java,
@@ -148,6 +165,9 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(CanisterPageRefreshSystem())
         entityRegistry.registerSystem(JunkPowerKickSystem())
         entityRegistry.registerSystem(MachineOwnerPlacementSystem())
+        entityRegistry.registerSystem(LensScanSystem(wellConfig))
+        entityRegistry.registerSystem(WellPulseSystem(wellConfig))
+        entityRegistry.registerSystem(WellBirthSystem(wellConfig))
         OpenCustomUIInteraction.registerBlockEntityCustomPage(
             this,
             CanisterPage::class.java,
@@ -160,6 +180,13 @@ class CraftoryTechPlugin(
             CraftoryIds.NOTEBOOK_PAGE,
         ) { playerRef ->
             NotebookPageUi(playerRef, CraftoryCore.crewService())
+        }
+        OpenCustomUIInteraction.registerSimple(
+            this,
+            CodexPageUi::class.java,
+            CraftoryIds.CODEX_PAGE,
+        ) { playerRef ->
+            CodexPageUi(playerRef, CraftoryCore.crewService())
         }
         getCodecRegistry(Interaction.CODEC)
             .register(
@@ -174,6 +201,14 @@ class CraftoryTechPlugin(
                 CraftoryIds.RECEIPT_USE_INTERACTION,
                 ReceiptUseInteraction::class.java,
                 ReceiptUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.LENS_USE_INTERACTION,
+                LensUseInteraction::class.java,
+                LensUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.JAR_USE_INTERACTION,
+                GobJarUseInteraction::class.java,
+                GobJarUseInteraction.CODEC,
             )
         val crews = CraftoryCore.crewService()
         crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }

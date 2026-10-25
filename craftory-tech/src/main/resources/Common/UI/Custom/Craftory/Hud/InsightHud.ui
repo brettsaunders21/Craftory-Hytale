@@ -1,0 +1,21 @@
+Group {
+  Anchor: (Bottom: 24, Right: 24, Width: 320);
+  LayoutMode: Top;
+  Background: #000000(0.55);
+  Padding: (Full: 10);
+
+  Label #Title {
+    Text: "Insight";
+    Style: (FontSize: 16, RenderBold: true);
+    Anchor: (Bottom: 4);
+  }
+
+  Label #Orbs {
+    Text: "✦ 0  ✦ 0  ✦ 0  ✦ 0";
+    Anchor: (Bottom: 3);
+  }
+
+  Label #Orbs2 {
+    Text: "✦ 0  ✦ 0  ✦ 0  ✦ 0";
+  }
+}

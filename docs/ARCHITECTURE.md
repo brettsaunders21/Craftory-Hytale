@@ -74,9 +74,9 @@ Third-party addons depend on `CraftoryCore` the same way `CraftoryTech` does.
 
 Core also owns opt-in crews and shared research knowledge. Players without an explicit crew receive a
 lazy solo crew. Accepting an invite merges solo knowledge into the destination; leaving or being kicked
-copies the crew's knowledge into a new solo crew. Core persists this state in `crews.json` with debounced
-atomic replacement. Tech uses only the public Core API to render the Tinker's Notebook and advance a
-crew to Tinkered when all eight first-slice pages are discovered.
+copies the crew's knowledge and Insight into a new solo crew. Core persists this state in `crews.json`
+with debounced atomic replacement. Tech uses only the public Core API to render the Tinker's Notebook
+and Codex, award research Insight, and advance crew tiers.
 
 ## 5. Performance design
 

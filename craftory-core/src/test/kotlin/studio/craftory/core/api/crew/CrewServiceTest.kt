@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import studio.craftory.core.api.well.Temperament
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
@@ -212,6 +213,76 @@ class CrewServiceTest {
             assertEquals(1, service.persistenceWriteCount)
             assertTrue(Files.exists(file))
         } finally {
+            service.close()
+        }
+    }
+
+    @Test
+    fun `insight round trips and legacy crew files default it to empty`() {
+        val file = temporaryDirectory.resolve("insight.json")
+        val owner = UUID.randomUUID()
+        val first = CrewService(file, 60_000)
+        val crew =
+            try {
+                val created = first.crewOf(owner)
+                first.addInsight(created.id, Temperament.TIDE, 37)
+                created.id
+            } finally {
+                first.close()
+            }
+        val restored = CrewService(file, 60_000)
+        try {
+            assertEquals(mapOf(Temperament.TIDE to 37L), restored.crewOf(owner).insight)
+        } finally {
+            restored.close()
+        }
+
+        val legacyFile = temporaryDirectory.resolve("legacy.json")
+        val legacyOwner = UUID.randomUUID()
+        val legacyId = UUID.randomUUID()
+        Files.writeString(
+            legacyFile,
+            """
+            {
+              "crews": [{
+                "id": "$legacyId",
+                "name": "Old",
+                "owner": "$legacyOwner",
+                "members": ["$legacyOwner"],
+                "tier": 1,
+                "solo": true
+              }]
+            }
+            """.trimIndent(),
+        )
+        val legacy = CrewService(legacyFile, 60_000)
+        try {
+            assertEquals(emptyMap<Temperament, Long>(), legacy.crewOf(legacyOwner).insight)
+        } finally {
+            legacy.close()
+        }
+    }
+
+    @Test
+    fun `accept merges insight and crew changes notify listeners`() {
+        val service = CrewService(temporaryDirectory.resolve("insight-merge.json"), 60_000)
+        val owner = UUID.randomUUID()
+        val member = UUID.randomUUID()
+        val events = mutableListOf<Crew>()
+        val subscription = service.onCrewChanged(events::add)
+        try {
+            val crew = service.create(owner, "Insight Crew")
+            val solo = service.crewOf(member)
+            service.addInsight(crew.id, Temperament.SPARK, 11)
+            service.addInsight(solo.id, Temperament.SPARK, 7)
+            assertTrue(service.invite(owner, member))
+            val joined = service.accept(member, crew.id) ?: error("accept failed")
+            assertEquals(18L, joined.insight[Temperament.SPARK])
+            events.clear()
+            service.addInsight(crew.id, Temperament.TIDE, 3)
+            assertEquals(listOf(crew.id), events.map(Crew::id))
+        } finally {
+            subscription.close()
             service.close()
         }
     }

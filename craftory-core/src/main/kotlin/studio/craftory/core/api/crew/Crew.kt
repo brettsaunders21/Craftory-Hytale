@@ -1,5 +1,6 @@
 package studio.craftory.core.api.crew
 
+import studio.craftory.core.api.well.Temperament
 import java.util.UUID
 
 data class Crew(
@@ -11,4 +12,5 @@ data class Crew(
     val knowledge: Set<String>,
     val tier: Int,
     val solo: Boolean,
+    val insight: Map<Temperament, Long> = emptyMap(),
 )

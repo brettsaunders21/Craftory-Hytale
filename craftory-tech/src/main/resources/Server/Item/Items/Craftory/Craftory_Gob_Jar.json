@@ -1,0 +1,19 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Gob_Jar.name",
+    "Description": "server.items.Craftory_Gob_Jar.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Developer",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_JarUse"
+        }
+      ]
+    }
+  }
+}
