@@ -27,7 +27,9 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.jank.Jank
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
 
 data class EnergyHudSnapshot(
     val name: String,
@@ -38,6 +40,8 @@ data class EnergyHudSnapshot(
     val flow: Long,
     val supply: Long,
     val demand: Long,
+    val jank: Int? = null,
+    val status: String? = null,
 )
 
 class EnergyHudState : Component<EntityStore> {
@@ -107,7 +111,9 @@ private class CraftoryEnergyHud(
                 .set("#EnergyLabel.Text", "${snapshot.stored} / ${snapshot.capacity} Fizz")
                 .set("#Grade.Text", "Grade: ${snapshot.grade}")
                 .set("#Members.Text", "Members: ${snapshot.members}")
-                .set("#Flow.Text", "Net flow: ${snapshot.flow} Fizz/t"),
+                .set("#Flow.Text", "Net flow: ${snapshot.flow} Fizz/t")
+                .set("#Jank.Text", snapshot.jank?.let { "Jank: $it%" }.orEmpty())
+                .set("#Status.Text", snapshot.status.orEmpty()),
         )
     }
 }
@@ -152,14 +158,15 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
             }
             val position = target
             val id = BlockPos.pack(position.x, position.y, position.z)
-            if (energy.networkOf(id) < 0) {
+            val blockStore = world.chunkStore.store
+            val memberRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+            val member = memberRef?.let { blockStore.getComponent(it, EnergyMember.type) }
+            val jank = memberRef?.let { blockStore.getComponent(it, Jank.type) }
+            if (energy.networkOf(id) < 0 && jank == null) {
                 hudPort.hide(playerRef, player)
                 hudState.lastSnapshot = null
                 continue
             }
-            val blockStore = world.chunkStore.store
-            val memberRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
-            val member = memberRef?.let { blockStore.getComponent(it, EnergyMember.type) }
             val snapshot =
                 EnergyHudSnapshot(
                     machineName(member?.typeId),
@@ -170,6 +177,12 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                     energy.networkFlow(id),
                     energy.networkSupply(id),
                     energy.networkDemand(id),
+                    jank?.value?.roundToInt(),
+                    when {
+                        jank?.stolen == true -> "Stolen"
+                        (jank?.stallTicks ?: 0) > 0 -> "Stalled"
+                        else -> null
+                    },
                 )
             if (hudState.lastSnapshot != snapshot) {
                 hudState.lastSnapshot = snapshot
@@ -311,7 +324,7 @@ private fun gradeName(rank: Int): String =
         ?.replace('_', ' ')
         ?.replaceFirstChar(Char::uppercase) ?: "Fizz"
 
-private fun machineName(typeId: String?): String =
+internal fun machineName(typeId: String?): String =
     when (typeId) {
         CraftoryIds.BURNER_TYPE -> "Boomshroom Burner"
         CraftoryIds.CANISTER_TYPE -> "Fizz Canister"

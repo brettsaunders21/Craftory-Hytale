@@ -40,6 +40,11 @@
           "OreQueue": "",
           "ProgressPulses": 0,
           "Jammed": false
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
         }
       }
     }

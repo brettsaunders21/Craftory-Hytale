@@ -137,6 +137,11 @@
         "CraftoryMachineOwner": {},
         "CraftoryOvenPower": {
           "AccumulatedFizz": 0
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
         }
       }
     },

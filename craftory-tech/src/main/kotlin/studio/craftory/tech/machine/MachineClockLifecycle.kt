@@ -8,6 +8,8 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.RefSystem
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import studio.craftory.tech.machine.jank.BodgeSlots
+import studio.craftory.tech.machine.jank.Jank
 
 internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
@@ -25,6 +27,8 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         if (reason != AddReason.LOAD && reason != AddReason.SPAWN) return
+        commandBuffer.ensureComponent(ref, Jank.type)
+        commandBuffer.ensureComponent(ref, BodgeSlots.type)
         val tick = store.externalData.world.tick
         commandBuffer.getComponent(ref, CrankState.type)?.let { MachineClock.initialize(it, tick) }
         commandBuffer.getComponent(ref, BurnerState.type)?.let { MachineClock.initialize(it, tick) }

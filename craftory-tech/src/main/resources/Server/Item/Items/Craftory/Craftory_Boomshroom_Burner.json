@@ -108,6 +108,11 @@
         "CraftoryBurner": {
           "BurnTicks": 0,
           "Burning": false
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
         }
       }
     }

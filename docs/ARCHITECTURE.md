@@ -151,6 +151,22 @@ crystal-and-scrap hybrid tiers, then pure arcane magic. It builds on Hytale Upda
 
 ## 8. Milestones
 
+### Slice 2c implementation notes
+
+Powered machines persist `CraftoryJank` and two `CraftoryBodgeSlots` on their block entities.
+The slots are a dedicated component rather than `BenchBlock.upgradeItems`, since only the Scorch
+Oven is a bench. Jank evaluation runs after energy solving and pauses in inactive areas. Bodge parts
+use their item `Secondary` interaction; Scrap repairs Jank through the machine block interaction so
+vanilla Scrap assets are not overridden. The Core energy-condition facade exposes under-grade and
+overload events to Tech without exposing Core internals.
+Boom Valve speed currently scales generators and the Gnasher; vanilla ProcessingBench timing
+does not expose a safe per-machine speed multiplier, so Scorch Oven processing speed is unchanged.
+Scrap Rush raids persist their goblin UUIDs and theft timer on the target machine. A game-time
+probability roll selects one powered owned machine per eligible crew; vanilla
+`Coffer_Goblin_Scrapper` NPCs spawn through the column-probe API and follow a transient path to it,
+stall it after stealing, and grant the crew's Scrap Rush notebook page when defeated.
+`/craftory scraprush start` is the operator-only, schedule-bypassing entry point.
+
 0. **Repository & dev environment**
    - Gradle multi-project build, local dev server, debugging and hot swap, CI, lint and tests.
 1. **Engine**

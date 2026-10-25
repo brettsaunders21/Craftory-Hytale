@@ -38,8 +38,18 @@ import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.ScrapRushSettings
+import studio.craftory.tech.machine.jank.BodgePart
+import studio.craftory.tech.machine.jank.BodgeSlots
+import studio.craftory.tech.machine.jank.Jank
+import studio.craftory.tech.machine.jank.JankState
+import studio.craftory.tech.machine.jank.bodgeModifiers
+import studio.craftory.tech.machine.jank.repairWithScraps
+import studio.craftory.tech.machine.jank.rollFizzle
+import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
 import java.nio.file.Files
+import java.util.Random
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -875,6 +885,7 @@ object CraftorySelfTest {
             place(world, store, sectionRef, section, CraftoryIds.GNASHER_PIT, GNASHER, GnasherState.type)
             place(world, store, sectionRef, section, CraftoryIds.WAKEBELL_ANCHOR, ANCHOR, AnchorState.type)
             runPartCMachineProbes(world, store)
+            runSlice2cRuleProbes(run, store)
 
             fuelAndKickBurner(world, store)
 
@@ -1535,6 +1546,178 @@ object CraftorySelfTest {
         }
     }
 
+    private fun runSlice2cRuleProbes(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        var accrued = JankState()
+        repeat(20) {
+            accrued = step(accrued, true, false, false, bodgeModifiers(emptyList()), Random(1)).state
+        }
+        check(run, accrued.value == 5.0, "Jank accrual", "value=${accrued.value}")
+
+        val repaired = repairWithScraps(45.0)
+        check(run, repaired == 25.0, "Scrap repair", "value=$repaired")
+
+        val seed = (0L..10_000L).first { rollFizzle(100.0, Random(it)) }
+        val fizzled =
+            step(
+                JankState(99.75),
+                true,
+                false,
+                false,
+                bodgeModifiers(emptyList()),
+                Random(seed),
+            )
+        var recovered = fizzled.state
+        repeat(10) {
+            recovered = step(recovered, false, false, false, bodgeModifiers(emptyList()), Random(1)).state
+        }
+        check(
+            run,
+            fizzled.fizzled && recovered.value == 50.0 && recovered.stallTicks == 0,
+            "fizzle and recovery",
+            "fizzled=${fizzled.fizzled}, value=${recovered.value}, stall=${recovered.stallTicks}",
+        )
+
+        fun ticksToProcess(speed: Double): Int {
+            val state = GnasherState()
+            check(GnasherMachine.deposit(state, "Ore_Copper"))
+            var tick = 0
+            while (GritTable.queuedOreCount(state.oreQueue) > 0 && tick < 200) {
+                GnasherMachine.autoCrank(state, tick.toLong(), Long.MAX_VALUE, speed)
+                tick++
+            }
+            return tick
+        }
+
+        val baseTicks = ticksToProcess(1.0)
+        val valveTicks = ticksToProcess(bodgeModifiers(listOf(BodgePart.BOOM_VALVE)).speed)
+        check(run, valveTicks < baseTicks, "Boom Valve Gnasher speed", "base=$baseTicks valve=$valveTicks")
+        runScrapRushProbe(run, store)
+    }
+
+    @Suppress("LongMethod", "TooGenericExceptionCaught", "CyclomaticComplexMethod")
+    private fun runScrapRushProbe(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val section = store.getComponent(run.sectionRef, BlockComponentSection.getComponentType()) ?: return
+        val testDirectory = Files.createTempDirectory("craftory-scrap-rush-selftest-")
+        val testFile = testDirectory.resolve("crews.json")
+        val crews = CrewService(testFile)
+        val owner = UUID.randomUUID()
+        var ref: Ref<ChunkStore>? = null
+        var spawnedIds: List<String> = emptyList()
+        try {
+            crews.create(owner, "Scrap Rush Test")
+            place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, SCRAP_RUSH_TEST, BurnerState.type)
+            ref =
+                BlockModule.getBlockEntity(run.world, SCRAP_RUSH_TEST.x, SCRAP_RUSH_TEST.y, SCRAP_RUSH_TEST.z)
+                    ?: error("Scrap Rush test burner was not placed")
+            val blockRef = ref
+            (store.getComponent(blockRef, MachineOwner.type) ?: error("Scrap Rush machine owner is missing"))
+                .placerUuid = owner
+            val system =
+                ScrapRushSystem(
+                    ScrapRushSettings(minGoblins = 3, maxGoblins = 3),
+                    crews,
+                    requireOnlineCrew = false,
+                    directSpawnForSelfTest = true,
+                )
+            var started = false
+            var callbackInvoked = false
+            store.forEachChunk(
+                Query.and(BlockModule.BlockStateInfo.getComponentType()),
+                BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
+                    for (index in 0 until chunk.size()) {
+                        if (chunk.getReferenceTo(index) != blockRef) continue
+                        callbackInvoked = true
+                        commandBuffer.ensureComponent(blockRef, Jank.type)
+                        commandBuffer.ensureComponent(blockRef, BodgeSlots.type)
+                        started = system.startForSelfTest(blockRef, run.world, commandBuffer)
+                    }
+                },
+            )
+            spawnedIds =
+                store
+                    .getComponent(blockRef, ScrapRushRaid.type)
+                    ?.npcIds
+                    ?.toList()
+                    .orEmpty()
+            check(
+                run,
+                started && spawnedIds.size in 3..5,
+                "Scrap Rush spawns 3–5 goblins",
+                "callback=$callbackInvoked count=${spawnedIds.size} " +
+                    "${system.lastStartDiagnostic} ${system.lastSpawnDiagnostic}",
+            )
+            var completed = false
+            store.forEachChunk(
+                Query.and(BlockModule.BlockStateInfo.getComponentType()),
+                BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
+                    for (index in 0 until chunk.size()) {
+                        if (chunk.getReferenceTo(index) != blockRef) continue
+                        commandBuffer.ensureComponent(blockRef, Jank.type)
+                        commandBuffer.ensureComponent(blockRef, BodgeSlots.type)
+                        commandBuffer.getComponent(blockRef, Jank.type)?.stolen = true
+                        completed = ScrapRushSystem.forceComplete(blockRef, run.world, commandBuffer, crews)
+                    }
+                },
+            )
+            val cleared =
+                store.getComponent(blockRef, ScrapRushRaid.type) == null &&
+                    store.getComponent(blockRef, Jank.type)?.stolen == false
+            val pageGranted = crews.hasKnowledge(owner, NotebookPages.SCRAP_RUSH_PAGE_ID)
+            val npcsRemoved =
+                spawnedIds.none { id ->
+                    runCatching { UUID.fromString(id) }
+                        .getOrNull()
+                        ?.let {
+                            run.world.entityStore
+                                .getRefFromUUID(it)
+                                ?.isValid == true
+                        } == true
+                }
+            check(
+                run,
+                completed && cleared && pageGranted && npcsRemoved,
+                "Scrap Rush force-completion",
+                "cleared=$cleared page=$pageGranted npcsRemoved=$npcsRemoved",
+            )
+        } catch (failure: Exception) {
+            check(run, false, "Scrap Rush runtime probe", failure.message ?: failure.javaClass.simpleName)
+        } finally {
+            ref?.let { blockRef ->
+                store.forEachChunk(
+                    Query.and(BlockModule.BlockStateInfo.getComponentType()),
+                    BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
+                        for (index in 0 until chunk.size()) {
+                            if (chunk.getReferenceTo(index) != blockRef) continue
+                            ScrapRushSystem.forceComplete(blockRef, run.world, commandBuffer, crews)
+                        }
+                    },
+                )
+                BlockOperations.setBlock(
+                    run.world.chunkStore,
+                    run.sectionRef,
+                    SCRAP_RUSH_TEST.x,
+                    SCRAP_RUSH_TEST.y,
+                    SCRAP_RUSH_TEST.z,
+                    BlockType.EMPTY_ID,
+                    BlockType.EMPTY,
+                    0,
+                    0,
+                    SetBlockSettings.NO_DROP_ITEMS,
+                )
+            }
+            crews.close()
+            Files.deleteIfExists(testFile)
+            Files.deleteIfExists(testDirectory)
+            check(run, !Files.exists(testDirectory), "Scrap Rush test crew/page cleanup")
+        }
+    }
+
     internal fun cleanup(
         world: World,
         sectionRef: Ref<ChunkStore>,
@@ -1590,6 +1773,7 @@ object CraftorySelfTest {
     internal val ANCHOR = TestPosition(10_040, 150, 10_012)
     private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
     private val WRENCH_PACK = TestPosition(10_022, 148, 10_004)
+    private val SCRAP_RUSH_TEST = TestPosition(10_024, 148, 10_004)
 
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
@@ -1597,6 +1781,6 @@ object CraftorySelfTest {
     private fun testPositions(): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
-                listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK)
+                listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK, SCRAP_RUSH_TEST)
         ).distinct()
 }

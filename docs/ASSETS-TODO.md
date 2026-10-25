@@ -8,3 +8,8 @@ Replace these vanilla placeholders with Craftory Blockbench models and textures:
 - `Craftory_Gutterpipe`: grey developer tube model and texture. It is a straight-pipe placeholder; connected-block visuals are not configured.
 - `Craftory_Grizzlecog`: Klops merchant appearance and shopkeeper animation.
 - `Craftory_Gnasher_Pit`: replace the single-block placeholder with the planned 3×3×2 multiblock model and textures.
+- Boom Valve, Gutter Gear, Scrap Plating Bodge, Squawk Box and Muffler icons: `GoblinLab_Tinkering_Bench.png`.
+- Jank fizzle puff: `Cosmetic/Goblin/Cosmetic_Stink`.
+- Jank rattle steam: `Decorative/Goblin/Goblin_Decorative_Steam`.
+- High-Jank grey smoke: `Deployables/Healing_Totem/Totem_Heal_Smoke`.
+- Jank rattle/fizzle sound: `SFX_GoblinLab_Broken_Device`.
