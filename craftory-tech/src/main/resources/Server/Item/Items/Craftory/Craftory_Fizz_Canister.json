@@ -80,6 +80,18 @@
           "Burning": false
         }
       }
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "OpenCustomUI",
+            "Page": {
+              "Id": "Craftory_Canister"
+            }
+          }
+        ]
+      }
     }
   }
 }

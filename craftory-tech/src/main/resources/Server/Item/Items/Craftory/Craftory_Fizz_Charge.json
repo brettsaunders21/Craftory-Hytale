@@ -1,0 +1,24 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Fizz_Charge.name",
+    "Description": "server.items.Craftory_Fizz_Charge.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Rubble_Charcoal_Small.png",
+  "MaxStack": 99,
+  "Categories": [
+    "Items.Ingredients"
+  ],
+  "ResourceTypes": [
+    {
+      "Id": "Craftory_Fizz"
+    }
+  ],
+  "FuelQuality": 2,
+  "PlayerAnimationsId": "Item",
+  "Tags": {
+    "Type": [
+      "Ingredient"
+    ]
+  },
+  "DropOnDeath": true
+}

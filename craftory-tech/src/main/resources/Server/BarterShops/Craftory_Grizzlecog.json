@@ -68,6 +68,22 @@
         ],
         "Stock": 1
       }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Squint_Goggles",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 10
+          }
+        ],
+        "Stock": 1
+      }
     }
   ]
 }

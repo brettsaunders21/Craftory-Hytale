@@ -12,8 +12,12 @@ class JunkPowerState(
     var spinTicks: Long = 0,
     var burnTicks: Long = 0,
     var burning: Boolean = false,
+    var oreQueue: String = "",
+    var grindPulses: Int = 0,
+    var jammed: Boolean = false,
 ) : Component<ChunkStore> {
-    override fun clone(): Component<ChunkStore> = JunkPowerState(machine, spinTicks, burnTicks, burning)
+    override fun clone(): Component<ChunkStore> =
+        JunkPowerState(machine, spinTicks, burnTicks, burning, oreQueue, grindPulses, jammed)
 
     companion object {
         lateinit var type: ComponentType<ChunkStore, JunkPowerState>
@@ -34,6 +38,18 @@ class JunkPowerState(
                     { it.burnTicks },
                 ).add()
                 .append(KeyedCodec("Burning", Codec.BOOLEAN), { state, value -> state.burning = value }, { it.burning })
+                .add()
+                .append(
+                    KeyedCodec("OreQueue", Codec.STRING),
+                    { state, value -> state.oreQueue = value },
+                    { it.oreQueue },
+                ).add()
+                .append(
+                    KeyedCodec("GrindPulses", Codec.INTEGER),
+                    { state, value -> state.grindPulses = value },
+                    { it.grindPulses },
+                ).add()
+                .append(KeyedCodec("Jammed", Codec.BOOLEAN), { state, value -> state.jammed = value }, { it.jammed })
                 .add()
                 .build()
     }

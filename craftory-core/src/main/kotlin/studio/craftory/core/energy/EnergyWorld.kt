@@ -30,6 +30,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
     private var schedulerRegistered = false
     var lastSolveNanos: Long = 0
         private set
+    private var lastSolveTick: Long = 0
 
     override fun clone(): Resource<ChunkStore> = EnergyWorld()
 
@@ -105,6 +106,12 @@ internal class EnergyWorld : Resource<ChunkStore> {
 
     fun stored(id: Long): Long = runtime.graph.stored(id)
 
+    fun capacity(id: Long): Long = runtime.capacity(id)
+
+    fun networkSupply(id: Long): Long = runtime.diagnostics(id)?.supply ?: 0L
+
+    fun networkDemand(id: Long): Long = runtime.diagnostics(id)?.demand ?: 0L
+
     fun delivered(id: Long): Long = runtime.graph.delivered(id)
 
     fun deliveredRank(id: Long): Int = runtime.graph.deliveredRank(id)
@@ -116,8 +123,11 @@ internal class EnergyWorld : Resource<ChunkStore> {
     val networkCount: Int get() = runtime.graph.networkCount
     val awakeNetworkCount: Int get() = runtime.graph.awakeNetworkCount
 
+    fun lastSolveTick(): Long = lastSolveTick
+
     private fun solve(tick: Long) {
         val currentStore = store ?: return
+        lastSolveTick = tick
         val started = System.nanoTime()
         runtime.tick(events)
         lastSolveNanos = System.nanoTime() - started

@@ -2,12 +2,16 @@ package studio.craftory.tech
 
 import com.hypixel.hytale.logger.HytaleLogger
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.tech.command.SummonCommand
+import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CraftoryBlockUseInteraction
+import studio.craftory.tech.machine.CraftorySelfTest
+import studio.craftory.tech.machine.JunkPowerHudSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
 import studio.craftory.tech.machine.JunkPowerLifecycle
 import studio.craftory.tech.machine.JunkPowerState
@@ -36,6 +40,14 @@ class CraftoryTechPlugin(
             CraftoryIds.PIPE_TYPE,
             MemberSpec(MemberSpec.LINK, 0, 0, 0, 0, 1, lossPerMillion = 5_000),
         )
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.OVEN_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 30, 0, 0, 1),
+        )
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.GNASHER_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 15, 0, 0, 1),
+        )
         val chunkRegistry = getChunkStoreRegistry()
         JunkPowerState.type =
             chunkRegistry.registerComponent(
@@ -47,6 +59,13 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(JunkPowerLifecycle())
         chunkRegistry.registerSystem(JunkPowerTickSystem())
         getEntityStoreRegistry().registerSystem(JunkPowerKickSystem())
+        getEntityStoreRegistry().registerSystem(JunkPowerHudSystem())
+        OpenCustomUIInteraction.registerBlockEntityCustomPage(
+            this,
+            CanisterPage::class.java,
+            CraftoryIds.CANISTER_PAGE,
+            CanisterPage::tryCreate,
+        )
         getCodecRegistry(Interaction.CODEC)
             .register(
                 CraftoryIds.BLOCK_USE_INTERACTION,
@@ -54,6 +73,7 @@ class CraftoryTechPlugin(
                 CraftoryBlockUseInteraction.CODEC,
             )
         CraftoryCore.registerCommandHandler("summon", SummonCommand::execute)
+        CraftoryCore.registerCommandHandler("selftest", CraftorySelfTest::execute)
         LOGGER.atInfo().log("Craftory Tech v%s loaded", pluginVersion)
     }
 

@@ -43,6 +43,7 @@ class CraftoryCorePlugin(
             addSubCommand(NetCommand())
             addSubCommand(StatsCommand())
             addSubCommand(SummonCommand())
+            addSubCommand(SelfTestCommand())
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {
@@ -148,6 +149,21 @@ class CraftoryCorePlugin(
                 world,
             )
         }
+    }
+
+    private class SelfTestCommand : AbstractCommand("selftest", "Run the Craftory integration selftest") {
+        init {
+            requirePermission(
+                com.hypixel.hytale.server.core.permissions.HytalePermissions.fromCommand(
+                    "craftory",
+                    "selftest",
+                ),
+            )
+            setPermissionGroups("hytale:Admin")
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> =
+            CraftoryCore.dispatchCommandHandler("selftest", context)
     }
 
     private companion object {

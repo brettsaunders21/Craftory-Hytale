@@ -1,0 +1,47 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Gnasher_Pit.name",
+    "Description": "server.items.Craftory_Gnasher_Pit.description"
+  },
+  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "PlayerAnimationsId": "Block",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Benches/Goblin_Workbench_Texture.png"
+      }
+    ],
+    "CustomModel": "Blocks/Benches/Goblin_Workbench.blockymodel",
+    "DrawType": "Model",
+    "VariantRotation": "NESW",
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "HitboxType": "Bench_Workbench3",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:gnasher_pit",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "Craftory_JunkPowerMachine": {
+          "Machine": "GnasherPit",
+          "OreQueue": "",
+          "GrindPulses": 0,
+          "Jammed": false
+        }
+      }
+    }
+  }
+}

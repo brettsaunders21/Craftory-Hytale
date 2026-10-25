@@ -91,6 +91,8 @@ internal class EnergyRuntimeAdapter {
         nodes.getValue(id).demand = amount
     }
 
+    fun capacity(id: Long): Long = nodes[id]?.spec?.capacity ?: 0L
+
     fun tick(sink: EnergyEventSink) {
         nodes.forEach { (id, node) ->
             node.lastSolveNetworkId = graph.networkOf(id)
