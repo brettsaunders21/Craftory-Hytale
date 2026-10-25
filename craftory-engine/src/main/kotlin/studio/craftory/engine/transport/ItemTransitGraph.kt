@@ -2,6 +2,7 @@
 
 package studio.craftory.engine.transport
 
+import studio.craftory.engine.energy.LongIntMap
 import java.util.Arrays
 
 enum class NodeRemovalReason {
@@ -38,20 +39,35 @@ fun interface DirtyNodeVisitor {
 class ItemTransitGraph(
     private val speedPerTick: Int = DEFAULT_SPEED_PER_TICK,
 ) {
-    private val nodeMap = LongIntIndex()
+    private val nodeMap = LongIntMap()
     private var nodePositions = LongArray(INITIAL_CAPACITY)
     private var nodeColours = ByteArray(INITIAL_CAPACITY)
     private var nodeCursors = IntArray(INITIAL_CAPACITY)
     private var nodeNetworks = IntArray(INITIAL_CAPACITY) { -1 }
     private var nodeActive = BooleanArray(INITIAL_CAPACITY)
     private var nodeSize = 0
+    private var activeNodeCount = 0
+    private var freeHandles = IntArray(INITIAL_CAPACITY)
+    private var freeHandleCount = 0
+    private var nodeGenerations = IntArray(INITIAL_CAPACITY)
+    private var networkNext = IntArray(INITIAL_CAPACITY) { -1 }
+    private var networkPrevious = IntArray(INITIAL_CAPACITY) { -1 }
+    private var networkHeads = IntArray(INITIAL_CAPACITY) { -1 }
+    private var networkNodeCounts = IntArray(INITIAL_CAPACITY)
+    private var nodeItemCounts = IntArray(INITIAL_CAPACITY)
     private var componentCount = 0
     private var networkItemCounts = IntArray(INITIAL_CAPACITY)
-    private var awakeNetworks = IntArray(INITIAL_CAPACITY)
     private var awakeNetworkSize = 0
     private var queue = IntArray(INITIAL_CAPACITY)
+    private var visitOrder = IntArray(INITIAL_CAPACITY)
+    private var visited = IntArray(INITIAL_CAPACITY)
+    private var visitStamp = 0
+    private val componentStarts = IntArray(MAX_NEIGHBOURS)
+    private val componentSizes = IntArray(MAX_NEIGHBOURS)
+    private val componentRoots = IntArray(MAX_NEIGHBOURS)
     private var dirtyHandles = IntArray(INITIAL_CAPACITY)
     private var dirtyFlags = BooleanArray(INITIAL_CAPACITY)
+    private var dirtyGenerations = IntArray(INITIAL_CAPACITY)
     private var dirtyCount = 0
 
     private var itemIds = LongArray(INITIAL_CAPACITY)
@@ -71,7 +87,10 @@ class ItemTransitGraph(
     }
 
     val nodeCount: Int
-        get() = nodeMap.size
+        get() = activeNodeCount
+
+    internal val nodeHandleCapacity: Int
+        get() = nodePositions.size
 
     val itemCount: Int
         get() = itemSize
@@ -110,21 +129,32 @@ class ItemTransitGraph(
     ) {
         require(colour in 0..4)
         require(!containsNode(pos)) { "Node $pos already exists" }
-        ensureNodeCapacity(nodeSize + 1)
-        val handle = nodeSize++
+        val handle = allocateNodeHandle()
+        nodeGenerations[handle]++
         nodePositions[handle] = pos
         nodeColours[handle] = colour.toByte()
         nodeCursors[handle] = 0
         nodeActive[handle] = true
+        activeNodeCount++
         nodeMap.put(pos, handle)
-        rebuildNetworks()
+        nodeNetworks[handle] = handle
+        networkNext[handle] = -1
+        networkPrevious[handle] = -1
+        networkHeads[handle] = handle
+        networkNodeCounts[handle] = 1
+        nodeItemCounts[handle] = 0
+        networkItemCounts[handle] = 0
+        componentCount++
+        for (face in FACES.indices) {
+            val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
+            if (adjacent >= 0 && adjacent != handle) mergeNetworks(handle, adjacent)
+        }
         persistedItems.forEach { record ->
             require(record.fromPos == pos)
             require(record.quantity > 0 && record.colour in 0..4)
             appendItem(record)
             if (record.id >= nextItemId) nextItemId = record.id + 1
         }
-        rebuildAwakeNetworks()
     }
 
     fun connect(
@@ -133,7 +163,10 @@ class ItemTransitGraph(
     ) {
         require(containsNode(firstPos) && containsNode(secondPos))
         require(areAdjacent(firstPos, secondPos))
-        rebuildNetworks()
+        mergeNetworks(
+            nodeMap.getOrDefault(firstPos, -1),
+            nodeMap.getOrDefault(secondPos, -1),
+        )
     }
 
     fun removeNode(
@@ -143,6 +176,7 @@ class ItemTransitGraph(
     ): List<TransitItemRecord> {
         val handle = nodeMap.getOrDefault(pos, -1)
         if (handle < 0) return emptyList()
+        val formerNeighbourCount = collectNeighbours(handle)
         val persisted = if (reason == NodeRemovalReason.UNLOAD) ArrayList<TransitItemRecord>() else emptyList()
         var itemIndex = 0
         while (itemIndex < itemSize) {
@@ -162,13 +196,31 @@ class ItemTransitGraph(
                 itemIndex++
             }
         }
+        val oldNetwork = nodeNetworks[handle]
+        setNetworkItemCount(oldNetwork, networkItemCounts[oldNetwork] - nodeItemCounts[handle])
+        networkNodeCounts[oldNetwork]--
         nodeMap.remove(pos)
         nodeActive[handle] = false
         nodeNetworks[handle] = -1
-        if (dirtyFlags[handle]) dirtyFlags[handle] = false
-        rebuildNetworks()
-        rebuildAwakeNetworks()
+        activeNodeCount--
+        unlinkNetworkNode(handle, oldNetwork)
+        nodeItemCounts[handle] = 0
+        networkNodeCounts[handle] = 0
+        setNetworkItemCount(handle, 0)
+        networkHeads[handle] = -1
+        dirtyFlags[handle] = false
+        nodeGenerations[handle]++
+        splitNetworkAfterRemoval(oldNetwork, formerNeighbourCount)
+        freeHandle(handle)
         return persisted
+    }
+
+    fun canInsert(nodePos: Long): Boolean {
+        if (nodeMap.getOrDefault(nodePos, -1) < 0) return false
+        for (index in 0 until itemSize) {
+            if (fromPositions[index] == nodePos && progresses[index] < MIN_SPACING) return false
+        }
+        return true
     }
 
     fun insert(
@@ -180,11 +232,8 @@ class ItemTransitGraph(
         sink: TransitSink,
     ): Long {
         val handle = nodeMap.getOrDefault(nodePos, -1)
-        if (handle < 0 || itemKey < 0 || quantity <= 0 || colour !in 0..4) return REJECTED_ITEM_ID
-        for (index in 0 until itemSize) {
-            if (fromPositions[index] == nodePos && progresses[index] < MIN_SPACING) {
-                return REJECTED_ITEM_ID
-            }
+        if (handle < 0 || itemKey < 0 || quantity <= 0 || colour !in 0..4 || !canInsert(nodePos)) {
+            return REJECTED_ITEM_ID
         }
         ensureItemCapacity(itemSize + 1)
         val id = nextItemId++
@@ -198,9 +247,9 @@ class ItemTransitGraph(
         progresses[itemIndex] = SEGMENT_LENGTH
         originPositions[itemIndex] = originPos
         waitTicks[itemIndex] = 0
+        incrementOwnerCount(handle)
         markDirty(handle)
         resolveArrival(itemIndex, handle, NO_PREVIOUS_NODE, sink)
-        rebuildAwakeNetworks()
         return id
     }
 
@@ -208,56 +257,52 @@ class ItemTransitGraph(
         activity: NodeActivity,
         sink: TransitSink,
     ) {
-        for (awakeIndex in 0 until awakeNetworkCount) {
-            val network = awakeNetworks[awakeIndex]
-            var itemIndex = 0
-            while (itemIndex < itemSize) {
-                val ownerHandle = nodeMap.getOrDefault(fromPositions[itemIndex], -1)
-                if (ownerHandle < 0 || nodeNetworks[ownerHandle] != network) {
-                    itemIndex++
-                    continue
-                }
-                val fromPos = fromPositions[itemIndex]
-                if (!activity.isActive(fromPos)) {
-                    itemIndex++
-                    continue
-                }
-                if (toPositions[itemIndex] == fromPos) {
-                    waitTicks[itemIndex]++
-                    if (waitTicks[itemIndex] < ISOLATED_RETRY_TICKS) {
-                        itemIndex++
-                        continue
-                    }
-                    waitTicks[itemIndex] = 0
-                    val removed = resolveArrival(itemIndex, ownerHandle, NO_PREVIOUS_NODE, sink)
-                    if (!removed) itemIndex++
-                    continue
-                }
-                val destinationHandle = nodeMap.getOrDefault(toPositions[itemIndex], -1)
-                if (destinationHandle < 0) {
-                    progresses[itemIndex] = SEGMENT_LENGTH
-                    itemIndex++
-                    continue
-                }
-                progresses[itemIndex] += speedPerTick
-                if (progresses[itemIndex] >= SEGMENT_LENGTH) {
-                    val arrivedAt = toPositions[itemIndex]
-                    progresses[itemIndex] -= SEGMENT_LENGTH
-                    waitTicks[itemIndex] = 0
-                    val removed = resolveArrival(itemIndex, destinationHandle, fromPos, sink)
-                    if (!removed) itemIndex++
-                    continue
-                }
+        if (itemSize == 0 || awakeNetworkSize == 0) return
+        var itemIndex = 0
+        while (itemIndex < itemSize) {
+            val ownerHandle = nodeMap.getOrDefault(fromPositions[itemIndex], -1)
+            if (ownerHandle < 0) {
                 itemIndex++
+                continue
             }
+            val fromPos = fromPositions[itemIndex]
+            if (!activity.isActive(fromPos)) {
+                itemIndex++
+                continue
+            }
+            if (toPositions[itemIndex] == fromPos) {
+                waitTicks[itemIndex]++
+                if (waitTicks[itemIndex] < ISOLATED_RETRY_TICKS) {
+                    itemIndex++
+                    continue
+                }
+                waitTicks[itemIndex] = 0
+                val removed = resolveArrival(itemIndex, ownerHandle, NO_PREVIOUS_NODE, sink)
+                if (!removed) itemIndex++
+                continue
+            }
+            val destinationHandle = nodeMap.getOrDefault(toPositions[itemIndex], -1)
+            if (destinationHandle < 0) {
+                progresses[itemIndex] = SEGMENT_LENGTH
+                itemIndex++
+                continue
+            }
+            progresses[itemIndex] += speedPerTick
+            if (progresses[itemIndex] >= SEGMENT_LENGTH) {
+                progresses[itemIndex] -= SEGMENT_LENGTH
+                waitTicks[itemIndex] = 0
+                val removed = resolveArrival(itemIndex, destinationHandle, fromPos, sink)
+                if (!removed) itemIndex++
+                continue
+            }
+            itemIndex++
         }
-        rebuildAwakeNetworks()
     }
 
     fun drainDirty(visitor: DirtyNodeVisitor) {
         for (index in 0 until dirtyCount) {
             val handle = dirtyHandles[index]
-            if (!nodeActive[handle]) continue
+            if (!nodeActive[handle] || dirtyGenerations[index] != nodeGenerations[handle]) continue
             dirtyFlags[handle] = false
             visitor.visit(nodePositions[handle])
         }
@@ -377,7 +422,13 @@ class ItemTransitGraph(
 
         val next = chooseExit(nodeHandle, previousPos, itemColours[itemIndex].toInt())
         val oldOwner = nodeMap.getOrDefault(fromPositions[itemIndex], -1)
-        if (oldOwner >= 0) markDirty(oldOwner)
+        if (oldOwner >= 0) {
+            markDirty(oldOwner)
+            if (oldOwner != nodeHandle) {
+                decrementOwnerCount(oldOwner)
+                incrementOwnerCount(nodeHandle)
+            }
+        }
         fromPositions[itemIndex] = nodePos
         markDirty(nodeHandle)
         if (next < 0) {
@@ -450,49 +501,177 @@ class ItemTransitGraph(
         return candidates[0]
     }
 
-    private fun rebuildNetworks() {
-        componentCount = 0
-        Arrays.fill(nodeNetworks, 0, nodeCount, -1)
-        ensureNetworkCapacity(nodeCount)
-        for (start in 0 until nodeCount) {
-            if (!nodeActive[start] || nodeNetworks[start] >= 0) continue
-            val root = start
+    private fun mergeNetworks(
+        firstHandle: Int,
+        secondHandle: Int,
+    ) {
+        val firstNetwork = nodeNetworks[firstHandle]
+        val secondNetwork = nodeNetworks[secondHandle]
+        if (firstNetwork == secondNetwork) return
+
+        val largeNetwork: Int
+        val smallNetwork: Int
+        if (networkNodeCounts[firstNetwork] >= networkNodeCounts[secondNetwork]) {
+            largeNetwork = firstNetwork
+            smallNetwork = secondNetwork
+        } else {
+            largeNetwork = secondNetwork
+            smallNetwork = firstNetwork
+        }
+
+        var handle = networkHeads[smallNetwork]
+        while (handle >= 0) {
+            nodeNetworks[handle] = largeNetwork
+            handle = networkNext[handle]
+        }
+
+        val smallHead = networkHeads[smallNetwork]
+        val largeHead = networkHeads[largeNetwork]
+        var tail = smallHead
+        while (networkNext[tail] >= 0) tail = networkNext[tail]
+        networkNext[tail] = largeHead
+        if (largeHead >= 0) networkPrevious[largeHead] = tail
+        networkHeads[largeNetwork] = smallHead
+        networkNodeCounts[largeNetwork] += networkNodeCounts[smallNetwork]
+        networkNodeCounts[smallNetwork] = 0
+        networkHeads[smallNetwork] = -1
+
+        val mergedItemCount = networkItemCounts[largeNetwork] + networkItemCounts[smallNetwork]
+        setNetworkItemCount(smallNetwork, 0)
+        setNetworkItemCount(largeNetwork, mergedItemCount)
+        componentCount--
+    }
+
+    private fun collectNeighbours(handle: Int): Int {
+        var count = 0
+        val position = nodePositions[handle]
+        for (face in FACES.indices) {
+            val neighbour = nodeMap.getOrDefault(neighbour(position, face), -1)
+            if (neighbour >= 0) neighbourScratch[count++] = neighbour
+        }
+        return count
+    }
+
+    @Suppress("LongMethod")
+    private fun splitNetworkAfterRemoval(
+        oldNetwork: Int,
+        formerNeighbourCount: Int,
+    ) {
+        setNetworkItemCount(oldNetwork, 0)
+        networkNodeCounts[oldNetwork] = 0
+        networkHeads[oldNetwork] = -1
+        if (formerNeighbourCount == 0) {
+            componentCount--
+            return
+        }
+
+        visitStamp++
+        if (visitStamp == 0) {
+            Arrays.fill(visited, 0)
+            visitStamp = 1
+        }
+        var visitedCount = 0
+        var splitCount = 0
+        for (neighbourIndex in 0 until formerNeighbourCount) {
+            val start = neighbourScratch[neighbourIndex]
+            if (!nodeActive[start] || nodeNetworks[start] != oldNetwork || visited[start] == visitStamp) continue
+            val componentStart = visitedCount
             var head = 0
             var tail = 0
             queue[tail++] = start
-            nodeNetworks[start] = root
+            visited[start] = visitStamp
+            var containsOldRoot = false
             while (head < tail) {
                 val current = queue[head++]
+                visitOrder[visitedCount++] = current
+                if (current == oldNetwork) containsOldRoot = true
                 val currentPos = nodePositions[current]
                 for (face in FACES.indices) {
                     val adjacent = nodeMap.getOrDefault(neighbour(currentPos, face), -1)
-                    if (adjacent >= 0 && nodeNetworks[adjacent] < 0) {
-                        nodeNetworks[adjacent] = root
+                    if (
+                        adjacent >= 0 &&
+                        nodeNetworks[adjacent] == oldNetwork &&
+                        visited[adjacent] != visitStamp
+                    ) {
+                        visited[adjacent] = visitStamp
                         queue[tail++] = adjacent
                     }
                 }
             }
-            componentCount++
+            componentStarts[splitCount] = componentStart
+            componentSizes[splitCount] = tail
+            componentRoots[splitCount] = if (containsOldRoot) oldNetwork else start
+            splitCount++
         }
-        rebuildAwakeNetworks()
+
+        for (component in 0 until splitCount) {
+            val start = componentStarts[component]
+            val size = componentSizes[component]
+            val root = componentRoots[component]
+            setNetworkItemCount(root, 0)
+            networkNodeCounts[root] = size
+            networkHeads[root] = visitOrder[start]
+            var itemCount = 0
+            var previous = -1
+            for (offset in start until start + size) {
+                val handle = visitOrder[offset]
+                nodeNetworks[handle] = root
+                networkPrevious[handle] = previous
+                if (previous >= 0) networkNext[previous] = handle
+                networkNext[handle] = -1
+                if (previous < 0) networkPrevious[handle] = -1
+                previous = handle
+                itemCount += nodeItemCounts[handle]
+            }
+            setNetworkItemCount(root, itemCount)
+        }
+        componentCount += splitCount - 1
     }
 
-    private fun rebuildAwakeNetworks() {
-        ensureNetworkCapacity(nodeCount)
-        Arrays.fill(networkItemCounts, 0, nodeCount, 0)
-        for (index in 0 until itemSize) {
-            val handle = nodeMap.getOrDefault(fromPositions[index], -1)
-            if (handle >= 0) {
-                val network = nodeNetworks[handle]
-                if (network >= 0) networkItemCounts[network]++
-            }
-        }
-        awakeNetworkSize = 0
-        for (handle in 0 until nodeCount) {
-            if (nodeActive[handle] && nodeNetworks[handle] == handle && networkItemCounts[handle] > 0) {
-                awakeNetworks[awakeNetworkSize++] = handle
-            }
-        }
+    private fun unlinkNetworkNode(
+        handle: Int,
+        network: Int,
+    ) {
+        val previous = networkPrevious[handle]
+        val next = networkNext[handle]
+        if (previous >= 0) networkNext[previous] = next else networkHeads[network] = next
+        if (next >= 0) networkPrevious[next] = previous
+        networkNext[handle] = -1
+        networkPrevious[handle] = -1
+    }
+
+    private fun setNetworkItemCount(
+        network: Int,
+        count: Int,
+    ) {
+        val wasAwake = networkItemCounts[network] > 0
+        val isAwake = count > 0
+        if (wasAwake && !isAwake) awakeNetworkSize--
+        if (!wasAwake && isAwake) awakeNetworkSize++
+        networkItemCounts[network] = count
+    }
+
+    private fun incrementOwnerCount(handle: Int) {
+        nodeItemCounts[handle]++
+        val network = nodeNetworks[handle]
+        setNetworkItemCount(network, networkItemCounts[network] + 1)
+    }
+
+    private fun decrementOwnerCount(handle: Int) {
+        nodeItemCounts[handle]--
+        val network = nodeNetworks[handle]
+        setNetworkItemCount(network, networkItemCounts[network] - 1)
+    }
+
+    private fun allocateNodeHandle(): Int {
+        if (freeHandleCount > 0) return freeHandles[--freeHandleCount]
+        ensureNodeCapacity(nodeSize + 1)
+        return nodeSize++
+    }
+
+    private fun freeHandle(handle: Int) {
+        if (freeHandleCount == freeHandles.size) freeHandles = freeHandles.copyOf(freeHandles.size shl 1)
+        freeHandles[freeHandleCount++] = handle
     }
 
     private fun appendItem(record: TransitItemRecord) {
@@ -507,11 +686,16 @@ class ItemTransitGraph(
         progresses[index] = record.progress
         originPositions[index] = record.originPos
         waitTicks[index] = 0
+        val ownerHandle = nodeMap.getOrDefault(record.fromPos, -1)
+        if (ownerHandle >= 0) incrementOwnerCount(ownerHandle)
     }
 
     private fun removeItemAt(index: Int) {
         val ownerHandle = nodeMap.getOrDefault(fromPositions[index], -1)
-        if (ownerHandle >= 0) markDirty(ownerHandle)
+        if (ownerHandle >= 0) {
+            markDirty(ownerHandle)
+            decrementOwnerCount(ownerHandle)
+        }
         val last = --itemSize
         if (index != last) {
             itemIds[index] = itemIds[last]
@@ -542,7 +726,9 @@ class ItemTransitGraph(
         if (handle < 0 || !nodeActive[handle] || dirtyFlags[handle]) return
         ensureDirtyCapacity(dirtyCount + 1)
         dirtyFlags[handle] = true
-        dirtyHandles[dirtyCount++] = handle
+        dirtyHandles[dirtyCount] = handle
+        dirtyGenerations[dirtyCount] = nodeGenerations[handle]
+        dirtyCount++
     }
 
     private fun ensureNodeCapacity(required: Int) {
@@ -554,8 +740,18 @@ class ItemTransitGraph(
         nodeCursors = nodeCursors.copyOf(capacity)
         nodeNetworks = nodeNetworks.copyOf(capacity).also { Arrays.fill(it, nodeNetworks.size, capacity, -1) }
         nodeActive = nodeActive.copyOf(capacity)
+        nodeGenerations = nodeGenerations.copyOf(capacity)
+        networkNext = networkNext.copyOf(capacity).also { Arrays.fill(it, networkNext.size, capacity, -1) }
+        networkPrevious =
+            networkPrevious.copyOf(capacity).also { Arrays.fill(it, networkPrevious.size, capacity, -1) }
+        networkHeads = networkHeads.copyOf(capacity).also { Arrays.fill(it, networkHeads.size, capacity, -1) }
+        networkNodeCounts = networkNodeCounts.copyOf(capacity)
+        nodeItemCounts = nodeItemCounts.copyOf(capacity)
         queue = queue.copyOf(capacity)
+        visitOrder = visitOrder.copyOf(capacity)
+        visited = visited.copyOf(capacity)
         dirtyFlags = dirtyFlags.copyOf(capacity)
+        dirtyGenerations = dirtyGenerations.copyOf(capacity)
         ensureNetworkCapacity(capacity)
     }
 
@@ -564,12 +760,14 @@ class ItemTransitGraph(
         var capacity = networkItemCounts.size shl 1
         while (capacity < required) capacity = capacity shl 1
         networkItemCounts = networkItemCounts.copyOf(capacity)
-        awakeNetworks = awakeNetworks.copyOf(capacity)
+        networkNodeCounts = networkNodeCounts.copyOf(capacity)
+        networkHeads = networkHeads.copyOf(capacity).also { Arrays.fill(it, networkHeads.size, capacity, -1) }
     }
 
     private fun ensureDirtyCapacity(required: Int) {
         if (required <= dirtyHandles.size) return
         dirtyHandles = dirtyHandles.copyOf(dirtyHandles.size shl 1)
+        dirtyGenerations = dirtyGenerations.copyOf(dirtyGenerations.size shl 1)
     }
 
     private fun ensureItemCapacity(required: Int) {
@@ -608,6 +806,7 @@ class ItemTransitGraph(
     }
 
     private val candidateScratch = IntArray(6)
+    private val neighbourScratch = IntArray(MAX_NEIGHBOURS)
 
     companion object {
         const val SEGMENT_LENGTH = 1_000
@@ -616,6 +815,7 @@ class ItemTransitGraph(
         const val ISOLATED_RETRY_TICKS = 20
         const val REJECTED_ITEM_ID = -1L
         private const val NO_PREVIOUS_NODE = Long.MIN_VALUE
+        private const val MAX_NEIGHBOURS = 6
         private const val INITIAL_CAPACITY = 16
         private val FACES =
             arrayOf(
@@ -626,84 +826,5 @@ class ItemTransitGraph(
                 intArrayOf(0, 0, 1),
                 intArrayOf(0, 0, -1),
             )
-    }
-}
-
-private class LongIntIndex(
-    initialCapacity: Int = 16,
-) {
-    private var keys = LongArray(initialCapacity)
-    private var values = IntArray(initialCapacity)
-    private var states = ByteArray(initialCapacity)
-    var size = 0
-        private set
-
-    fun getOrDefault(
-        key: Long,
-        defaultValue: Int,
-    ): Int {
-        var slot = hash(key) and (keys.size - 1)
-        while (states[slot].toInt() != EMPTY) {
-            if (states[slot].toInt() == OCCUPIED && keys[slot] == key) return values[slot]
-            slot = (slot + 1) and (keys.size - 1)
-        }
-        return defaultValue
-    }
-
-    fun put(
-        key: Long,
-        value: Int,
-    ) {
-        if ((size + 1) * 10 >= keys.size * 7) rehash(keys.size shl 1)
-        var slot = hash(key) and (keys.size - 1)
-        while (states[slot].toInt() == OCCUPIED) {
-            if (keys[slot] == key) {
-                values[slot] = value
-                return
-            }
-            slot = (slot + 1) and (keys.size - 1)
-        }
-        keys[slot] = key
-        values[slot] = value
-        states[slot] = OCCUPIED.toByte()
-        size++
-    }
-
-    fun remove(key: Long) {
-        var slot = hash(key) and (keys.size - 1)
-        while (states[slot].toInt() != EMPTY) {
-            if (states[slot].toInt() == OCCUPIED && keys[slot] == key) {
-                states[slot] = DELETED.toByte()
-                size--
-                return
-            }
-            slot = (slot + 1) and (keys.size - 1)
-        }
-    }
-
-    private fun rehash(capacity: Int) {
-        val oldKeys = keys
-        val oldValues = values
-        val oldStates = states
-        keys = LongArray(capacity)
-        values = IntArray(capacity)
-        states = ByteArray(capacity)
-        size = 0
-        for (index in oldKeys.indices) {
-            if (oldStates[index].toInt() == OCCUPIED) put(oldKeys[index], oldValues[index])
-        }
-    }
-
-    private fun hash(key: Long): Int {
-        var mixed = key
-        mixed = (mixed xor (mixed ushr 33)) * -49064778989782843L
-        mixed = (mixed xor (mixed ushr 33)) * -4265267296055464877L
-        return (mixed xor (mixed ushr 33)).toInt()
-    }
-
-    companion object {
-        private const val EMPTY = 0
-        private const val OCCUPIED = 1
-        private const val DELETED = 2
     }
 }

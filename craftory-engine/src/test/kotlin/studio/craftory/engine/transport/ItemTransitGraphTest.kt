@@ -154,6 +154,66 @@ class ItemTransitGraphTest {
     }
 
     @Test
+    fun `adding and removing a bridge merges then splits item networks incrementally`() {
+        val graph = ItemTransitGraph()
+        val left = pos(20)
+        val bridge = pos(21)
+        val right = pos(22)
+        val sink = RecordingSink(pos(99))
+        graph.addNode(left)
+        graph.addNode(right)
+        graph.insert(left, 1, 1, 0, Long.MIN_VALUE, sink)
+        graph.insert(right, 2, 1, 0, Long.MIN_VALUE, sink)
+
+        assertEquals(2, graph.awakeNetworkCount)
+        graph.addNode(bridge)
+
+        assertEquals(graph.networkOf(left), graph.networkOf(bridge))
+        assertEquals(graph.networkOf(right), graph.networkOf(bridge))
+        assertEquals(1, graph.awakeNetworkCount)
+        assertEquals(2, graph.itemCount)
+
+        graph.removeNode(bridge, NodeRemovalReason.BREAK, sink)
+
+        assertNotEquals(graph.networkOf(left), graph.networkOf(right))
+        assertEquals(2, graph.awakeNetworkCount)
+        assertEquals(1, graph.itemsOwnedByCount(left))
+        assertEquals(1, graph.itemsOwnedByCount(right))
+        assertEquals(2, graph.itemCount)
+    }
+
+    @Test
+    fun `node handles are reused through repeated add and remove cycles`() {
+        val graph = ItemTransitGraph()
+        val sink = RecordingSink()
+
+        repeat(2_000) { index ->
+            val node = pos(index)
+            graph.addNode(node)
+            graph.removeNode(node, NodeRemovalReason.BREAK, sink)
+        }
+
+        assertEquals(0, graph.nodeCount)
+        assertEquals(0, graph.networkCount)
+        assertEquals(16, graph.nodeHandleCapacity)
+    }
+
+    @Test
+    fun `can insert follows topology and congestion rules`() {
+        val graph = ItemTransitGraph()
+        val start = pos(30)
+        val next = pos(31)
+        val sink = RecordingSink(pos(99))
+
+        assertFalse(graph.canInsert(start))
+        graph.addNode(start)
+        graph.addNode(next)
+        assertTrue(graph.canInsert(start))
+        graph.insert(start, 1, 1, 0, Long.MIN_VALUE, sink)
+        assertFalse(graph.canInsert(start))
+    }
+
+    @Test
     fun `transit codec round trips records and ignores malformed fields`() {
         val records =
             listOf(
