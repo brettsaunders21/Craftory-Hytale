@@ -95,7 +95,7 @@ class WellAccess internal constructor() {
                 0,
             ) ?: return null
         val well = Glimmerwell(temperament, strength, state, taste, world.tick)
-        store.addComponent(ref, Glimmerwell.type, well)
+        store.putComponent(ref, Glimmerwell.type, well)
         val event = WellEvent(world, pos, ref, well)
         bornListeners.forEach { listener ->
             try {
