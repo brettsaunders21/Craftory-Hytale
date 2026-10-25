@@ -177,16 +177,7 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
 
                 store.getComponent(ref, BurnerState.type) != null && heldItem != null -> {
                     val state = store.getComponent(ref, BurnerState.type)!!
-                    if (MachineActions.addFuel(state, member, blockState, store, tick, heldItem.itemId) > 0) {
-                        val container = context.heldItemContainer ?: return
-                        val replacement =
-                            if (heldItem.quantity == 1) {
-                                null
-                            } else {
-                                heldItem.withQuantity(heldItem.quantity - 1)
-                            }
-                        container.setItemStackForSlot(context.heldItemSlot.toShort(), replacement)
-                    }
+                    context.addFuelTo(heldItem, state, member, blockState, store, tick)
                     null
                 }
 
@@ -280,5 +271,33 @@ private fun machineReadout(
 ): String =
     "$name: ${member.stored} Fizz, network ${member.networkId}, " +
         "production ${member.production}, delivered ${member.delivered}"
+
+private fun InteractionContext.addFuelTo(
+    heldItem: ItemStack,
+    state: BurnerState,
+    member: EnergyMember,
+    blockState: BlockModule.BlockStateInfo,
+    store: Store<ChunkStore>,
+    tick: Long,
+) {
+    val container = heldItemContainer ?: return
+    val slot = heldItemSlot.toShort()
+    val slotItem = container.getItemStack(slot) ?: return
+    if (
+        slotItem.itemId != heldItem.itemId ||
+        slotItem.quantity != heldItem.quantity ||
+        !BurnerMachine.acceptsFuel(heldItem.itemId)
+    ) {
+        return
+    }
+    val replacement =
+        if (slotItem.quantity == 1) {
+            null
+        } else {
+            slotItem.withQuantity(slotItem.quantity - 1)
+        }
+    if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
+    MachineActions.addFuel(state, member, blockState, store, tick, heldItem.itemId)
+}
 
 private const val SAVE_INTERVAL_TICKS = 20L

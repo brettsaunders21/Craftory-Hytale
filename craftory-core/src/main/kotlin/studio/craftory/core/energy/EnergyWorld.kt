@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.core.api.energy.MemberSpec
 import kotlin.math.abs
 
@@ -69,17 +70,29 @@ internal class EnergyWorld : Resource<ChunkStore> {
         amount: Long,
         rank: Int,
     ) {
-        member(id)?.let {
-            it.production = amount
-            it.productionRank = rank
-        }
+        EnergyRequestValidation.productionInput(amount, rank, GradeTable.DEFAULT)
+        val member = member(id) ?: return
+        val spec =
+            requireNotNull(CraftoryCore.energyType(member.typeId)?.spec) {
+                "Member $id has an unregistered energy type: ${member.typeId}"
+            }
+        EnergyRequestValidation.producer(id, spec)
+        member.production = amount
+        member.productionRank = rank
     }
 
     fun setDemand(
         id: Long,
         amount: Long,
     ) {
-        member(id)?.demand = amount
+        EnergyRequestValidation.demandInput(amount)
+        val member = member(id) ?: return
+        val spec =
+            requireNotNull(CraftoryCore.energyType(member.typeId)?.spec) {
+                "Member $id has an unregistered energy type: ${member.typeId}"
+            }
+        EnergyRequestValidation.consumer(id, spec)
+        member.demand = amount
     }
 
     fun stored(id: Long): Long = member(id)?.stored ?: 0

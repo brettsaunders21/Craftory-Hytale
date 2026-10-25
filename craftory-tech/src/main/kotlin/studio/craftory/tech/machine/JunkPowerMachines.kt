@@ -55,6 +55,8 @@ internal object CrankMachine {
 internal object BurnerMachine {
     private val fuels = JunkPowerFuels.definitions.associate { it.itemId to it.burnTicks }
 
+    fun acceptsFuel(itemId: String): Boolean = itemId in fuels
+
     fun addFuel(
         state: BurnerState,
         itemId: String,

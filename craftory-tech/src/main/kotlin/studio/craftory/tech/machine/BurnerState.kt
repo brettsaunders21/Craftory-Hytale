@@ -38,11 +38,6 @@ class BurnerState(
                 ).add()
                 .append(KeyedCodec("Burning", Codec.BOOLEAN), { state, value -> state.burning = value }, { it.burning })
                 .add()
-                .append(
-                    KeyedCodec("LastAdvancedTick", Codec.LONG),
-                    { state, value -> state.lastAdvancedTick = value },
-                    { it.lastAdvancedTick },
-                ).add()
                 .build()
     }
 }

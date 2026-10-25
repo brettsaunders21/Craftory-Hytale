@@ -109,4 +109,49 @@ class CoreEnergyTest {
         assertThrows(IllegalArgumentException::class.java) { BlockPos.pack(0, 1 shl 11, 0) }
         assertFalse(BlockPos.unpack(BlockPos.pack(3, 5, -7)) == BlockPos(3, 5, 7))
     }
+
+    @Test
+    fun `energy requests reject negative amounts invalid ranks and incompatible roles`() {
+        val producer = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 0, 5)
+        val consumer = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 0, 5)
+
+        assertEquals(
+            "Production amount must be non-negative",
+            assertThrows(IllegalArgumentException::class.java) {
+                EnergyRequestValidation.production(1, producer, -1, 0)
+            }.message,
+        )
+        assertEquals(
+            "Production rank must be non-negative",
+            assertThrows(IllegalArgumentException::class.java) {
+                EnergyRequestValidation.production(1, producer, 1, -1)
+            }.message,
+        )
+        assertEquals(
+            "Production rank 6 is outside the grade table",
+            assertThrows(IllegalArgumentException::class.java) {
+                EnergyRequestValidation.production(1, producer, 1, 6)
+            }.message,
+        )
+        assertEquals(
+            "Member 2 is not a producer",
+            assertThrows(IllegalArgumentException::class.java) {
+                EnergyRequestValidation.production(2, consumer, 1, 0)
+            }.message,
+        )
+        assertEquals(
+            "Demand amount must be non-negative",
+            assertThrows(IllegalArgumentException::class.java) {
+                EnergyRequestValidation.demand(2, consumer, -1)
+            }.message,
+        )
+        assertEquals(
+            "Member 1 is not a consumer",
+            assertThrows(IllegalArgumentException::class.java) {
+                EnergyRequestValidation.demand(1, producer, 1)
+            }.message,
+        )
+        EnergyRequestValidation.production(1, producer, 1, 0)
+        EnergyRequestValidation.demand(2, consumer, 1)
+    }
 }

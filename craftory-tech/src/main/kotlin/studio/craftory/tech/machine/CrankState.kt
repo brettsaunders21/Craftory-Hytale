@@ -34,11 +34,6 @@ class CrankState(
                     { state, value -> state.spinTicks = value },
                     { it.spinTicks },
                 ).add()
-                .append(
-                    KeyedCodec("LastAdvancedTick", Codec.LONG),
-                    { state, value -> state.lastAdvancedTick = value },
-                    { it.lastAdvancedTick },
-                ).add()
                 .build()
     }
 }

@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.command.system.AbstractCommand
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.permissions.HytalePermissions
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
@@ -61,6 +62,7 @@ class CraftoryCorePlugin(
     private class SummonCommand : AbstractCommand("summon", "Summon a Craftory trader") {
         init {
             setAllowsExtraArguments(true)
+            requirePermission(HytalePermissions.fromCommand("craftory.summon"))
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> =
@@ -159,6 +161,7 @@ class CraftoryCorePlugin(
     private class InspectCommand : AbstractCommand("inspect", "Inspect Craftory components at block coordinates") {
         init {
             setAllowsExtraArguments(true)
+            requirePermission(HytalePermissions.fromCommand("craftory.inspect"))
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {
@@ -220,6 +223,10 @@ class CraftoryCorePlugin(
     }
 
     private class SelfTestCommand : AbstractCommand("selftest", "Run Craftory runtime checks") {
+        init {
+            requirePermission(HytalePermissions.fromCommand("craftory.selftest"))
+        }
+
         override fun execute(context: CommandContext): CompletableFuture<Void> =
             CraftoryCore.dispatchCommandHandler("selftest", context)
     }

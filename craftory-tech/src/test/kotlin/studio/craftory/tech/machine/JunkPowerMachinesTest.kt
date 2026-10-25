@@ -70,6 +70,24 @@ class JunkPowerMachinesTest {
     }
 
     @Test
+    fun `reloaded machine state starts advancing from the current world tick`() {
+        val crank = CrankState(spinTicks = 40)
+        val burner = BurnerState(burnTicks = 40, burning = true)
+
+        MachineClock.initialize(crank, 500)
+        MachineClock.initialize(burner, 500)
+
+        assertFalse(CrankMachine.advanceTo(crank, 500))
+        assertFalse(BurnerMachine.advanceTo(burner, 500))
+        assertEquals(40, crank.spinTicks)
+        assertEquals(40, burner.burnTicks)
+        assertTrue(CrankMachine.advanceTo(crank, 501))
+        assertTrue(BurnerMachine.advanceTo(burner, 501))
+        assertEquals(39, crank.spinTicks)
+        assertEquals(39, burner.burnTicks)
+    }
+
+    @Test
     fun `throttled crank persistence retries until saved`() {
         val crank = CrankState(spinTicks = 12, lastAdvancedTick = 172)
         assertTrue(CrankMachine.advanceTo(crank, 184))

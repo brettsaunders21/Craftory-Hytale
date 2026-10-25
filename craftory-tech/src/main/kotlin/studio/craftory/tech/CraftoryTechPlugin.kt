@@ -14,6 +14,7 @@ import studio.craftory.tech.machine.CraftorySelfTest
 import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
+import studio.craftory.tech.machine.MachineClockLifecycle
 import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
 
@@ -59,6 +60,7 @@ class CraftoryTechPlugin(
             accessor.getComponent(ref, BurnerState.type)
         }
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
+        chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(CrankSystem())
         chunkRegistry.registerSystem(BurnerSystem())
         chunkRegistry.registerSystem(SelfTestSystem())

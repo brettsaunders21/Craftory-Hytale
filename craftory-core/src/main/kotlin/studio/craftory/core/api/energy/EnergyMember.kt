@@ -12,8 +12,8 @@ import studio.craftory.core.api.Inspectable
 
 class EnergyMember(
     var typeId: String = "",
-    var stored: Long = 0L,
-    var storeRank: Int = -1,
+    stored: Long = 0L,
+    storeRank: Int = -1,
     var production: Long = 0L,
     var productionRank: Int = 0,
     var demand: Long = 0L,
@@ -26,6 +26,14 @@ class EnergyMember(
     var lastSavedStoreRank: Int = -1,
 ) : Component<ChunkStore>,
     Inspectable {
+    /** The energy solver owns persisted charge and its grade. */
+    var stored: Long = stored
+        internal set
+
+    /** The energy solver owns persisted charge and its grade. */
+    var storeRank: Int = storeRank
+        internal set
+
     override fun clone(): Component<ChunkStore> =
         EnergyMember(
             typeId,
