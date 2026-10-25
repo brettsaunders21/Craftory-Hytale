@@ -60,7 +60,7 @@ SoundUtil.playSoundEvent3d(SoundEvent.getAssetMap().getIndex("SFX_Global_Weather
   `releaseOverride(Ref)`, `setOverrideWeatherIndex(int)` / `clearOverrideWeatherIndex()`. This is the per-player
   "local" override that vanilla encounters use (`EncounterWeatherState`, `ActionSetEncounterWeather`).
 - Weather assets: `Weather.getAssetMap()` (107 loaded, including `Blood_Moon`).
-- No weather-change event exists. `SpikeWeatherWatchSystem` polls `getEnvironmentWeather()` every 20 ticks per world
+- No weather-change event exists. `SpikeWeatherWatchSystem` polls `getEffectiveWeatherIndex(env)` (includes forced weather) for every environment every 20 ticks per world
   (state in a world `Resource`) and logs changes. Weather rerolls at most hourly (`compareAndSwapHour`), so a
   20-tick poll is cheap and plenty.
 - Console: `[spike weather] assets=107 [Blood_Moon, Cave_Deep, ...]`.
@@ -182,7 +182,7 @@ Fallback: cancel the damage instead (`Damage` event filter by source projectile 
 
 - No claim, protection or region classes in 0.7.4 (jar + Javadoc). Console: `[spike claims] matching plugins=[none]; no claim API in 0.7.4`.
 - Fallback proof: `SpikeClaimGuardSystem` cancels `DamageBlockEvent` (cancellable ECS event) for non-crew players
-  within 8 blocks of a guard point. The real version would store claims in crew data and also guard `BreakBlockEvent`/`PlaceBlockEvent`.
+  within 8 blocks of a guard point. The real version would store claims in crew data and also guard `BreakBlockEvent`/`PlaceBlockEvent` and block use interactions. Solo players can't own a guard and count as outsiders.
 
 ## 9. Flying mounts — unverified
 
