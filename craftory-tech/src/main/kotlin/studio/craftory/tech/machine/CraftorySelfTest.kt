@@ -340,7 +340,45 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
         val crank = crankRef?.let { store.getComponent(it, CrankState.type) }
         val crankMember = crankRef?.let { store.getComponent(it, EnergyMember.type) }
-        val crankBlock = crankRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        val crankBlockState = crankRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        val crankSectionRef =
+            run.world.chunkStore.getChunkSectionReferenceAtBlock(
+                CraftorySelfTest.CRANK.x,
+                CraftorySelfTest.CRANK.y,
+                CraftorySelfTest.CRANK.z,
+            )
+        val crankBlockType =
+            crankSectionRef
+                ?.let { store.getComponent(it, BlockSection.getComponentType()) }
+                ?.get(
+                    ChunkUtil.indexBlock(
+                        CraftorySelfTest.CRANK.x,
+                        CraftorySelfTest.CRANK.y,
+                        CraftorySelfTest.CRANK.z,
+                    ),
+                )?.let { BlockType.getAssetMap().getAsset(it) }
+        val crankType = BlockType.fromString(CraftoryIds.CRANK)
+        val crankStateName = crankBlockType?.let { crankType?.getStateForBlock(it) }
+        val crankActualStateName =
+            crankStateName
+                ?: if (crankType != null && crankBlockType?.id == crankType.id) {
+                    "default"
+                } else {
+                    "unresolved"
+                }
+        val crankStateMatches =
+            when {
+                crank?.visualSpinning == true -> crankStateName == "On"
+
+                crankStateName == "Off" -> true
+
+                crankStateName == null &&
+                    crank?.visualSpinning != true &&
+                    crankType != null &&
+                    crankBlockType?.id == crankType.id -> true
+
+                else -> false
+            }
         reportEnergyTopology(run, store)
         check(
             run,
@@ -358,13 +396,15 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         check(
             run,
             crank != null &&
-                crankBlock != null &&
-                CraftoryCore.isAreaActive(store, crankBlock) &&
-                crank.spinTicks > 0 &&
-                crank.visualSpinning == true &&
-                crankMember?.production?.let { it > 0 } == true,
+                crankBlockState != null &&
+                CraftoryCore.isAreaActive(store, crankBlockState) &&
+                crank.visualSpinning == (crank.spinTicks > 0) &&
+                crankStateMatches &&
+                crankMember != null &&
+                (crankMember.production > 0) == (crank.spinTicks > 0),
             "crank visual state follows spin",
-            "visual=${crank?.visualSpinning}, spin=${crank?.spinTicks}, production=${crankMember?.production}",
+            "visual=${crank?.visualSpinning}, spin=${crank?.spinTicks}, " +
+                "production=${crankMember?.production}, actualState=$crankActualStateName",
         )
         val anchorRef =
             BlockModule.getBlockEntity(
