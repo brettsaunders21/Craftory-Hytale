@@ -3,6 +3,7 @@ package studio.craftory.core.api.energy
 import com.hypixel.hytale.server.core.universe.world.World
 import studio.craftory.core.energy.EnergyWorld
 
+@Suppress("TooManyFunctions")
 class EnergyAccess internal constructor(
     private val energy: EnergyWorld,
     private val world: World,
@@ -49,9 +50,31 @@ class EnergyAccess internal constructor(
         return energy.diagnostics(pos)?.members ?: 0
     }
 
+    fun capacity(pos: Long): Long {
+        assertWorldThread()
+        return energy.capacity(pos)
+    }
+
     fun networkGrade(pos: Long): Int {
         assertWorldThread()
         return energy.diagnostics(pos)?.grade ?: 0
+    }
+
+    fun networkSupply(pos: Long): Long {
+        assertWorldThread()
+        return energy.diagnostics(pos)?.supply ?: 0L
+    }
+
+    fun networkDemand(pos: Long): Long {
+        assertWorldThread()
+        return energy.diagnostics(pos)?.demand ?: 0L
+    }
+
+    fun networkFlow(pos: Long): Long = networkSupply(pos) - networkDemand(pos)
+
+    fun lastSolveTick(): Long {
+        assertWorldThread()
+        return energy.lastSolveTick
     }
 
     private fun assertWorldThread() {

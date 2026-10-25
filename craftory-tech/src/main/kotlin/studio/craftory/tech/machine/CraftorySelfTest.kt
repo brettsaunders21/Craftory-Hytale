@@ -1,5 +1,9 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.builtin.crafting.component.BenchBlock
+import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
+import com.hypixel.hytale.component.ArchetypeChunk
+import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
@@ -7,13 +11,17 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.dependency.Dependency
 import com.hypixel.hytale.component.dependency.Order
 import com.hypixel.hytale.component.dependency.SystemDependency
+import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.command.system.CommandContext
+import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
+import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
@@ -21,12 +29,15 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.tech.CraftoryIds
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.function.BiConsumer
 
 internal class SelfTestRun : Resource<ChunkStore> {
     data class Run(
@@ -34,10 +45,21 @@ internal class SelfTestRun : Resource<ChunkStore> {
         val world: World,
         val startTick: Long,
         val sectionRef: Ref<ChunkStore>,
+        var sectionEntityTicking: Boolean = true,
+        var tickingStateReported: Boolean = false,
+        var ovenCompletionTickOffset: Long = 240,
         var phase: Int = 0,
         var passed: Int = 0,
         var failed: Int = 0,
+        var finalReported: Boolean = false,
+        var stoppedReported: Boolean = false,
         var cleanupTick: Long? = null,
+        var powerLossTick: Long? = null,
+        var ovenProgressAtSixSeconds: Float? = null,
+        var ovenInputAtSixSeconds: String? = null,
+        var ovenOutputAtSixSeconds: String? = null,
+        var spawnedGritDrops: Int = 0,
+        var spawnedGritQuantity: Int = 0,
     )
 
     var active: Run? = null
@@ -49,10 +71,18 @@ internal class SelfTestRun : Resource<ChunkStore> {
     }
 }
 
+internal data class SelfTestCleanupResult(
+    val liveDrops: Int,
+    val sectionHolders: Int,
+    val chunkHolders: Int,
+)
+
+@Suppress("TooManyFunctions")
 internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
 
+    @Suppress("CyclomaticComplexMethod")
     override fun tick(
         dt: Float,
         systemIndex: Int,
@@ -60,18 +90,71 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
+        run.sectionEntityTicking =
+            store.getComponent(
+                run.sectionRef,
+                ChunkStore.REGISTRY.getNonTickingComponentType(),
+            ) == null
         if (!CraftoryCore.isEnergyTick(store)) return
-        if (run.phase == 3) {
+        if (!run.tickingStateReported && tick >= run.startTick + 8) {
+            run.tickingStateReported = true
+            if (run.sectionEntityTicking) {
+                check(run, true, "selftest section entity-ticking", "NonTicking absent")
+            } else {
+                run.context.sendMessage(
+                    Message.raw("selftest: SKIP isolated section ticking is player-dependent (NonTicking)"),
+                )
+            }
+        }
+        if (run.phase == 4) {
+            val powerLossTick = run.powerLossTick ?: return
+            if (!run.finalReported && tick >= powerLossTick + 120) {
+                if (run.sectionEntityTicking) {
+                    captureOvenAfterPowerLoss(run, store)
+                } else {
+                    run.context.sendMessage(Message.raw("selftest: SKIP oven power-loss buffer check (NonTicking)"))
+                }
+                run.finalReported = true
+                run.cleanupTick = tick + 20
+            } else if (
+                run.finalReported &&
+                !run.stoppedReported &&
+                tick >= (run.cleanupTick ?: Long.MAX_VALUE) - 12
+            ) {
+                if (run.sectionEntityTicking) {
+                    checkOvenStopped(run, store)
+                } else {
+                    run.context.sendMessage(Message.raw("selftest: SKIP oven stop-after-power-loss check (NonTicking)"))
+                }
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+                run.stoppedReported = true
+                run.cleanupTick = tick + 12
+            }
             if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
-                CraftorySelfTest.cleanup(run.world, run.sectionRef)
+                reportCleanup(
+                    run,
+                    CraftorySelfTest.cleanup(run.world, run.sectionRef),
+                )
                 store.getResource(SelfTestRun.type).active = null
             }
             return
         }
         when {
-            run.phase == 0 && tick >= run.startTick + 8 -> checkCrank(run, store)
-            run.phase == 1 && tick >= run.startTick + 40 -> checkBurnerAndRemovePipe(run, store)
-            run.phase == 2 && tick >= run.startTick + 44 -> checkSplitAndFinish(run, store)
+            run.phase == 0 && tick >= run.startTick + 8 -> {
+                checkCrank(run, store)
+            }
+
+            run.phase == 1 && tick >= run.startTick + 40 -> {
+                checkBurnerAndOvenCharge(run, store)
+            }
+
+            run.phase == 2 && tick >= run.startTick + run.ovenCompletionTickOffset -> {
+                checkPoweredOvenOutputAndDisconnect(run, store)
+            }
+
+            run.phase == 3 && tick >= run.startTick + 124 -> {
+                checkSplitAndFinish(run, store)
+            }
         }
     }
 
@@ -96,7 +179,8 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         run.phase = 1
     }
 
-    private fun checkBurnerAndRemovePipe(
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
+    private fun checkBurnerAndOvenCharge(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
@@ -133,19 +217,90 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                     }
             run.context.sendMessage(Message.raw("selftest: inspect canister $inspection"))
         }
+        if (!run.sectionEntityTicking) {
+            run.context.sendMessage(Message.raw("selftest: SKIP oven solve-path charge and activation (NonTicking)"))
+            run.ovenCompletionTickOffset = 48
+            run.phase = 2
+            return
+        }
+        val ovenPosition = CraftorySelfTest.OVEN
+        val ovenRef = BlockModule.getBlockEntity(run.world, ovenPosition.x, ovenPosition.y, ovenPosition.z)
+        val bench = ovenRef?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+        val power = ovenRef?.let { store.getComponent(it, OvenPower.type) }
+        val ovenMember = ovenRef?.let { store.getComponent(it, EnergyMember.type) }
+        val energy = CraftoryCore.energyAccess(run.world)
+        val burnerNetwork = energy.networkOf(pack(CraftorySelfTest.BURNER))
+        val ovenNetwork = energy.networkOf(pack(ovenPosition))
+        val fuel = bench?.fuelContainer?.getItemStack(0.toShort())
+        val chargeAvailable =
+            (fuel != null && fuel.itemId == CraftoryIds.FIZZ_CHARGE && fuel.quantity > 0) ||
+                (bench?.fuelTime ?: 0f) > 0f
+        val solverPathUsed = power?.lastFizzSolveTick?.let { it > run.startTick } == true
+        val poweredNetwork = burnerNetwork >= 0 && ovenNetwork == burnerNetwork
+        if (!(chargeAvailable && solverPathUsed && poweredNetwork)) {
+            check(
+                run,
+                false,
+                "oven solve-path Fizz Charge insertion",
+                "oven charge insertion failed " +
+                    "(fuel=${fuel?.itemId}x${fuel?.quantity}, fuelTime=${bench?.fuelTime}, " +
+                    "lastSolve=${power?.lastFizzSolveTick}, delivered=${ovenMember?.delivered}, " +
+                    "networks=$burnerNetwork/$ovenNetwork)",
+            )
+            run.phase = 2
+            return
+        }
+        check(
+            run,
+            true,
+            "oven solve-path Fizz Charge insertion",
+            "fuel=${fuel?.itemId}x${fuel?.quantity}, fuelTime=${bench?.fuelTime}, " +
+                "lastSolve=${power?.lastFizzSolveTick}, delivered=${ovenMember?.delivered}, network=$ovenNetwork",
+        )
+        val benchBlock = ovenRef?.let { store.getComponent(it, BenchBlock.getComponentType()) }
+        val blockState = ovenRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        if (bench != null && benchBlock != null && blockState != null) {
+            bench.setActive(true, benchBlock, blockState)
+        }
+        check(run, bench?.isActive() == true, "oven vanilla processing activated", "active=${bench?.isActive()}")
+        run.phase = 2
+    }
+
+    private fun checkPoweredOvenOutputAndDisconnect(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val ovenPosition = CraftorySelfTest.OVEN
+        val ref = BlockModule.getBlockEntity(run.world, ovenPosition.x, ovenPosition.y, ovenPosition.z)
+        val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+        val output = bench?.outputContainer?.getItemStack(0.toShort())
+        val input = bench?.inputContainer?.getItemStack(0.toShort())
+        if (run.sectionEntityTicking) {
+            check(
+                run,
+                output?.itemId == "Ingredient_Bar_Copper" && (output?.quantity ?: 0) > 0,
+                "powered oven processes copper",
+                "active=${bench?.isActive()}, input=${input?.itemId}x${input?.quantity}, " +
+                    "output=${output?.itemId}x${output?.quantity}, " +
+                    "progress=${bench?.inputProgress}, fuelTime=${bench?.fuelTime}",
+            )
+        } else {
+            run.context.sendMessage(Message.raw("selftest: SKIP oven copper completion (NonTicking)"))
+        }
+        val link = CraftorySelfTest.OVEN_LINK_PIPE
         BlockOperations.setBlock(
             run.world.chunkStore,
             run.sectionRef,
-            CraftorySelfTest.PIPE.x,
-            CraftorySelfTest.PIPE.y,
-            CraftorySelfTest.PIPE.z,
+            link.x,
+            link.y,
+            link.z,
             BlockType.EMPTY_ID,
             BlockType.EMPTY,
             0,
             0,
             SetBlockSettings.NO_DROP_ITEMS,
         )
-        run.phase = 2
+        run.phase = 3
     }
 
     private fun reportEnergyTopology(
@@ -238,10 +393,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
         check(
             run,
-            burnerNetwork >= 0 && canisterNetwork >= 0 && burnerNetwork != canisterNetwork,
+            burnerNetwork >= 0 && canisterNetwork >= 0 && burnerNetwork == canisterNetwork,
             "pipe split",
             "burner=$burnerNetwork canister=$canisterNetwork",
         )
+        val ovenNetwork = energy.networkOf(pack(CraftorySelfTest.OVEN))
+        check(run, ovenNetwork >= 0 && ovenNetwork != canisterNetwork, "oven isolated from supply", "oven=$ovenNetwork")
         val crank =
             BlockModule
                 .getBlockEntity(
@@ -251,22 +408,99 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                     CraftorySelfTest.CRANK.z,
                 )?.let { store.getComponent(it, EnergyMember.type) }
         check(run, crank?.production == 0L, "crank expiry", "production=${crank?.production}")
-        run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
-        run.phase = 3
-        run.cleanupTick = run.world.tick + 1_000
+        reportInspectable(run, store, CraftorySelfTest.OVEN, "oven")
+        reportInspectable(run, store, CraftorySelfTest.GNASHER, "gnasher")
+        run.phase = 4
+        run.powerLossTick = run.world.tick
     }
+
+    private fun captureOvenAfterPowerLoss(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val position = CraftorySelfTest.OVEN
+        val ref = BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)
+        val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+        val input = bench?.inputContainer?.getItemStack(0.toShort())
+        run.ovenProgressAtSixSeconds = bench?.inputProgress
+        run.ovenInputAtSixSeconds = stackDescription(input)
+        run.ovenOutputAtSixSeconds = stackDescription(bench?.outputContainer?.getItemStack(0.toShort()))
+        check(
+            run,
+            bench != null && bench.fuelTime <= 0.001f && !bench.isActive(),
+            "oven buffer exhausted after six seconds",
+            "active=${bench?.isActive()}, fuelTime=${bench?.fuelTime}",
+        )
+    }
+
+    private fun checkOvenStopped(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val position = CraftorySelfTest.OVEN
+        val ref = BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)
+        val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+        val input = stackDescription(bench?.inputContainer?.getItemStack(0.toShort()))
+        val output = stackDescription(bench?.outputContainer?.getItemStack(0.toShort()))
+        val progress = bench?.inputProgress
+        val stopped =
+            bench != null &&
+                !bench.isActive() &&
+                (bench.fuelTime <= 0.001f) &&
+                input == run.ovenInputAtSixSeconds &&
+                output == run.ovenOutputAtSixSeconds &&
+                progress != null &&
+                kotlin.math.abs(progress - (run.ovenProgressAtSixSeconds ?: Float.NaN)) < 0.001f
+        check(
+            run,
+            stopped,
+            "oven stops after six seconds unpowered",
+            "fuelTime=${bench?.fuelTime}, progress=$progress, input=$input, output=$output",
+        )
+    }
+
+    private fun reportCleanup(
+        run: SelfTestRun.Run,
+        result: SelfTestCleanupResult,
+    ) {
+        run.context.sendMessage(
+            Message.raw(
+                "selftest: cleanup (liveGrit=${result.liveDrops}, " +
+                    "sectionHolders=${result.sectionHolders}, chunkHolders=${result.chunkHolders})",
+            ),
+        )
+    }
+
+    private fun stackDescription(stack: ItemStack?): String? = stack?.let { "${it.itemId}x${it.quantity}" }
 
     private fun check(
         run: SelfTestRun.Run,
         passed: Boolean,
         name: String,
-        detail: String,
+        detail: String = "",
     ) {
         if (passed) run.passed++ else run.failed++
         run.context.sendMessage(Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $name ($detail)"))
     }
+
+    private fun reportInspectable(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        position: CraftorySelfTest.TestPosition,
+        name: String,
+    ) {
+        val ref = BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)
+        val details =
+            ref?.let { blockRef ->
+                CraftoryCore.inspectableComponents(store, blockRef).joinToString(" ") { (id, component) ->
+                    "$id{${component.describe().joinToString(" ") { (key, value) -> "$key=$value" }}}"
+                }
+            } ?: "block entity unavailable"
+        run.context.sendMessage(Message.raw("selftest: inspect $name $details"))
+    }
 }
 
+@Suppress("TooManyFunctions")
 object CraftorySelfTest {
     fun execute(context: CommandContext): CompletableFuture<Void> {
         val world = Universe.get().defaultWorld
@@ -297,37 +531,24 @@ object CraftorySelfTest {
         world: World,
         sectionRef: Ref<ChunkStore>,
     ) {
+        val store = world.chunkStore.store
         try {
-            val store = world.chunkStore.store
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")
-            clear(world, sectionRef, listOf(BURNER, PIPE, CANISTER, CRANK))
+            GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
+            clear(world, sectionRef, testPositions())
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
-            place(world, store, sectionRef, section, CraftoryIds.PIPE, PIPE, EnergyMember.type)
+            pipePositions().forEach {
+                place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)
+            }
             place(world, store, sectionRef, section, CraftoryIds.CANISTER, CANISTER, EnergyMember.type)
             place(world, store, sectionRef, section, CraftoryIds.CRANK, CRANK, CrankState.type)
+            place(world, store, sectionRef, section, CraftoryIds.SCORCH_OVEN, OVEN, OvenPower.type)
+            place(world, store, sectionRef, section, CraftoryIds.GNASHER_PIT, GNASHER, GnasherState.type)
+            runPartCMachineProbes(world, store)
 
-            val burnerRef =
-                BlockModule.getBlockEntity(world, BURNER.x, BURNER.y, BURNER.z)
-                    ?: error("burner entity missing")
-            val burner = store.getComponent(burnerRef, BurnerState.type) ?: error("burner component missing")
-            val burnerMember =
-                store.getComponent(burnerRef, EnergyMember.type) ?: error("burner energy component missing")
-            val burnerBlock =
-                store.getComponent(burnerRef, BlockModule.BlockStateInfo.getComponentType())
-                    ?: error("burner block state missing")
-            check(
-                MachineActions.addFuel(
-                    burner,
-                    burnerMember,
-                    burnerBlock,
-                    store,
-                    world.tick,
-                    "Plant_Crop_Mushroom_Common_Brown",
-                ) > 0,
-            )
-            check(MachineActions.kick(burner, burnerMember, burnerBlock, store, world.tick))
+            fuelAndKickBurner(world, store)
 
             val crankRef = BlockModule.getBlockEntity(world, CRANK.x, CRANK.y, CRANK.z) ?: error("crank entity missing")
             val crank = store.getComponent(crankRef, CrankState.type) ?: error("crank component missing")
@@ -336,13 +557,316 @@ object CraftorySelfTest {
                 store.getComponent(crankRef, BlockModule.BlockStateInfo.getComponentType())
                     ?: error("crank block state missing")
             check(MachineActions.pulse(crank, crankMember, crankBlock, store, world.tick))
-            store.getResource(SelfTestRun.type).active = SelfTestRun.Run(context, world, world.tick, sectionRef)
+            val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
+            store.getResource(SelfTestRun.type).active = run
+            startGnasherSequence(run, store)
         } catch (failure: IllegalStateException) {
             context.sendMessage(
                 Message.raw("selftest: FAIL setup (${failure.message ?: failure.javaClass.simpleName})"),
             )
-            runCatching { clear(world, sectionRef, listOf(BURNER, PIPE, CANISTER, CRANK)) }
+            runCatching { clear(world, sectionRef, testPositions()) }
         }
+    }
+
+    private fun fuelAndKickBurner(
+        world: World,
+        store: Store<ChunkStore>,
+    ) {
+        val burnerRef =
+            BlockModule.getBlockEntity(world, BURNER.x, BURNER.y, BURNER.z)
+                ?: error("burner entity missing")
+        val burner = store.getComponent(burnerRef, BurnerState.type) ?: error("burner component missing")
+        val member = store.getComponent(burnerRef, EnergyMember.type) ?: error("burner energy component missing")
+        val blockState =
+            store.getComponent(burnerRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("burner block state missing")
+        repeat(2) {
+            check(
+                MachineActions.addFuel(
+                    burner,
+                    member,
+                    blockState,
+                    store,
+                    world.tick,
+                    "Plant_Crop_Mushroom_Common_Brown",
+                ) > 0,
+            )
+        }
+        check(MachineActions.kick(burner, member, blockState, store, world.tick))
+    }
+
+    private fun runPartCMachineProbes(
+        world: World,
+        store: Store<ChunkStore>,
+    ) {
+        val ovenRef = BlockModule.getBlockEntity(world, OVEN.x, OVEN.y, OVEN.z) ?: error("oven block entity missing")
+        val bench =
+            store.getComponent(ovenRef, ProcessingBenchBlock.getComponentType())
+                ?: error("processing bench missing")
+        check(bench.inputContainer.setItemStackForSlot(0.toShort(), ItemStack("Ore_Copper", 2)).succeeded()) {
+            "oven copper input setup failed"
+        }
+
+        val gnasherRef =
+            BlockModule.getBlockEntity(world, GNASHER.x, GNASHER.y, GNASHER.z)
+                ?: error("gnasher block entity missing")
+        val state = store.getComponent(gnasherRef, GnasherState.type) ?: error("gnasher state missing")
+        val blockState =
+            store.getComponent(gnasherRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("gnasher block state missing")
+        repeat(2) {
+            check(MachineActions.depositGnasher(state, blockState, store, "Ore_Copper")) {
+                "gnasher rejected copper ore"
+            }
+        }
+    }
+
+    private fun startGnasherSequence(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val ref = BlockModule.getBlockEntity(run.world, GNASHER.x, GNASHER.y, GNASHER.z) ?: return
+        val state = store.getComponent(ref, GnasherState.type) ?: return
+        val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        pulseGnasher(run, store, state, blockState, 1)
+    }
+
+    private fun pulseGnasher(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+        pulseNumber: Int,
+    ) {
+        if (store.getResource(SelfTestRun.type).active !== run) return
+        val holdersBefore =
+            if (pulseNumber % GnasherMachine.PULSES_PER_ORE == 0) {
+                GnasherSelfTestHolders.snapshot(store, run.sectionRef, GNASHER)
+            } else {
+                null
+            }
+        holdersBefore?.let {
+            GnasherSelfTestHolders.log(run, "before drop ${run.spawnedGritDrops + 1}", it)
+        }
+        val action =
+            MachineActions.pulseGnasher(
+                run.world,
+                state,
+                blockState,
+                store,
+                run.world.tick,
+                BlockPos(GNASHER.x, GNASHER.y, GNASHER.z),
+            )
+        if (!action.pulse.accepted) {
+            check(run, false, "gnasher pulse $pulseNumber accepted")
+        }
+        val drop = action.drop
+        if (action.pulse.accepted && action.pulse.outputItemId != null && drop == null) {
+            check(run, false, "gnasher drop result", "missing for pulse $pulseNumber")
+        }
+        if (drop != null) verifyGnasherDrop(run, store, drop, holdersBefore)
+        if (pulseNumber < GnasherMachine.PULSES_PER_ORE * 2) {
+            scheduleAfterTicks(run.world, GnasherMachine.MANUAL_PULSE_INTERVAL_TICKS) {
+                pulseGnasher(run, store, state, blockState, pulseNumber + 1)
+            }
+            return
+        }
+        verifyGnasherDrops(run, store, state, blockState)
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    private fun verifyGnasherDrop(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        drop: GritDropResult,
+        before: GnasherSelfTestHolders.Snapshot?,
+    ): Boolean {
+        val holdersAfter = GnasherSelfTestHolders.snapshot(store, run.sectionRef, GNASHER)
+        GnasherSelfTestHolders.log(run, "after drop attempt ${run.spawnedGritDrops + 1}", holdersAfter)
+        when (drop) {
+            GritDropResult.Parked -> {
+                val parkedIncrease = holdersAfter.entitySectionGrit - (before?.entitySectionGrit ?: 0)
+                val parked = holdersAfter.nonTicking && parkedIncrease == GnasherMachine.GRIT_OUTPUT_QUANTITY
+                if (parked) {
+                    run.spawnedGritDrops++
+                    run.spawnedGritQuantity += parkedIncrease
+                }
+                check(
+                    run,
+                    parked,
+                    "gnasher parked-holder drop",
+                    "nonTicking=${holdersAfter.nonTicking}, quantityAdded=$parkedIncrease",
+                )
+                return true
+            }
+
+            is GritDropResult.Spawned -> {
+                val entityStore = run.world.entityStore.store
+                val refValid = drop.ref.isValid
+                val item =
+                    if (refValid) {
+                        entityStore.getComponent(drop.ref, ItemComponent.getComponentType())
+                    } else {
+                        null
+                    }
+                val stack = item?.itemStack
+                val expectedGrit = GritTable.gritForOre("Ore_Copper")
+                val liveQuantity = gritQuantityNear(run.world, GNASHER)
+                val verified =
+                    refValid &&
+                        expectedGrit != null &&
+                        stack != null &&
+                        stack.itemId == expectedGrit &&
+                        stack.quantity == GnasherMachine.GRIT_OUTPUT_QUANTITY &&
+                        liveQuantity >= GnasherMachine.GRIT_OUTPUT_QUANTITY
+                if (verified) {
+                    run.spawnedGritDrops++
+                    run.spawnedGritQuantity += GnasherMachine.GRIT_OUTPUT_QUANTITY
+                }
+                check(
+                    run,
+                    verified,
+                    "gnasher grit drop same-tick",
+                    "drop=${run.spawnedGritDrops}, refValid=$refValid, " +
+                        "stack=${stack?.itemId}x${stack?.quantity}, liveNearby=$liveQuantity, " +
+                        "cumulative=${run.spawnedGritQuantity}",
+                )
+            }
+
+            else -> {
+                check(run, false, "gnasher grit drop", drop.toString())
+            }
+        }
+        return true
+    }
+
+    private fun verifyGnasherDrops(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+    ) {
+        scheduleAfterTicks(run.world, 4) {
+            if (store.getResource(SelfTestRun.type).active !== run) return@scheduleAfterTicks
+            verifyGnasherDropsAfterDelay(run, store, state, blockState)
+        }
+    }
+
+    private fun verifyGnasherDropsAfterDelay(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+    ) {
+        val holders = GnasherSelfTestHolders.snapshot(store, run.sectionRef, GNASHER)
+        val liveQuantity = gritQuantityNear(run.world, GNASHER)
+        val parkedQuantity = holders.entityChunkGrit + holders.entitySectionGrit
+        val totalQuantity = liveQuantity + parkedQuantity
+        GnasherSelfTestHolders.log(run, "after 4 ticks", holders)
+        check(
+            run,
+            run.spawnedGritDrops == 2 && run.spawnedGritQuantity == 4,
+            "gnasher two ore to four grit",
+            "drops=${run.spawnedGritDrops}, sameTickQuantity=${run.spawnedGritQuantity}",
+        )
+        check(
+            run,
+            totalQuantity == 4,
+            "gnasher live and parked grit accounting",
+            "live=$liveQuantity, parked=$parkedQuantity, total=$totalQuantity",
+        )
+        if (holders.nonTicking) {
+            check(
+                run,
+                parkedQuantity == 4,
+                "gnasher non-ticking parked grit",
+                "EntityChunk=${holders.entityChunkGrit}, EntitySection=${holders.entitySectionGrit}",
+            )
+            run.context.sendMessage(
+                Message.raw("selftest: SKIP live Gnasher drop visibility after N ticks (NonTicking)"),
+            )
+        } else {
+            check(
+                run,
+                liveQuantity == 4 && parkedQuantity == 0,
+                "gnasher live drops after 4 ticks",
+                "live=$liveQuantity, parked=$parkedQuantity",
+            )
+        }
+        repeat(GnasherMachine.HOPPER_CAPACITY + 1) {
+            check(
+                run,
+                MachineActions.depositGnasher(state, blockState, store, "Ore_Copper"),
+                "gnasher accepts ore for jam",
+            )
+        }
+        val rejectedPulse =
+            MachineActions.pulseGnasher(
+                run.world,
+                state,
+                blockState,
+                store,
+                run.world.tick,
+                BlockPos(GNASHER.x, GNASHER.y, GNASHER.z),
+            )
+        check(run, state.jammed && !rejectedPulse.pulse.accepted, "gnasher ninth-ore jam")
+        check(run, MachineActions.kickGnasher(state, blockState, store) && !state.jammed, "gnasher kick recovery")
+    }
+
+    private fun check(
+        run: SelfTestRun.Run,
+        passed: Boolean,
+        name: String,
+        detail: String = "",
+    ) {
+        if (passed) run.passed++ else run.failed++
+        run.context.sendMessage(Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $name ($detail)"))
+    }
+
+    private fun scheduleAfterTicks(
+        world: World,
+        ticks: Long,
+        action: () -> Unit,
+    ) {
+        val targetTick = world.tick + ticks
+
+        fun scheduleNext() {
+            val remaining = targetTick - world.tick
+            if (remaining <= 0) {
+                action()
+            } else {
+                world.scheduleAfter({ scheduleNext() }, remaining * 50, TimeUnit.MILLISECONDS)
+            }
+        }
+        world.scheduleAfter({ scheduleNext() }, ticks * 50, TimeUnit.MILLISECONDS)
+    }
+
+    @Suppress("LoopWithTooManyJumpStatements")
+    private fun gritQuantityNear(
+        world: World,
+        position: TestPosition,
+    ): Int {
+        var quantity = 0
+        val entityStore = world.entityStore.store
+        entityStore.forEachChunk(
+            Query.and(ItemComponent.getComponentType(), TransformComponent.getComponentType()),
+            BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, _ ->
+                for (index in 0 until chunk.size()) {
+                    val item = chunk.getComponent(index, ItemComponent.getComponentType()) ?: continue
+                    val stack = item.itemStack ?: continue
+                    val transform = chunk.getComponent(index, TransformComponent.getComponentType()) ?: continue
+                    val point = transform.position
+                    if (
+                        GritTable.containsGrit(stack.itemId) &&
+                        kotlin.math.abs(point.x - (position.x + 0.5)) < 2.0 &&
+                        kotlin.math.abs(point.z - (position.z + 0.5)) < 2.0
+                    ) {
+                        quantity += stack.quantity
+                    }
+                }
+            },
+        )
+        return quantity
     }
 
     private fun place(
@@ -414,8 +938,8 @@ object CraftorySelfTest {
     internal fun cleanup(
         world: World,
         sectionRef: Ref<ChunkStore>,
-    ) {
-        listOf(BURNER, PIPE, CANISTER, CRANK).forEach { position ->
+    ): SelfTestCleanupResult {
+        testPositions().forEach { position ->
             BlockOperations.setBlock(
                 world.chunkStore,
                 sectionRef,
@@ -429,6 +953,7 @@ object CraftorySelfTest {
                 SetBlockSettings.NO_DROP_ITEMS,
             )
         }
+        return GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
     }
 
     internal data class TestPosition(
@@ -437,8 +962,17 @@ object CraftorySelfTest {
         val z: Int,
     )
 
-    internal val BURNER = TestPosition(10_002, 148, 10_000)
-    internal val PIPE = TestPosition(10_002, 149, 10_000)
-    internal val CANISTER = TestPosition(10_002, 150, 10_000)
-    internal val CRANK = TestPosition(10_010, 150, 10_000)
+    internal val BURNER = TestPosition(10_018, 148, 10_000)
+    internal val PIPE = TestPosition(10_018, 149, 10_000)
+    internal val CANISTER = TestPosition(10_018, 150, 10_000)
+    internal val CRANK = TestPosition(10_026, 150, 10_006)
+    internal val OVEN = TestPosition(10_034, 150, 10_000)
+    internal val OVEN_LINK_PIPE = TestPosition(10_034, 149, 10_000)
+    internal val GNASHER = TestPosition(10_044, 150, 10_006)
+
+    private fun pipePositions(): List<TestPosition> =
+        listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
+
+    private fun testPositions(): List<TestPosition> =
+        (listOf(BURNER) + pipePositions() + listOf(CANISTER, CRANK, OVEN, GNASHER)).distinct()
 }

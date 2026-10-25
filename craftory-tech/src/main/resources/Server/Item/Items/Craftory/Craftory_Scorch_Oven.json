@@ -1,0 +1,154 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Scorch_Oven.name",
+    "Description": "server.items.Craftory_Scorch_Oven.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Bench_Furnace.png",
+  "Categories": [
+    "Furniture.Benches"
+  ],
+  "Recipe": {
+    "Input": [
+      {
+        "ResourceTypeId": "Wood_Trunk",
+        "Quantity": 6
+      },
+      {
+        "ResourceTypeId": "Rock",
+        "Quantity": 6
+      }
+    ],
+    "Output": [
+      {
+        "ItemId": "Craftory_Scorch_Oven"
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Crafting"
+        ],
+        "Id": "Workbench"
+      }
+    ],
+    "TimeSeconds": 3
+  },
+  "PlayerAnimationsId": "Block",
+  "IconProperties": {
+    "Scale": 0.365,
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ],
+    "Translation": [
+      12,
+      -17.4
+    ]
+  },
+  "Tags": {
+    "Type": [
+      "Bench"
+    ]
+  },
+  "MaxStack": 1,
+  "ItemLevel": 1,
+  "ItemSoundSetId": "ISS_Blocks_Stone",
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Benches/Furnace.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Benches/Furnace_Texture_Off.png",
+        "Weight": 1
+      }
+    ],
+    "VariantRotation": "NESW",
+    "Bench": {
+      "Type": "Processing",
+      "AllowNoInputProcessing": true,
+      "Input": [
+        {
+          "FilterValidIngredients": true
+        },
+        {
+          "FilterValidIngredients": true
+        }
+      ],
+      "Fuel": [
+        {
+          "ResourceTypeId": "Craftory_Fizz",
+          "Icon": "Icons/Processing/FuelSlotIcon.png"
+        }
+      ],
+      "FuelDropItemId": "Craftory_Fizz_Charge",
+      "LocalOpenSoundEventId": "SFX_Furnace_Bench_Open",
+      "LocalCloseSoundEventId": "SFX_Furnace_Bench_Close",
+      "CompletedSoundEventId": "SFX_Furnace_Bench_Processing_Complete",
+      "EndSoundEventId": "SFX_Furnace_Bench_Processing_End",
+      "FailedSoundEventId": "SFX_Furnace_Bench_Processing_Failed",
+      "BenchUpgradeSoundEventId": "SFX_Workbench_Upgrade_Start_Default",
+      "BenchUpgradeCompletedSoundEventId": "SFX_Workbench_Upgrade_Complete_Default",
+      "OutputSlotsCount": 4,
+      "Id": "Furnace",
+      "TierLevels": [
+        {
+          "UpgradeRequirement": {
+            "Material": [
+              {
+                "ItemId": "Ingredient_Bar_Copper",
+                "Quantity": 5
+              },
+              {
+                "ItemId": "Ingredient_Bar_Iron",
+                "Quantity": 5
+              },
+              {
+                "ItemId": "Ingredient_Bar_Thorium",
+                "Quantity": 5
+              },
+              {
+                "ItemId": "Ingredient_Bar_Cobalt",
+                "Quantity": 5
+              }
+            ],
+            "TimeSeconds": 3
+          },
+          "CraftingTimeReductionModifier": 0.0
+        },
+        {
+          "CraftingTimeReductionModifier": 0.3,
+          "ExtraInputSlot": 1
+        }
+      ]
+    },
+    "BlockEntity": {
+      "Components": {
+        "BenchBlock": {},
+        "ProcessingBenchBlock": {},
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:scorch_oven",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryOvenPower": {
+          "AccumulatedFizz": 0
+        }
+      }
+    },
+    "HitboxType": "Bench_Furnace",
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full"
+        }
+      ]
+    },
+    "Interactions": {
+      "Use": "Open_Processing_Bench"
+    }
+  }
+}

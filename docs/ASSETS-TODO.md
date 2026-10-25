@@ -7,3 +7,4 @@ Replace these vanilla placeholders with Craftory Blockbench models and textures:
 - `Craftory_Fizz_Canister`: Goblin boomshroom generator model and texture.
 - `Craftory_Gutterpipe`: grey developer tube model and texture. It is a straight-pipe placeholder; connected-block visuals are not configured.
 - `Craftory_Grizzlecog`: Klops merchant appearance and shopkeeper animation.
+- `Craftory_Gnasher_Pit`: replace the single-block placeholder with the planned 3×3×2 multiblock model and textures.

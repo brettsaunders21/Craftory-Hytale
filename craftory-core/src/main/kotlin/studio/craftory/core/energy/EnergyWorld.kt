@@ -22,6 +22,8 @@ internal class EnergyWorld : Resource<ChunkStore> {
     private var store: Store<ChunkStore>? = null
     var lastSolveNanos: Long = 0
         private set
+    var lastSolveTick: Long = Long.MIN_VALUE
+        private set
 
     override fun clone(): Resource<ChunkStore> = EnergyWorld()
 
@@ -105,6 +107,8 @@ internal class EnergyWorld : Resource<ChunkStore> {
 
     fun diagnostics(id: Long): EnergyNetworkDiagnostics? = runtime.diagnostics(id)
 
+    fun capacity(id: Long): Long = member(id)?.let { CraftoryCore.energyType(it.typeId)?.spec?.capacity } ?: 0L
+
     val networkCount: Int get() = runtime.graph.networkCount
     val awakeNetworkCount: Int get() = runtime.graph.awakeNetworkCount
 
@@ -158,6 +162,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
             }
         }
         events.drain()
+        lastSolveTick = tick
     }
 
     companion object {

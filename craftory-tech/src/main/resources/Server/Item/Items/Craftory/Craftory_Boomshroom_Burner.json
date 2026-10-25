@@ -106,8 +106,7 @@
         },
         "CraftoryBurner": {
           "BurnTicks": 0,
-          "Burning": false,
-          "LastAdvancedTick": 0
+          "Burning": false
         }
       }
     }

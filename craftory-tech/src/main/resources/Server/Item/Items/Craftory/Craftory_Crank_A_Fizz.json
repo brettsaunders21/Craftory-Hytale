@@ -81,8 +81,7 @@
           "StoreRank": -1
         },
         "CraftoryCrank": {
-          "SpinTicks": 0,
-          "LastAdvancedTick": 0
+          "SpinTicks": 0
         }
       }
     }

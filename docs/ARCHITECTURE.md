@@ -48,7 +48,8 @@ mutate world state, and side-car save files.
 - Server plugins are JVM jars (`JavaPlugin`, `manifest.json`) and can bundle an asset pack. We build with
   Kotlin on Java 25.
 - Data is ECS: block data is a `Component<ChunkStore>` and logic runs in systems such as
-  `EntityTickingSystem`. Ticking blocks have to be marked (`WorldChunk.setTicking`).
+  `EntityTickingSystem`. Chunk sections carry a `NonTicking` marker when no player is tracking them;
+  `WorldChunk.addKeepLoaded()` keeps a chunk loaded but does not force it to tick.
 - Each `World` is its own `TickingThread`. The ECS supports parallel work through `CommandBuffer.fork()` /
   `mergeParallel`.
 - Components are persisted through codecs (`BuilderCodec`), so machine and network state saves with the chunk.
@@ -87,6 +88,8 @@ machines, commands, UI and debugging to read.
    member changes. A large idle base then costs nearly nothing.
 4. **Query-driven systems.** Machine systems query their state, energy member and block-state components.
    The Core energy clock gates the solver cadence; there are no per-machine maps or custom schedulers.
+   A future Anchor machine may use a verified player-tracking API to keep an area ticking for unattended
+   production; keep-loaded references alone do not provide that behavior.
 5. **World-thread ownership.** All mutation happens on the world's own thread through the ECS. Solver
    write-back and machine state updates remain serial because they mutate shared graph and component state.
 6. **No reflection on hot paths.** Tick intervals, capabilities and limits are resolved once at registration.

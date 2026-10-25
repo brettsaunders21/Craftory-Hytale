@@ -1,0 +1,12 @@
+{
+  "TranslationProperties": { "Name": "server.items.Craftory_Grit_Adamantite.name" },
+  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Adamantite.png",
+  "Categories": ["Items.Ingredients"],
+  "MaxStack": 100,
+  "Recipe": {
+    "Input": [{ "ItemId": "Craftory_Grit_Adamantite", "Quantity": 1 }],
+    "BenchRequirement": [{ "Type": "Processing", "Id": "Furnace" }],
+    "Output": [{ "ItemId": "Ingredient_Bar_Adamantite", "Quantity": 1 }],
+    "TimeSeconds": 6
+  }
+}

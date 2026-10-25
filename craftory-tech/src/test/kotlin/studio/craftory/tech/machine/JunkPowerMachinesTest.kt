@@ -104,4 +104,96 @@ class JunkPowerMachinesTest {
         assertFalse(member.shouldPersist(200, 20, immediate = false))
         assertFalse(member.unsaved)
     }
+
+    @Test
+    fun `gnasher accepts ore variants and returns two grit after six pulses per ore`() {
+        val gnasher = GnasherState()
+
+        assertFalse(GnasherMachine.deposit(gnasher, "Ore_Unknown"))
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper_Stone"))
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+
+        val outputs =
+            (0 until GnasherMachine.PULSES_PER_ORE * 2)
+                .map { pulse -> GnasherMachine.pulse(gnasher, pulse * GnasherMachine.MANUAL_PULSE_INTERVAL_TICKS) }
+                .filter { it.outputItemId != null }
+                .mapNotNull { it.outputItemId }
+
+        assertEquals(listOf("Craftory_Grit_Copper", "Craftory_Grit_Copper"), outputs)
+        assertEquals(0, GritTable.queuedOreCount(gnasher.oreQueue))
+        assertEquals(GnasherMachine.GRIT_OUTPUT_QUANTITY, 2)
+    }
+
+    @Test
+    fun `gnasher accepts ninth ore then jams until a kick clears it`() {
+        val gnasher = GnasherState()
+
+        repeat(GnasherMachine.HOPPER_CAPACITY + 1) {
+            assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+        }
+        assertEquals(9, GritTable.queuedOreCount(gnasher.oreQueue))
+        assertTrue(gnasher.jammed)
+        assertFalse(GnasherMachine.pulse(gnasher, 100).accepted)
+        assertFalse(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+        assertTrue(GnasherMachine.kick(gnasher))
+        assertFalse(gnasher.jammed)
+        assertFalse(GnasherMachine.kick(gnasher))
+    }
+
+    @Test
+    fun `gnasher powered mode requires delivered fizz and pulses at most every twenty ticks`() {
+        val gnasher = GnasherState(lastAutoCrankTick = 0)
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+
+        assertFalse(GnasherMachine.autoCrank(gnasher, 0, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
+        assertFalse(GnasherMachine.autoCrank(gnasher, 20, 0).accepted)
+        assertFalse(GnasherMachine.autoCrank(gnasher, 19, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
+        assertTrue(GnasherMachine.autoCrank(gnasher, 20, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
+        assertFalse(GnasherMachine.autoCrank(gnasher, 39, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
+        assertTrue(GnasherMachine.autoCrank(gnasher, 40, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
+        assertEquals(2, gnasher.progressPulses)
+    }
+
+    @Test
+    fun `gnasher hopper persistence preserves item ids and counts`() {
+        val gnasher = GnasherState()
+        GnasherMachine.deposit(gnasher, "Ore_Copper")
+        GnasherMachine.deposit(gnasher, "Ore_Copper")
+        GnasherMachine.deposit(gnasher, "Ore_Iron_Slate")
+
+        val restored = GnasherState(oreQueue = gnasher.oreQueue, progressPulses = 3)
+
+        assertEquals(
+            mapOf("Ore_Copper" to 2, "Ore_Iron_Slate" to 1),
+            GritTable.decodeOreQueue(restored.oreQueue),
+        )
+        assertEquals(3, restored.progressPulses)
+    }
+
+    @Test
+    fun `grit table covers all mapped metal ore variants`() {
+        assertEquals(
+            setOf(
+                "Adamantite",
+                "Cobalt",
+                "Copper",
+                "Gold",
+                "Iron",
+                "Mithril",
+                "Onyxium",
+                "Prisma",
+                "Silver",
+                "Thorium",
+            ),
+            GritTable.definitions.map { it.metal }.toSet(),
+        )
+        assertEquals(
+            GritTable.definitions.sumOf { it.oreItemIds.size },
+            GritTable.definitions
+                .flatMap { it.oreItemIds }
+                .toSet()
+                .size,
+        )
+        assertTrue(GritTable.definitions.flatMap { it.oreItemIds }.all { GritTable.gritForOre(it) != null })
+    }
 }

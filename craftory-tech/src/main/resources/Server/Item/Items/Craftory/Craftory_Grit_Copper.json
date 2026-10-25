@@ -1,0 +1,12 @@
+{
+  "TranslationProperties": { "Name": "server.items.Craftory_Grit_Copper.name" },
+  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Copper.png",
+  "Categories": ["Items.Ingredients"],
+  "MaxStack": 100,
+  "Recipe": {
+    "Input": [{ "ItemId": "Craftory_Grit_Copper", "Quantity": 1 }],
+    "BenchRequirement": [{ "Type": "Processing", "Id": "Furnace" }],
+    "Output": [{ "ItemId": "Ingredient_Bar_Copper", "Quantity": 1 }],
+    "TimeSeconds": 6
+  }
+}

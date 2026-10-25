@@ -118,3 +118,210 @@ internal object JunkPowerFuels {
             FuelDefinition("Ingredient_Scraps", 40),
         )
 }
+
+data class GritDefinition(
+    val metal: String,
+    val gritItemId: String,
+    val oreItemIds: List<String>,
+) {
+    init {
+        require(metal.isNotBlank())
+        require(gritItemId.isNotBlank())
+        require(oreItemIds.isNotEmpty())
+    }
+}
+
+object GritTable {
+    val definitions =
+        listOf(
+            GritDefinition(
+                "Adamantite",
+                "Craftory_Grit_Adamantite",
+                listOf("Ore_Adamantite", "Ore_Adamantite_Magma", "Ore_Adamantite_Magma_Cracked"),
+            ),
+            GritDefinition(
+                "Cobalt",
+                "Craftory_Grit_Cobalt",
+                listOf("Ore_Cobalt", "Ore_Cobalt_Shale", "Ore_Cobalt_Slate", "Ore_Cobalt_Slate_Cracked"),
+            ),
+            GritDefinition(
+                "Copper",
+                "Craftory_Grit_Copper",
+                listOf("Ore_Copper", "Ore_Copper_Sandstone", "Ore_Copper_Shale", "Ore_Copper_Stone"),
+            ),
+            GritDefinition(
+                "Gold",
+                "Craftory_Grit_Gold",
+                listOf(
+                    "Ore_Gold",
+                    "Ore_Gold_Basalt",
+                    "Ore_Gold_Calcite",
+                    "Ore_Gold_Sandstone",
+                    "Ore_Gold_Shale",
+                    "Ore_Gold_Stone",
+                    "Ore_Gold_Volcanic",
+                ),
+            ),
+            GritDefinition(
+                "Iron",
+                "Craftory_Grit_Iron",
+                listOf(
+                    "Ore_Iron",
+                    "Ore_Iron_Basalt",
+                    "Ore_Iron_Basalt_Cracked",
+                    "Ore_Iron_Sandstone",
+                    "Ore_Iron_Shale",
+                    "Ore_Iron_Slate",
+                    "Ore_Iron_Stone",
+                    "Ore_Iron_Volcanic",
+                ),
+            ),
+            GritDefinition("Mithril", "Craftory_Grit_Mithril", listOf("Ore_Mithril", "Ore_Mithril_Stone")),
+            GritDefinition("Onyxium", "Craftory_Grit_Onyxium", listOf("Ore_Onyxium")),
+            GritDefinition("Prisma", "Craftory_Grit_Prisma", listOf("Ore_Prisma")),
+            GritDefinition(
+                "Silver",
+                "Craftory_Grit_Silver",
+                listOf(
+                    "Ore_Silver",
+                    "Ore_Silver_Basalt",
+                    "Ore_Silver_Sandstone",
+                    "Ore_Silver_Shale",
+                    "Ore_Silver_Slate",
+                    "Ore_Silver_Stone",
+                    "Ore_Silver_Volcanic",
+                ),
+            ),
+            GritDefinition(
+                "Thorium",
+                "Craftory_Grit_Thorium",
+                listOf("Ore_Thorium", "Ore_Thorium_Mud", "Ore_Thorium_Mud_Cracked", "Ore_Thorium_Sandstone"),
+            ),
+        )
+    private val byOre =
+        definitions
+            .flatMap { definition -> definition.oreItemIds.map { it to definition.gritItemId } }
+            .toMap()
+    private val gritIds = definitions.map { it.gritItemId }.toSet()
+
+    fun gritForOre(oreItemId: String): String? = byOre[oreItemId]
+
+    fun metalForGrit(gritItemId: String): String? = definitions.firstOrNull { it.gritItemId == gritItemId }?.metal
+
+    fun encodeOreQueue(oreCounts: Map<String, Int>): String =
+        oreCounts.entries
+            .filter { it.key in byOre && it.value > 0 }
+            .joinToString(";") { (oreId, count) -> "$oreId=$count" }
+
+    fun decodeOreQueue(encoded: String): Map<String, Int> =
+        encoded
+            .split(';')
+            .mapNotNull { entry ->
+                val separator = entry.lastIndexOf('=')
+                if (separator <= 0) return@mapNotNull null
+                val count = entry.substring(separator + 1).toIntOrNull()?.takeIf { it > 0 } ?: return@mapNotNull null
+                val oreId = entry.substring(0, separator)
+                if (oreId in byOre) oreId to count else null
+            }.toMap()
+
+    fun queuedOreCount(encoded: String): Int = decodeOreQueue(encoded).values.sum()
+
+    fun containsGrit(gritItemId: String): Boolean = gritItemId in gritIds
+}
+
+data class GnasherPulseResult(
+    val accepted: Boolean,
+    val outputItemId: String? = null,
+    val consumedOreItemId: String? = null,
+)
+
+internal object GnasherMachine {
+    fun canDeposit(
+        state: GnasherState,
+        oreItemId: String,
+    ): Boolean = !state.jammed && GritTable.gritForOre(oreItemId) != null
+
+    fun deposit(
+        state: GnasherState,
+        oreItemId: String,
+    ): Boolean {
+        if (!canDeposit(state, oreItemId)) return false
+        val oreCounts = GritTable.decodeOreQueue(state.oreQueue).toMutableMap()
+        oreCounts[oreItemId] = (oreCounts[oreItemId] ?: 0) + 1
+        state.oreQueue = GritTable.encodeOreQueue(oreCounts)
+        if (GritTable.queuedOreCount(state.oreQueue) > HOPPER_CAPACITY) state.jammed = true
+        return true
+    }
+
+    fun pulse(
+        state: GnasherState,
+        currentTick: Long,
+    ): GnasherPulseResult {
+        val previous = state.lastPulseTick
+        if (previous != null && (currentTick < previous || currentTick - previous < MANUAL_PULSE_INTERVAL_TICKS)) {
+            return GnasherPulseResult(false)
+        }
+        if (state.jammed || GritTable.queuedOreCount(state.oreQueue) == 0) return GnasherPulseResult(false)
+        state.lastPulseTick = currentTick
+        return advanceGrinding(state)
+    }
+
+    fun autoCrank(
+        state: GnasherState,
+        currentTick: Long,
+        deliveredFizz: Long,
+    ): GnasherPulseResult {
+        if (state.jammed || GritTable.queuedOreCount(state.oreQueue) == 0 || deliveredFizz < FIZZ_PER_SOLVE_TICK) {
+            return GnasherPulseResult(false)
+        }
+        val previous = state.lastAutoCrankTick
+        if (
+            previous != Long.MIN_VALUE &&
+            (currentTick < previous || currentTick - previous < AUTO_PULSE_INTERVAL_TICKS)
+        ) {
+            return GnasherPulseResult(false)
+        }
+        state.lastAutoCrankTick = currentTick
+        return advanceGrinding(state)
+    }
+
+    fun kick(state: GnasherState): Boolean {
+        if (!state.jammed) return false
+        state.jammed = false
+        return true
+    }
+
+    fun restoreFailedDrop(
+        state: GnasherState,
+        result: GnasherPulseResult,
+    ) {
+        val consumedOre = result.consumedOreItemId ?: return
+        val oreCounts = GritTable.decodeOreQueue(state.oreQueue).toMutableMap()
+        oreCounts[consumedOre] = (oreCounts[consumedOre] ?: 0) + 1
+        state.oreQueue = GritTable.encodeOreQueue(oreCounts)
+        state.progressPulses = PULSES_PER_ORE - 1
+    }
+
+    private fun advanceGrinding(state: GnasherState): GnasherPulseResult {
+        val oreCounts = GritTable.decodeOreQueue(state.oreQueue).toMutableMap()
+        val oreItemId = oreCounts.keys.firstOrNull() ?: return GnasherPulseResult(false)
+        state.progressPulses++
+        if (state.progressPulses < PULSES_PER_ORE) return GnasherPulseResult(true)
+        state.progressPulses = 0
+        val remaining = (oreCounts[oreItemId] ?: 0) - 1
+        if (remaining == 0) {
+            oreCounts.remove(oreItemId)
+        } else {
+            oreCounts[oreItemId] = remaining
+        }
+        state.oreQueue = GritTable.encodeOreQueue(oreCounts)
+        return GnasherPulseResult(true, GritTable.gritForOre(oreItemId), oreItemId)
+    }
+
+    const val HOPPER_CAPACITY = 8
+    const val PULSES_PER_ORE = 6
+    const val GRIT_OUTPUT_QUANTITY = 2
+    const val FIZZ_PER_SOLVE_TICK = 15L
+    const val MANUAL_PULSE_INTERVAL_TICKS = 10L
+    const val AUTO_PULSE_INTERVAL_TICKS = 20L
+}

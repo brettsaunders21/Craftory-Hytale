@@ -1,7 +1,11 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
+import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
+import com.hypixel.hytale.component.ComponentAccessor
+import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.dependency.Dependency
 import com.hypixel.hytale.component.dependency.Order
@@ -9,6 +13,9 @@ import com.hypixel.hytale.component.dependency.SystemDependency
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.EntityEventSystem
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem
+import com.hypixel.hytale.logger.HytaleLogger
+import com.hypixel.hytale.math.util.ChunkUtil
+import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
@@ -16,22 +23,31 @@ import com.hypixel.hytale.server.core.entity.InteractionContext
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import org.joml.Vector3d
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.tech.CraftoryIds
+import java.util.logging.Level
 
 internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(CrankState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            CrankState.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
@@ -51,6 +67,7 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
         if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
     }
 
+    @Suppress("CyclomaticComplexMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -70,7 +87,11 @@ internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
 
 internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(BurnerState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            BurnerState.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
@@ -90,6 +111,7 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
         if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
     }
 
+    @Suppress("CyclomaticComplexMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -127,6 +149,239 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
     }
 }
 
+internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(
+            OvenPower.type,
+            EnergyMember.type,
+            ProcessingBenchBlock.getComponentType(),
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
+
+    override fun getDependencies(): Set<Dependency<ChunkStore>> =
+        setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val power = chunk.getComponent(index, OvenPower.type) ?: return
+        val member = chunk.getComponent(index, EnergyMember.type) ?: return
+        val bench = chunk.getComponent(index, ProcessingBenchBlock.getComponentType()) ?: return
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val world = store.externalData.world
+        val position = Vector3i()
+        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        val id = BlockPos.pack(position.x, position.y, position.z)
+        val chargeStack = bench.fuelContainer.getItemStack(0.toShort())
+        val chargeCount =
+            if (chargeStack?.itemId == CraftoryIds.FIZZ_CHARGE) {
+                chargeStack.quantity
+            } else {
+                0
+            }
+        val fuelSlotAvailable =
+            chargeStack == null || chargeStack.isEmpty || chargeStack.itemId == CraftoryIds.FIZZ_CHARGE
+        val demand =
+            if (hasRecipeInput(bench) && chargeCount < MAX_CHARGES && fuelSlotAvailable) {
+                FIZZ_PER_SOLVE_TICK
+            } else {
+                0L
+            }
+        val energy = CraftoryCore.energyAccess(world)
+        if (member.demand != demand) energy.setDemand(id, demand)
+        var dirty = false
+        val completedSolveTick = energy.lastSolveTick()
+        if (demand > 0 && completedSolveTick != Long.MIN_VALUE && completedSolveTick != power.lastFizzSolveTick) {
+            power.lastFizzSolveTick = completedSolveTick
+            power.accumulatedFizz =
+                if (Long.MAX_VALUE - power.accumulatedFizz < member.delivered) {
+                    Long.MAX_VALUE
+                } else {
+                    power.accumulatedFizz + member.delivered.coerceAtLeast(0)
+                }
+            dirty = true
+        }
+        if (demand > 0 && power.accumulatedFizz >= FIZZ_PER_CHARGE) {
+            val transaction =
+                bench.fuelContainer.setItemStackForSlot(
+                    0.toShort(),
+                    ItemStack(CraftoryIds.FIZZ_CHARGE, chargeCount + 1),
+                )
+            if (transaction.succeeded()) {
+                power.accumulatedFizz -= FIZZ_PER_CHARGE
+                dirty = true
+            }
+        }
+        if (dirty) blockState.markNeedsSaving(commandBuffer)
+    }
+
+    private fun hasRecipeInput(bench: ProcessingBenchBlock): Boolean =
+        bench.recipe != null &&
+            (0 until bench.inputContainer.capacity).any { slot ->
+                bench.inputContainer.getItemStack(slot.toShort())?.isEmpty == false
+            }
+
+    private companion object {
+        const val FIZZ_PER_SOLVE_TICK = 30L
+        const val FIZZ_PER_CHARGE = 120L
+        const val MAX_CHARGES = 2
+    }
+}
+
+internal class GnasherSystem : EntityTickingSystem<ChunkStore>() {
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(
+            GnasherState.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
+
+    override fun getDependencies(): Set<Dependency<ChunkStore>> =
+        setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        if (CraftoryCore.isEnergyTick(store)) super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val state = chunk.getComponent(index, GnasherState.type) ?: return
+        val member = chunk.getComponent(index, EnergyMember.type) ?: return
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val world = store.externalData.world
+        val position = blockState.worldPosition(commandBuffer) ?: return
+        val id = BlockPos.pack(position.x, position.y, position.z)
+        val demand =
+            if (!state.jammed && GritTable.queuedOreCount(state.oreQueue) > 0) {
+                GnasherMachine.FIZZ_PER_SOLVE_TICK
+            } else {
+                0L
+            }
+        val energy = CraftoryCore.energyAccess(world)
+        if (member.demand != demand) energy.setDemand(id, demand)
+        val result =
+            MachineActions.autoCrankGnasher(
+                world,
+                state,
+                blockState,
+                commandBuffer,
+                world.tick,
+                member.delivered,
+                position,
+            )
+        if (!result.pulse.accepted) return
+    }
+}
+
+private fun BlockModule.BlockStateInfo.worldPosition(store: ComponentAccessor<ChunkStore>): BlockPos? {
+    val sectionRef = this.sectionRef
+    if (!sectionRef.isValid) return null
+    val section = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return null
+    val blockIndex = this.index
+    return BlockPos(
+        ChunkUtil.worldCoordFromLocalCoord(section.getX(), ChunkUtil.xFromIndex(blockIndex)),
+        ChunkUtil.worldCoordFromLocalCoord(section.getY(), ChunkUtil.yFromIndex(blockIndex)),
+        ChunkUtil.worldCoordFromLocalCoord(section.getZ(), ChunkUtil.zFromIndex(blockIndex)),
+    )
+}
+
+internal sealed interface GritDropResult {
+    data class Spawned(
+        val ref: Ref<EntityStore>,
+    ) : GritDropResult
+
+    data class InvalidItem(
+        val itemId: String,
+    ) : GritDropResult
+
+    data object Parked : GritDropResult
+
+    data object SpawnRejected : GritDropResult
+
+    data object NoPosition : GritDropResult
+}
+
+internal data class GnasherPulseActionResult(
+    val pulse: GnasherPulseResult,
+    val drop: GritDropResult?,
+)
+
+internal fun dropGrit(
+    world: World,
+    store: Store<EntityStore>,
+    machinePosition: BlockPos?,
+    itemId: String,
+    targetSection: Ref<ChunkStore>,
+): GritDropResult {
+    if (machinePosition == null) {
+        LOGGER.at(Level.WARNING).log("Gnasher grit drop failed: machine world position is unavailable")
+        return GritDropResult.NoPosition
+    }
+    val holder =
+        ItemComponent.generateItemDrop(
+            store,
+            ItemStack(itemId, GnasherMachine.GRIT_OUTPUT_QUANTITY),
+            Vector3d(machinePosition.x + 0.5, machinePosition.y + 1.0, machinePosition.z + 0.5),
+            Rotation3f.IDENTITY,
+            0f,
+            0f,
+            0f,
+        )
+    if (holder == null) {
+        LOGGER.at(Level.WARNING).log("Gnasher grit drop failed: invalid item %s", itemId)
+        return GritDropResult.InvalidItem(itemId)
+    }
+    val ref = world.entityStore.store.addEntity(holder, AddReason.SPAWN)
+    if (ref == null || !ref.isValid) {
+        if (
+            targetSection.isValid &&
+            world.chunkStore.store.getComponent(
+                targetSection,
+                ChunkStore.REGISTRY.getNonTickingComponentType(),
+            ) != null
+        ) {
+            return GritDropResult.Parked
+        }
+        LOGGER.at(Level.WARNING).log("Gnasher grit drop failed: EntityStore invalidated the new entity")
+        return GritDropResult.SpawnRejected
+    }
+    return GritDropResult.Spawned(ref)
+}
+
 internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockEvent>(DamageBlockEvent::class.java) {
     override fun getQuery(): Query<EntityStore> = Query.and(PlayerRef.getComponentType())
 
@@ -137,11 +392,18 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
         commandBuffer: CommandBuffer<EntityStore>,
         event: DamageBlockEvent,
     ) {
-        if (event.blockType.id != CraftoryIds.BURNER) return
         val world = store.externalData.world
         val pos = event.targetBlock
         val ref = BlockModule.getBlockEntity(world, pos.x, pos.y, pos.z) ?: return
         val chunks = world.chunkStore.store
+        if (event.blockType.id == CraftoryIds.GNASHER_PIT) {
+            val state = chunks.getComponent(ref, GnasherState.type) ?: return
+            val blockState = chunks.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+            if (!MachineActions.kickGnasher(state, blockState, chunks)) return
+            event.isCancelled = true
+            return
+        }
+        if (event.blockType.id != CraftoryIds.BURNER) return
         val state = chunks.getComponent(ref, BurnerState.type) ?: return
         val member = chunks.getComponent(ref, EnergyMember.type) ?: return
         val blockState = chunks.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
@@ -151,6 +413,7 @@ internal class JunkPowerKickSystem : EntityEventSystem<EntityStore, DamageBlockE
 }
 
 class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
+    @Suppress("CyclomaticComplexMethod")
     override fun interactWithBlock(
         world: World,
         commandBuffer: CommandBuffer<EntityStore>,
@@ -165,6 +428,33 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val member = store.getComponent(ref, EnergyMember.type) ?: return
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val tick = world.tick
+        val gnasher = store.getComponent(ref, GnasherState.type)
+        if (gnasher != null) {
+            val message =
+                if (heldItem == null) {
+                    val action =
+                        MachineActions.pulseGnasher(
+                            world,
+                            gnasher,
+                            blockState,
+                            store,
+                            tick,
+                            BlockPos(position.x, position.y, position.z),
+                        )
+                    when (val drop = action.drop) {
+                        null, is GritDropResult.Spawned -> gnasherReadout(gnasher, member)
+                        else -> "Gnasher grit drop failed: $drop"
+                    }
+                } else {
+                    if (context.depositOre(heldItem, gnasher, blockState, store)) {
+                        "Deposited ${heldItem.itemId}."
+                    } else {
+                        gnasherReadout(gnasher, member)
+                    }
+                }
+            commandBuffer.getComponent(context.entity, PlayerRef.getComponentType())?.sendMessage(Message.raw(message))
+            return
+        }
         val readout =
             when {
                 store.getComponent(ref, CrankState.type) != null -> {
@@ -254,6 +544,86 @@ internal object MachineActions {
         return true
     }
 
+    fun depositGnasher(
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+        store: Store<ChunkStore>,
+        itemId: String,
+    ): Boolean {
+        if (!GnasherMachine.deposit(state, itemId)) return false
+        blockState.markNeedsSaving(store)
+        return true
+    }
+
+    fun pulseGnasher(
+        world: World,
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+        store: Store<ChunkStore>,
+        tick: Long,
+        position: BlockPos?,
+    ): GnasherPulseActionResult =
+        persistGnasherPulse(
+            world,
+            state,
+            GnasherMachine.pulse(state, tick),
+            blockState,
+            store,
+            position,
+        )
+
+    fun autoCrankGnasher(
+        world: World,
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+        store: ComponentAccessor<ChunkStore>,
+        tick: Long,
+        deliveredFizz: Long,
+        position: BlockPos?,
+    ): GnasherPulseActionResult =
+        persistGnasherPulse(
+            world,
+            state,
+            GnasherMachine.autoCrank(state, tick, deliveredFizz),
+            blockState,
+            store,
+            position,
+        )
+
+    fun persistGnasherPulse(
+        world: World,
+        state: GnasherState,
+        pulse: GnasherPulseResult,
+        blockState: BlockModule.BlockStateInfo,
+        store: ComponentAccessor<ChunkStore>,
+        position: BlockPos?,
+    ): GnasherPulseActionResult {
+        if (!pulse.accepted) return GnasherPulseActionResult(pulse, null)
+        val drop =
+            pulse.outputItemId?.let {
+                dropGrit(world, world.entityStore.store, position, it, blockState.sectionRef)
+            }
+        if (
+            drop != null &&
+            drop !is GritDropResult.Spawned &&
+            drop != GritDropResult.Parked
+        ) {
+            GnasherMachine.restoreFailedDrop(state, pulse)
+        }
+        blockState.markNeedsSaving(store)
+        return GnasherPulseActionResult(pulse, drop)
+    }
+
+    fun kickGnasher(
+        state: GnasherState,
+        blockState: BlockModule.BlockStateInfo,
+        store: Store<ChunkStore>,
+    ): Boolean {
+        if (!GnasherMachine.kick(state)) return false
+        blockState.markNeedsSaving(store)
+        return true
+    }
+
     private fun persist(
         member: EnergyMember,
         blockState: BlockModule.BlockStateInfo,
@@ -271,6 +641,41 @@ private fun machineReadout(
 ): String =
     "$name: ${member.stored} Fizz, network ${member.networkId}, " +
         "production ${member.production}, delivered ${member.delivered}"
+
+private fun gnasherReadout(
+    state: GnasherState,
+    member: EnergyMember,
+): String =
+    if (state.jammed) {
+        "Jammed! Kick it."
+    } else {
+        "Gnasher Pit: ${GritTable.queuedOreCount(state.oreQueue)}/${GnasherMachine.HOPPER_CAPACITY} ore, " +
+            "${state.progressPulses}/${GnasherMachine.PULSES_PER_ORE} pulses, " +
+            "${member.delivered} Fizz delivered."
+    }
+
+private fun InteractionContext.depositOre(
+    heldItem: ItemStack,
+    state: GnasherState,
+    blockState: BlockModule.BlockStateInfo,
+    store: Store<ChunkStore>,
+): Boolean {
+    val container = heldItemContainer ?: return false
+    val slot = heldItemSlot.toShort()
+    val slotItem = container.getItemStack(slot) ?: return false
+    if (
+        slotItem.itemId != heldItem.itemId ||
+        slotItem.quantity != heldItem.quantity ||
+        !GnasherMachine.canDeposit(state, heldItem.itemId)
+    ) {
+        return false
+    }
+    val replacement = if (slotItem.quantity == 1) null else slotItem.withQuantity(slotItem.quantity - 1)
+    if (!container.setItemStackForSlot(slot, replacement).succeeded()) return false
+    if (MachineActions.depositGnasher(state, blockState, store, heldItem.itemId)) return true
+    container.setItemStackForSlot(slot, slotItem)
+    return false
+}
 
 private fun InteractionContext.addFuelTo(
     heldItem: ItemStack,
@@ -301,3 +706,5 @@ private fun InteractionContext.addFuelTo(
 }
 
 private const val SAVE_INTERVAL_TICKS = 20L
+
+private val LOGGER: HytaleLogger = HytaleLogger.get("CraftoryTech")

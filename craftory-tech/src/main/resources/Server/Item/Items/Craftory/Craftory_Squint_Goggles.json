@@ -1,0 +1,21 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Squint_Goggles.name",
+    "Description": "server.items.Craftory_Squint_Goggles.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Armor_Bronze_Head.png",
+  "Categories": [
+    "Armor"
+  ],
+  "PlayerAnimationsId": "Item",
+  "Quality": "Common",
+  "MaxStack": 1,
+  "Armor": {
+    "ArmorSlot": "Head",
+    "BaseDamageResistance": 0,
+    "DamageResistance": {},
+    "StatModifiers": {}
+  },
+  "Model": "Items/Armors/Bronze/Head.blockymodel",
+  "Texture": "Items/Armors/Bronze/Head_Texture.png"
+}

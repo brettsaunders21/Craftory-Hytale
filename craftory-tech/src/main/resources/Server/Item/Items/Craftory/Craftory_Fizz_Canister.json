@@ -29,15 +29,6 @@
         "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png"
       }
     ],
-    "Interactions": {
-      "Use": {
-        "Interactions": [
-          {
-            "Type": "Craftory_BlockUse"
-          }
-        ]
-      }
-    },
     "Support": {
       "Down": [
         {
@@ -73,6 +64,18 @@
           "Stored": 0,
           "StoreRank": -1
         }
+      }
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "OpenCustomUI",
+            "Page": {
+              "Id": "Craftory_Canister"
+            }
+          }
+        ]
       }
     }
   }

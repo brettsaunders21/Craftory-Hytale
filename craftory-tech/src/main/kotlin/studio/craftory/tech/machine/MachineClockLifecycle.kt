@@ -10,7 +10,13 @@ import com.hypixel.hytale.component.system.RefSystem
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 
 internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
-    override fun getQuery(): Query<ChunkStore> = Query.or(Query.and(CrankState.type), Query.and(BurnerState.type))
+    override fun getQuery(): Query<ChunkStore> =
+        Query.or(
+            Query.and(CrankState.type),
+            Query.and(BurnerState.type),
+            Query.and(GnasherState.type),
+            Query.and(OvenPower.type),
+        )
 
     override fun onEntityAdded(
         ref: Ref<ChunkStore>,
@@ -22,6 +28,14 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
         val tick = store.externalData.world.tick
         commandBuffer.getComponent(ref, CrankState.type)?.let { MachineClock.initialize(it, tick) }
         commandBuffer.getComponent(ref, BurnerState.type)?.let { MachineClock.initialize(it, tick) }
+        commandBuffer.getComponent(ref, GnasherState.type)?.let { MachineClock.initialize(it, tick) }
+        val ovenPower = commandBuffer.getComponent(ref, OvenPower.type)
+        if (ovenPower != null) {
+            val energy =
+                studio.craftory.core.api.CraftoryCore
+                    .energyAccess(store.externalData.world)
+            ovenPower.lastFizzSolveTick = energy.lastSolveTick()
+        }
     }
 
     override fun onEntityRemove(
@@ -45,5 +59,13 @@ internal object MachineClock {
         tick: Long,
     ) {
         state.lastAdvancedTick = tick
+    }
+
+    fun initialize(
+        state: GnasherState,
+        tick: Long,
+    ) {
+        state.lastAutoCrankTick = tick
+        state.lastPulseTick = null
     }
 }
