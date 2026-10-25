@@ -3,19 +3,19 @@
     "Name": "server.items.Craftory_Fizz_Canister.name",
     "Description": "server.items.Craftory_Fizz_Canister.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Canister.png",
   "PlayerAnimationsId": "Block",
   "Quality": "Developer",
   "IconProperties": {
-    "Scale": 0.25,
+    "Scale": 0.58823,
     "Rotation": [
-      345,
-      211,
-      341
+      22.5,
+      45,
+      22.5
     ],
     "Translation": [
-      8,
-      -48
+      0,
+      -13.5
     ]
   },
   "MaxStack": 1,
@@ -23,12 +23,67 @@
     "Group": "GoblinLab_Power_Switch_Unpowered",
     "DrawType": "Model",
     "Opacity": "Transparent",
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel",
+    "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty.blockymodel",
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png"
+        "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty_Texture.png",
+        "Weight": 1
       }
     ],
+    "State": {
+      "Definitions": {
+        "Empty": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "Quarter": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Quarter.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Quarter_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "Half": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Half.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Half_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "ThreeQuarter": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "Full": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Full.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Full_Texture.png",
+              "Weight": 1
+            }
+          ]
+        }
+      }
+    },
     "Support": {
       "Down": [
         {

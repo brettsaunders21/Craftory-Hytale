@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Squint_Goggles.name",
     "Description": "server.items.Craftory_Squint_Goggles.description"
   },
-  "Icon": "Icons/ItemsGenerated/Armor_Bronze_Head.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Squint_Goggles.png",
   "Categories": [
     "Armor"
   ],
@@ -16,6 +16,6 @@
     "DamageResistance": {},
     "StatModifiers": {}
   },
-  "Model": "Items/Armors/Bronze/Head.blockymodel",
-  "Texture": "Items/Armors/Bronze/Head_Texture.png"
+  "Model": "Items/Craftory/Squint_Goggles/Squint_Goggles_Head.blockymodel",
+  "Texture": "Items/Craftory/Squint_Goggles/Squint_Goggles_Head_Texture.png"
 }

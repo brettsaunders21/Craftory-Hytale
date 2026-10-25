@@ -16,7 +16,10 @@ import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.common.CommonAssetRegistry
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.item.config.Item
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockEntity
@@ -799,6 +802,19 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
 
 @Suppress("LargeClass", "TooManyFunctions")
 object CraftorySelfTest {
+    private val craftoryWiredItemIds =
+        setOf(
+            "Craftory_Crank_A_Fizz",
+            "Craftory_Boomshroom_Burner",
+            "Craftory_Fizz_Canister",
+            "Craftory_Gutterpipe",
+            "Craftory_Gnasher_Pit",
+            "Craftory_Scorch_Oven",
+            "Craftory_Wakebell_Anchor",
+            "Craftory_Squint_Goggles",
+            "Craftory_Tinkers_Wrench",
+        )
+
     internal fun retainTestKeepLoaded(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
@@ -825,6 +841,122 @@ object CraftorySelfTest {
             }
         }
         run.testKeepLoadedChunks.clear()
+    }
+
+    private fun checkAssetReferences(run: SelfTestRun.Run) {
+        val craftoryItems =
+            Item
+                .getAssetMap()
+                .assetMap.values
+                .filter { it.id.startsWith("Craftory_") }
+        val itemsById = craftoryItems.associateBy { it.id }
+        val blockTypesByItemId =
+            craftoryItems.associate { item ->
+                item.id to item.blockId?.let { BlockType.getAssetMap().getAsset(it) }
+            }
+        val referencedPaths = linkedSetOf<String>()
+        val modelPathsByItemId = mutableMapOf<String, MutableSet<String>>()
+        val unresolvedBlockStates = mutableListOf<String>()
+        val missingBlockTypes = mutableListOf<String>()
+        craftoryItems.forEach { item ->
+            item.icon?.let(referencedPaths::add)
+            item.model?.let {
+                referencedPaths.add(it)
+                modelPathsByItemId.getOrPut(item.id) { linkedSetOf() }.add(it)
+            }
+            item.texture?.let(referencedPaths::add)
+            val blockType = blockTypesByItemId[item.id]
+            if (item.blockId != null && blockType == null) {
+                missingBlockTypes.add("${item.id} BlockType ${item.blockId} did not resolve")
+            }
+            blockType?.let {
+                collectBlockAssetReferences(
+                    it,
+                    referencedPaths,
+                    modelPathsByItemId.getOrPut(item.id) { linkedSetOf() },
+                    unresolvedBlockStates,
+                )
+            }
+        }
+
+        val missingPaths = referencedPaths.filterNot { CommonAssetRegistry.hasCommonAsset(it) }
+        val wiringFailures = requiredCraftoryWiringFailures(itemsById, modelPathsByItemId)
+        val grizzlecogResolves = ModelAsset.getAssetMap().getAsset("Craftory_Grizzlecog") != null
+        val problems =
+            buildList {
+                if (missingPaths.isNotEmpty()) add("missing paths=${missingPaths.joinToString()}")
+                addAll(missingBlockTypes)
+                addAll(unresolvedBlockStates)
+                addAll(wiringFailures)
+                if (!grizzlecogResolves) add("model asset Craftory_Grizzlecog did not resolve")
+            }
+        val detail =
+            buildString {
+                append("items=${craftoryItems.size}, references=${referencedPaths.size}")
+                if (problems.isNotEmpty()) append(", ").append(problems.joinToString())
+            }
+        check(
+            run,
+            problems.isEmpty(),
+            "assets",
+            detail,
+        )
+    }
+
+    private fun requiredCraftoryWiringFailures(
+        itemsById: Map<String, Item>,
+        modelPathsByItemId: Map<String, Set<String>>,
+    ): List<String> =
+        buildList {
+            craftoryWiredItemIds.forEach { itemId ->
+                val item = itemsById[itemId]
+                if (item == null) {
+                    add("$itemId item asset is missing")
+                    return@forEach
+                }
+                if (item.icon?.contains("/Craftory/") != true) {
+                    add("$itemId Icon path is not Craftory-specific: ${item.icon ?: "<missing>"}")
+                }
+                val modelPaths = modelPathsByItemId[itemId].orEmpty()
+                if (modelPaths.isEmpty()) {
+                    add("$itemId has no CustomModel/Model path")
+                } else {
+                    modelPaths.filterNot { "/Craftory/" in it }.forEach { path ->
+                        add("$itemId model path is not Craftory-specific: $path")
+                    }
+                }
+            }
+        }
+
+    private fun collectBlockAssetReferences(
+        blockType: BlockType,
+        referencedPaths: MutableSet<String>,
+        modelPaths: MutableSet<String>,
+        unresolvedBlockStates: MutableList<String>,
+        includeStates: Boolean = true,
+    ) {
+        blockType.customModel?.let {
+            referencedPaths.add(it)
+            modelPaths.add(it)
+        }
+        blockType.customModelTexture?.forEach { referencedPaths.add(it.texture) }
+        blockType.customModelAnimation?.let(referencedPaths::add)
+        if (!includeStates) return
+        blockType.state?.stateNames.orEmpty().forEach { stateName ->
+            val variant =
+                blockType.getBlockForState(stateName)
+                    ?: run {
+                        unresolvedBlockStates.add("${blockType.id} state $stateName did not resolve")
+                        return@forEach
+                    }
+            collectBlockAssetReferences(
+                variant,
+                referencedPaths,
+                modelPaths,
+                unresolvedBlockStates,
+                includeStates = false,
+            )
+        }
     }
 
     fun execute(context: CommandContext): CompletableFuture<Void> {
@@ -860,6 +992,7 @@ object CraftorySelfTest {
         val store = world.chunkStore.store
         val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
         try {
+            checkAssetReferences(run)
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")

@@ -3,30 +3,31 @@
     "Name": "server.items.Craftory_Crank_A_Fizz.name",
     "Description": "server.items.Craftory_Crank_A_Fizz.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Crank_A_Fizz.png",
   "PlayerAnimationsId": "Block",
   "Quality": "Developer",
   "IconProperties": {
-    "Scale": 0.4,
+    "Scale": 0.58823,
     "Rotation": [
-      18,
-      52,
-      23
+      22.5,
+      45,
+      22.5
     ],
     "Translation": [
-      11,
-      -18
+      0,
+      -13.5
     ]
   },
   "MaxStack": 1,
   "BlockType": {
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Benches/Goblin_Workbench_Texture.png"
+        "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",
+        "Weight": 1
       }
     ],
-    "CustomModel": "Blocks/Benches/Goblin_Workbench.blockymodel",
-    "CustomModelAnimation": "Blocks/Benches/Goblin_Workbench_Off_Idle.blockyanim",
+    "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
+    "CustomModelAnimation": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Crank.blockyanim",
     "Looping": true,
     "DrawType": "Model",
     "VariantRotation": "NESW",

@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Wakebell_Anchor.name",
     "Description": "server.items.Craftory_Wakebell_Anchor.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Wakebell_Anchor.png",
   "Categories": [
     "Furniture.Lighting"
   ],
@@ -48,7 +48,6 @@
       },
       "UseDefaultDropWhenPlaced": true
     },
-    "HitboxType": "GoblinLab_Generator",
     "Material": "Solid",
     "Opacity": "Transparent",
     "InteractionSoundEventId": "SFX_Flame_Ignite",
@@ -65,36 +64,38 @@
       "Definitions": {
         "On": {
           "DrawType": "Model",
+          "CustomModelAnimation": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Sway.blockyanim",
+          "Looping": true,
           "Light": {
             "Color": "#6ee8ff"
           },
           "CustomModelTexture": [
             {
-              "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png",
+              "Texture": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_On_Texture.png",
               "Weight": 1
             }
           ],
-          "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel"
+          "CustomModel": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_On.blockymodel"
         },
         "Off": {
           "DrawType": "Model",
           "CustomModelTexture": [
             {
-              "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png",
+              "Texture": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off_Texture.png",
               "Weight": 1
             }
           ],
-          "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel"
+          "CustomModel": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off.blockymodel"
         }
       }
     },
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator_Texture.png",
+        "Texture": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off_Texture.png",
         "Weight": 1
       }
     ],
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Boomshroom_Generator/Goblin_Boomshroom_Generator.blockymodel",
+    "CustomModel": "Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off.blockymodel",
     "PhysicalMaterialId": "Metal",
     "VariantRotation": "NESW",
     "RotationYawPlacementOffset": "TwoSeventy",
@@ -105,6 +106,18 @@
         }
       }
     }
+  },
+  "IconProperties": {
+    "Scale": 0.58823,
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ],
+    "Translation": [
+      0,
+      -13.5
+    ]
   },
   "Tags": {
     "Type": [

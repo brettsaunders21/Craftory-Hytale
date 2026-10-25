@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Tinkers_Notebook.name",
     "Description": "server.items.Craftory_Tinkers_Notebook.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Console.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Notebook.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
   "Quality": "Developer",

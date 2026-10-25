@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Scorch_Oven.name",
     "Description": "server.items.Craftory_Scorch_Oven.description"
   },
-  "Icon": "Icons/ItemsGenerated/Bench_Furnace.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scorch_Oven.png",
   "Categories": [
     "Furniture.Benches"
   ],
@@ -36,15 +36,15 @@
   },
   "PlayerAnimationsId": "Block",
   "IconProperties": {
-    "Scale": 0.365,
+    "Scale": 0.58823,
     "Rotation": [
       22.5,
       45,
       22.5
     ],
     "Translation": [
-      12,
-      -17.4
+      0,
+      -13.5
     ]
   },
   "Tags": {
@@ -59,10 +59,10 @@
     "Material": "Solid",
     "DrawType": "Model",
     "Opacity": "Transparent",
-    "CustomModel": "Blocks/Benches/Furnace.blockymodel",
+    "CustomModel": "Blocks/Craftory/Scorch_Oven/Scorch_Oven_Off.blockymodel",
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Benches/Furnace_Texture_Off.png",
+        "Texture": "Blocks/Craftory/Scorch_Oven/Scorch_Oven_Off_Texture.png",
         "Weight": 1
       }
     ],

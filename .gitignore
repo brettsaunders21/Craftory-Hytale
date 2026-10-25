@@ -24,3 +24,6 @@ run/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Python art tooling
+__pycache__/
