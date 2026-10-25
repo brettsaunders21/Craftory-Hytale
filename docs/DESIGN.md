@@ -693,25 +693,29 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 
 ---
 
-## 17. Open decisions for the owner
+## 17. Owner decisions (2026-10-25)
 
-1. **Name: "Glimmerwell"** for magic nodes (proposal), replacing node / Ley Well / Wellspring.
-2. **Wells: shared or per-player?** Proposal: shared, with Tethered Wells claimed by their tetherer. Alternative: Flicker and Steady per player, Roaring and stronger shared.
-3. **Capture: allow jarring at all?** Proposal: yes, as a co-op escort mission plus a tap-in-place option. The alternative (fixed Wells only, no jars) means more outposts and travel but less fun.
-4. **Pressurised Fizz (0+)**: keep the half-grade, or have Tinkered machines just use more Fizz?
-5. **Tint**: bonus-only, or do some late recipes *require* a Tint?
-6. **Tier Hearts** as Keystone builds with a soft aura (proposal). Should the aura be a soft bonus (proposed) or a hard radius requirement?
-7. **Characters**: approve Vessa Lanternwright (human bridge) and Snikka (second goblin)? Is the lore framing OK?
-8. **Puzzle Board**: keep a short optional puzzle, or reduce skipping to a pay-Insight button?
-9. **Temperament list**: 8 (Spark, Ember, Tide, Growth, Stone, Gale, Clank, Hollow). Is Clank in? Is Frost folded into Gale?
-10. **Racket on PvP servers**: event targeting only (proposed), or visible to other players too?
-11. **Raids when offline**: proposal is online-only for Poacher and Racket raids.
-12. **Void scars from bursts and skipped seals**: permanent, or fade after a few real days on public servers?
-13. **Block damage**: off by default everywhere (proposed). Offer a hardcore opt-in?
-14. **Veil Engine seal events**: allow a fuel-cost skip on PvE servers?
-15. **Runestone depth**: cosmetic tie-in only, or the Runebinder Adapter for foci?
-16. **Sky Hurl and Skyline**: require the vanilla Scrap Glider and Hookshot, or also allow Craftory items?
-17. **Footprint cap**: 7×7 except the Orrery and Riftloom?
-18. **Hollowmere**: OK to fall back to a sky region if per-team worlds aren't possible?
-19. **Gating items from vanilla bosses**: add drops to vanilla loot tables, or run our own follow-up encounter after the kill?
-20. **Shared Codex on teams**: on by default, or opt-in?
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Node name | **Glimmerwell** approved |
+| 2 | Wells shared or per-player | **Shared.** A Tethered Well is claimed by its tetherer's crew (§11) |
+| 3 | Jarring | **Yes.** Jar-escort as a co-op mission, plus tap-in-place |
+| 4 | Pressurised Fizz | **Keep** the half-grade; revisit only if it proves awkward in development |
+| 5 | Tint | **Bonus-only.** No recipe requires a Tint; Prismatic still needs distinct Tints as inputs |
+| 6 | Tier Heart aura | **Soft bonus** |
+| 7 | Characters | Vessa Lanternwright and Snikka **approved**, lore framing OK |
+| 8 | Puzzle Board | **Keep the optional puzzle** for the full build-out; may be removed after playtesting |
+| 9 | Temperaments | **8**, Clank in, Frost folded into Gale |
+| 10 | Racket on PvP | **Event targeting only**; not visible to other players |
+| 11 | Raids when offline | **Online-only** for Poacher and Racket raids |
+| 12 | Void scars | **Config** `risk.voidScarFadeDays` (0 = permanent) |
+| 13 | Block damage | **Off by default**, config `faults.blockDamage` as hardcore opt-in |
+| 14 | Veil Engine seal skip | **Config** `endgame.allowSealSkip`, default on for PvE |
+| 15 | Runestones | **Cosmetic tie-in first**; Runebinder Adapter for foci later (needs prototype) |
+| 16 | Sky Hurl / Skyline | Accept the vanilla Scrap Glider and Hookshot **or** Craftory equivalents |
+| 17 | Footprint | **7×7 soft cap**; larger where it makes sense (Orrery, Riftloom, Coreheart) |
+| 18 | Hollowmere | Sky-region fallback **OK** |
+| 19 | Boss gating items | **Add to vanilla loot tables** (simplest to maintain); add our own follow-up encounter only if a slice shows it adds depth |
+| 20 | Shared Codex | **Opt-in crews.** Hytale has no team concept we can rely on, so players form a Craftory crew (create, invite, leave). Crew members share Codex progress, tethered Wells and machine access. Co-op for two or more players is a primary focus |
+
+Naming: a new mod name to replace "Craftory" is being chosen; see the README once decided.
