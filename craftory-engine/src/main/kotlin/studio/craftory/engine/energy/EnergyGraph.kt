@@ -238,10 +238,16 @@ class EnergyGraph {
         return if (handle < 0) -1 else handleNetworks[handle]
     }
 
-    internal fun isAwake(id: Long): Boolean {
+    fun isAwake(id: Long): Boolean {
         val handle = idToHandle.getOrDefault(id, -1)
         return handle >= 0 && networkForHandle(handle).awakeIndex >= 0
     }
+
+    val networkCount: Int
+        get() = networksById.count { it != null }
+
+    val awakeNetworkCount: Int
+        get() = awakeNetworks.size
 
     fun setProduction(
         id: Long,
@@ -278,6 +284,32 @@ class EnergyGraph {
             return 0L
         }
         return networkForHandle(handle).stored[handleSlots[handle]]
+    }
+
+    fun storedRank(id: Long): Int {
+        val handle = idToHandle.getOrDefault(id, -1)
+        if (handle < 0) {
+            return -1
+        }
+        return networkForHandle(handle).storeRank[handleSlots[handle]]
+    }
+
+    fun restoreStored(
+        id: Long,
+        amount: Long,
+        rank: Int,
+    ) {
+        require(amount >= 0)
+        require(rank >= -1)
+        val handle = requireHandle(id)
+        val network = networkForHandle(handle)
+        val slot = handleSlots[handle]
+        require((network.role[slot] and MemberSpec.STORAGE) != 0) { "Member $id is not storage" }
+        require(amount <= network.capacity[slot]) { "Stored energy exceeds capacity for member $id" }
+        require(amount == 0L || rank >= 0) { "Stored energy requires a grade rank" }
+        network.stored[slot] = amount
+        network.storeRank[slot] = if (amount == 0L) -1 else rank
+        wake(network)
     }
 
     fun delivered(id: Long): Long {

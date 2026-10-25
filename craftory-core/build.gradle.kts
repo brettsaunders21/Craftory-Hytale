@@ -1,4 +1,5 @@
 plugins {
+    `java-library`
     id("craftory.kotlin")
     id("craftory.hytale-mod")
 }
@@ -10,7 +11,7 @@ hytaleTools {
 }
 
 dependencies {
-    implementation(project(":craftory-engine"))
+    api(project(":craftory-engine"))
 }
 
 tasks.named<Jar>("jar") {
