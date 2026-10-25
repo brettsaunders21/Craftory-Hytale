@@ -1609,8 +1609,9 @@ object CraftorySelfTest {
         val owner = UUID.randomUUID()
         var ref: Ref<ChunkStore>? = null
         var spawnedIds: List<String> = emptyList()
+        var naturalSpawnedIds: List<String> = emptyList()
+        var testSystem: ScrapRushSystem? = null
         try {
-            crews.create(owner, "Scrap Rush Test")
             place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, SCRAP_RUSH_TEST, BurnerState.type)
             ref =
                 BlockModule.getBlockEntity(run.world, SCRAP_RUSH_TEST.x, SCRAP_RUSH_TEST.y, SCRAP_RUSH_TEST.z)
@@ -1624,7 +1625,16 @@ object CraftorySelfTest {
                     crews,
                     requireOnlineCrew = false,
                     directSpawnForSelfTest = true,
+                    evaluationIntervalTicks = 1,
+                    areaIsActive = { _, _ -> true },
                 )
+            testSystem = system
+            val soloCrew = crews.crewOf(owner)
+            check(
+                run,
+                soloCrew.solo && soloCrew.members == setOf(owner),
+                "Scrap Rush solo owner membership",
+            )
             var started = false
             var callbackInvoked = false
             store.forEachChunk(
@@ -1685,6 +1695,61 @@ object CraftorySelfTest {
                 "Scrap Rush force-completion",
                 "cleared=$cleared page=$pageGranted npcsRemoved=$npcsRemoved",
             )
+
+            val naturalOwner = UUID.randomUUID()
+            (store.getComponent(blockRef, MachineOwner.type) ?: error("Scrap Rush machine owner is missing"))
+                .placerUuid = naturalOwner
+            val naturalCrew = crews.crewOf(naturalOwner)
+            var naturalStarted = false
+            store.forEachChunk(
+                Query.and(BlockModule.BlockStateInfo.getComponentType()),
+                BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
+                    for (index in 0 until chunk.size()) {
+                        if (chunk.getReferenceTo(index) != blockRef) continue
+                        commandBuffer.ensureComponent(blockRef, Jank.type)
+                        commandBuffer.ensureComponent(blockRef, BodgeSlots.type)
+                        naturalStarted = system.startForSelfTest(blockRef, run.world, commandBuffer)
+                    }
+                },
+            )
+            naturalSpawnedIds =
+                store
+                    .getComponent(blockRef, ScrapRushRaid.type)
+                    ?.npcIds
+                    ?.toList()
+                    .orEmpty()
+            var naturalTicked = false
+            store.forEachChunk(
+                Query.and(BlockModule.BlockStateInfo.getComponentType()),
+                BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
+                    for (index in 0 until chunk.size()) {
+                        if (chunk.getReferenceTo(index) != blockRef) continue
+                        commandBuffer.getComponent(blockRef, Jank.type)?.stolen = true
+                        val energyMember = chunk.getComponent(index, EnergyMember.type)
+                        energyMember?.production = 0
+                        energyMember?.delivered = 0
+                        system.despawnForSelfTest(naturalSpawnedIds, run.world)
+                        system.tick(0f, index, chunk, store, commandBuffer)
+                        naturalTicked = true
+                    }
+                },
+            )
+            val naturalCleared =
+                store.getComponent(blockRef, ScrapRushRaid.type) == null &&
+                    store.getComponent(blockRef, Jank.type)?.stolen == false
+            val naturalPageGranted = crews.hasKnowledge(naturalOwner, NotebookPages.SCRAP_RUSH_PAGE_ID)
+            check(
+                run,
+                naturalCrew.solo &&
+                    naturalStarted &&
+                    naturalSpawnedIds.size in 3..5 &&
+                    naturalTicked &&
+                    naturalCleared &&
+                    naturalPageGranted,
+                "Scrap Rush natural defeat clears Stolen",
+                "solo=${naturalCrew.solo} started=$naturalStarted count=${naturalSpawnedIds.size} " +
+                    "ticked=$naturalTicked cleared=$naturalCleared page=$naturalPageGranted",
+            )
         } catch (failure: Exception) {
             check(run, false, "Scrap Rush runtime probe", failure.message ?: failure.javaClass.simpleName)
         } finally {
@@ -1711,6 +1776,7 @@ object CraftorySelfTest {
                     SetBlockSettings.NO_DROP_ITEMS,
                 )
             }
+            testSystem?.despawnForSelfTest(spawnedIds + naturalSpawnedIds, run.world)
             crews.close()
             Files.deleteIfExists(testFile)
             Files.deleteIfExists(testDirectory)

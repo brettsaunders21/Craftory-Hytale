@@ -48,6 +48,10 @@ internal class ScrapRushSystem(
     private val crews: CrewService = CraftoryCore.crewService(),
     private val requireOnlineCrew: Boolean = true,
     private val directSpawnForSelfTest: Boolean = false,
+    private val evaluationIntervalTicks: Long = EVALUATION_TICKS,
+    private val areaIsActive: (Store<ChunkStore>, BlockModule.BlockStateInfo) -> Boolean = { store, blockState ->
+        CraftoryCore.isAreaActive(store, blockState)
+    },
 ) : EntityTickingSystem<ChunkStore>() {
     internal var lastStartDiagnostic: String = ""
         private set
@@ -96,9 +100,9 @@ internal class ScrapRushSystem(
     ) {
         val world = store.externalData.world
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState)) return
+        if (!areaIsActive(store, blockState)) return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
-        if (member.typeId !in RAIDABLE_MACHINE_TYPES || (member.production <= 0 && member.delivered <= 0)) return
+        if (member.typeId !in RAIDABLE_MACHINE_TYPES) return
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val blockRef = chunk.getReferenceTo(index)
@@ -116,7 +120,7 @@ internal class ScrapRushSystem(
             )
             return
         }
-        if (settings.enabled && world.tick % EVALUATION_TICKS == 0L) evaluateSchedule(world, store)
+        if (settings.enabled && world.tick % evaluationIntervalTicks == 0L) evaluateSchedule(world, store)
     }
 
     @Suppress("CyclomaticComplexMethod")
@@ -131,7 +135,7 @@ internal class ScrapRushSystem(
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val world = store.externalData.world
-        if (world.tick % EVALUATION_TICKS != 0L) return
+        if (world.tick % evaluationIntervalTicks != 0L) return
         val entityStore = world.entityStore
         val target = Vector3d(position.x + 0.5, position.y + 0.5, position.z + 0.5)
         var alive = 0
@@ -146,9 +150,7 @@ internal class ScrapRushSystem(
         }
         if (alive == 0) {
             val owner = commandBuffer.getComponent(blockRef, MachineOwner.type)?.placerUuid
-            owner?.let { crews.crewOf(it).members.firstOrNull() }?.let {
-                crews.grantKnowledge(it, NotebookPages.SCRAP_RUSH_PAGE_ID)
-            }
+            owner?.let { crews.grantKnowledge(it, NotebookPages.SCRAP_RUSH_PAGE_ID) }
             jank.stolen = false
             commandBuffer.removeComponent(blockRef, ScrapRushRaid.type)
             blockState.markNeedsSaving(commandBuffer)
@@ -160,7 +162,7 @@ internal class ScrapRushSystem(
             )
             return
         }
-        val newAdjacentTicks = if (adjacent) raid.adjacentTicks + EVALUATION_TICKS.toInt() else 0
+        val newAdjacentTicks = if (adjacent) raid.adjacentTicks + evaluationIntervalTicks.toInt() else 0
         if (newAdjacentTicks != raid.adjacentTicks) {
             raid.adjacentTicks = newAdjacentTicks
             if (!jank.stolen && raid.adjacentTicks >= settings.stealSeconds * TICKS_PER_SECOND) {
@@ -193,13 +195,10 @@ internal class ScrapRushSystem(
                     return false
                 }
         val crew = crews.crewOf(owner)
-        if (crew.solo) {
-            lastStartDiagnostic = "owner crew is solo"
-            return false
-        }
+        val members = crew.members.ifEmpty { setOf(owner) }
         if (
             requireOnlineCrew &&
-            crew.members.none { member ->
+            members.none { member ->
                 isOnlineNear(member, world, position, settings.crewRadius)
             }
         ) {
@@ -226,7 +225,7 @@ internal class ScrapRushSystem(
             ScrapRushRaid(ids.toTypedArray(), 0, crew.id.toString(), startedAt),
         )
         notifyCrew(
-            crew.members,
+            owner,
             Message
                 .translation("server.craftory.scraprush.raiding")
                 .param("position", "${position.x}, ${position.y}, ${position.z}"),
@@ -254,6 +253,13 @@ internal class ScrapRushSystem(
             return false
         }
         return startRaid(blockRef, blockState, position, world, commandBuffer)
+    }
+
+    internal fun despawnForSelfTest(
+        ids: List<String>,
+        world: World,
+    ) {
+        despawn(ids, world)
     }
 
     @Suppress("LongMethod")
@@ -363,7 +369,6 @@ internal class ScrapRushSystem(
         schedule.lastGameTimeNanos = now
         val interval = settings.averageIntervalInGameDays.coerceAtLeast(0.001) * WorldTimeResource.NANOS_PER_DAY
         val chance = (elapsed / interval).coerceIn(0.0, 1.0)
-        if (ThreadLocalRandom.current().nextDouble() >= chance) return
 
         val activeCrews = mutableSetOf<UUID>()
         store.forEachChunk(
@@ -387,15 +392,10 @@ internal class ScrapRushSystem(
             BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, commandBuffer ->
                 for (index in 0 until chunk.size()) {
                     val member = chunk.getComponent(index, EnergyMember.type) ?: continue
-                    if (
-                        member.typeId !in RAIDABLE_MACHINE_TYPES ||
-                        (member.production <= 0 && member.delivered <= 0)
-                    ) {
-                        continue
-                    }
+                    if (member.typeId !in RAIDABLE_MACHINE_TYPES) continue
                     val owner = chunk.getComponent(index, MachineOwner.type)?.placerUuid ?: continue
                     val crew = crews.crewOf(owner)
-                    if (crew.solo || crew.id in activeCrews) continue
+                    if (crew.id in activeCrews) continue
                     val blockState =
                         chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: continue
                     if (!CraftoryCore.isAreaActive(store, blockState)) continue
@@ -403,15 +403,16 @@ internal class ScrapRushSystem(
                     if (!blockState.fillWorldPos(commandBuffer, position)) {
                         continue
                     }
-                    if (crew.members.none { isOnlineNear(it, world, position, settings.crewRadius) }) continue
+                    val members = crew.members.ifEmpty { setOf(owner) }
+                    if (members.none { isOnlineNear(it, world, position, settings.crewRadius) }) continue
                     candidates.getOrPut(crew.id, ::mutableListOf).add(
                         RaidCandidate(chunk.getReferenceTo(index), blockState, position),
                     )
                 }
             },
         )
-        candidates.forEach { (crewId, eligible) ->
-            if (eligible.isEmpty()) return@forEach
+        candidates.values.forEach { eligible ->
+            if (eligible.isEmpty() || ThreadLocalRandom.current().nextDouble() >= chance) return@forEach
             val target = eligible[ThreadLocalRandom.current().nextInt(eligible.size)]
             store.forEachChunk(
                 target.ref,
@@ -442,7 +443,8 @@ internal class ScrapRushSystem(
         radius: Int,
     ): Boolean {
         val crew = crews.crewOf(owner)
-        return !crew.solo && crew.members.any { isOnlineNear(it, world, position, radius) }
+        val members = crew.members.ifEmpty { setOf(owner) }
+        return members.any { isOnlineNear(it, world, position, radius) }
     }
 
     private fun isOnlineNear(
@@ -474,7 +476,7 @@ internal class ScrapRushSystem(
     ) {
         owner ?: return
         val crew = crews.crewOf(owner)
-        notifyCrew(if (crew.solo) setOf(owner) else crew.members, message)
+        notifyCrew(crew.members.ifEmpty { setOf(owner) }, message)
     }
 
     private fun notifyCrew(
@@ -573,10 +575,9 @@ internal class ScrapRushSystem(
                 .getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType())
                 ?.markNeedsSaving(commandBuffer)
             val owner = commandBuffer.getComponent(blockRef, MachineOwner.type)?.placerUuid
-            owner?.let { crews.crewOf(it).members.firstOrNull() }?.let {
-                crews.grantKnowledge(it, NotebookPages.SCRAP_RUSH_PAGE_ID)
-            }
-            owner?.let { crews.crewOf(it).members }?.let { members ->
+            owner?.let { crews.grantKnowledge(it, NotebookPages.SCRAP_RUSH_PAGE_ID) }
+            owner?.let { ownerUuid ->
+                val members = crews.crewOf(ownerUuid).members.ifEmpty { setOf(ownerUuid) }
                 Universe.get().getPlayers().filter { it.uuid in members }.forEach { player ->
                     player.sendMessage(
                         com.hypixel.hytale.server.core.Message
@@ -595,7 +596,6 @@ internal class ScrapRushSystem(
             if (!settings.enabled) return false
             val world = Universe.get().getWorld(player.worldUuid ?: return false) ?: return false
             val ownerCrew = CraftoryCore.crewService().crewOf(player.uuid)
-            if (ownerCrew.solo) return false
             val playerPosition = player.transform.position
             val activeCrews = mutableSetOf<UUID>()
             world.chunkStore.store.forEachChunk(
@@ -619,12 +619,7 @@ internal class ScrapRushSystem(
                 BiConsumer<ArchetypeChunk<ChunkStore>, CommandBuffer<ChunkStore>> { chunk, _ ->
                     for (index in 0 until chunk.size()) {
                         val member = chunk.getComponent(index, EnergyMember.type) ?: continue
-                        if (
-                            member.typeId !in RAIDABLE_MACHINE_TYPES ||
-                            (member.production <= 0 && member.delivered <= 0)
-                        ) {
-                            continue
-                        }
+                        if (member.typeId !in RAIDABLE_MACHINE_TYPES) continue
                         val owner = chunk.getComponent(index, MachineOwner.type)?.placerUuid ?: continue
                         if (CraftoryCore.crewService().crewOf(owner).id != ownerCrew.id) continue
                         if (ownerCrew.id in activeCrews) continue

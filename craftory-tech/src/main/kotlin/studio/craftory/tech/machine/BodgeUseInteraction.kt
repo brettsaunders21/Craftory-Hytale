@@ -37,6 +37,7 @@ class BodgeUseInteraction : SimpleBlockInteraction() {
         cooldownHandler: CooldownHandler,
     ) {
         val part = BodgePart.fromItemId(heldItem?.itemId) ?: return
+        val partName = Message.translation("server.items.${part.itemId}.name")
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
         val movement = commandBuffer.getComponent(context.entity, MovementStatesComponent.getComponentType())
         if (movement?.movementStates?.let { it.crouching || it.forcedCrouching } != true) {
@@ -57,7 +58,7 @@ class BodgeUseInteraction : SimpleBlockInteraction() {
             if (!returnPart(world, context.entity, part.itemId)) return
             slots.remove(part.itemId)
             blockState.markNeedsSaving(store)
-            player.sendMessage(Message.translation("server.craftory.bodge.removed").param("part", part.itemId))
+            player.sendMessage(Message.translation("server.craftory.bodge.removed").param("part", partName))
             return
         }
         if (slots.itemIds().size == 2) {
@@ -75,7 +76,7 @@ class BodgeUseInteraction : SimpleBlockInteraction() {
             return
         }
         blockState.markNeedsSaving(store)
-        player.sendMessage(Message.translation("server.craftory.bodge.installed").param("part", part.itemId))
+        player.sendMessage(Message.translation("server.craftory.bodge.installed").param("part", partName))
     }
 
     private fun returnPart(
