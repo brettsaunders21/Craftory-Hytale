@@ -7,8 +7,8 @@ import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.util.TargetUtil
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
-import studio.craftory.core.energy.BlockPos
 import studio.craftory.core.energy.EnergyMember
 import studio.craftory.core.energy.EnergyMemberLifecycle
 import studio.craftory.core.energy.EnergyWorld

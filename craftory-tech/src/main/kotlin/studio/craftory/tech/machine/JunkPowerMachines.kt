@@ -31,6 +31,7 @@ class CrankMachine(
         if (previous != null && (currentTick < previous || currentTick - previous < pulseIntervalTicks)) {
             return false
         }
+        val wasIdle = spinTicks == 0L
         lastPulseTick = currentTick
         spinTicks =
             if (Long.MAX_VALUE - spinTicks < spinPerPulseTicks) {
@@ -38,6 +39,7 @@ class CrankMachine(
             } else {
                 spinTicks + spinPerPulseTicks
             }
+        if (wasIdle) lastAdvancedTick = currentTick
         return true
     }
 
@@ -84,9 +86,10 @@ class BurnerMachine(
         return addedTicks
     }
 
-    fun kick(): Boolean {
+    fun kick(currentTick: Long): Boolean {
         if (isBurning || burnTicks == 0L) return false
         isBurning = true
+        lastAdvancedTick = currentTick
         return true
     }
 

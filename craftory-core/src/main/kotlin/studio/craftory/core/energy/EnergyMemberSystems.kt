@@ -11,6 +11,7 @@ import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 
 internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {

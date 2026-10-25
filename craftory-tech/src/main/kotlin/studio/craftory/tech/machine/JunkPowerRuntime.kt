@@ -26,12 +26,12 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.core.api.energy.MemberSpec
-import studio.craftory.core.energy.BlockPos
-import studio.craftory.engine.energy.GradeTable
-import studio.craftory.engine.tick.Handle
-import studio.craftory.engine.tick.TickScheduler
+import studio.craftory.core.api.tick.Handle
+import studio.craftory.core.api.tick.TickScheduler
 import studio.craftory.tech.CraftoryIds
 
 internal class JunkPowerWorld : Resource<ChunkStore> {
@@ -144,7 +144,7 @@ internal class JunkPowerWorld : Resource<ChunkStore> {
     ): Boolean {
         val entry = machines[id] ?: return false
         val burner = entry.machine as? BurnerMachine ?: return false
-        if (!burner.kick()) return false
+        if (!burner.kick(currentTick)) return false
         entry.state.burning = true
         entry.persist(store, currentTick, immediate = true)
         updateProduction(entry, burner.productionPerSolveTick())
@@ -158,16 +158,17 @@ internal class JunkPowerWorld : Resource<ChunkStore> {
         currentTick: Long,
     ) {
         val entry = machines[id] ?: return
+        var dirty = false
         val production =
             when (val machine = entry.machine) {
                 is CrankMachine -> {
-                    machine.advanceTo(currentTick)
+                    dirty = machine.advanceTo(currentTick)
                     entry.state.spinTicks = machine.spinTicks
                     machine.productionPerSolveTick()
                 }
 
                 is BurnerMachine -> {
-                    machine.advanceTo(currentTick)
+                    dirty = machine.advanceTo(currentTick)
                     entry.state.burnTicks = machine.burnTicks
                     entry.state.burning = machine.isBurning
                     machine.productionPerSolveTick()
@@ -183,7 +184,7 @@ internal class JunkPowerWorld : Resource<ChunkStore> {
             setBurnerState(entry, entry.state.burning)
             entry.visualBurning = entry.state.burning
         }
-        entry.persist(store, currentTick, immediate = visualChanged)
+        if (dirty || visualChanged) entry.persist(store, currentTick, immediate = visualChanged)
     }
 
     private fun updateProduction(
@@ -353,7 +354,6 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val runtime = world.chunkStore.store.getResource(JunkPowerWorld.type)
         val state = BlockModule.getComponent(JunkPowerState.type, world, position.x, position.y, position.z) ?: return
         val entry = runtime.use(id, heldItem, world.tick)
-        if (state.machine == "Crank" && heldItem == null) return
         if (state.machine == "Burner" && heldItem != null) {
             val container = context.heldItemContainer ?: return
             val fuel = runtime.addFuel(id, heldItem.itemId, world.tick)

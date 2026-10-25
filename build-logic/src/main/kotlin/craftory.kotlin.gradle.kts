@@ -14,6 +14,11 @@ kotlin {
 }
 
 val versionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+val detektConfigs =
+    buildList {
+        add(rootProject.file("config/detekt/detekt.yml"))
+        file("config/detekt/detekt.yml").takeIf { it.isFile }?.let(::add)
+    }
 
 dependencies {
     testImplementation(versionCatalog.findLibrary("junit-jupiter").get())
@@ -27,7 +32,7 @@ tasks.withType<Test>().configureEach {
 detekt {
     toolVersion = versionCatalog.findVersion("detekt").get().requiredVersion
     buildUponDefaultConfig = true
-    config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+    config.setFrom(detektConfigs)
 }
 
 tasks.withType<dev.detekt.gradle.Detekt>().configureEach {

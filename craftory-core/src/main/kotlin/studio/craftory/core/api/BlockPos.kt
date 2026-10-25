@@ -1,4 +1,4 @@
-package studio.craftory.core.energy
+package studio.craftory.core.api
 
 data class BlockPos(
     val x: Int,
