@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.inventory.ItemStack
+import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer
 import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
@@ -1604,7 +1605,51 @@ object CraftorySelfTest {
             "Scorch oven repair keeps processing-bench interaction",
             "resolved=${benchInteraction?.javaClass?.simpleName}",
         )
+        testScorchOvenScrapRepair(run, store)
         runScrapRushProbe(run, store)
+    }
+
+    private fun testScorchOvenScrapRepair(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val ref =
+            BlockModule.getBlockEntity(run.world, OVEN.x, OVEN.y, OVEN.z)
+                ?: error("Scorch oven repair test machine is missing")
+        val jank = store.getComponent(ref, Jank.type) ?: error("Scorch oven Jank component is missing")
+        val blockState =
+            store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("Scorch oven block state is missing")
+        val scraps = SimpleItemContainer(1.toShort())
+        val slot = 0.toShort()
+        val populated = scraps.setItemStackForSlot(slot, ItemStack("Ingredient_Scraps", 2)).succeeded()
+        check(run, populated, "Scorch oven repair test scraps", "populated=$populated")
+
+        jank.value = 60.0
+        val repaired = repairMachineWithScraps(true, jank, scraps, slot, blockState, store)
+        val scrapsAfterRepair = scraps.getItemStack(slot)?.quantity
+        check(
+            run,
+            repaired && jank.value == 40.0 && scrapsAfterRepair == 1,
+            "Scorch oven Scrap repair",
+            "repaired=$repaired jank=${jank.value} scraps=$scrapsAfterRepair",
+        )
+
+        val jankBeforeUnauthorizedRepair = jank.value
+        val scrapsBeforeUnauthorizedRepair = scraps.getItemStack(slot)?.quantity
+        val unauthorizedRepair = repairMachineWithScraps(false, jank, scraps, slot, blockState, store)
+        check(
+            run,
+            !unauthorizedRepair &&
+                jank.value == jankBeforeUnauthorizedRepair &&
+                scraps.getItemStack(slot)?.quantity == scrapsBeforeUnauthorizedRepair,
+            "Scorch oven rejects foreign Scrap repair",
+            "repaired=$unauthorizedRepair jank=${jank.value} scraps=${scraps.getItemStack(slot)?.quantity}",
+        )
+
+        jank.value = 0.0
+        blockState.markNeedsSaving(store)
+        scraps.setItemStackForSlot(slot, null)
     }
 
     @Suppress("LongMethod", "TooGenericExceptionCaught", "CyclomaticComplexMethod")

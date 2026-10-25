@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.entity.InteractionContext
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent
 import com.hypixel.hytale.server.core.inventory.InventoryComponent
 import com.hypixel.hytale.server.core.inventory.ItemStack
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
@@ -532,18 +533,14 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         if (heldItem?.itemId == "Ingredient_Scraps" && jank != null && jank.value > 0.0) {
             if (player == null) return
             val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
-            if (!MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())) {
+            val ownerAuthorized = MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())
+            if (!ownerAuthorized) {
                 player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
                 return
             }
             val container = context.heldItemContainer ?: return
             val slot = context.heldItemSlot.toShort()
-            val held = container.getItemStack(slot) ?: return
-            if (held.itemId != "Ingredient_Scraps") return
-            val replacement = if (held.quantity == 1) null else held.withQuantity(held.quantity - 1)
-            if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
-            jank.value = repairWithScraps(jank.value)
-            blockState.markNeedsSaving(store)
+            if (!repairMachineWithScraps(ownerAuthorized, jank, container, slot, blockState, store)) return
             player.sendMessage(Message.translation("server.craftory.bodge.repair").param("jank", jank.value.toInt()))
             return
         }
@@ -665,18 +662,15 @@ class CraftoryOvenUseInteraction : OpenProcessingBenchInteraction() {
         }
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
         val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
-        if (!MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())) {
+        val ownerAuthorized = MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())
+        if (!ownerAuthorized) {
             player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
             return
         }
+        val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val container = context.heldItemContainer ?: return
         val slot = context.heldItemSlot.toShort()
-        val held = container.getItemStack(slot) ?: return
-        if (held.itemId != "Ingredient_Scraps") return
-        val replacement = if (held.quantity == 1) null else held.withQuantity(held.quantity - 1)
-        if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
-        jank.value = repairWithScraps(jank.value)
-        store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        if (!repairMachineWithScraps(ownerAuthorized, jank, container, slot, blockState, store)) return
         player.sendMessage(Message.translation("server.craftory.bodge.repair").param("jank", jank.value.toInt()))
     }
 
@@ -690,6 +684,24 @@ class CraftoryOvenUseInteraction : OpenProcessingBenchInteraction() {
                     OpenProcessingBenchInteraction.CODEC,
                 ).build()
     }
+}
+
+internal fun repairMachineWithScraps(
+    ownerAuthorized: Boolean,
+    jank: Jank,
+    container: ItemContainer,
+    slot: Short,
+    blockState: BlockModule.BlockStateInfo,
+    store: Store<ChunkStore>,
+): Boolean {
+    if (!ownerAuthorized || jank.value <= 0.0) return false
+    val held = container.getItemStack(slot) ?: return false
+    if (held.itemId != "Ingredient_Scraps") return false
+    val replacement = if (held.quantity == 1) null else held.withQuantity(held.quantity - 1)
+    if (!container.setItemStackForSlot(slot, replacement).succeeded()) return false
+    jank.value = repairWithScraps(jank.value)
+    blockState.markNeedsSaving(store)
+    return true
 }
 
 private fun stalledMachineMessage(jank: Jank): Message =
