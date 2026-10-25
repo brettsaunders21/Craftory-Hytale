@@ -7,7 +7,6 @@ import com.hypixel.hytale.builtin.adventure.worldevents.component.WorldEventSign
 import com.hypixel.hytale.builtin.mounts.NPCMountComponent
 import com.hypixel.hytale.builtin.weather.components.WeatherTracker
 import com.hypixel.hytale.builtin.weather.resources.WeatherResource
-import com.hypixel.hytale.codec.builder.BuilderCodec
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
@@ -55,22 +54,6 @@ internal class SpikeSlowed : Component<EntityStore> {
 
     companion object {
         lateinit var type: ComponentType<EntityStore, SpikeSlowed>
-        val CODEC: BuilderCodec<SpikeSlowed> =
-            BuilderCodec
-                .builder(SpikeSlowed::class.java, ::SpikeSlowed)
-                .append(
-                    com.hypixel.hytale.codec
-                        .KeyedCodec("OriginalSpeed", com.hypixel.hytale.codec.Codec.FLOAT),
-                    { component, value -> component.originalSpeed = value },
-                    { component -> component.originalSpeed },
-                ).add()
-                .append(
-                    com.hypixel.hytale.codec
-                        .KeyedCodec("HeldItemRule", com.hypixel.hytale.codec.Codec.BOOLEAN),
-                    { component, value -> component.heldItemRule = value },
-                    { component -> component.heldItemRule },
-                ).add()
-                .build()
     }
 }
 
@@ -81,16 +64,6 @@ internal class SpikeHeldSlow : Component<EntityStore> {
 
     companion object {
         lateinit var type: ComponentType<EntityStore, SpikeHeldSlow>
-        val CODEC: BuilderCodec<SpikeHeldSlow> =
-            BuilderCodec
-                .builder(SpikeHeldSlow::class.java, ::SpikeHeldSlow)
-                .append(
-                    com.hypixel.hytale.codec
-                        .KeyedCodec("ItemId", com.hypixel.hytale.codec.Codec.STRING),
-                    { component, value -> component.itemId = value },
-                    { component -> component.itemId },
-                ).add()
-                .build()
     }
 }
 
@@ -108,28 +81,6 @@ internal class SpikeHudProbe : Component<EntityStore> {
 
     companion object {
         lateinit var type: ComponentType<EntityStore, SpikeHudProbe>
-        val CODEC: BuilderCodec<SpikeHudProbe> =
-            BuilderCodec
-                .builder(SpikeHudProbe::class.java, ::SpikeHudProbe)
-                .append(
-                    com.hypixel.hytale.codec
-                        .KeyedCodec("StartedAtNanos", com.hypixel.hytale.codec.Codec.LONG),
-                    { component, value -> component.startedAtNanos = value },
-                    { component -> component.startedAtNanos },
-                ).add()
-                .append(
-                    com.hypixel.hytale.codec
-                        .KeyedCodec("Updates", com.hypixel.hytale.codec.Codec.LONG),
-                    { component, value -> component.updates = value },
-                    { component -> component.updates },
-                ).add()
-                .append(
-                    com.hypixel.hytale.codec
-                        .KeyedCodec("TotalBuildNanos", com.hypixel.hytale.codec.Codec.LONG),
-                    { component, value -> component.totalBuildNanos = value },
-                    { component -> component.totalBuildNanos },
-                ).add()
-                .build()
     }
 }
 
@@ -209,11 +160,9 @@ internal class SpikeHud(
 
 internal object SpikeComponents {
     fun register(registry: ComponentRegistryProxy<EntityStore>) {
-        SpikeSlowed.type = registry.registerComponent(SpikeSlowed::class.java, "CraftorySpikeSlowed", SpikeSlowed.CODEC)
-        SpikeHeldSlow.type =
-            registry.registerComponent(SpikeHeldSlow::class.java, "CraftorySpikeHeldSlow", SpikeHeldSlow.CODEC)
-        SpikeHudProbe.type =
-            registry.registerComponent(SpikeHudProbe::class.java, "CraftorySpikeHudProbe", SpikeHudProbe.CODEC)
+        SpikeSlowed.type = registry.registerComponent(SpikeSlowed::class.java, ::SpikeSlowed)
+        SpikeHeldSlow.type = registry.registerComponent(SpikeHeldSlow::class.java, ::SpikeHeldSlow)
+        SpikeHudProbe.type = registry.registerComponent(SpikeHudProbe::class.java, ::SpikeHudProbe)
         SpikeWeatherWatch.type = registry.registerResource(SpikeWeatherWatch::class.java, ::SpikeWeatherWatch)
         SpikeProjectileWard.type = registry.registerResource(SpikeProjectileWard::class.java, ::SpikeProjectileWard)
         SpikeClaimGuard.type = registry.registerResource(SpikeClaimGuard::class.java, ::SpikeClaimGuard)
