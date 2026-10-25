@@ -1,6 +1,6 @@
 @file:Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements", "NestedBlockDepth")
 
-package studio.craftory.core.transport
+package studio.craftory.core.api.transport
 
 import com.hypixel.hytale.component.Component
 import com.hypixel.hytale.component.ComponentType
@@ -18,10 +18,6 @@ import org.joml.Vector3d
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
-import studio.craftory.core.api.transport.ItemInputAdapter
-import studio.craftory.core.api.transport.ItemPipe
-import studio.craftory.core.api.transport.ItemTransport
-import studio.craftory.core.api.transport.ItemTransportAccess
 import studio.craftory.engine.transport.ItemKeyTable
 import studio.craftory.engine.transport.ItemTransitGraph
 import studio.craftory.engine.transport.NodeActivity
@@ -35,7 +31,11 @@ import studio.craftory.engine.transport.TransitSink
 internal class ItemTransportWorld : Resource<ChunkStore> {
     private val graph = ItemTransitGraph()
     private val itemKeys = ItemKeyTable()
-    private val refsByPosition = HashMap<Long, Ref<ChunkStore>>()
+    private val refsByPosition = TransportLongIntMap()
+    private var refsByIndex = arrayOfNulls<Ref<ChunkStore>>(32)
+    private var freeReferenceIndexes = IntArray(32)
+    private var freeReferenceCount = 0
+    private var nextReferenceIndex = 0
     private val activityCache = ChunkActivityCache()
     private var store: Store<ChunkStore>? = null
     private var currentTick = Long.MIN_VALUE
@@ -45,7 +45,7 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
             val chunkKey = chunkKey(position)
             val cached = activityCache.get(chunkKey)
             if (cached != null) return@NodeActivity cached
-            val ref = refsByPosition[position] ?: return@NodeActivity false
+            val ref = referenceAt(position) ?: return@NodeActivity false
             val blockState = currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
             val active = blockState?.let { CraftoryCore.isAreaActive(currentStore, it) } ?: false
             activityCache.put(chunkKey, active)
@@ -68,7 +68,7 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
         pipe: ItemPipe,
     ) {
         if (graph.containsNode(position)) return
-        refsByPosition[position] = ref
+        putReference(position, ref)
         val persisted =
             TransitItemCodec.decode(pipe.items).map { record ->
                 record.itemId?.let { record.copy(itemKey = itemKeys.intern(it)) } ?: record
@@ -85,7 +85,7 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
     ) {
         if (!graph.containsNode(position)) return
         val persisted = graph.removeNode(position, reason, sink)
-        refsByPosition.remove(position)
+        removeReference(position)
         if (reason == NodeRemovalReason.UNLOAD) {
             pipe.items =
                 TransitItemCodec.encode(
@@ -123,6 +123,8 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
         return graph.insert(position, key, quantity, colour, originPosition, sink) != ItemTransitGraph.REJECTED_ITEM_ID
     }
 
+    fun canInsert(position: Long): Boolean = graph.canInsert(position)
+
     fun isPipe(position: Long): Boolean = graph.containsNode(position)
 
     fun itemsInTransit(): Int = graph.itemCount
@@ -138,11 +140,57 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
 
     fun itemIdString(index: Int): String? = itemKeys.key(graph.itemKey(index))
 
+    fun itemOwner(index: Int): Long = graph.itemFrom(index)
+
+    fun itemProgress(index: Int): Int = graph.itemProgress(index)
+
     fun itemWorldX(index: Int): Double = graph.itemWorldX(index)
 
     fun itemWorldY(index: Int): Double = graph.itemWorldY(index)
 
     fun itemWorldZ(index: Int): Double = graph.itemWorldZ(index)
+
+    fun clearDisplaysInArea(
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Int {
+        val currentStore = store ?: return 0
+        val currentWorld = currentStore.externalData.world
+        return currentStore.getResource(ItemTransitDisplayState.type).clearInArea(
+            currentWorld,
+            minX,
+            minY,
+            minZ,
+            maxX,
+            maxY,
+            maxZ,
+        )
+    }
+
+    fun displaysInArea(
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Int {
+        val currentStore = store ?: return 0
+        val currentWorld = currentStore.externalData.world
+        return currentStore.getResource(ItemTransitDisplayState.type).countInArea(
+            currentWorld,
+            minX,
+            minY,
+            minZ,
+            maxX,
+            maxY,
+            maxZ,
+        )
+    }
 
     fun colourOf(position: Long): Int = graph.colourOf(position)
 
@@ -152,7 +200,7 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
     ): Boolean {
         if (!graph.containsNode(position)) return false
         graph.setColour(position, colour.coerceIn(0, 4))
-        val ref = refsByPosition[position] ?: return false
+        val ref = referenceAt(position) ?: return false
         val currentStore = store ?: return false
         val pipe = currentStore.getComponent(ref, ItemPipe.type) ?: return false
         pipe.colour = colour.coerceIn(0, 4)
@@ -181,7 +229,7 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
 
     private fun flushNode(position: Long) {
         val currentStore = store ?: return
-        val ref = refsByPosition[position] ?: return
+        val ref = referenceAt(position) ?: return
         val pipe = currentStore.getComponent(ref, ItemPipe.type) ?: return
         pipe.items =
             TransitItemCodec.encode(
@@ -198,6 +246,50 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
         val x = PackedPosition.x(position) shr 5
         val z = PackedPosition.z(position) shr 5
         return (x.toLong() shl 32) xor (z.toLong() and 0xffffffffL)
+    }
+
+    private fun referenceAt(position: Long): Ref<ChunkStore>? {
+        val index = refsByPosition.getOrDefault(position, -1)
+        return if (index < 0) null else refsByIndex[index]
+    }
+
+    private fun putReference(
+        position: Long,
+        ref: Ref<ChunkStore>,
+    ) {
+        val existing = refsByPosition.getOrDefault(position, -1)
+        if (existing >= 0) {
+            refsByIndex[existing] = ref
+            return
+        }
+        val index =
+            if (freeReferenceCount > 0) {
+                freeReferenceIndexes[--freeReferenceCount]
+            } else {
+                ensureReferenceCapacity(nextReferenceIndex + 1)
+                nextReferenceIndex++
+                nextReferenceIndex - 1
+            }
+        refsByIndex[index] = ref
+        refsByPosition.put(position, index)
+    }
+
+    private fun removeReference(position: Long) {
+        val index = refsByPosition.remove(position)
+        if (index < 0) return
+        refsByIndex[index] = null
+        if (freeReferenceCount == freeReferenceIndexes.size) {
+            freeReferenceIndexes = freeReferenceIndexes.copyOf(freeReferenceIndexes.size shl 1)
+        }
+        freeReferenceIndexes[freeReferenceCount++] = index
+    }
+
+    private fun ensureReferenceCapacity(required: Int) {
+        if (required <= refsByIndex.size) return
+        var capacity = refsByIndex.size
+        while (capacity < required) capacity = capacity shl 1
+        refsByIndex = refsByIndex.copyOf(capacity)
+        if (freeReferenceIndexes.size < capacity) freeReferenceIndexes = freeReferenceIndexes.copyOf(capacity)
     }
 
     private inner class DirtyVisitor : studio.craftory.engine.transport.DirtyNodeVisitor {
@@ -324,6 +416,116 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
                 intArrayOf(0, 0, -1),
             )
         lateinit var type: ResourceType<ChunkStore, ItemTransportWorld>
+    }
+}
+
+internal class TransportLongIntMap(
+    initialCapacity: Int = 32,
+) {
+    private var keys = LongArray(powerOfTwo(initialCapacity))
+    private var values = IntArray(keys.size)
+    private var states = ByteArray(keys.size)
+    private var size = 0
+    private var tombstones = 0
+
+    fun getOrDefault(
+        key: Long,
+        defaultValue: Int,
+    ): Int {
+        var slot = hash(key) and (keys.size - 1)
+        while (states[slot].toInt() != EMPTY) {
+            if (states[slot].toInt() == OCCUPIED && keys[slot] == key) return values[slot]
+            slot = (slot + 1) and (keys.size - 1)
+        }
+        return defaultValue
+    }
+
+    fun put(
+        key: Long,
+        value: Int,
+    ) {
+        if ((size + tombstones + 1) * 10 >= keys.size * 7) {
+            rehash(if (size * 10 < keys.size * 4) keys.size else keys.size shl 1)
+        }
+        var slot = hash(key) and (keys.size - 1)
+        var firstTombstone = -1
+        while (states[slot].toInt() != EMPTY) {
+            when (states[slot].toInt()) {
+                OCCUPIED -> {
+                    if (keys[slot] == key) {
+                        values[slot] = value
+                        return
+                    }
+                }
+
+                DELETED -> {
+                    if (firstTombstone < 0) firstTombstone = slot
+                }
+            }
+            slot = (slot + 1) and (keys.size - 1)
+        }
+        if (firstTombstone >= 0) {
+            slot = firstTombstone
+            tombstones--
+        }
+        keys[slot] = key
+        values[slot] = value
+        states[slot] = OCCUPIED.toByte()
+        size++
+    }
+
+    fun remove(key: Long): Int {
+        var slot = hash(key) and (keys.size - 1)
+        while (states[slot].toInt() != EMPTY) {
+            if (states[slot].toInt() == OCCUPIED && keys[slot] == key) {
+                states[slot] = DELETED.toByte()
+                size--
+                tombstones++
+                return values[slot]
+            }
+            slot = (slot + 1) and (keys.size - 1)
+        }
+        return -1
+    }
+
+    fun clear() {
+        java.util.Arrays.fill(states, EMPTY.toByte())
+        size = 0
+        tombstones = 0
+    }
+
+    private fun rehash(capacity: Int) {
+        val oldKeys = keys
+        val oldValues = values
+        val oldStates = states
+        keys = LongArray(capacity)
+        values = IntArray(capacity)
+        states = ByteArray(capacity)
+        size = 0
+        tombstones = 0
+        for (index in oldKeys.indices) {
+            if (oldStates[index].toInt() == OCCUPIED) put(oldKeys[index], oldValues[index])
+        }
+    }
+
+    private fun hash(key: Long): Int {
+        var mixed = key
+        mixed = (mixed xor (mixed ushr 33)) * -49064778989728563L
+        mixed = (mixed xor (mixed ushr 33)) * -4265267296055464877L
+        return (mixed xor (mixed ushr 33)).toInt()
+    }
+
+    companion object {
+        private const val EMPTY = 0
+        private const val OCCUPIED = 1
+        private const val DELETED = 2
+
+        private fun powerOfTwo(value: Int): Int {
+            require(value > 0)
+            var capacity = 1
+            while (capacity < value) capacity = capacity shl 1
+            return maxOf(capacity, 16)
+        }
     }
 }
 

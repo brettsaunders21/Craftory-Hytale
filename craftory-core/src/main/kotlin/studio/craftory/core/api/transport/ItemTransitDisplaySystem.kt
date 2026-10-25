@@ -1,6 +1,6 @@
 @file:Suppress("TooManyFunctions", "LoopWithTooManyJumpStatements")
 
-package studio.craftory.core.transport
+package studio.craftory.core.api.transport
 
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ComponentType
@@ -50,7 +50,11 @@ internal class ItemTransitDisplaySystem(
 }
 
 internal class ItemTransitDisplayState : Resource<ChunkStore> {
-    private val displays = HashMap<Long, Display>()
+    private val displayIndexes = TransportLongIntMap()
+    private var displayIds = LongArray(16)
+    private var displayRefs = arrayOfNulls<Ref<EntityStore>>(16)
+    private var displayLastSeen = LongArray(16)
+    private var displayCount = 0
     private var viewers = DoubleArray(48)
     private var viewerCount = 0
     private var chunkKeys = LongArray(32)
@@ -76,6 +80,10 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
         world = currentWorld
         tick++
         collectViewers(currentWorld)
+        if (viewerCount == 0) {
+            despawnAll()
+            return
+        }
         chunkCount = 0
         for (index in 0 until runtime.graphItemCount) {
             val x = runtime.itemWorldX(index)
@@ -87,15 +95,83 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
             if (chunkIndex >= capPerChunk) continue
             incrementChunkCount(chunkKey, chunkIndex)
             val id = runtime.itemId(index)
-            val display =
-                displays[id] ?: createDisplay(currentWorld, runtime, index, x, y, z)?.also { displays[id] = it }
-                    ?: continue
-            display.lastSeen = tick
-            updateDisplay(currentWorld, display, x, y, z)
+            var displayIndex = displayIndexes.getOrDefault(id, -1)
+            if (displayIndex < 0) {
+                val ref = createDisplay(currentWorld, runtime, index, x, y, z) ?: continue
+                displayIndex = addDisplay(id, ref)
+            }
+            displayLastSeen[displayIndex] = tick
+            updateDisplay(currentWorld, displayIndex, x, y, z)
         }
         collectStaleDisplays()
         removeStaleDisplays(currentWorld)
     }
+
+    fun countInArea(
+        currentWorld: World,
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Int {
+        var count = 0
+        for (index in 0 until displayCount) {
+            val ref = displayRefs[index] ?: continue
+            if (!ref.isValid) continue
+            val transform =
+                currentWorld.entityStore.store.getComponent(ref, TransformComponent.getComponentType()) ?: continue
+            val point = transform.position
+            if (isWithinArea(point.x, point.y, point.z, minX, minY, minZ, maxX, maxY, maxZ)) {
+                count++
+            }
+        }
+        return count
+    }
+
+    fun clearInArea(
+        currentWorld: World,
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Int {
+        var removed = 0
+        var index = 0
+        while (index < displayCount) {
+            val ref = displayRefs[index]
+            val transform =
+                ref
+                    ?.takeIf { it.isValid }
+                    ?.let { currentWorld.entityStore.store.getComponent(it, TransformComponent.getComponentType()) }
+            val point = transform?.position
+            if (point != null && isWithinArea(point.x, point.y, point.z, minX, minY, minZ, maxX, maxY, maxZ)) {
+                removeDisplayAt(index, currentWorld)
+                removed++
+            } else {
+                index++
+            }
+        }
+        return removed
+    }
+
+    private fun isWithinArea(
+        x: Double,
+        y: Double,
+        z: Double,
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Boolean =
+        x in minX.toDouble()..maxX.toDouble() &&
+            y in minY.toDouble()..maxY.toDouble() &&
+            z in minZ.toDouble()..maxZ.toDouble()
 
     private fun collectViewers(currentWorld: World) {
         viewerCount = 0
@@ -170,7 +246,7 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
         x: Double,
         y: Double,
         z: Double,
-    ): Display? {
+    ): Ref<EntityStore>? {
         val itemId = runtime.itemIdString(index) ?: return null
         val entityStore = currentWorld.entityStore.store
         val holder =
@@ -190,19 +266,38 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
         holder.tryRemoveComponent(PhysicsValues.getComponentType())
         holder.tryRemoveComponent(DespawnComponent.getComponentType())
         val ref = entityStore.addEntity(holder, AddReason.SPAWN) ?: return null
-        return Display(ref, tick)
+        return ref
+    }
+
+    private fun addDisplay(
+        id: Long,
+        ref: Ref<EntityStore>,
+    ): Int {
+        if (displayCount == displayIds.size) {
+            val capacity = displayIds.size shl 1
+            displayIds = displayIds.copyOf(capacity)
+            displayRefs = displayRefs.copyOf(capacity)
+            displayLastSeen = displayLastSeen.copyOf(capacity)
+        }
+        val index = displayCount++
+        displayIds[index] = id
+        displayRefs[index] = ref
+        displayLastSeen[index] = tick
+        displayIndexes.put(id, index)
+        return index
     }
 
     private fun updateDisplay(
         currentWorld: World,
-        display: Display,
+        displayIndex: Int,
         x: Double,
         y: Double,
         z: Double,
     ) {
-        if (!display.ref.isValid) return
+        val ref = displayRefs[displayIndex] ?: return
+        if (!ref.isValid) return
         val entityStore = currentWorld.entityStore.store
-        val transform = entityStore.getComponent(display.ref, TransformComponent.getComponentType()) ?: return
+        val transform = entityStore.getComponent(ref, TransformComponent.getComponentType()) ?: return
         position.set(x, y, z)
         transform.setPosition(position)
         transform.setSectionLocation(
@@ -216,29 +311,57 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
 
     private fun collectStaleDisplays() {
         staleCount = 0
-        displays.forEach { (id, display) ->
-            if (display.lastSeen != tick) {
-                if (staleCount == staleIds.size) staleIds = staleIds.copyOf(staleIds.size shl 1)
-                staleIds[staleCount++] = id
+        for (index in 0 until displayCount) {
+            if (displayLastSeen[index] != tick) {
+                ensureStaleCapacity(staleCount + 1)
+                staleIds[staleCount++] = displayIds[index]
             }
         }
     }
 
+    private fun ensureStaleCapacity(required: Int) {
+        if (required <= staleIds.size) return
+        var capacity = staleIds.size
+        while (capacity < required) capacity = capacity shl 1
+        staleIds = staleIds.copyOf(capacity)
+    }
+
     private fun removeStaleDisplays(currentWorld: World) {
-        val entityStore = currentWorld.entityStore.store
         for (index in 0 until staleCount) {
-            val display = displays.remove(staleIds[index]) ?: continue
-            if (display.ref.isValid) entityStore.removeEntity(display.ref, RemoveReason.REMOVE)
+            val displayIndex = displayIndexes.getOrDefault(staleIds[index], -1)
+            if (displayIndex >= 0) removeDisplayAt(displayIndex, currentWorld)
         }
+    }
+
+    private fun removeDisplayAt(
+        index: Int,
+        currentWorld: World,
+    ) {
+        val ref = displayRefs[index]
+        if (ref != null && ref.isValid) currentWorld.entityStore.store.removeEntity(ref, RemoveReason.REMOVE)
+        val id = displayIds[index]
+        displayIndexes.remove(id)
+        val last = --displayCount
+        if (index != last) {
+            val movedId = displayIds[last]
+            displayIds[index] = movedId
+            displayRefs[index] = displayRefs[last]
+            displayLastSeen[index] = displayLastSeen[last]
+            displayIndexes.put(movedId, index)
+        }
+        displayRefs[last] = null
     }
 
     private fun despawnAll() {
         val currentWorld = world ?: return
         val entityStore = currentWorld.entityStore.store
-        displays.values.forEach { display ->
-            if (display.ref.isValid) entityStore.removeEntity(display.ref, RemoveReason.REMOVE)
+        for (index in 0 until displayCount) {
+            val ref = displayRefs[index]
+            if (ref != null && ref.isValid) entityStore.removeEntity(ref, RemoveReason.REMOVE)
+            displayRefs[index] = null
         }
-        displays.clear()
+        displayCount = 0
+        displayIndexes.clear()
     }
 
     private fun chunkKey(
@@ -249,11 +372,6 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
         val chunkZ = kotlin.math.floor(z).toInt() shr 5
         return (chunkX.toLong() shl 32) xor (chunkZ.toLong() and 0xffffffffL)
     }
-
-    private data class Display(
-        val ref: Ref<EntityStore>,
-        var lastSeen: Long,
-    )
 
     companion object {
         private const val MAX_RENDER_DISTANCE_SQUARED = 64.0 * 64.0

@@ -1,8 +1,7 @@
-package studio.craftory.core.transport
+package studio.craftory.core.api.transport
 
 import com.hypixel.hytale.server.core.util.Config
 import studio.craftory.core.CraftoryCoreConfig
-import studio.craftory.core.api.transport.ItemPipe
 
 internal object ItemTransportRegistration {
     fun register(

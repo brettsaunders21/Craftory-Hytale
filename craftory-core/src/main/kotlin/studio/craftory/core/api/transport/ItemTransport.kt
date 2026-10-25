@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
-import studio.craftory.core.transport.ItemTransportWorld
 import java.util.concurrent.ConcurrentHashMap
 
 object ItemTransport {
@@ -32,6 +31,7 @@ object ItemTransport {
     internal fun inputAdapters(): Map<ComponentType<ChunkStore, *>, ItemInputAdapter> = inputAdapters
 }
 
+@Suppress("TooManyFunctions")
 class ItemTransportAccess internal constructor(
     private val runtime: ItemTransportWorld,
 ) {
@@ -63,6 +63,12 @@ class ItemTransportAccess internal constructor(
 
     fun itemsInTransit(): Int = runtime.itemsInTransit()
 
+    fun canInsert(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Boolean = runtime.canInsert(BlockPos(x, y, z).pack())
+
     fun itemsOwnedBy(
         x: Int,
         y: Int,
@@ -91,4 +97,28 @@ class ItemTransportAccess internal constructor(
     fun progressOf(itemId: Long): Int? = runtime.progressOf(itemId)
 
     fun itemIdAt(index: Int): Long = runtime.itemId(index)
+
+    fun itemStringAt(index: Int): String? = runtime.itemIdString(index)
+
+    fun itemOwnerAt(index: Int): Long = runtime.itemOwner(index)
+
+    fun itemProgressAt(index: Int): Int = runtime.itemProgress(index)
+
+    fun clearDisplaysInArea(
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Int = runtime.clearDisplaysInArea(minX, minY, minZ, maxX, maxY, maxZ)
+
+    fun displaysInArea(
+        minX: Int,
+        minY: Int,
+        minZ: Int,
+        maxX: Int,
+        maxY: Int,
+        maxZ: Int,
+    ): Int = runtime.displaysInArea(minX, minY, minZ, maxX, maxY, maxZ)
 }
