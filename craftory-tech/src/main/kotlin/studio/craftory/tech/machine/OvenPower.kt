@@ -34,3 +34,51 @@ class OvenPower(
                 .build()
     }
 }
+
+internal data class OvenFizzUpdate(
+    val demand: Long,
+    val accumulatedFizz: Long,
+    val lastFizzSolveTick: Long,
+    val shouldInsertCharge: Boolean,
+)
+
+internal object OvenFizzAccounting {
+    fun update(
+        accumulatedFizz: Long,
+        lastFizzSolveTick: Long,
+        completedSolveTick: Long,
+        deliveredFizz: Long,
+        hasRecipeInput: Boolean,
+        chargeCount: Int,
+        fuelSlotAvailable: Boolean,
+    ): OvenFizzUpdate {
+        val demand =
+            if (hasRecipeInput && chargeCount < MAX_CHARGES && fuelSlotAvailable) {
+                FIZZ_PER_SOLVE_TICK
+            } else {
+                0L
+            }
+        var nextAccumulatedFizz = accumulatedFizz
+        var nextLastFizzSolveTick = lastFizzSolveTick
+        if (completedSolveTick != Long.MIN_VALUE && completedSolveTick != lastFizzSolveTick) {
+            val delivered = deliveredFizz.coerceAtLeast(0)
+            nextAccumulatedFizz =
+                if (nextAccumulatedFizz > Long.MAX_VALUE - delivered) {
+                    Long.MAX_VALUE
+                } else {
+                    nextAccumulatedFizz + delivered
+                }
+            nextLastFizzSolveTick = completedSolveTick
+        }
+        return OvenFizzUpdate(
+            demand,
+            nextAccumulatedFizz,
+            nextLastFizzSolveTick,
+            nextAccumulatedFizz >= FIZZ_PER_CHARGE && chargeCount < MAX_CHARGES && fuelSlotAvailable,
+        )
+    }
+
+    const val FIZZ_PER_SOLVE_TICK = 30L
+    const val FIZZ_PER_CHARGE = 120L
+    const val MAX_CHARGES = 2
+}

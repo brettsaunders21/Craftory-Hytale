@@ -208,23 +208,17 @@ object GritTable {
 
     fun metalForGrit(gritItemId: String): String? = definitions.firstOrNull { it.gritItemId == gritItemId }?.metal
 
-    fun encodeOreQueue(oreCounts: Map<String, Int>): String =
-        oreCounts.entries
-            .filter { it.key in byOre && it.value > 0 }
-            .joinToString(";") { (oreId, count) -> "$oreId=$count" }
+    fun encodeOreQueue(oreItems: List<String>): String =
+        oreItems
+            .filter { it in byOre }
+            .joinToString(",")
 
-    fun decodeOreQueue(encoded: String): Map<String, Int> =
+    fun decodeOreQueue(encoded: String): List<String> =
         encoded
-            .split(';')
-            .mapNotNull { entry ->
-                val separator = entry.lastIndexOf('=')
-                if (separator <= 0) return@mapNotNull null
-                val count = entry.substring(separator + 1).toIntOrNull()?.takeIf { it > 0 } ?: return@mapNotNull null
-                val oreId = entry.substring(0, separator)
-                if (oreId in byOre) oreId to count else null
-            }.toMap()
+            .split(',')
+            .filter { it in byOre }
 
-    fun queuedOreCount(encoded: String): Int = decodeOreQueue(encoded).values.sum()
+    fun queuedOreCount(encoded: String): Int = decodeOreQueue(encoded).size
 
     fun containsGrit(gritItemId: String): Boolean = gritItemId in gritIds
 }
@@ -246,9 +240,9 @@ internal object GnasherMachine {
         oreItemId: String,
     ): Boolean {
         if (!canDeposit(state, oreItemId)) return false
-        val oreCounts = GritTable.decodeOreQueue(state.oreQueue).toMutableMap()
-        oreCounts[oreItemId] = (oreCounts[oreItemId] ?: 0) + 1
-        state.oreQueue = GritTable.encodeOreQueue(oreCounts)
+        val oreItems = GritTable.decodeOreQueue(state.oreQueue).toMutableList()
+        oreItems.add(oreItemId)
+        state.oreQueue = GritTable.encodeOreQueue(oreItems)
         if (GritTable.queuedOreCount(state.oreQueue) > HOPPER_CAPACITY) state.jammed = true
         return true
     }
@@ -296,25 +290,20 @@ internal object GnasherMachine {
         result: GnasherPulseResult,
     ) {
         val consumedOre = result.consumedOreItemId ?: return
-        val oreCounts = GritTable.decodeOreQueue(state.oreQueue).toMutableMap()
-        oreCounts[consumedOre] = (oreCounts[consumedOre] ?: 0) + 1
-        state.oreQueue = GritTable.encodeOreQueue(oreCounts)
+        val oreItems = GritTable.decodeOreQueue(state.oreQueue).toMutableList()
+        oreItems.add(0, consumedOre)
+        state.oreQueue = GritTable.encodeOreQueue(oreItems)
         state.progressPulses = PULSES_PER_ORE - 1
     }
 
     private fun advanceGrinding(state: GnasherState): GnasherPulseResult {
-        val oreCounts = GritTable.decodeOreQueue(state.oreQueue).toMutableMap()
-        val oreItemId = oreCounts.keys.firstOrNull() ?: return GnasherPulseResult(false)
+        val oreItems = GritTable.decodeOreQueue(state.oreQueue).toMutableList()
+        val oreItemId = oreItems.firstOrNull() ?: return GnasherPulseResult(false)
         state.progressPulses++
         if (state.progressPulses < PULSES_PER_ORE) return GnasherPulseResult(true)
         state.progressPulses = 0
-        val remaining = (oreCounts[oreItemId] ?: 0) - 1
-        if (remaining == 0) {
-            oreCounts.remove(oreItemId)
-        } else {
-            oreCounts[oreItemId] = remaining
-        }
-        state.oreQueue = GritTable.encodeOreQueue(oreCounts)
+        oreItems.removeAt(0)
+        state.oreQueue = GritTable.encodeOreQueue(oreItems)
         return GnasherPulseResult(true, GritTable.gritForOre(oreItemId), oreItemId)
     }
 

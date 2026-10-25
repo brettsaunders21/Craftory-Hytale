@@ -96,49 +96,71 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 ChunkStore.REGISTRY.getNonTickingComponentType(),
             ) == null
         if (!CraftoryCore.isEnergyTick(store)) return
-        if (!run.tickingStateReported && tick >= run.startTick + 8) {
-            run.tickingStateReported = true
-            if (run.sectionEntityTicking) {
-                check(run, true, "selftest section entity-ticking", "NonTicking absent")
-            } else {
-                run.context.sendMessage(
-                    Message.raw("selftest: SKIP isolated section ticking is player-dependent (NonTicking)"),
-                )
-            }
-        }
+        reportTickingState(run, tick)
         if (run.phase == 4) {
-            val powerLossTick = run.powerLossTick ?: return
-            if (!run.finalReported && tick >= powerLossTick + 120) {
-                if (run.sectionEntityTicking) {
-                    captureOvenAfterPowerLoss(run, store)
-                } else {
-                    run.context.sendMessage(Message.raw("selftest: SKIP oven power-loss buffer check (NonTicking)"))
-                }
-                run.finalReported = true
-                run.cleanupTick = tick + 20
-            } else if (
-                run.finalReported &&
-                !run.stoppedReported &&
-                tick >= (run.cleanupTick ?: Long.MAX_VALUE) - 12
-            ) {
-                if (run.sectionEntityTicking) {
-                    checkOvenStopped(run, store)
-                } else {
-                    run.context.sendMessage(Message.raw("selftest: SKIP oven stop-after-power-loss check (NonTicking)"))
-                }
-                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
-                run.stoppedReported = true
-                run.cleanupTick = tick + 12
-            }
-            if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
-                reportCleanup(
-                    run,
-                    CraftorySelfTest.cleanup(run.world, run.sectionRef),
-                )
-                store.getResource(SelfTestRun.type).active = null
-            }
+            tickPowerLossPhase(run, store, tick)
             return
         }
+        tickSelfTestPhase(run, store, tick)
+    }
+
+    private fun reportTickingState(
+        run: SelfTestRun.Run,
+        tick: Long,
+    ) {
+        if (run.tickingStateReported || tick < run.startTick + 8) return
+        run.tickingStateReported = true
+        if (run.sectionEntityTicking) {
+            check(run, true, "selftest section entity-ticking", "NonTicking absent")
+        } else {
+            run.context.sendMessage(
+                Message.raw("selftest: SKIP isolated section ticking is player-dependent (NonTicking)"),
+            )
+        }
+    }
+
+    private fun tickPowerLossPhase(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        tick: Long,
+    ) {
+        val powerLossTick = run.powerLossTick ?: return
+        if (!run.finalReported && tick >= powerLossTick + 120) {
+            if (run.sectionEntityTicking) {
+                captureOvenAfterPowerLoss(run, store)
+            } else {
+                run.context.sendMessage(Message.raw("selftest: SKIP oven power-loss buffer check (NonTicking)"))
+            }
+            run.finalReported = true
+            run.cleanupTick = tick + 20
+        } else if (
+            run.finalReported &&
+            !run.stoppedReported &&
+            tick >= (run.cleanupTick ?: Long.MAX_VALUE) - 12
+        ) {
+            if (run.sectionEntityTicking) {
+                checkOvenStopped(run, store)
+            } else {
+                run.context.sendMessage(Message.raw("selftest: SKIP oven stop-after-power-loss check (NonTicking)"))
+            }
+            run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+            run.stoppedReported = true
+            run.cleanupTick = tick + 12
+        }
+        if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+            reportCleanup(
+                run,
+                CraftorySelfTest.cleanup(run.world, run.sectionRef),
+            )
+            store.getResource(SelfTestRun.type).active = null
+        }
+    }
+
+    private fun tickSelfTestPhase(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        tick: Long,
+    ) {
         when {
             run.phase == 0 && tick >= run.startTick + 8 -> {
                 checkCrank(run, store)

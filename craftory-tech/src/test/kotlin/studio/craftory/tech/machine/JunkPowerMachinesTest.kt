@@ -88,6 +88,41 @@ class JunkPowerMachinesTest {
     }
 
     @Test
+    fun `oven collects surplus fizz and charges whenever fuel space is available`() {
+        val secondCharge =
+            OvenFizzAccounting.update(
+                accumulatedFizz = 90,
+                lastFizzSolveTick = 100,
+                completedSolveTick = 101,
+                deliveredFizz = 30,
+                hasRecipeInput = true,
+                chargeCount = 1,
+                fuelSlotAvailable = true,
+            )
+
+        assertEquals(OvenFizzAccounting.FIZZ_PER_SOLVE_TICK, secondCharge.demand)
+        assertEquals(120, secondCharge.accumulatedFizz)
+        assertEquals(101, secondCharge.lastFizzSolveTick)
+        assertTrue(secondCharge.shouldInsertCharge)
+
+        val surplus =
+            OvenFizzAccounting.update(
+                accumulatedFizz = secondCharge.accumulatedFizz - OvenFizzAccounting.FIZZ_PER_CHARGE,
+                lastFizzSolveTick = secondCharge.lastFizzSolveTick,
+                completedSolveTick = 102,
+                deliveredFizz = 30,
+                hasRecipeInput = true,
+                chargeCount = 2,
+                fuelSlotAvailable = true,
+            )
+
+        assertEquals(0, surplus.demand)
+        assertEquals(30, surplus.accumulatedFizz)
+        assertEquals(102, surplus.lastFizzSolveTick)
+        assertFalse(surplus.shouldInsertCharge)
+    }
+
+    @Test
     fun `throttled crank persistence retries until saved`() {
         val crank = CrankState(spinTicks = 12, lastAdvancedTick = 172)
         assertTrue(CrankMachine.advanceTo(crank, 184))
@@ -122,6 +157,25 @@ class JunkPowerMachinesTest {
         assertEquals(listOf("Craftory_Grit_Copper", "Craftory_Grit_Copper"), outputs)
         assertEquals(0, GritTable.queuedOreCount(gnasher.oreQueue))
         assertEquals(GnasherMachine.GRIT_OUTPUT_QUANTITY, 2)
+    }
+
+    @Test
+    fun `gnasher processes ores in arrival order`() {
+        val gnasher = GnasherState()
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Iron"))
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+
+        val outputs =
+            (0 until GnasherMachine.PULSES_PER_ORE * 3)
+                .map { pulse -> GnasherMachine.pulse(gnasher, pulse * GnasherMachine.MANUAL_PULSE_INTERVAL_TICKS) }
+                .filter { it.outputItemId != null }
+                .mapNotNull { it.outputItemId }
+
+        assertEquals(
+            listOf("Craftory_Grit_Copper", "Craftory_Grit_Iron", "Craftory_Grit_Copper"),
+            outputs,
+        )
     }
 
     @Test
@@ -164,7 +218,7 @@ class JunkPowerMachinesTest {
         val restored = GnasherState(oreQueue = gnasher.oreQueue, progressPulses = 3)
 
         assertEquals(
-            mapOf("Ore_Copper" to 2, "Ore_Iron_Slate" to 1),
+            listOf("Ore_Copper", "Ore_Copper", "Ore_Iron_Slate"),
             GritTable.decodeOreQueue(restored.oreQueue),
         )
         assertEquals(3, restored.progressPulses)

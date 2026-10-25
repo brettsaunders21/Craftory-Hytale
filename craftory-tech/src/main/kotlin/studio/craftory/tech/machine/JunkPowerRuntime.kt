@@ -200,34 +200,33 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
             }
         val fuelSlotAvailable =
             chargeStack == null || chargeStack.isEmpty || chargeStack.itemId == CraftoryIds.FIZZ_CHARGE
-        val demand =
-            if (hasRecipeInput(bench) && chargeCount < MAX_CHARGES && fuelSlotAvailable) {
-                FIZZ_PER_SOLVE_TICK
-            } else {
-                0L
-            }
         val energy = CraftoryCore.energyAccess(world)
-        if (member.demand != demand) energy.setDemand(id, demand)
-        var dirty = false
         val completedSolveTick = energy.lastSolveTick()
-        if (demand > 0 && completedSolveTick != Long.MIN_VALUE && completedSolveTick != power.lastFizzSolveTick) {
-            power.lastFizzSolveTick = completedSolveTick
-            power.accumulatedFizz =
-                if (Long.MAX_VALUE - power.accumulatedFizz < member.delivered) {
-                    Long.MAX_VALUE
-                } else {
-                    power.accumulatedFizz + member.delivered.coerceAtLeast(0)
-                }
+        val fizzUpdate =
+            OvenFizzAccounting.update(
+                power.accumulatedFizz,
+                power.lastFizzSolveTick,
+                completedSolveTick,
+                member.delivered,
+                hasRecipeInput(bench),
+                chargeCount,
+                fuelSlotAvailable,
+            )
+        if (member.demand != fizzUpdate.demand) energy.setDemand(id, fizzUpdate.demand)
+        var dirty = false
+        power.lastFizzSolveTick = fizzUpdate.lastFizzSolveTick
+        if (power.accumulatedFizz != fizzUpdate.accumulatedFizz) {
+            power.accumulatedFizz = fizzUpdate.accumulatedFizz
             dirty = true
         }
-        if (demand > 0 && power.accumulatedFizz >= FIZZ_PER_CHARGE) {
+        if (fizzUpdate.shouldInsertCharge) {
             val transaction =
                 bench.fuelContainer.setItemStackForSlot(
                     0.toShort(),
                     ItemStack(CraftoryIds.FIZZ_CHARGE, chargeCount + 1),
                 )
             if (transaction.succeeded()) {
-                power.accumulatedFizz -= FIZZ_PER_CHARGE
+                power.accumulatedFizz -= OvenFizzAccounting.FIZZ_PER_CHARGE
                 dirty = true
             }
         }
@@ -241,9 +240,7 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
             }
 
     private companion object {
-        const val FIZZ_PER_SOLVE_TICK = 30L
-        const val FIZZ_PER_CHARGE = 120L
-        const val MAX_CHARGES = 2
+        const val MAX_CHARGES = OvenFizzAccounting.MAX_CHARGES
     }
 }
 

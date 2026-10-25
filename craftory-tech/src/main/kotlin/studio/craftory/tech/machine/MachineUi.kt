@@ -205,7 +205,7 @@ class CanisterPage private constructor(
         world: World,
         currentTick: Long,
     ) {
-        if (currentTick - lastUpdateTick < 10) return
+        if (lastUpdateTick != Long.MIN_VALUE && currentTick - lastUpdateTick < 10) return
         if (!blockRef.isValid() || blockRef.store.externalData.world !== world) return
         val snapshot = readSnapshot() ?: return
         if (snapshot == lastSnapshot) return
