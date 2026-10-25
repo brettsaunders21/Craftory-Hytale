@@ -134,6 +134,7 @@
           "Stored": 0,
           "StoreRank": -1
         },
+        "CraftoryMachineOwner": {},
         "CraftoryOvenPower": {
           "AccumulatedFizz": 0
         }

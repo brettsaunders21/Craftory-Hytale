@@ -1225,7 +1225,7 @@ object CraftorySelfTest {
         return quantity
     }
 
-    @Suppress("LongMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     internal fun testWrench(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
@@ -1246,6 +1246,32 @@ object CraftorySelfTest {
                     WRENCH_TAKE_APART.y,
                     WRENCH_TAKE_APART.z,
                 ) ?: error("wrench test burner was not placed")
+            val machineOwner = store.getComponent(takeApartRef, MachineOwner.type) ?: error("machine owner is missing")
+            check(run, machineOwner.placerUuid == null, "programmatic machine placement is unowned")
+            machineOwner.placerUuid = UUID.randomUUID()
+            val foreign =
+                MachineActions.useWrench(
+                    run.world,
+                    takeApartRef,
+                    org.joml.Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z),
+                    playerUuid,
+                    null,
+                    crews,
+                    store,
+                )
+            check(
+                run,
+                foreign == WrenchActionResult.ForeignCrew &&
+                    !blockEntityMissing(run.world, WRENCH_TAKE_APART) &&
+                    !crews.hasKnowledge(playerUuid, page.id) &&
+                    itemQuantityNear(run.world, WRENCH_TAKE_APART, "Ingredient_Scraps") == 0,
+                "wrench refuses a foreign crew machine",
+            )
+            val crewOwner = UUID.randomUUID()
+            val crew = crews.create(crewOwner, "Machine Owners")
+            check(run, crews.invite(crewOwner, playerUuid), "wrench owner test invite")
+            check(run, crews.accept(playerUuid, crew.id) != null, "wrench owner test join")
+            machineOwner.placerUuid = crewOwner
             val takeApart =
                 MachineActions.useWrench(
                     run.world,
@@ -1256,6 +1282,11 @@ object CraftorySelfTest {
                     crews,
                     store,
                 )
+            check(
+                run,
+                takeApart is WrenchActionResult.Learned && machineOwner.placerUuid in crews.crewOf(playerUuid).members,
+                "wrench permits same-crew machine owner",
+            )
             check(
                 run,
                 takeApart is WrenchActionResult.Learned && takeApart.pageGranted && takeApart.scrapsDropped &&

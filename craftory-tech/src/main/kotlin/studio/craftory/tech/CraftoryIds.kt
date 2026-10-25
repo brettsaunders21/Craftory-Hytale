@@ -27,10 +27,12 @@ object CraftoryIds {
     const val OVEN_COMPONENT = "CraftoryOvenPower"
     const val ANCHOR_COMPONENT = "CraftoryWakebellAnchor"
     const val GNASHER_COMPONENT = "CraftoryGnasherState"
+    const val MACHINE_OWNER_COMPONENT = "CraftoryMachineOwner"
     const val HUD_STATE_COMPONENT = "CraftoryEnergyHudState"
     const val CANISTER_PAGE = "Craftory_Canister"
     const val MACHINE_HUD = "Craftory_EnergyHud"
     const val BLOCK_USE_INTERACTION = "Craftory_BlockUse"
+    const val WRENCH_USE_INTERACTION = "Craftory_WrenchUse"
     const val RECEIPT_USE_INTERACTION = "Craftory_ReceiptUse"
     const val NOTEBOOK_PAGE = "Craftory_Tinkers_Notebook"
 }

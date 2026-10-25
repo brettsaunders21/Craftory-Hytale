@@ -35,6 +35,7 @@
           "Stored": 0,
           "StoreRank": -1
         },
+        "CraftoryMachineOwner": {},
         "CraftoryGnasherState": {
           "OreQueue": "",
           "ProgressPulses": 0,

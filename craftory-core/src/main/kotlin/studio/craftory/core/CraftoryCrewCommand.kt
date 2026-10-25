@@ -71,7 +71,7 @@ internal class CraftoryCrewCommand(
             return
         }
         val crew = crews.crewOf(player.uuid)
-        if (!crews.invite(crew, target.uuid)) {
+        if (!crews.invite(player.uuid, target.uuid)) {
             context.sendMessage(Message.translation("server.craftory.crew.invite-failed"))
             return
         }

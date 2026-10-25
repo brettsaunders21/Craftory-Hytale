@@ -21,6 +21,7 @@ import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CanisterPageRefreshSystem
 import studio.craftory.tech.machine.CraftoryBlockUseInteraction
 import studio.craftory.tech.machine.CraftorySelfTest
+import studio.craftory.tech.machine.CraftoryWrenchUseInteraction
 import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.EnergyHudState
@@ -29,6 +30,8 @@ import studio.craftory.tech.machine.GnasherSystem
 import studio.craftory.tech.machine.JunkPowerHudSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
 import studio.craftory.tech.machine.MachineClockLifecycle
+import studio.craftory.tech.machine.MachineOwner
+import studio.craftory.tech.machine.MachineOwnerPlacementSystem
 import studio.craftory.tech.machine.OvenPower
 import studio.craftory.tech.machine.ReceiptUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
@@ -103,6 +106,12 @@ class CraftoryTechPlugin(
                 CraftoryIds.ANCHOR_COMPONENT,
                 AnchorState.CODEC,
             )
+        MachineOwner.type =
+            chunkRegistry.registerComponent(
+                MachineOwner::class.java,
+                CraftoryIds.MACHINE_OWNER_COMPONENT,
+                MachineOwner.CODEC,
+            )
         CraftoryCore.registerInspectableComponent(CraftoryIds.CRANK_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, CrankState.type)
         }
@@ -138,6 +147,7 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(JunkPowerHudSystem())
         entityRegistry.registerSystem(CanisterPageRefreshSystem())
         entityRegistry.registerSystem(JunkPowerKickSystem())
+        entityRegistry.registerSystem(MachineOwnerPlacementSystem())
         OpenCustomUIInteraction.registerBlockEntityCustomPage(
             this,
             CanisterPage::class.java,
@@ -156,6 +166,10 @@ class CraftoryTechPlugin(
                 CraftoryIds.BLOCK_USE_INTERACTION,
                 CraftoryBlockUseInteraction::class.java,
                 CraftoryBlockUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.WRENCH_USE_INTERACTION,
+                CraftoryWrenchUseInteraction::class.java,
+                CraftoryWrenchUseInteraction.CODEC,
             ).register(
                 CraftoryIds.RECEIPT_USE_INTERACTION,
                 ReceiptUseInteraction::class.java,

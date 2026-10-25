@@ -104,6 +104,7 @@
           "Stored": 0,
           "StoreRank": -1
         },
+        "CraftoryMachineOwner": {},
         "CraftoryBurner": {
           "BurnTicks": 0,
           "Burning": false

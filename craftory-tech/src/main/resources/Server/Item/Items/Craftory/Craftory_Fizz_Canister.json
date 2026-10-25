@@ -63,7 +63,8 @@
           "TypeId": "craftory:fizz_canister",
           "Stored": 0,
           "StoreRank": -1
-        }
+        },
+        "CraftoryMachineOwner": {}
       }
     },
     "Interactions": {

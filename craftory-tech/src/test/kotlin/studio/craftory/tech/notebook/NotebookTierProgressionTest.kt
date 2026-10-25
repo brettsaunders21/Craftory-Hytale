@@ -32,7 +32,7 @@ class NotebookTierProgressionTest {
 
             assertEquals(1, service.tierOf(owner))
             assertEquals(1, service.tierOf(joiningPlayer))
-            assertTrue(service.invite(crew, joiningPlayer))
+            assertTrue(service.invite(owner, joiningPlayer))
             assertEquals(crew.id, service.accept(joiningPlayer, crew.id)?.id)
             assertEquals(2, service.tierOf(owner))
         } finally {

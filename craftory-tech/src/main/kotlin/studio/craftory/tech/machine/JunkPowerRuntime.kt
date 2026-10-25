@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.ComponentAccessor
+import com.hypixel.hytale.component.Holder
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.dependency.Dependency
@@ -24,8 +25,10 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.entity.InteractionContext
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent
+import com.hypixel.hytale.server.core.inventory.InventoryComponent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction
@@ -461,39 +464,6 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val store = world.chunkStore.store
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val tick = world.tick
-        if (heldItem?.itemId == CraftoryIds.TINKERS_WRENCH) {
-            val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
-            val message =
-                when (val result = MachineActions.useWrench(world, ref, position, player, store)) {
-                    WrenchActionResult.NotMachine -> {
-                        Message.translation("server.craftory.wrench.not-machine")
-                    }
-
-                    WrenchActionResult.RemovalFailed -> {
-                        Message.translation("server.craftory.wrench.failed")
-                    }
-
-                    is WrenchActionResult.Learned -> {
-                        Message
-                            .translation("server.craftory.wrench.learned")
-                            .param("machine", Message.translation(result.machineNameKey))
-                            .param("page", Message.translation(result.page.nameKey))
-                    }
-
-                    is WrenchActionResult.Packed -> {
-                        Message
-                            .translation(
-                                if (result.itemDropped) {
-                                    "server.craftory.wrench.packed"
-                                } else {
-                                    "server.craftory.wrench.pack-failed"
-                                },
-                            ).param("machine", Message.translation(result.machineNameKey))
-                    }
-                }
-            player.sendMessage(message)
-            return
-        }
         val anchor = store.getComponent(ref, AnchorState.type)
         if (anchor != null) {
             val message =
@@ -585,6 +555,97 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
     }
 }
 
+class CraftoryWrenchUseInteraction : SimpleBlockInteraction() {
+    @Suppress("CyclomaticComplexMethod")
+    override fun interactWithBlock(
+        world: World,
+        commandBuffer: CommandBuffer<EntityStore>,
+        type: InteractionType,
+        context: InteractionContext,
+        heldItem: ItemStack?,
+        position: Vector3i,
+        cooldownHandler: CooldownHandler,
+    ) {
+        if (heldItem?.itemId != CraftoryIds.TINKERS_WRENCH) return
+        val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
+        val result = MachineActions.useWrench(world, ref, position, player, world.chunkStore.store)
+        val message =
+            when (result) {
+                WrenchActionResult.NotMachine -> {
+                    Message.translation("server.craftory.wrench.not-machine")
+                }
+
+                WrenchActionResult.RemovalFailed -> {
+                    Message.translation("server.craftory.wrench.failed")
+                }
+
+                WrenchActionResult.ForeignCrew -> {
+                    Message.translation("server.craftory.wrench.foreign-crew")
+                }
+
+                WrenchActionResult.HasContents -> {
+                    Message.translation("server.craftory.wrench.empty-first")
+                }
+
+                is WrenchActionResult.Learned -> {
+                    Message
+                        .translation(
+                            if (result.burnTimeLost) {
+                                "server.craftory.wrench.learned-burn-lost"
+                            } else {
+                                "server.craftory.wrench.learned"
+                            },
+                        ).param("machine", Message.translation(result.machineNameKey))
+                        .param("page", Message.translation(result.page.nameKey))
+                }
+
+                is WrenchActionResult.Packed -> {
+                    Message
+                        .translation(
+                            when {
+                                !result.itemDropped && result.burnTimeLost -> {
+                                    "server.craftory.wrench.pack-failed-burn-lost"
+                                }
+
+                                !result.itemDropped -> {
+                                    "server.craftory.wrench.pack-failed"
+                                }
+
+                                result.burnTimeLost -> {
+                                    "server.craftory.wrench.packed-burn-lost"
+                                }
+
+                                else -> {
+                                    "server.craftory.wrench.packed"
+                                }
+                            },
+                        ).param("machine", Message.translation(result.machineNameKey))
+                }
+            }
+        player.sendMessage(message)
+    }
+
+    override fun simulateInteractWithBlock(
+        type: InteractionType,
+        context: InteractionContext,
+        heldItem: ItemStack?,
+        world: World,
+        position: Vector3i,
+    ) = Unit
+
+    companion object {
+        @JvmField
+        val CODEC =
+            com.hypixel.hytale.codec.builder.BuilderCodec
+                .builder(
+                    CraftoryWrenchUseInteraction::class.java,
+                    ::CraftoryWrenchUseInteraction,
+                    SimpleBlockInteraction.CODEC,
+                ).build()
+    }
+}
+
 @Suppress("TooManyFunctions")
 internal object MachineActions {
     @Suppress("NestedBlockDepth")
@@ -626,11 +687,96 @@ internal object MachineActions {
         val member = store.getComponent(blockRef, EnergyMember.type) ?: return WrenchActionResult.NotMachine
         val page = NotebookPages.forMachineType(member.typeId) ?: return WrenchActionResult.NotMachine
         val itemId = machineItemId(member.typeId) ?: return WrenchActionResult.NotMachine
+        val ownerUuid = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
+        if (!mayUseWrench(ownerUuid, playerUuid, playerRef, crews)) return WrenchActionResult.ForeignCrew
         val blockState =
             store.getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType())
                 ?: return WrenchActionResult.NotMachine
         val blockType = BlockType.fromString(itemId) ?: return WrenchActionResult.NotMachine
         val hasPage = crews.hasKnowledge(playerUuid, page.id)
+        if (hasNonEmptyMachineContents(blockRef, store)) {
+            return WrenchActionResult.HasContents
+        }
+        val dropHolders =
+            createWrenchDropHolders(world, position, blockRef, itemId, hasPage, store)
+                ?: return WrenchActionResult.RemovalFailed
+        val burnTimeLost = store.getComponent(blockRef, BurnerState.type)?.burnTicks?.let { it > 0 } ?: false
+        if (!removeWrenchedBlock(world, blockState, blockType, position, playerRef)) {
+            return WrenchActionResult.RemovalFailed
+        }
+
+        if (hasPage) {
+            val itemDropped = spawnDrops(world, position, dropHolders, itemId, playerRef)
+            return WrenchActionResult.Packed("server.items.$itemId.name", itemDropped, burnTimeLost)
+        }
+        val scrapsDropped = spawnDrops(world, position, dropHolders, null, playerRef)
+        val pageGranted = crews.grantKnowledge(playerUuid, page.id)
+        return WrenchActionResult.Learned("server.items.$itemId.name", page, scrapsDropped, pageGranted, burnTimeLost)
+    }
+
+    private fun mayUseWrench(
+        ownerUuid: java.util.UUID?,
+        playerUuid: java.util.UUID,
+        playerRef: PlayerRef?,
+        crews: CrewService,
+    ): Boolean {
+        if (ownerUuid == null || ownerUuid == playerUuid) return true
+        if (playerRef?.hasPermission("hytale.command.craftory.wrench.any") == true) return true
+        return ownerUuid in crews.crewOf(playerUuid).members
+    }
+
+    private fun hasNonEmptyMachineContents(
+        blockRef: Ref<ChunkStore>,
+        store: Store<ChunkStore>,
+    ): Boolean {
+        val processingBench = store.getComponent(blockRef, ProcessingBenchBlock.getComponentType())
+        val itemContainerBlock = store.getComponent(blockRef, ItemContainerBlock.getComponentType())
+        val itemContainer = itemContainerBlock?.itemContainer
+        val containers =
+            listOfNotNull(
+                processingBench?.inputContainer,
+                processingBench?.fuelContainer,
+                processingBench?.outputContainer,
+                itemContainer,
+            )
+        if (containers.any { !it.isEmpty }) return true
+        val bench = store.getComponent(blockRef, BenchBlock.getComponentType()) ?: return false
+        return bench.upgradeItems?.any { it?.isEmpty == false } == true
+    }
+
+    private fun createWrenchDropHolders(
+        world: World,
+        position: Vector3i,
+        blockRef: Ref<ChunkStore>,
+        itemId: String,
+        hasPage: Boolean,
+        store: Store<ChunkStore>,
+    ): List<Holder<EntityStore>>? {
+        val firstDropId = if (hasPage) itemId else "Ingredient_Scraps"
+        val firstDropQuantity = if (hasPage) 1 else WRENCH_SCRAP_QUANTITY
+        val drops = mutableListOf(firstDropId to firstDropQuantity)
+        val gnasher = store.getComponent(blockRef, GnasherState.type)
+        val queuedOres =
+            gnasher
+                ?.oreQueue
+                ?.split(',')
+                ?.filter(String::isNotBlank)
+                .orEmpty()
+        queuedOres.forEach { drops.add(it to 1) }
+        val holders = ArrayList<Holder<EntityStore>>(drops.size)
+        for ((dropId, quantity) in drops) {
+            holders.add(createDropHolder(world, position, dropId, quantity) ?: return null)
+        }
+        return holders
+    }
+
+    private fun removeWrenchedBlock(
+        world: World,
+        blockState: BlockModule.BlockStateInfo,
+        blockType: BlockType,
+        position: Vector3i,
+        playerRef: PlayerRef?,
+    ): Boolean {
         val removed =
             BlockOperations.setBlock(
                 world.chunkStore,
@@ -644,8 +790,7 @@ internal object MachineActions {
                 0,
                 SetBlockSettings.NO_DROP_ITEMS,
             )
-        if (!removed) return WrenchActionResult.RemovalFailed
-
+        if (!removed) return false
         BlockOperations.spawnBlockParticles(
             world.chunkStore,
             BlockType.getAssetMap().getIndex(blockType.id),
@@ -659,14 +804,7 @@ internal object MachineActions {
         if (soundIndex > 0 && playerRef != null) {
             SoundUtil.playSoundEvent2dToPlayer(playerRef, soundIndex, SoundCategory.SFX)
         }
-
-        if (hasPage) {
-            val itemDropped = dropItemStack(world, position, itemId, 1)
-            return WrenchActionResult.Packed("server.items.$itemId.name", itemDropped)
-        }
-        val scrapsDropped = dropItemStack(world, position, "Ingredient_Scraps", WRENCH_SCRAP_QUANTITY)
-        val pageGranted = crews.grantKnowledge(playerUuid, page.id)
-        return WrenchActionResult.Learned("server.items.$itemId.name", page, scrapsDropped, pageGranted)
+        return true
     }
 
     private fun machineItemId(typeId: String): String? =
@@ -680,25 +818,56 @@ internal object MachineActions {
             else -> null
         }
 
-    private fun dropItemStack(
+    private fun createDropHolder(
         world: World,
         position: Vector3i,
         itemId: String,
         quantity: Int,
-    ): Boolean {
+    ): Holder<EntityStore>? {
         val store = world.entityStore.store
-        val holder =
-            ItemComponent.generateItemDrop(
-                store,
-                ItemStack(itemId, quantity),
-                Vector3d(position.x + 0.5, position.y + 1.0, position.z + 0.5),
-                Rotation3f.IDENTITY,
-                0f,
-                0f,
-                0f,
-            ) ?: return false
-        val ref = store.addEntity(holder, AddReason.SPAWN) ?: return false
-        return ref.isValid
+        return ItemComponent.generateItemDrop(
+            store,
+            ItemStack(itemId, quantity),
+            Vector3d(position.x + 0.5, position.y + 1.0, position.z + 0.5),
+            Rotation3f.IDENTITY,
+            0f,
+            0f,
+            0f,
+        )
+    }
+
+    private fun spawnDrops(
+        world: World,
+        position: Vector3i,
+        holders: List<Holder<EntityStore>>,
+        packedItemId: String?,
+        playerRef: PlayerRef?,
+    ): Boolean {
+        val entityStore = world.entityStore.store
+        var packedItemSpawned = packedItemId == null
+        holders.forEachIndexed { index, holder ->
+            val ref = entityStore.addEntity(holder, AddReason.SPAWN)
+            if (ref?.isValid == true) {
+                if (index == 0 && packedItemId != null) packedItemSpawned = true
+            } else if (index == 0 && packedItemId != null) {
+                val inventory =
+                    playerRef?.let {
+                        val playerEntity = it.reference ?: return@let null
+                        InventoryComponent.getCombined(
+                            world.entityStore.store,
+                            playerEntity,
+                            *InventoryComponent.HOTBAR_STORAGE_BACKPACK,
+                        )
+                    }
+                val transaction = inventory?.addItemStack(ItemStack(packedItemId, 1))
+                if (transaction?.succeeded() == true) {
+                    packedItemSpawned = true
+                } else {
+                    LOGGER.at(Level.SEVERE).log("Unable to return packed item %s at %s", packedItemId, position)
+                }
+            }
+        }
+        return packedItemSpawned
     }
 
     fun pulse(
@@ -838,16 +1007,22 @@ internal sealed interface WrenchActionResult {
 
     data object RemovalFailed : WrenchActionResult
 
+    data object ForeignCrew : WrenchActionResult
+
+    data object HasContents : WrenchActionResult
+
     data class Learned(
         val machineNameKey: String,
         val page: NotebookPage,
         val scrapsDropped: Boolean,
         val pageGranted: Boolean,
+        val burnTimeLost: Boolean,
     ) : WrenchActionResult
 
     data class Packed(
         val machineNameKey: String,
         val itemDropped: Boolean,
+        val burnTimeLost: Boolean,
     ) : WrenchActionResult
 }
 

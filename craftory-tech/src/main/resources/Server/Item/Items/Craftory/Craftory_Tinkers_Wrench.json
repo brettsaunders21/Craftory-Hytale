@@ -8,10 +8,10 @@
   "PlayerAnimationsId": "Item",
   "Quality": "Developer",
   "Interactions": {
-    "Use": {
+    "Secondary": {
       "Interactions": [
         {
-          "Type": "Craftory_BlockUse"
+          "Type": "Craftory_WrenchUse"
         }
       ]
     }

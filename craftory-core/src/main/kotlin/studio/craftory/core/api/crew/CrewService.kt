@@ -122,13 +122,13 @@ class CrewService private constructor(
     }
 
     fun invite(
-        crew: Crew,
+        inviter: UUID,
         target: UUID,
     ): Boolean =
         synchronized(lock) {
             ensureOpen()
-            val current = crews[crew.id] ?: return@synchronized false
-            if (current.solo || target in current.members) return@synchronized false
+            val current = playerCrews[inviter]?.let(crews::get) ?: return@synchronized false
+            if (current.solo || current.owner != inviter || target in current.members) return@synchronized false
             if (!current.pendingInvites.add(target)) return@synchronized false
             markDirtyLocked()
             true

@@ -26,8 +26,8 @@ class CrewServiceTest {
             assertTrue(service.grantKnowledge(member, "craftory:page/crank"))
             val crew = service.create(owner, "The Riveters")
             assertTrue(service.grantKnowledge(owner, "craftory:page/burner"))
-            assertTrue(service.invite(crew, member))
-            assertFalse(service.invite(crew, member))
+            assertTrue(service.invite(owner, member))
+            assertFalse(service.invite(owner, member))
             assertEquals(crew.id, service.accept(member, crew.id)?.id)
             assertTrue(service.hasKnowledge(member, "craftory:page/crank"))
             assertTrue(service.hasKnowledge(member, "craftory:page/burner"))
@@ -38,13 +38,31 @@ class CrewServiceTest {
             assertNotEquals(crew.id, soloAfterLeaving.id)
             assertEquals(setOf("craftory:page/crank", "craftory:page/burner"), soloAfterLeaving.knowledge)
 
-            assertTrue(service.invite(crew, kicked))
+            assertTrue(service.invite(owner, kicked))
             assertEquals(crew.id, service.accept(kicked, crew.id)?.id)
             assertTrue(service.kick(owner, kicked))
             assertTrue(service.crewOf(kicked).solo)
             assertTrue(service.hasKnowledge(kicked, "craftory:page/burner"))
             assertFalse(service.kick(member, owner))
             assertNull(service.accept(UUID.randomUUID(), crew.id))
+        } finally {
+            service.close()
+        }
+    }
+
+    @Test
+    fun `only crew owner may invite`() {
+        val service = CrewService(temporaryDirectory.resolve("owner-invites.json"), 60_000)
+        val owner = UUID.randomUUID()
+        val member = UUID.randomUUID()
+        val target = UUID.randomUUID()
+        try {
+            val crew = service.create(owner, "Owner Invitations")
+            assertTrue(service.invite(owner, member))
+            assertEquals(crew.id, service.accept(member, crew.id)?.id)
+
+            assertFalse(service.invite(member, target))
+            assertTrue(service.invite(owner, target))
         } finally {
             service.close()
         }
@@ -62,12 +80,12 @@ class CrewServiceTest {
 
             val lowerTierSolo = service.crewOf(lowerTierMember)
             service.setTier(lowerTierSolo.id, 2)
-            assertTrue(service.invite(crew, lowerTierMember))
+            assertTrue(service.invite(owner, lowerTierMember))
             assertEquals(3, service.accept(lowerTierMember, crew.id)?.tier)
 
             val higherTierSolo = service.crewOf(higherTierMember)
             service.setTier(higherTierSolo.id, 4)
-            assertTrue(service.invite(crew, higherTierMember))
+            assertTrue(service.invite(owner, higherTierMember))
             assertEquals(4, service.accept(higherTierMember, crew.id)?.tier)
         } finally {
             service.close()
@@ -82,9 +100,9 @@ class CrewServiceTest {
         val kicked = UUID.randomUUID()
         try {
             val crew = service.create(owner, "Tiered Crew")
-            assertTrue(service.invite(crew, leaving))
+            assertTrue(service.invite(owner, leaving))
             assertEquals(crew.id, service.accept(leaving, crew.id)?.id)
-            assertTrue(service.invite(crew, kicked))
+            assertTrue(service.invite(owner, kicked))
             assertEquals(crew.id, service.accept(kicked, crew.id)?.id)
             service.setTier(crew.id, 4)
 
@@ -110,17 +128,17 @@ class CrewServiceTest {
             assertEquals(listOf(crew.id), events.map(Crew::id))
 
             events.clear()
-            assertTrue(service.invite(crew, joining))
+            assertTrue(service.invite(owner, joining))
             assertEquals(crew.id, service.accept(joining, crew.id)?.id)
             assertEquals(listOf(crew.id), events.map(Crew::id))
 
-            assertTrue(service.invite(crew, leaving))
+            assertTrue(service.invite(owner, leaving))
             assertEquals(crew.id, service.accept(leaving, crew.id)?.id)
             events.clear()
             val departing = service.leave(leaving)
             assertEquals(listOf(departing.id, crew.id), events.map(Crew::id))
 
-            assertTrue(service.invite(crew, kicked))
+            assertTrue(service.invite(owner, kicked))
             assertEquals(crew.id, service.accept(kicked, crew.id)?.id)
             events.clear()
             assertTrue(service.kick(owner, kicked))
@@ -154,7 +172,7 @@ class CrewServiceTest {
             try {
                 val created = first.create(owner, "Round Trip")
                 first.grantKnowledge(owner, "craftory:page/oven")
-                first.invite(created, member)
+                first.invite(owner, member)
                 first.accept(member, created.id)
                 first.setTier(created.id, 2)
                 first.crewOf(owner)
