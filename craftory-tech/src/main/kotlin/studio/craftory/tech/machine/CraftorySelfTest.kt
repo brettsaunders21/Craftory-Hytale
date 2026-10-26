@@ -2124,6 +2124,7 @@ object CraftorySelfTest {
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
+        var claimedBlockRef: Ref<ChunkStore>? = null
         try {
             val section =
                 store.getComponent(run.sectionRef, BlockComponentSection.getComponentType())
@@ -2144,6 +2145,7 @@ object CraftorySelfTest {
                     SCRAP_RUSH_TEST.y,
                     SCRAP_RUSH_TEST.z,
                 ) ?: error("Scrap Rush test machine is missing")
+            claimedBlockRef = blockRef
             run.scrapRushProbePending = true
             ScrapRushProbeSession(
                 run,
@@ -2154,6 +2156,7 @@ object CraftorySelfTest {
                 check(run, passed, name, detail)
             }.begin()
         } catch (failure: Exception) {
+            claimedBlockRef?.let { ScrapRushSystem.releaseSelfTestBlock(it) }
             run.scrapRushProbePending = false
             check(run, false, "Scrap Rush setup", failure.message ?: failure.javaClass.simpleName)
         }
@@ -2623,7 +2626,11 @@ object CraftorySelfTest {
                     "floors=$floorsRestored raid=$raidCleared errors=$errors",
                 )
             } finally {
-                releaseResources()
+                try {
+                    releaseResources()
+                } finally {
+                    ScrapRushSystem.releaseSelfTestBlock(blockRef)
+                }
             }
         }
 

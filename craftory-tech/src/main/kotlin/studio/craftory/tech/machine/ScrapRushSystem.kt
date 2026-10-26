@@ -43,6 +43,7 @@ import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.notebook.NotebookPages
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.function.BiConsumer
 
@@ -118,6 +119,7 @@ internal class ScrapRushSystem(
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val blockRef = chunk.getReferenceTo(index)
+        if (!directSpawnForSelfTest && blockRef in selfTestBlocks) return
         val raid = commandBuffer.getComponent(blockRef, ScrapRushRaid.type)
         if (raid != null) {
             processRaid(
@@ -252,6 +254,7 @@ internal class ScrapRushSystem(
         world: World,
         commandBuffer: CommandBuffer<ChunkStore>,
     ): Boolean {
+        selfTestBlocks.add(blockRef)
         lastStartDiagnostic = "entered test helper"
         val blockState =
             commandBuffer.getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType())
@@ -623,6 +626,12 @@ internal class ScrapRushSystem(
     }
 
     companion object {
+        private val selfTestBlocks: MutableSet<Ref<ChunkStore>> = ConcurrentHashMap.newKeySet()
+
+        internal fun releaseSelfTestBlock(ref: Ref<ChunkStore>) {
+            selfTestBlocks.remove(ref)
+        }
+
         private const val EVALUATION_TICKS = 100L
         private const val TICKS_PER_SECOND = 20
         private const val STEAL_DISTANCE_SQUARED = 4.0
