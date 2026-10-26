@@ -108,11 +108,18 @@ def export_particles(manifest: list[str]) -> None:
         img.save(written(manifest, d / f"{name}.png"), optimize=True)
 
 
+def export_beams(manifest: list[str]) -> None:
+    d = COMMON / "Beams"
+    d.mkdir(parents=True, exist_ok=True)
+    particles.tether_beam().save(written(manifest, d / "Craftory_Tether_Cyan.png"), optimize=True)
+
+
 def main() -> None:
     manifest: list[str] = []
     export_blocks(manifest)
     export_items(manifest)
     export_particles(manifest)
+    export_beams(manifest)
     grizzlecog.export(manifest, COMMON, build)
     out = HERE / "manifest.txt"
     out.write_text("\n".join(sorted(set(manifest))) + "\n")

@@ -1,3 +1,4 @@
+Common/Beams/Craftory_Tether_Cyan.png
 Common/Blocks/Craftory/Boiler_Tank/Boiler_Tank.blockymodel
 Common/Blocks/Craftory/Boiler_Tank/Boiler_Tank_Texture.png
 Common/Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack.blockymodel

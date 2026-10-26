@@ -75,6 +75,20 @@ def mote(seed=3) -> Image.Image:
     return _img(a)
 
 
+def tether_beam() -> Image.Image:
+    yy, xx = np.mgrid[0:32, 0:32] + 0.5
+    distance = np.abs(xx - 16) / 16
+    glow = np.clip(1 - distance, 0, 1) ** 1.8
+    pulse = 0.88 + 0.12 * np.cos((yy - 16) * math.pi / 8)
+    alpha = np.clip(glow * pulse, 0, 1)
+    image = np.zeros((32, 32, 4), np.float32)
+    image[..., 0] = 0.12 * glow
+    image[..., 1] = 0.72 + 0.23 * glow
+    image[..., 2] = 0.82 + 0.18 * glow
+    image[..., 3] = alpha
+    return _img(image)
+
+
 def textures() -> dict[str, Image.Image]:
     return {
         "Fizz_Spark": spark(),

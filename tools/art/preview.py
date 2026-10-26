@@ -110,9 +110,21 @@ def grizzlecog_row(assets_zip: Path | None):
 def icon_rows():
     out = []
     for ip in sorted((COMMON / "Icons" / "ItemsGenerated" / "Craftory").glob("*.png")) + sorted(
-            (COMMON / "Particles" / "Craftory").glob("*.png")):
+            (COMMON / "Particles" / "Craftory").glob("*.png")) + sorted((COMMON / "Beams").glob("*.png")):
         im = Image.open(ip).convert("RGBA")
         out.append((ip.name, im))
+    for temperament, color in (
+            ("SPARK", "#5ff3ff"),
+            ("EMBER", "#ff8a2b"),
+            ("TIDE", "#3f8cff"),
+            ("GROWTH", "#5fd35a"),
+            ("STONE", "#a58c6a"),
+            ("GALE", "#d6f2ff"),
+            ("CLANK", "#8bff3a"),
+            ("HOLLOW", "#6a2a9a"),
+    ):
+        swatch = Image.new("RGBA", (64, 64), color)
+        out.append((f"Well tint {temperament} {color}", swatch))
     return out
 
 
