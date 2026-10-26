@@ -36,10 +36,8 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         energy.bind(store)
         val converter = CraftoryCore.converterType(member.typeId)
         if (converter != null) {
-            val outputId = energy.converterOutputId(id)
             val neighbours = findNeighbours(store, position, id, type.linkFaces, converter, energy)
             energy.addConverter(id, converter, neighbours[0], neighbours[1], member, ref)
-            check(energy.converterOutputId(id) == outputId)
         } else {
             val neighbours = findNeighbours(store, position, id, type.linkFaces, null, energy)
             energy.addMember(id, type.spec, neighbours[0], member, ref)
@@ -60,7 +58,7 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         val id = BlockPos.pack(position.x, position.y, position.z)
         if (CraftoryCore.converterType(member.typeId) != null) {
             energy.removeConverter(id, member, blockState, reason, commandBuffer)
-        } else if (energy.contains(id)) {
+        } else if (energy.containsPhysical(id)) {
             energy.removeMember(id, member, blockState, reason, commandBuffer)
         }
     }
@@ -87,6 +85,7 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
     private data class LinkNode(
         val id: Long,
         val faces: Int,
+        val converterOutput: Boolean = false,
     )
 
     private fun findNeighbours(
@@ -103,7 +102,7 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
             } else {
                 arrayOf(
                     LinkNode(positionId, converter.inputFaces),
-                    LinkNode(energy.converterOutputId(positionId), converter.outputFaces),
+                    LinkNode(energy.converterOutputId(positionId), converter.outputFaces, converterOutput = true),
                 )
             }
         val neighbours = Array(ownNodes.size) { ArrayList<Long>(6) }
@@ -126,13 +125,21 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
                 } else {
                     arrayOf(
                         LinkNode(neighbourPositionId, neighbourConverter.inputFaces),
-                        LinkNode(energy.converterOutputId(neighbourPositionId), neighbourConverter.outputFaces),
+                        LinkNode(
+                            energy.converterOutputId(neighbourPositionId),
+                            neighbourConverter.outputFaces,
+                            converterOutput = true,
+                        ),
                     )
                 }
             ownNodes.forEachIndexed { ownIndex, ownNode ->
                 otherNodes.forEach { otherNode ->
                     if (EnergyFaces.connects(ownNode.faces, otherNode.faces, direction.face) &&
-                        energy.contains(otherNode.id)
+                        if (otherNode.converterOutput) {
+                            energy.containsConverterOutput(otherNode.id)
+                        } else {
+                            energy.containsPhysical(otherNode.id)
+                        }
                     ) {
                         neighbours[ownIndex].add(otherNode.id)
                     }

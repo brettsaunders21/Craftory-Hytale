@@ -54,6 +54,34 @@ class CoreEnergyTest {
     }
 
     @Test
+    fun `converter output ids flip the packed y sign bit and round trip`() {
+        val xs = listOf(-(1 shl 25), (1 shl 25) - 1)
+        val zs = listOf(-(1 shl 25), (1 shl 25) - 1)
+        for (y in listOf(-2048, -1, 0, 319, 2047)) {
+            for (x in xs) {
+                for (z in zs) {
+                    val input = BlockPos.pack(x, y, z)
+                    val output = EnergyMemberIds.converterOutput(input)
+                    assertEquals(input, EnergyMemberIds.converterOutput(output))
+                    assertNotEquals(input, output)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `converter id collisions refuse both physical and output nodes`() {
+        val converterInput = BlockPos.pack(19, -2048, -7)
+        val physicalMember = BlockPos.pack(19, 0, -7)
+        val outputId = EnergyMemberIds.converterOutput(converterInput)
+        assertEquals(physicalMember, outputId)
+        assertFalse(EnergyMemberIds.allowConverterOutput(outputIdTaken = true))
+        assertFalse(EnergyMemberIds.allowPhysicalNode(existingConverterOutput = true))
+        assertTrue(EnergyMemberIds.allowPhysicalNode(existingConverterOutput = false))
+        assertTrue(EnergyMemberIds.allowConverterOutput(outputIdTaken = false))
+    }
+
+    @Test
     fun `energy type registry rejects duplicates`() {
         val spec = MemberSpec(MemberSpec.PRODUCER, 0, 0, 10, 0, 5)
         val id = "test:core_energy_duplicate"

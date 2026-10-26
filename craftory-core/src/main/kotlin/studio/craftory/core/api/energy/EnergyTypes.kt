@@ -68,5 +68,11 @@ object EnergyFaces {
 }
 
 internal object EnergyMemberIds {
-    fun converterOutput(positionId: Long): Long = positionId xor Long.MIN_VALUE
+    const val CONVERTER_Y_MASK = 0x800L shl 26
+
+    fun converterOutput(positionId: Long): Long = positionId xor CONVERTER_Y_MASK
+
+    fun allowPhysicalNode(existingConverterOutput: Boolean): Boolean = !existingConverterOutput
+
+    fun allowConverterOutput(outputIdTaken: Boolean): Boolean = !outputIdTaken
 }
