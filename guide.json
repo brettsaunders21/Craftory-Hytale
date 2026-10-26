@@ -1,1437 +1,1573 @@
 {
-"items": [
-{
-"id": "Craftory_Fizz_Canister",
-"name": "Fizz canister",
-"tier": 0,
-"category": "machine",
-"obtain": [
-"Grizzlecog: 20 Scrap",
-"Workbench (Tinkering): 12 Scrap + 4 Copper Bar"
-],
-"does": "Keeps fizz contained; the language description says it prevents spilling. Its machine component is a Fizz canister energy member.",
-"use": [
-"Place it as a machine and connect it to a Fizz energy network."
-],
-"tips": [
-"The active-area rules apply to machine processing."
-],
-"icon": "Fizz_Canister"
-},
-{
-"id": "Craftory_Crank_A_Fizz",
-"name": "Squeak-crank",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Grizzlecog: 16 Scrap",
-"Workbench (Tinkering): 12 Scrap + 4 Stick"
-],
-"does": "Turning the crank produces Fizz; the energy code registers it as a crank machine.",
-"use": [
-"Place it, then use the crank interaction to turn it; connect its output to a Fizz network."
-],
-"tips": [
-"Only a running machine produces energy."
-],
-"icon": "Crank_A_Fizz"
-},
-{
-"id": "Craftory_Riftmoth_Wing",
-"name": "Riftmoth Wing",
-"tier": 0,
-"category": "material",
-"obtain": [
-"Drop: Riftmoth, 1"
-],
-"does": "A Riftmoth drop item; its language description calls it brittle and void-touched.",
-"use": [
-"Use it only in a recipe or system that accepts this item; no such consumer is identified in the inspected sources."
-],
-"tips": [
-"The Riftmoth drop definition gives one wing."
-],
-"icon": null
-},
-{
-"id": "Craftory_Scrap_Plating",
-"name": "Scrap plating",
-"tier": 0,
-"category": "material",
-"obtain": [
-"Workbench (Crafting): 4 Scrap"
-],
-"does": "A crafted plating material. Harmony recognizes Scrap Plating as a matching block for a Well whose taste is Scrap.",
-"use": [
-"Place the plating block near a Glimmerwell Cradle to contribute to harmony."
-],
-"tips": [
-"Harmony checks a 9-by-9-by-9 area around the Cradle, excluding the Cradle and the Well above it."
-],
-"icon": "Scrap_Plating"
-},
-{
-"id": "Craftory_Glimmer_Dust",
-"name": "Glimmer Dust",
-"tier": 0,
-"category": "material",
-"obtain": [
-"Drop: Glimmer Wisp, 1-2"
-],
-"does": "A Glimmer Wisp drop; the language description identifies it as light shed by a wisp.",
-"use": [
-"No item-specific use action is defined in the inspected sources."
-],
-"tips": [
-"The drop definition allows one or two Dust."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Gold",
-"name": "Gold Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The item has a furnace processing recipe that consumes one Gold Grit and outputs one Ingredient_Bar_Gold.",
-"use": [
-"Put one Gold Grit into the furnace recipe to produce one Gold Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Muffler",
-"name": "Muffler",
-"tier": 0,
-"category": "bodge",
-"obtain": [
-"Grizzlecog: 6 Scrap"
-],
-"does": "When installed as a bodge, it suppresses machine rattling.",
-"use": [
-"Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
-],
-"tips": [
-"Machines support at most two bodges."
-],
-"icon": "Muffler"
-},
-{
-"id": "Craftory_Gob_Jar",
-"name": "Gob-Jar",
-"tier": 0,
-"category": "well",
-"obtain": [
-"Grizzlecog: 6 Scrap",
-"Drop: Goblin Poacher (weighted drop entry; weight 10)"
-],
-"does": "An empty jar used to capture a Tethered Glimmerwell. Capture requires three presses, with 0.2-2 seconds between consecutive presses.",
-"use": [
-"With the empty jar held, interact with a Tethered Well three times; keep each interval between 4 and 2 seconds."
-],
-"tips": [
-"The press timing is interval-based, not aligned to a Well pulse."
-],
-"icon": null
-},
-{
-"id": "Craftory_Wakebell_Anchor",
-"name": "Wakebell Anchor",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Workbench (Crafting): 6 Iron Bar + 1 Fizz Canister"
-],
-"does": "A fueled Anchor keeps nearby chunks loaded; its default maximum charge is 240 minutes. The Anchor refreshes a 3-by-3 chunk area around itself.",
-"use": [
-"Place the Anchor and insert charge/fuel through its configured interaction; keep it fueled to maintain chunk loading."
-],
-"tips": [
-"When charge reaches zero or the configured maximum is zero, the Anchor releases its keep-loaded chunks."
-],
-"icon": "Wakebell_Anchor"
-},
-{
-"id": "Craftory_Fizz_Charge",
-"name": "Fizz charge",
-"tier": 0,
-"category": "power",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Burns for 10 seconds when used as a boiler fuel item.",
-"use": [
-"Insert it into a Gutter Boiler fuel slot."
-],
-"tips": [
-"The charge is consumed as fuel; no recipe, shop trade, or drop source is listed in the extraction."
-],
-"icon": "Fizz_Charge"
-},
-{
-"id": "Craftory_Storm_Vane",
-"name": "Storm Vane",
-"tier": 0,
-"category": "well",
-"obtain": [
-"Grizzlecog: 12 Scrap"
-],
-"does": "A Storm Vane within 64 blocks contributes to the Stormcall chance of a Steady Well; each vane adds 0.10 to the base 0.15 chance, capped at 0.55.",
-"use": [
-"Place the vane within 64 blocks of a Stormcall strike position."
-],
-"tips": [
-"Only recognized storm weather activates the vane; other weather IDs are not storm."
-],
-"icon": "Storm_Vane"
-},
-{
-"id": "Craftory_Snatcher_Claw",
-"name": "Snatcher Claw",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The Claw filters transported items by item ID or daub colour. With no item held, its filter is cleared.",
-"use": [
-"Use a paint daub on the Claw to set its colour filter; use an item to set an item-ID filter; use an empty hand to clear the filter."
-],
-"tips": [
-"Only its owner crew or a permitted user may configure it."
-],
-"icon": null
-},
-{
-"id": "Craftory_Squint_Goggles",
-"name": "Squint Goggles",
-"tier": 0,
-"category": "tool",
-"obtain": [
-"Grizzlecog: 10 Scrap"
-],
-"does": "An equipment item; its language description says it helps the wearer see details.",
-"use": [
-"Wear the goggles in the equipment slot."
-],
-"tips": [
-"No numerical vision range is specified in the inspected sources."
-],
-"icon": "Squint_Goggles"
-},
-{
-"id": "Craftory_Paint_Daub_Yellow",
-"name": "Yellow paint daub",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Marks a Gutterpipe branch yellow.",
-"use": [
-"Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
-],
-"tips": [
-"Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
-],
-"icon": null
-},
-{
-"id": "Craftory_Gnasher_Pit",
-"name": "Gnasher Pit",
-"tier": 0,
-"category": "machine",
-"obtain": [
-"Workbench (Tinkering): 20 Scrap + 4 Iron Bar"
-],
-"does": "A buildable machine with a dedicated notebook page and energy member.",
-"use": [
-"Place it as a machine and use its configured block interaction."
-],
-"tips": [
-"Crafting is blocked until the crew has the matching Gnasher notebook page."
-],
-"icon": "Gnasher_Pit"
-},
-{
-"id": "Craftory_Fizz_Damper",
-"name": "Fizz Damper",
-"tier": 0,
-"category": "well",
-"obtain": [
-"Grizzlecog: 12 Scrap"
-],
-"does": "A Damper can calm a Well; the runtime transitions a smothered Well to DORMANT and reduces its strength band.",
-"use": [
-"Place and activate it beside a Well using its block interaction."
-],
-"tips": [
-"Well state changes are persisted by the Well block entity."
-],
-"icon": "Fizz_Damper"
-},
-{
-"id": "Craftory_Scorch_Oven",
-"name": "Scorch Oven",
-"tier": 0,
-"category": "machine",
-"obtain": [
-"Workbench (Tinkering): 24 Scrap + 2 Copper Bar"
-],
-"does": "Processes recipes using Fizz fuel; the configured oven fuel drop is Fizz Charge.",
-"use": [
-"Place it, add a supported recipe's inputs and Fizz fuel, then let its machine process while the area is active."
-],
-"tips": [
-"Oven crafting requires the matching notebook page."
-],
-"icon": "Scorch_Oven"
-},
-{
-"id": "Craftory_Grit_Prisma",
-"name": "Prisma Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Prisma Grit and outputs one Ingredient_Bar_Prisma.",
-"use": [
-"Put one Prisma Grit into the furnace recipe to produce one Prisma Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Catch_Net",
-"name": "Catch Net",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The Hurl Cannon description identifies the Catch Net as a landing target, and the Catch Net description calls it a soft landing.",
-"use": [
-"Place it as the landing target for a Hurl Cannon; the Hurl Cannon description requires a Catch Net within 64 blocks."
-],
-"tips": [
-"The Hurl Cannon description says its Boom Powder charges are coming soon."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Cobalt",
-"name": "Cobalt Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Cobalt Grit and outputs one Ingredient_Bar_Cobalt.",
-"use": [
-"Put one Cobalt Grit into the furnace recipe to produce one Cobalt Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Junk_Heart_Firebox",
-"name": "Junk Heart Firebox",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Grizzlecog: 20 Scrap"
-],
-"does": "A formed Junk Heart multiblock can burn as an energy source and grants its owner crew Junk Heart knowledge.",
-"use": [
-"Build the Junk Heart multiblock around the Firebox, form it, and activate its burner."
-],
-"tips": [
-"The multiblock must be in FORMED state to count as running."
-],
-"icon": "Junk_Heart_Firebox"
-},
-{
-"id": "Craftory_Hurl_Tube",
-"name": "Hurl Tube",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Hurl tubes form routes between stations; the configured ride uses 16 blocks per energy unit, 100 energy per unit, and speed 0.5.",
-"use": [
-"Place face-adjacent tubes to connect Hurl Stations, then use a station to start a ride."
-],
-"tips": [
-"Ride start validates the route, required energy, and station permissions."
-],
-"icon": null
-},
-{
-"id": "Craftory_Gutter_Gear",
-"name": "Gutter Gear",
-"tier": 0,
-"category": "bodge",
-"obtain": [
-"Grizzlecog: 10 Scrap"
-],
-"does": "When installed as a bodge, it multiplies machine energy use by 0.8.",
-"use": [
-"Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
-],
-"tips": [
-"Machines support at most two bodges."
-],
-"icon": "Gutter_Gear"
-},
-{
-"id": "Craftory_Tinkers_Wrench",
-"name": "Tinker's Wrench",
-"tier": 0,
-"category": "tool",
-"obtain": [
-"Grizzlecog: 15 Scrap"
-],
-"does": "A wrench tool used on owned machines; machine interactions enforce owner-crew or override authorization.",
-"use": [
-"Use the wrench on a machine to open its wrench action."
-],
-"tips": [
-"Foreign-crew use is refused unless an override permission applies."
-],
-"icon": "Tinkers_Wrench"
-},
-{
-"id": "Craftory_Glimmer_Lens",
-"name": "Glimmer Lens",
-"tier": 0,
-"category": "tool",
-"obtain": [
-"Grizzlecog: 12 Scrap"
-],
-"does": "Scans Glimmerwells, mobs, machines, ores, and crystals to grant crew Insight. A first mob scan grants 5 Insight, a first machine scan 8, and a first ore/crystal scan 4.",
-"use": [
-"Use the Lens on a scannable target and complete its scan interaction."
-],
-"tips": [
-"Repeated scans award one tenth of the base value, with a minimum of 1; Well scans have strength-based values."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Silver",
-"name": "Silver Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Silver Grit and outputs one Ingredient_Bar_Silver.",
-"use": [
-"Put one Silver Grit into the furnace recipe to produce one Silver Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Paint_Daub_Blue",
-"name": "Blue paint daub",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Marks a Gutterpipe branch blue.",
-"use": [
-"Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
-],
-"tips": [
-"Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
-],
-"icon": null
-},
-{
-"id": "Craftory_Paint_Daub_Red",
-"name": "Red paint daub",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Marks a Gutterpipe branch red.",
-"use": [
-"Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
-],
-"tips": [
-"Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
-],
-"icon": null
-},
-{
-"id": "Craftory_Tinkers_Notebook",
-"name": "Tinker's Notebook",
-"tier": 0,
-"category": "tool",
-"obtain": [
-"Grizzlecog: 5 Scrap"
-],
-"does": "Stores crew notebook knowledge pages; eight page IDs and Junk Heart knowledge are required for Tinkered tier 2.",
-"use": [
-"Use it to open the notebook and review unlocked pages."
-],
-"tips": [
-"The delivery and Scrap Rush pages are earned through their respective systems."
-],
-"icon": "Tinkers_Notebook"
-},
-{
-"id": "Craftory_Gob_Jar_Filled",
-"name": "Filled Gob-Jar",
-"tier": 0,
-"category": "well",
-"obtain": [
-"Capture a Tethered Well with an empty Gob-Jar"
-],
-"does": "Stores the captured Well's temperament, strength, taste, and stability metadata.",
-"use": [
-"Use it on a Well Cradle to seat the contained Well, or carry it to transport it."
-],
-"tips": [
-"Carried jars lose 0.2 stability per second; damage removes 10 stability. At zero, a Well spawn is attempted before the jar is consumed."
-],
-"icon": null
-},
-{
-"id": "Craftory_Boom_Valve",
-"name": "Boom Valve",
-"tier": 0,
-"category": "bodge",
-"obtain": [
-"Grizzlecog: 12 Scrap"
-],
-"does": "When installed, multiplies machine speed by 1.25 and Jank gain by 1.5.",
-"use": [
-"Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
-],
-"tips": [
-"Machines support at most two bodges; extra speed comes with more Jank."
-],
-"icon": "Boom_Valve"
-},
-{
-"id": "Craftory_Hurl_Station",
-"name": "Hurl Station",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Connects to Hurl Tubes and a Fizz network; using it starts travel through a validated route.",
-"use": [
-"Connect face-adjacent tubes and a Fizz network, then use the Station to travel; use a wrench to rename it."
-],
-"tips": [
-"Rides require route validity, enough energy, and permission for the station."
-],
-"icon": null
-},
-{
-"id": "Craftory_Gutterpipe",
-"name": "Gutterpipe",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"Grizzlecog: 8 pipes for 6 Scrap",
-"Workbench (Tinkering): 2 Scrap + 1 Copper Bar"
-],
-"does": "Moves items through a connected transport route; paint daubs set branch colours for sorting.",
-"use": [
-"Place connected pipes, then daub a branch to assign its route colour."
-],
-"tips": [
-"Colour names are red, blue, green, and yellow; the Snatcher Claw can filter by those colours."
-],
-"icon": "Gutterpipe"
-},
-{
-"id": "Craftory_Codex",
-"name": "Codex",
-"tier": 0,
-"category": "tool",
-"obtain": [
-"Grizzlecog: 8 Scrap"
-],
-"does": "Displays crew discoveries and Insight, including scanned Well, mob, machine, ore, and crystal information.",
-"use": [
-"Use the Codex to open its crew research view."
-],
-"tips": [
-"Repeated scans give 10% of base Insight, minimum 1."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Iron",
-"name": "Iron Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Iron Grit and outputs one Ingredient_Bar_Iron.",
-"use": [
-"Put one Iron Grit into the furnace recipe to produce one Iron Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Paint_Daub_Green",
-"name": "Green paint daub",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Marks a Gutterpipe branch green.",
-"use": [
-"Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
-],
-"tips": [
-"Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grizzlecog_Receipt",
-"name": "Grizzlecog's Receipt",
-"tier": 0,
-"category": "npc_item",
-"obtain": [
-"Grizzlecog: 20 Scrap"
-],
-"does": "A proof-of-delivery item; its language description says using it records the job.",
-"use": [
-"Use the Receipt to record the delivery job."
-],
-"tips": [
-"A Delivery notebook page is defined separately from the Scrap Rush page."
-],
-"icon": null
-},
-{
-"id": "Craftory_Scrap_Plating_Bodge",
-"name": "Scrap Plating Bodge",
-"tier": 0,
-"category": "bodge",
-"obtain": [
-"Grizzlecog: 8 Scrap"
-],
-"does": "When installed, halves Jank gain.",
-"use": [
-"Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
-],
-"tips": [
-"Machines support at most two bodges."
-],
-"icon": "Scrap_Plating_Bodge"
-},
-{
-"id": "Craftory_Spark_Shard",
-"name": "Spark Shard",
-"tier": 0,
-"category": "material",
-"obtain": [
-"Drop: Sparkjaw, 1-2"
-],
-"does": "A Sparkjaw drop; the drop definition allows one or two Shards.",
-"use": [
-"Use it in a recipe or system that accepts Spark Shards; no consumer is identified in the inspected sources."
-],
-"tips": [
-"No use recipe is listed in the extraction."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Onyxium",
-"name": "Onyxium Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Onyxium Grit and outputs one Ingredient_Bar_Onyxium.",
-"use": [
-"Put one Onyxium Grit into the furnace recipe to produce one Onyxium Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Thorium",
-"name": "Thorium Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Thorium Grit and outputs one Ingredient_Bar_Thorium.",
-"use": [
-"Put one Thorium Grit into the furnace recipe to produce one Thorium Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Grit_Adamantite",
-"name": "Adamantite Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Adamantite Grit and outputs one Ingredient_Bar_Adamantite.",
-"use": [
-"Put one Adamantite Grit into the furnace recipe to produce one Adamantite Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Tinkers_Hammer",
-"name": "Tinker's Hammer",
-"tier": 0,
-"category": "tool",
-"obtain": [
-"Grizzlecog: 10 Scrap"
-],
-"does": "Used to straighten leaning Tether Stakes; authorization is checked against the Well claim crew, stake placer crew, or override permission.",
-"use": [
-"Hit a leaning Tether Stake with the hammer to straighten it."
-],
-"tips": [
-"A foreign crew without override permission cannot straighten the stake."
-],
-"icon": "Tinkers_Hammer"
-},
-{
-"id": "Craftory_Boomshroom_Burner",
-"name": "Boomshroom Burner",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Grizzlecog: 24 Scrap",
-"Workbench (Tinkering): 16 Scrap + 2 Iron Bar"
-],
-"does": "Burns fuel to produce Fizz energy; the energy system gates its processing by active area.",
-"use": [
-"Place it, add supported fuel, and connect its output to the Fizz network."
-],
-"tips": [
-"Crafting requires the matching Burner notebook page; machine production pauses in an inactive area."
-],
-"icon": "Boomshroom_Burner"
-},
-{
-"id": "Craftory_Squawk_Box",
-"name": "Squawk Box",
-"tier": 0,
-"category": "bodge",
-"obtain": [
-"Grizzlecog: 6 Scrap"
-],
-"does": "When installed, it enables machine alerts; Scrap Rush uses it to notify the crew when a raid steals machine output.",
-"use": [
-"Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
-],
-"tips": [
-"Machines support at most two bodges."
-],
-"icon": "Squawk_Box"
-},
-{
-"id": "Craftory_Hurl_Cannon",
-"name": "Hurl Cannon",
-"tier": 0,
-"category": "logistics",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The item description instructs players to aim at a Catch Net within 64 blocks and climb aboard.",
-"use": [
-"Place the cannon, aim toward a Catch Net within 64 blocks, and climb aboard."
-],
-"tips": [
-"The item description says Boom Powder charges are coming soon."
-],
-"icon": null
-},
-{
-"id": "Craftory_Shroom_Bed",
-"name": "Shroom Bed",
-"tier": 0,
-"category": "machine",
-"obtain": [
-"Grizzlecog: 18 Scrap"
-],
-"does": "A machine block that can host bodge slots; its energy member can be configured as a machine component.",
-"use": [
-"Place the bed, then use its configured block interaction."
-],
-"tips": [
-"Bodge installation uses crouch-use and is limited to two slots."
-],
-"icon": "Shroom_Bed"
-},
-{
-"id": "Craftory_Grit_Mithril",
-"name": "Mithril Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Mithril Grit and outputs one Ingredient_Bar_Mithril.",
-"use": [
-"Put one Mithril Grit into the furnace recipe to produce one Mithril Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Tether_Stake",
-"name": "Tether Stake",
-"tier": 0,
-"category": "well",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "Tethering needs 3 stakes for Flicker or Steady, 4 for Roaring, and 6 for Primal. Stake angles more than 40 degrees from even spacing are considered leaning.",
-"use": [
-"Place stakes around a Dormant Well, distribute them evenly, then let the stake system evaluate the tether."
-],
-"tips": [
-"The Well remains untethered if any required stake leans."
-],
-"icon": "Tether_Stake"
-},
-{
-"id": "Craftory_Grit_Copper",
-"name": "Copper Grit",
-"tier": 0,
-"category": "material",
-"obtain": [
-"No survival source found (creative/command only)"
-],
-"does": "The furnace processing recipe consumes one Copper Grit and outputs one Ingredient_Bar_Copper.",
-"use": [
-"Put one Copper Grit into the furnace recipe to produce one Copper Bar."
-],
-"tips": [
-"The listed recipe processes Grit; it does not produce the Grit."
-],
-"icon": null
-},
-{
-"id": "Craftory_Rattlewheel",
-"name": "Rattlewheel",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Grizzlecog: 20 Scrap"
-],
-"does": "A power machine that generates energy while running; Jank can make machines rattle at 40 points.",
-"use": [
-"Place it and use its configured interaction to run it, then connect its output to a Fizz network."
-],
-"tips": [
-"Running Jank rises by 0.25 per 20-tick cycle before modifiers; idle Jank decays by 0.1 per cycle."
-],
-"icon": "Rattlewheel"
-},
-{
-"id": "Craftory_Crackle_Coil",
-"name": "Crackle Coil",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Workbench (Tinkering): 12 Scrap + 2 Iron Bar"
-],
-"does": "Consumes 5 units of energy demand per solve and converts delivered energy into Dim Glimmer output, drawing from a burning Burner or formed Junk Heart below.",
-"use": [
-"Place the Coil above a running Burner or formed Junk Heart and connect it to the energy network."
-],
-"tips": [
-"It produces nothing when its area is inactive."
-],
-"icon": null
-},
-{
-"id": "Craftory_Resonator",
-"name": "Glimmer Resonator",
-"tier": 0,
-"category": "power",
-"obtain": [
-"Workbench (Tinkering): 16 Scrap + 3 Iron Bar + 1 Cyan Crystal"
-],
-"does": "Converts up to 40 delivered energy from a clear crystal into Dim Glimmer output. It clouds after 200 conversions by default.",
-"use": [
-"Insert a crystal, connect the Resonator to an energy network, and clear it when it clouds."
-],
-"tips": [
-"A clouded crystal stops output; inactive areas also stop conversion."
-],
-"icon": null
-},
-{
-"id": "Craftory_Well_Cradle",
-"name": "Glimmerwell Cradle",
-"tier": 0,
-"category": "well",
-"obtain": [
-"Workbench (Tinkering): 12 Scrap + 2 Iron Bar"
-],
-"does": "Seats a filled Gob-Jar in the air block above the Cradle and generates 4, 10, 25, or 40 energy for Flicker, Steady, Roaring, or Primal strength, multiplied by harmony from 0 to 5.",
-"use": [
-"Place a filled Gob-Jar into the Cradle to seat its Well; place matching taste blocks nearby to increase harmony."
-],
-"tips": [
-"The Cradle refuses placement if a Well already occupies the block above it."
-],
-"icon": null
-},
-{
-"id": "Craftory_Sloshtank",
-"name": "Sloshtank",
-"tier": 0,
-"category": "fluid",
-"obtain": [
-"Grizzlecog: 20 Scrap"
-],
-"does": "A fluid tank with a capacity registered by its fluid handler; the tank display updates once per second in an active area.",
-"use": [
-"Place it and connect fluid pipes; use the fluid network to fill or drain it."
-],
-"tips": [
-"Its visual fill state updates only in an active area and on the energy tick."
-],
-"icon": null
-},
-{
-"id": "Craftory_Gasbag",
-"name": "Gasbag",
-"tier": 0,
-"category": "fluid",
-"obtain": [
-"Grizzlecog: 28 Scrap"
-],
-"does": "Stores up to 400,000 energy. Adjacent fire starts a leak that drains 1% of capacity per second; the bag can be patched.",
-"use": [
-"Place it in the energy network; patch it after a fire-triggered leak."
-],
-"tips": [
-"The leak is triggered by an adjacent fire fluid and only processes in active areas."
-],
-"icon": null
-},
-{
-"id": "Craftory_Gutter_Boiler",
-"name": "Gutter Boiler",
-"tier": 0,
-"category": "fluid",
-"obtain": [
-"Grizzlecog: 32 Scrap"
-],
-"does": "Holds 4,000 water and consumes 10 water per second while active. It outputs 60 base power, boosted to 125% at pressure 80-95; pressure 100 pops the boiler.",
-"use": [
-"Fill it with Water or Water_Source through a fluid connection, add fuel or lava below, then connect its output."
-],
-"tips": [
-"Venting above pressure 95 drops pressure by 40; a Fizz Charge burns for 10 seconds."
-],
-"icon": null
-}
-],
-"mobs": [
-{
-"id": "Craftory_Glimmer_Wisp",
-"name": "Glimmer Wisp",
-"where": "The role asset is a passive bird-template variant; no survival spawn condition was found in the inspected branch sources. It can be spawned through the permission-gated mob command.",
-"behaviour": "Passive bird-template variant; wanders 12 blocks, at 2-6 blocks above ground, with 18 max health.",
-"drops": "1-2 Glimmer Dust."
-},
-{
-"id": "Craftory_Sparkjaw",
-"name": "Sparkjaw",
-"where": "The role asset uses the Predator template; no survival spawn condition was found in the inspected branch sources. It can be spawned through the permission-gated mob command.",
-"behaviour": "Predatory melee role with 110 max health, 12-block view and alert ranges, 3-block attack distance, and 22 base physical damage with a 10% random modifier.",
-"drops": "1-2 Spark Shards."
-},
-{
-"id": "Craftory_Riftmoth",
-"name": "Riftmoth",
-"where": "The role asset uses the Void Spawn template; no survival spawn condition was found in the inspected branch sources. It can be spawned through the permission-gated mob command.",
-"behaviour": "Void-attitude role with 90 max health and 12-block view range. Riftmoth drains 20 stored energy per second when near a qualifying energy source.",
-"drops": "1 Riftmoth Wing."
-},
-{
-"id": "Craftory_Goblin_Poacher",
-"name": "Goblin Poacher",
-"where": "Scrap Rush raids spawn 1-5 Goblin Poachers around an eligible machine when the enabled schedule or command starts a raid; no ambient survival spawn condition was found.",
-"behaviour": "Goblin lobber role with 80 max health, 8-block view and attack distance, and maximum speed 3.",
-"drops": "Weighted drop entries: Scrap 1-2 at weight 90; Gob-Jar 1 at weight 10."
-},
-{
-"id": "Craftory_Vessa",
-"name": "Vessa Lanternwright",
-"where": "Can spawn when a crew-tier-2 owned Burner or formed Junk Heart is running and a crystal trigger is within 8 blocks; the system spawns Vessa when there is a free air cell above the machine.",
-"behaviour": "Generic idle NPC; the role asset sets 70 max health and an Ignore default NPC attitude.",
-"drops": "No drop list is defined in the Vessa role asset."
-},
-{
-"id": "Craftory_Grizzlecog",
-"name": "Grizzlecog",
-"where": "Can be summoned by a player with the summon permission, while looking at a block within 8 blocks; the command places him above the targeted block.",
-"behaviour": "Trader NPC; its role asset links to the Craftory_Grizzlecog shop.",
-"drops": "The role asset references Drop_Klops_Merchant; no Craftory-specific drop list is assigned."
-}
-],
-"npcs": [
-{
-"name": "Grizzlecog",
-"where": "Summoned with `/craftory summon grizzlecog` by a player who has the command permission and looks at a block within 8 blocks.",
-"role": "Trader for the Grizzlecog shop; the NPC role links the Craftory_Grizzlecog trade asset.",
-"dialogue": []
-},
-{
-"name": "Vessa",
-"where": "First Spark system may spawn her beside a running owned Burner or formed Junk Heart if the crew is tier 2 and a crystal trigger is within 8 blocks.",
-"role": "First Spark encounter NPC; a successful spawn records Vessa-met knowledge for the owner's crew.",
-"dialogue": []
-}
-],
-"systems": [
-{
-"key": "energy",
-"title": "Fizz energy",
-"facts": [
-"Energy is solved every 0.2 seconds.",
-"Machine production and demand are registered in the shared energy network; over-grading and overload affect Jank."
-]
-},
-{
-"key": "jank",
-"title": "Machine Jank",
-"facts": [
-"Jank updates on a 20-tick cycle: running gain is 0.25 and idle decay is 0.1.",
-"Over-grading and overload each multiply gain by 2.0. Rattle starts at 40; fizzle chance starts at 2% at 70 and adds 0.2 percentage points per point above 70.",
-"A fizzle stalls for 10 seconds and recovers at Jank 50; scrap repair removes 20 Jank."
-]
-},
-{
-"key": "bodge",
-"title": "Bodge parts",
-"facts": [
-"Machines accept at most two bodges.",
-"Boom Valve: speed \u00d71.25 and Jank \u00d71.5; Gutter Gear: energy use \u00d70.8; Scrap Plating Bodge: Jank \u00d70.5; Squawk Box enables alerts; Muffler suppresses rattling.",
-"Install or remove bodges with crouch-use on a compatible machine."
-]
-},
-{
-"key": "multiblock",
-"title": "Junk Heart multiblock",
-"facts": [
-"A formed Junk Heart grants its owner crew the `craftory:heart/junk` knowledge.",
-"The Junk Heart counts as running only while its burner is active and its multiblock state is FORMED."
-]
-},
-{
-"key": "crews",
-"title": "Crews",
-"facts": [
-"Crew membership, invitations, and knowledge are keyed to player UUIDs; `/craftory crew` supports create, invite, accept, leave, kick, and info.",
-"Crew names are limited to 32 characters."
-]
-},
-{
-"key": "notebook",
-"title": "Tinker's Notebook",
-"facts": [
-"The eight Tinkered pages are Burner, Crank, Canister, Gutterpipe, Gnasher, Oven, Grizzlecog delivery, and Scrap Rush.",
-"The first six machine pages are associated with their respective machine type; Delivery and Scrap Rush are job pages."
-]
-},
-{
-"key": "tier_unlocks",
-"title": "Crew tiers",
-"facts": [
-"Tinkered tier is tier 2.",
-"A crew reaches tier 2 only when it has all eight notebook page IDs and `craftory:heart/junk` knowledge."
-]
-},
-{
-"key": "scrap_rush",
-"title": "Scrap Rush",
-"facts": [
-"Scrap Rush raids target eligible active-area machines; an enabled schedule or `/craftory scraprush start` can start a raid.",
-"Raids spawn a configured 1-5 Goblin Poachers, and their defeat grants the Scrap Rush notebook page to the machine owner's crew.",
-"A Goblin Poacher adjacent for the configured steal interval can mark the machine's Jank as stolen."
-]
-},
-{
-"key": "anchor_pause",
-"title": "Wakebell Anchor",
-"facts": [
-"Default maximum Anchor charge is 240 minutes; setting the maximum to 0 prevents an active charge.",
-"An active Anchor refreshes the surrounding 3-by-3 chunk area and removes its keep-loaded handles when charge runs out."
-]
-},
-{
-"key": "wells_scan",
-"title": "Well births and scan",
-"facts": [
-"Stormcall default interval is 180 seconds and chance 0.35; rain Flicker chance is 0.1, kill Flicker chance 0.05, and player Flicker cooldown 120 seconds.",
-"Stormcall uses the strike position for the region cooldown, vane count within 64 blocks, and strong-Well regional budget.",
-"The strong-Well budget defaults to one per region; region coordinates are `x shr 9` and `z shr 9`."
-]
-},
-{
-"key": "insight_codex",
-"title": "Insight and Codex",
-"facts": [
-"First Well read gives 20 points per strength ordinal plus 1, with a perfect read adding half of that base; repeat reads give 10% of base, minimum 1.",
-"First mob, machine, and ore/crystal scans give 5, 8, and 4 Insight respectively; repeats use the same 10% decay with minimum 1."
-]
-},
-{
-"key": "first_spark",
-"title": "First Spark",
-"facts": [
-"A running owned Burner or formed, burning Junk Heart can trigger First Spark for a crew at tier 2 when a crystal trigger is within 8 blocks.",
-"The first Spark grants knowledge and attempts to spawn Vessa above the machine where an air cell is available."
-]
-},
-{
-"key": "cradle_harmony",
-"title": "Cradle harmony",
-"facts": [
-"Harmony counts matching blocks within four blocks in each axis and maps counts 0, 1-2, 3-5, 6-9, and 10+ to harmony 1-5.",
-"Scrap taste matches Scrap plating; other taste strings match a block with that same ID.",
-"Cradle output bases are 4/10/25/40 for Flicker/Steady/Roaring/Primal, multiplied by harmony 0-5."
-]
-},
-{
-"key": "storm_hunt",
-"title": "Storm Hunt and Glimmerwells",
-"facts": [
-"Recognized storm IDs are `zone1_storm`, `zone2_thunder_storm`, `zone4_storm`, and `zone4_swamp_storm`; IDs containing `rain` classify as rain unless in the storm set.",
-"Spark dislikes rain; Ember dislikes rain and recognized storms; other Temperaments have no weather penalty in the implemented rule.",
-"Storm Steady chance is 0.15 plus 0.1 per nearby vane, capped at 0.55. Regions are 512 blocks wide on X and Z.",
-"Tether stake counts are Flicker/Steady 3, Roaring 4, Primal 6. A Well must be DORMANT, meet the stake count, and have no leaning stakes to become TETHERED.",
-"Capture uses 3 presses spaced 0.2-2 seconds apart."
-]
-},
-{
-"key": "escort",
-"title": "Jar carrier",
-"facts": [
-"A carried filled jar slows base movement to 0.7\u00d7 while not mounted; the component is present while a filled jar is carried.",
-"Each jar loses 0.2 stability per second; damage removes 10 stability per instance; disliked weather removes 1 stability per 10 seconds.",
-"At zero stability the carrier attempts a Wild Well spawn; the jar is consumed only after a successful spawn, otherwise it is retained at stability 1 for retry."
-]
-},
-{
-"key": "hurl",
-"title": "Hurl transport",
-"facts": [
-"Hurl uses 16 blocks per energy unit, 100 energy per unit, speed 0.5, lookahead 32, and a 200-tick fall guard by default.",
-"A ride validates its route, energy, carrier status, and station permissions before starting."
-]
-},
-{
-"key": "pipes_sorting",
-"title": "Gutterpipe sorting",
-"facts": [
-"Red, blue, green, and yellow paint daubs set Gutterpipe branch colours.",
-"The Snatcher Claw filters by item ID or daub colour; an empty-hand interaction clears its filter."
-]
-},
-{
-"key": "fluids",
-"title": "Fluids and Gutter Boiler",
-"facts": [
-"The Boiler accepts Water or Water_Source, stores at most 4,000 water, and consumes 10 per second while active.",
-"Boiler pressure is capped at 100; base output is 60 and output is boosted to 125% at pressure 80-95. At pressure 100 the Boiler pops; venting above 95 drops pressure by 40.",
-"Gasbag capacity is 400,000; adjacent fire triggers a leak draining 1% capacity per second."
-]
-},
-{
-"key": "commands",
-"title": "Commands",
-"facts": [
-"See the `commands` array for registered syntax, player/permission requirements, and command effects."
-]
-}
-],
-"commands": [
-{
-"cmd": "/craftory",
-"who": "player",
-"does": "Displays Craftory version and loaded modules."
-},
-{
-"cmd": "/craftory crew create <name> | invite <player> | accept <crew-uuid> | leave | kick <player> | info [player]",
-"who": "player; `/craftory crew info <player>` requires `craftory.crew.info`",
-"does": "Manages crew membership and displays crew tier, pages, knowledge, and members."
-},
-{
-"cmd": "/craftory summon grizzlecog",
-"who": "player with `hytale.command.craftory.summon`",
-"does": "Summons Grizzlecog above the block the player targets within 8 blocks."
-},
-{
-"cmd": "/craftory well list | spawn <temperament> <strength>",
-"who": "player with `craftory.well` permission",
-"does": "Lists nearby Glimmerwells or spawns one at the targeted block within 8 blocks, falling back to the player's position."
-},
-{
-"cmd": "/craftory scraprush start",
-"who": "player with `hytale.command.craftory.scraprush`; Scrap Rush config must be enabled",
-"does": "Starts a Scrap Rush at the nearest eligible machine."
-},
-{
-"cmd": "/craftory mob spawn <role>",
-"who": "player with `craftory.mob` permission",
-"does": "Spawns a registered Craftory mob above the targeted block within 8 blocks; role aliases include glimmer_wisp, sparkjaw, riftmoth, and goblin_poacher."
-},
-{
-"cmd": "/craftory config anchor-max <minutes>",
-"who": "player with `hytale.command.craftory.config`",
-"does": "Sets the maximum Wakebell Anchor charge time to a nonnegative number of minutes."
-},
-{
-"cmd": "/craftory grant <player> <knowledge-id>",
-"who": "player with `hytale.command.craftory.grant`",
-"does": "Grants a knowledge page to an online player."
-},
-{
-"cmd": "/craftory net [x y z]",
-"who": "player",
-"does": "Displays energy-network diagnostics for a targeted block within 8 blocks or explicit coordinates."
-},
-{
-"cmd": "/craftory selftest",
-"who": "player with `hytale.command.craftory.selftest`",
-"does": "Runs Craftory runtime checks; intended for diagnostics rather than ordinary gameplay."
-}
-],
-"tiers": [
-{
-"tier": 0,
-"unlock": "Default or item-specific tier is not assigned in the inspected item extraction; tier 0 in this file means unspecified, not a claimed in-game tier.",
-"pages": []
-},
-{
-"tier": 2,
-"unlock": "Tinkered tier is granted when the crew knows all eight notebook page IDs and Junk Heart knowledge (`craftory:heart/junk`).",
-"pages": [
-{
-"id": "craftory:page/burner",
-"earned": "Burner page; source key is machines."
-},
-{
-"id": "craftory:page/crank",
-"earned": "Crank page; source key is machines."
-},
-{
-"id": "craftory:page/canister",
-"earned": "Canister page; source key is machines."
-},
-{
-"id": "craftory:page/gutterpipe",
-"earned": "Gutterpipe page; source key is machines."
-},
-{
-"id": "craftory:page/gnasher",
-"earned": "Gnasher page; source key is machines."
-},
-{
-"id": "craftory:page/oven",
-"earned": "Oven page; source key is machines."
-},
-{
-"id": "craftory:page/job/grizzlecog_delivery",
-"earned": "Grizzlecog delivery page; source key is delivery."
-},
-{
-"id": "craftory:page/job/scrap_rush",
-"earned": "Scrap Rush page; granted when the raid is defeated."
-}
-]
-}
-],
-"well_reference": {
-"strengths": [
-{
-"name": "Flicker",
-"description": "The weakest and most common. Catchable from Tier 3. Base Cradle output 4."
-},
-{
-"name": "Steady",
-"description": "Rarer, usually from Stormcall strikes. Guarded, and must be calmed before tethering. Base output 10, up to grade 2."
-},
-{
-"name": "Roaring",
-"description": "Base output 25, up to grade 3. Later tiers."
-},
-{
-"name": "Primal",
-"description": "Base output 40. Later tiers."
-}
-],
-"states": [
-{
-"name": "Wild",
-"description": "Newly born and restless. A Steady or stronger Well may have a Sparkjaw guardian."
-},
-{
-"name": "Dormant",
-"description": "Calmed, by killing its guardian or by smothering it with three powered Fizz Dampers. Ready for Tether Stakes."
-},
-{
-"name": "Tethered",
-"description": "Held by three evenly spaced Tether Stakes and claimed by your crew. Ready to jar."
-},
-{
-"name": "Jarred",
-"description": "Sealed in a Gob-Jar and being carried home. Its Stability drains, so hurry."
-},
-{
-"name": "Seated",
-"description": "Sitting on a Glimmerwell Cradle and producing Dim Glimmer."
-},
-{
-"name": "Tapped",
-"description": "A Wellhead draws on it directly (coming in Storm Hunt part 2)."
-},
-{
-"name": "Corrupted",
-"description": "Riftmoths have fed on it, halving its output (coming in Storm Hunt part 2)."
-},
-{
-"name": "Void-touched / Spent",
-"description": "Later-tier states."
-}
-],
-"temperaments": [
-{
-"name": "Spark",
-"color": "#5ff3ff",
-"description": "Dislikes plain rain, but loves a thunderstorm."
-},
-{
-"name": "Ember",
-"color": "#ff8a2b",
-"description": "Dislikes rain and storms."
-},
-{
-"name": "Tide",
-"color": "#3f8cff",
-"description": "No weather dislike."
-},
-{
-"name": "Growth",
-"color": "#5fd35a",
-"description": "No weather dislike."
-},
-{
-"name": "Stone",
-"color": "#a58c6a",
-"description": "No weather dislike."
-},
-{
-"name": "Gale",
-"color": "#d6f2ff",
-"description": "No weather dislike."
-},
-{
-"name": "Clank",
-"color": "#8bff3a",
-"description": "No weather dislike."
-},
-{
-"name": "Hollow",
-"color": "#6a2a9a",
-"description": "No weather dislike."
-}
-],
-"note": "While you carry a jarred Well in weather it dislikes, it loses 1 Stability every 10 seconds on top of the normal drain. For now every Temperament shares the same Taste: surround a seated Well with Scrap Plating to raise its Harmony (up to 5)."
-},
-"gaps": [
-"The extracted data contains 57 items, but several have no recipe, Grizzlecog trade, or mob drop: Fizz Charge, Snatcher Claw, all four Paint Daubs, Catch Net, Hurl Tube, Hurl Station, Hurl Cannon, Tether Stake, and the Grit items. These are marked with `No survival source found (creative/command only)` where no acquisition route was found.",
-"Sloshtank, Gasbag, and Gutter Boiler have Grizzlecog trades in the #19 source branch, but the inspected union contains no craft recipe or drop for them.",
-"The inspected code defines the Grit-to-metal-bar furnace conversions, but does not define a route that produces the Grit inputs themselves.",
-"No survival spawn configuration was found for Glimmer Wisp, Sparkjaw, or Riftmoth in the inspected source paths; role assets and a permission-gated mob spawn command exist. Goblin Poacher is used by Scrap Rush.",
-"Temperament has no per-temperament taste/like mapping in code; Glimmerwell's default taste is Scrap and Harmony currently maps that taste to Scrap Plating.",
-"The item extraction does not encode item-specific tier numbers. `tier: 0` in item records means unspecified by the source data; the explicitly implemented crew progression is Tinkered tier 2.",
-"No player-facing survival interaction for every Glimmerwell state is established by the state enum alone; WILD, DORMANT, TETHERED, JARRED, and SEATED are exercised by current runtime systems, while TAPPED, CORRUPTED, VOID_TOUCHED, and SPENT have no player-facing transition documented in the inspected sources."
-],
-"lore": {
-"intro": "Goblins have been dragging scrap out of the breaches for longer than anyone can remember, and some of it still hums. Craftory starts the day you buy a leaky goblin machine with a handful of Scrap. You learn to bodge your own. Then one of your machines makes a breach crystal sing, and a half-blind crystal archivist turns up to explain what you've done. From there scrap and crystal start to merge.",
-"beats": [
-{
-"tier": 1,
-"title": "The sealed crate",
-"text": "Grizzlecog the goblin scrap peddler sells you a sealed crate. It opens with a puff, and the machine inside coughs to life. Sealed goblin junk: you can run it, but you don't understand it yet."
-},
-{
-"tier": 2,
-"title": "Learning to bodge",
-"text": "Take machines apart with a cracked Tinker's Wrench, fill your crew's Notebook, and hammer together your own Junk Heart. The goblins notice, and some of them come to take it."
-},
-{
-"tier": 3,
-"title": "You made it sing",
-"text": "Your machine whines, a nearby crystal answers with a pillar of light, and Vessa Lanternwright steps out of the glow: \"You made it sing. With\u2026 a kettle?\" The goblins back off: \"Void-glass! Bad luck! \u2026Sells though.\""
-}
-],
-"cast": [
-{
-"name": "Grizzlecog",
-"text": "A goblin scrap peddler, and your first supplier. He trades in Scrap, and he takes it very seriously."
-},
-{
-"name": "Vessa Lanternwright",
-"text": "A human crystal archivist who has spent her life listening to the breaches. She arrives the first time one of your machines makes a crystal sing."
-},
-{
-"name": "The Wellborn",
-"text": "Creatures that form around Glimmerwells. They aren't evil. Vessa calls them \"the world trying to sing\"."
-}
-],
-"wells": "A Glimmerwell is a living knot of light, born where the world's energy runs high: in thunderstorms, in rain and after big fights. Each one has a Temperament, a Strength and a Taste, the kind of place it wants to live."
-}
+ "items": [
+  {
+   "id": "Craftory_Fizz_Canister",
+   "name": "Fizz canister",
+   "tier": 0,
+   "category": "machine",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 4 Copper Bar",
+    "Grizzlecog: 20 Scrap"
+   ],
+   "does": "Keeps fizz contained; the language description says it prevents spilling. Its machine component is a Fizz canister energy member.",
+   "use": [
+    "Place it as a machine and connect it to a Fizz energy network."
+   ],
+   "tips": [
+    "The active-area rules apply to machine processing."
+   ],
+   "icon": "Fizz_Canister"
+  },
+  {
+   "id": "Craftory_Crank_A_Fizz",
+   "name": "Squeak-crank",
+   "tier": 0,
+   "category": "power",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 4 Stick",
+    "Grizzlecog: 16 Scrap"
+   ],
+   "does": "Turning the crank produces Fizz; the energy code registers it as a crank machine.",
+   "use": [
+    "Place it, then use the crank interaction to turn it; connect its output to a Fizz network."
+   ],
+   "tips": [
+    "Only a running machine produces energy."
+   ],
+   "icon": "Crank_A_Fizz"
+  },
+  {
+   "id": "Craftory_Riftmoth_Wing",
+   "name": "Riftmoth Wing",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Drop: Riftmoth, 1"
+   ],
+   "does": "A Riftmoth drop item; its language description calls it brittle and void-touched.",
+   "use": [
+    "Use it only in a recipe or system that accepts this item; no such consumer is identified in the inspected sources."
+   ],
+   "tips": [
+    "The Riftmoth drop definition gives one wing."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Scrap_Plating",
+   "name": "Scrap plating",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 4 Scrap",
+    "Grizzlecog: 8 Scrap"
+   ],
+   "does": "A crafted plating material. Harmony recognizes Scrap Plating as a matching block for a Well whose taste is Scrap.",
+   "use": [
+    "Place the plating block near a Glimmerwell Cradle to contribute to harmony."
+   ],
+   "tips": [
+    "Harmony checks a 9-by-9-by-9 area around the Cradle, excluding the Cradle and the Well above it."
+   ],
+   "icon": "Scrap_Plating"
+  },
+  {
+   "id": "Craftory_Glimmer_Dust",
+   "name": "Glimmer Dust",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Drop: Glimmer Wisp, 1-2"
+   ],
+   "does": "A Glimmer Wisp drop; the language description identifies it as light shed by a wisp.",
+   "use": [
+    "No item-specific use action is defined in the inspected sources."
+   ],
+   "tips": [
+    "The drop definition allows one or two Dust."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Gold",
+   "name": "Gold Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Gold Grit",
+    "Gnasher Pit: grind any Gold ore"
+   ],
+   "does": "The item has a furnace processing recipe that consumes one Gold Grit and outputs one Ingredient_Bar_Gold.",
+   "use": [
+    "Put one Gold Grit into the furnace recipe to produce one Gold Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Muffler",
+   "name": "Muffler",
+   "tier": 0,
+   "category": "bodge",
+   "obtain": [
+    "Grizzlecog: 6 Scrap"
+   ],
+   "does": "When installed as a bodge, it suppresses machine rattling.",
+   "use": [
+    "Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
+   ],
+   "tips": [
+    "Machines support at most two bodges."
+   ],
+   "icon": "Muffler"
+  },
+  {
+   "id": "Craftory_Gob_Jar",
+   "name": "Gob-Jar",
+   "tier": 0,
+   "category": "well",
+   "obtain": [
+    "Grizzlecog: 6 Scrap",
+    "Drop: Goblin Poacher (weighted drop entry; weight 10)"
+   ],
+   "does": "An empty jar used to capture a Tethered Glimmerwell. Capture requires three presses, with 0.2-2 seconds between consecutive presses.",
+   "use": [
+    "With the empty jar held, interact with a Tethered Well three times; keep each interval between 4 and 2 seconds."
+   ],
+   "tips": [
+    "The press timing is interval-based, not aligned to a Well pulse."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Wakebell_Anchor",
+   "name": "Wakebell Anchor",
+   "tier": 0,
+   "category": "power",
+   "obtain": [
+    "Workbench (Tinkering): 6 Iron Bar + 1 Fizz canister"
+   ],
+   "does": "A fueled Anchor keeps nearby chunks loaded; its default maximum charge is 240 minutes. The Anchor refreshes a 3-by-3 chunk area around itself.",
+   "use": [
+    "Place the Anchor and insert charge/fuel through its configured interaction; keep it fueled to maintain chunk loading."
+   ],
+   "tips": [
+    "When charge reaches zero or the configured maximum is zero, the Anchor releases its keep-loaded chunks."
+   ],
+   "icon": "Wakebell_Anchor"
+  },
+  {
+   "id": "Craftory_Fizz_Charge",
+   "name": "Fizz charge",
+   "tier": 0,
+   "category": "power",
+   "obtain": [
+    "Workbench (Tinkering): 4 Scrap + 1 Copper Bar",
+    "Grizzlecog: 8 Scrap for 4"
+   ],
+   "does": "Burns for 10 seconds when used as a boiler fuel item.",
+   "use": [
+    "Insert it into a Gutter Boiler fuel slot."
+   ],
+   "tips": [
+    "The charge is consumed as fuel; no recipe, shop trade, or drop source is listed in the extraction."
+   ],
+   "icon": "Fizz_Charge"
+  },
+  {
+   "id": "Craftory_Storm_Vane",
+   "name": "Storm Vane",
+   "tier": 0,
+   "category": "well",
+   "obtain": [
+    "Grizzlecog: 12 Scrap"
+   ],
+   "does": "A Storm Vane within 64 blocks contributes to the Stormcall chance of a Steady Well; each vane adds 0.10 to the base 0.15 chance, capped at 0.55.",
+   "use": [
+    "Place the vane within 64 blocks of a Stormcall strike position."
+   ],
+   "tips": [
+    "Only recognized storm weather activates the vane; other weather IDs are not storm."
+   ],
+   "icon": "Storm_Vane"
+  },
+  {
+   "id": "Craftory_Snatcher_Claw",
+   "name": "Snatcher Claw",
+   "tier": 2,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 8 Scrap + 2 Iron Bar + 1 Copper Bar (crew Tier 2)",
+    "Grizzlecog: 28 Scrap"
+   ],
+   "does": "The Claw filters transported items by item ID or daub colour. With no item held, its filter is cleared.",
+   "use": [
+    "Use a paint daub on the Claw to set its colour filter; use an item to set an item-ID filter; use an empty hand to clear the filter."
+   ],
+   "tips": [
+    "Only its owner crew or a permitted user may configure it."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Squint_Goggles",
+   "name": "Squint Goggles",
+   "tier": 0,
+   "category": "tool",
+   "obtain": [
+    "Grizzlecog: 10 Scrap"
+   ],
+   "does": "An equipment item; its language description says it helps the wearer see details.",
+   "use": [
+    "Wear the goggles in the equipment slot."
+   ],
+   "tips": [
+    "No numerical vision range is specified in the inspected sources."
+   ],
+   "icon": "Squint_Goggles"
+  },
+  {
+   "id": "Craftory_Paint_Daub_Yellow",
+   "name": "Yellow paint daub",
+   "tier": 0,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 2 Scrap + 1 Copper Bar"
+   ],
+   "does": "Marks a Gutterpipe branch yellow.",
+   "use": [
+    "Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
+   ],
+   "tips": [
+    "Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Gnasher_Pit",
+   "name": "Gnasher Pit",
+   "tier": 0,
+   "category": "machine",
+   "obtain": [
+    "Workbench (Tinkering): 20 Scrap + 4 Iron Bar"
+   ],
+   "does": "A buildable machine with a dedicated notebook page and energy member.",
+   "use": [
+    "Place it as a machine and use its configured block interaction."
+   ],
+   "tips": [
+    "Crafting is blocked until the crew has the matching Gnasher notebook page."
+   ],
+   "icon": "Gnasher_Pit"
+  },
+  {
+   "id": "Craftory_Fizz_Damper",
+   "name": "Fizz Damper",
+   "tier": 0,
+   "category": "well",
+   "obtain": [
+    "Grizzlecog: 12 Scrap"
+   ],
+   "does": "A Damper can calm a Well; the runtime transitions a smothered Well to DORMANT and reduces its strength band.",
+   "use": [
+    "Place and activate it beside a Well using its block interaction."
+   ],
+   "tips": [
+    "Well state changes are persisted by the Well block entity."
+   ],
+   "icon": "Fizz_Damper"
+  },
+  {
+   "id": "Craftory_Scorch_Oven",
+   "name": "Scorch Oven",
+   "tier": 0,
+   "category": "machine",
+   "obtain": [
+    "Workbench (Tinkering): 24 Scrap + 2 Copper Bar"
+   ],
+   "does": "Processes recipes using Fizz fuel; the configured oven fuel drop is Fizz Charge.",
+   "use": [
+    "Place it, add a supported recipe's inputs and Fizz fuel, then let its machine process while the area is active."
+   ],
+   "tips": [
+    "Oven crafting requires the matching notebook page."
+   ],
+   "icon": "Scorch_Oven"
+  },
+  {
+   "id": "Craftory_Grit_Prisma",
+   "name": "Prisma Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Prisma Grit",
+    "Gnasher Pit: grind any Prisma ore"
+   ],
+   "does": "The furnace processing recipe consumes one Prisma Grit and outputs one Ingredient_Bar_Prisma.",
+   "use": [
+    "Put one Prisma Grit into the furnace recipe to produce one Prisma Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Catch_Net",
+   "name": "Catch Net",
+   "tier": 0,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 6 Scrap + 1 Iron Bar + 2 Fibre",
+    "Grizzlecog: 14 Scrap"
+   ],
+   "does": "The Hurl Cannon description identifies the Catch Net as a landing target, and the Catch Net description calls it a soft landing.",
+   "use": [
+    "Place it as the landing target for a Hurl Cannon; the Hurl Cannon description requires a Catch Net within 64 blocks."
+   ],
+   "tips": [
+    "The Hurl Cannon description says its Boom Powder charges are coming soon."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Cobalt",
+   "name": "Cobalt Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Cobalt Grit",
+    "Gnasher Pit: grind any Cobalt ore"
+   ],
+   "does": "The furnace processing recipe consumes one Cobalt Grit and outputs one Ingredient_Bar_Cobalt.",
+   "use": [
+    "Put one Cobalt Grit into the furnace recipe to produce one Cobalt Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Junk_Heart_Firebox",
+   "name": "Junk Heart Firebox",
+   "tier": 0,
+   "category": "power",
+   "obtain": [
+    "Grizzlecog: 20 Scrap"
+   ],
+   "does": "A formed Junk Heart multiblock can burn as an energy source and grants its owner crew Junk Heart knowledge.",
+   "use": [
+    "Build the Junk Heart multiblock around the Firebox, form it, and activate its burner."
+   ],
+   "tips": [
+    "The multiblock must be in FORMED state to count as running."
+   ],
+   "icon": "Junk_Heart_Firebox"
+  },
+  {
+   "id": "Craftory_Hurl_Tube",
+   "name": "Hurl Tube",
+   "tier": 2,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 4 Scrap + 1 Iron Bar (crew Tier 2)",
+    "Grizzlecog: 10 Scrap for 4"
+   ],
+   "does": "Hurl tubes form routes between stations; the configured ride uses 16 blocks per energy unit, 100 energy per unit, and speed 0.5.",
+   "use": [
+    "Place face-adjacent tubes to connect Hurl Stations, then use a station to start a ride."
+   ],
+   "tips": [
+    "Ride start validates the route, required energy, and station permissions."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Gutter_Gear",
+   "name": "Gutter Gear",
+   "tier": 0,
+   "category": "bodge",
+   "obtain": [
+    "Grizzlecog: 10 Scrap"
+   ],
+   "does": "When installed as a bodge, it multiplies machine energy use by 0.8.",
+   "use": [
+    "Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
+   ],
+   "tips": [
+    "Machines support at most two bodges."
+   ],
+   "icon": "Gutter_Gear"
+  },
+  {
+   "id": "Craftory_Tinkers_Wrench",
+   "name": "Tinker's Wrench",
+   "tier": 0,
+   "category": "tool",
+   "obtain": [
+    "Grizzlecog: 15 Scrap"
+   ],
+   "does": "A wrench tool used on owned machines; machine interactions enforce owner-crew or override authorization.",
+   "use": [
+    "Use the wrench on a machine to open its wrench action."
+   ],
+   "tips": [
+    "Foreign-crew use is refused unless an override permission applies."
+   ],
+   "icon": "Tinkers_Wrench"
+  },
+  {
+   "id": "Craftory_Glimmer_Lens",
+   "name": "Glimmer Lens",
+   "tier": 0,
+   "category": "tool",
+   "obtain": [
+    "Grizzlecog: 12 Scrap"
+   ],
+   "does": "Scans Glimmerwells, mobs, machines, ores, and crystals to grant crew Insight. A first mob scan grants 5 Insight, a first machine scan 8, and a first ore/crystal scan 4.",
+   "use": [
+    "Use the Lens on a scannable target and complete its scan interaction."
+   ],
+   "tips": [
+    "Repeated scans award one tenth of the base value, with a minimum of 1; Well scans have strength-based values."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Silver",
+   "name": "Silver Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Silver Grit",
+    "Gnasher Pit: grind any Silver ore"
+   ],
+   "does": "The furnace processing recipe consumes one Silver Grit and outputs one Ingredient_Bar_Silver.",
+   "use": [
+    "Put one Silver Grit into the furnace recipe to produce one Silver Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Paint_Daub_Blue",
+   "name": "Blue paint daub",
+   "tier": 0,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 2 Scrap + 1 Copper Bar"
+   ],
+   "does": "Marks a Gutterpipe branch blue.",
+   "use": [
+    "Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
+   ],
+   "tips": [
+    "Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Paint_Daub_Red",
+   "name": "Red paint daub",
+   "tier": 0,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 2 Scrap + 1 Copper Bar"
+   ],
+   "does": "Marks a Gutterpipe branch red.",
+   "use": [
+    "Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
+   ],
+   "tips": [
+    "Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Tinkers_Notebook",
+   "name": "Tinker's Notebook",
+   "tier": 0,
+   "category": "tool",
+   "obtain": [
+    "Grizzlecog: 5 Scrap"
+   ],
+   "does": "Stores crew notebook knowledge pages; eight page IDs and Junk Heart knowledge are required for Tinkered tier 2.",
+   "use": [
+    "Use it to open the notebook and review unlocked pages."
+   ],
+   "tips": [
+    "The delivery and Scrap Rush pages are earned through their respective systems."
+   ],
+   "icon": "Tinkers_Notebook"
+  },
+  {
+   "id": "Craftory_Gob_Jar_Filled",
+   "name": "Filled Gob-Jar",
+   "tier": 0,
+   "category": "well",
+   "obtain": [
+    "Capture a Tethered Well with an empty Gob-Jar"
+   ],
+   "does": "Stores the captured Well's temperament, strength, taste, and stability metadata.",
+   "use": [
+    "Use it on a Well Cradle to seat the contained Well, or carry it to transport it."
+   ],
+   "tips": [
+    "Carried jars lose 0.2 stability per second; damage removes 10 stability. At zero, a Well spawn is attempted before the jar is consumed."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Boom_Valve",
+   "name": "Boom Valve",
+   "tier": 0,
+   "category": "bodge",
+   "obtain": [
+    "Grizzlecog: 12 Scrap"
+   ],
+   "does": "When installed, multiplies machine speed by 1.25 and Jank gain by 1.5.",
+   "use": [
+    "Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
+   ],
+   "tips": [
+    "Machines support at most two bodges; extra speed comes with more Jank."
+   ],
+   "icon": "Boom_Valve"
+  },
+  {
+   "id": "Craftory_Hurl_Station",
+   "name": "Hurl Station",
+   "tier": 2,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 2 Iron Bar + 1 Copper Bar (crew Tier 2)"
+   ],
+   "does": "Connects to Hurl Tubes and a Fizz network; using it starts travel through a validated route.",
+   "use": [
+    "Connect face-adjacent tubes and a Fizz network, then use the Station to travel; use a wrench to rename it."
+   ],
+   "tips": [
+    "Rides require route validity, enough energy, and permission for the station."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Gutterpipe",
+   "name": "Gutterpipe",
+   "tier": 0,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 2 Scrap + 1 Copper Bar",
+    "Grizzlecog: 6 Scrap for 8"
+   ],
+   "does": "Moves items through a connected transport route; paint daubs set branch colours for sorting.",
+   "use": [
+    "Place connected pipes, then daub a branch to assign its route colour."
+   ],
+   "tips": [
+    "Colour names are red, blue, green, and yellow; the Snatcher Claw can filter by those colours."
+   ],
+   "icon": "Gutterpipe"
+  },
+  {
+   "id": "Craftory_Codex",
+   "name": "Codex",
+   "tier": 0,
+   "category": "tool",
+   "obtain": [
+    "Grizzlecog: 8 Scrap"
+   ],
+   "does": "Displays crew discoveries and Insight, including scanned Well, mob, machine, ore, and crystal information.",
+   "use": [
+    "Use the Codex to open its crew research view."
+   ],
+   "tips": [
+    "Repeated scans give 10% of base Insight, minimum 1."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Iron",
+   "name": "Iron Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Iron Grit",
+    "Gnasher Pit: grind any Iron ore"
+   ],
+   "does": "The furnace processing recipe consumes one Iron Grit and outputs one Ingredient_Bar_Iron.",
+   "use": [
+    "Put one Iron Grit into the furnace recipe to produce one Iron Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Paint_Daub_Green",
+   "name": "Green paint daub",
+   "tier": 0,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 2 Scrap + 1 Copper Bar"
+   ],
+   "does": "Marks a Gutterpipe branch green.",
+   "use": [
+    "Use it on the target Gutterpipe branch; the daub interaction sets the pipe colour."
+   ],
+   "tips": [
+    "Colour affects pipe routing; the code recognizes red, blue, green, and yellow."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grizzlecog_Receipt",
+   "name": "Grizzlecog's Receipt",
+   "tier": 0,
+   "category": "npc_item",
+   "obtain": [
+    "Grizzlecog: 20 Scrap"
+   ],
+   "does": "A proof-of-delivery item; its language description says using it records the job.",
+   "use": [
+    "Use the Receipt to record the delivery job."
+   ],
+   "tips": [
+    "A Delivery notebook page is defined separately from the Scrap Rush page."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Scrap_Plating_Bodge",
+   "name": "Scrap Plating Bodge",
+   "tier": 0,
+   "category": "bodge",
+   "obtain": [
+    "Grizzlecog: 8 Scrap"
+   ],
+   "does": "When installed, halves Jank gain.",
+   "use": [
+    "Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
+   ],
+   "tips": [
+    "Machines support at most two bodges."
+   ],
+   "icon": "Scrap_Plating_Bodge"
+  },
+  {
+   "id": "Craftory_Spark_Shard",
+   "name": "Spark Shard",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Drop: Sparkjaw, 1-2"
+   ],
+   "does": "A Sparkjaw drop; the drop definition allows one or two Shards.",
+   "use": [
+    "Use it in a recipe or system that accepts Spark Shards; no consumer is identified in the inspected sources."
+   ],
+   "tips": [
+    "No use recipe is listed in the extraction."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Onyxium",
+   "name": "Onyxium Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Onyxium Grit",
+    "Gnasher Pit: grind any Onyxium ore"
+   ],
+   "does": "The furnace processing recipe consumes one Onyxium Grit and outputs one Ingredient_Bar_Onyxium.",
+   "use": [
+    "Put one Onyxium Grit into the furnace recipe to produce one Onyxium Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Thorium",
+   "name": "Thorium Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Thorium Grit",
+    "Gnasher Pit: grind any Thorium ore"
+   ],
+   "does": "The furnace processing recipe consumes one Thorium Grit and outputs one Ingredient_Bar_Thorium.",
+   "use": [
+    "Put one Thorium Grit into the furnace recipe to produce one Thorium Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Grit_Adamantite",
+   "name": "Adamantite Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Adamantite Grit",
+    "Gnasher Pit: grind any Adamantite ore"
+   ],
+   "does": "The furnace processing recipe consumes one Adamantite Grit and outputs one Ingredient_Bar_Adamantite.",
+   "use": [
+    "Put one Adamantite Grit into the furnace recipe to produce one Adamantite Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Tinkers_Hammer",
+   "name": "Tinker's Hammer",
+   "tier": 0,
+   "category": "tool",
+   "obtain": [
+    "Grizzlecog: 10 Scrap"
+   ],
+   "does": "Used to straighten leaning Tether Stakes; authorization is checked against the Well claim crew, stake placer crew, or override permission.",
+   "use": [
+    "Hit a leaning Tether Stake with the hammer to straighten it."
+   ],
+   "tips": [
+    "A foreign crew without override permission cannot straighten the stake."
+   ],
+   "icon": "Tinkers_Hammer"
+  },
+  {
+   "id": "Craftory_Boomshroom_Burner",
+   "name": "Boomshroom Burner",
+   "tier": 0,
+   "category": "power",
+   "obtain": [
+    "Workbench (Tinkering): 16 Scrap + 2 Iron Bar",
+    "Grizzlecog: 24 Scrap"
+   ],
+   "does": "Burns fuel to produce Fizz energy; the energy system gates its processing by active area.",
+   "use": [
+    "Place it, add supported fuel, and connect its output to the Fizz network."
+   ],
+   "tips": [
+    "Crafting requires the matching Burner notebook page; machine production pauses in an inactive area."
+   ],
+   "icon": "Boomshroom_Burner"
+  },
+  {
+   "id": "Craftory_Squawk_Box",
+   "name": "Squawk Box",
+   "tier": 0,
+   "category": "bodge",
+   "obtain": [
+    "Grizzlecog: 6 Scrap"
+   ],
+   "does": "When installed, it enables machine alerts; Scrap Rush uses it to notify the crew when a raid steals machine output.",
+   "use": [
+    "Crouch and use it on a compatible machine; crouch-use toggles installation/removal."
+   ],
+   "tips": [
+    "Machines support at most two bodges."
+   ],
+   "icon": "Squawk_Box"
+  },
+  {
+   "id": "Craftory_Hurl_Cannon",
+   "name": "Hurl Cannon",
+   "tier": 2,
+   "category": "logistics",
+   "obtain": [
+    "Workbench (Tinkering): 20 Scrap + 4 Iron Bar + 2 Copper Bar (crew Tier 2)"
+   ],
+   "does": "The item description instructs players to aim at a Catch Net within 64 blocks and climb aboard.",
+   "use": [
+    "Place the cannon, aim toward a Catch Net within 64 blocks, and climb aboard."
+   ],
+   "tips": [
+    "The item description says Boom Powder charges are coming soon."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Shroom_Bed",
+   "name": "Shroom Bed",
+   "tier": 0,
+   "category": "machine",
+   "obtain": [
+    "Grizzlecog: 18 Scrap"
+   ],
+   "does": "A machine block that can host bodge slots; its energy member can be configured as a machine component.",
+   "use": [
+    "Place the bed, then use its configured block interaction."
+   ],
+   "tips": [
+    "Bodge installation uses crouch-use and is limited to two slots."
+   ],
+   "icon": "Shroom_Bed"
+  },
+  {
+   "id": "Craftory_Grit_Mithril",
+   "name": "Mithril Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Mithril Grit",
+    "Gnasher Pit: grind any Mithril ore"
+   ],
+   "does": "The furnace processing recipe consumes one Mithril Grit and outputs one Ingredient_Bar_Mithril.",
+   "use": [
+    "Put one Mithril Grit into the furnace recipe to produce one Mithril Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Tether_Stake",
+   "name": "Tether Stake",
+   "tier": 3,
+   "category": "well",
+   "obtain": [
+    "Workbench (Tinkering): 8 Scrap + 2 Iron Bar + 1 Spark Shard (crew Tier 3)"
+   ],
+   "does": "Tethering needs 3 stakes for Flicker or Steady, 4 for Roaring, and 6 for Primal. Stake angles more than 40 degrees from even spacing are considered leaning.",
+   "use": [
+    "Place stakes around a Dormant Well, distribute them evenly, then let the stake system evaluate the tether."
+   ],
+   "tips": [
+    "The Well remains untethered if any required stake leans."
+   ],
+   "icon": "Tether_Stake"
+  },
+  {
+   "id": "Craftory_Grit_Copper",
+   "name": "Copper Grit",
+   "tier": 0,
+   "category": "material",
+   "obtain": [
+    "Workbench (Tinkering): 1 Copper Grit",
+    "Gnasher Pit: grind any Copper ore"
+   ],
+   "does": "The furnace processing recipe consumes one Copper Grit and outputs one Ingredient_Bar_Copper.",
+   "use": [
+    "Put one Copper Grit into the furnace recipe to produce one Copper Bar."
+   ],
+   "tips": [
+    "The listed recipe processes Grit; it does not produce the Grit."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Rattlewheel",
+   "name": "Rattlewheel",
+   "tier": 0,
+   "category": "power",
+   "obtain": [
+    "Grizzlecog: 20 Scrap"
+   ],
+   "does": "A power machine that generates energy while running; Jank can make machines rattle at 40 points.",
+   "use": [
+    "Place it and use its configured interaction to run it, then connect its output to a Fizz network."
+   ],
+   "tips": [
+    "Running Jank rises by 0.25 per 20-tick cycle before modifiers; idle Jank decays by 0.1 per cycle."
+   ],
+   "icon": "Rattlewheel"
+  },
+  {
+   "id": "Craftory_Crackle_Coil",
+   "name": "Crackle Coil",
+   "tier": 3,
+   "category": "power",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 2 Iron Bar (crew Tier 3)"
+   ],
+   "does": "Consumes 5 units of energy demand per solve and converts delivered energy into Dim Glimmer output, drawing from a burning Burner or formed Junk Heart below.",
+   "use": [
+    "Place the Coil above a running Burner or formed Junk Heart and connect it to the energy network."
+   ],
+   "tips": [
+    "It produces nothing when its area is inactive."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Resonator",
+   "name": "Glimmer Resonator",
+   "tier": 3,
+   "category": "power",
+   "obtain": [
+    "Workbench (Tinkering): 16 Scrap + 3 Iron Bar + 1 Crystal Cyan (crew Tier 3)"
+   ],
+   "does": "Converts up to 40 delivered energy from a clear crystal into Dim Glimmer output. It clouds after 200 conversions by default.",
+   "use": [
+    "Insert a crystal, connect the Resonator to an energy network, and clear it when it clouds."
+   ],
+   "tips": [
+    "A clouded crystal stops output; inactive areas also stop conversion."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Well_Cradle",
+   "name": "Glimmerwell Cradle",
+   "tier": 3,
+   "category": "well",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 2 Iron Bar (crew Tier 3)"
+   ],
+   "does": "Seats a filled Gob-Jar in the air block above the Cradle and generates 4, 10, 25, or 40 energy for Flicker, Steady, Roaring, or Primal strength, multiplied by harmony from 0 to 5.",
+   "use": [
+    "Place a filled Gob-Jar into the Cradle to seat its Well; place matching taste blocks nearby to increase harmony."
+   ],
+   "tips": [
+    "The Cradle refuses placement if a Well already occupies the block above it."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Sloshtank",
+   "name": "Sloshtank",
+   "tier": 0,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 2 Iron Bar",
+    "Grizzlecog: 20 Scrap"
+   ],
+   "does": "A fluid tank with a capacity registered by its fluid handler; the tank display updates once per second in an active area.",
+   "use": [
+    "Place it and connect fluid pipes; use the fluid network to fill or drain it."
+   ],
+   "tips": [
+    "Its visual fill state updates only in an active area and on the energy tick."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Gasbag",
+   "name": "Gasbag",
+   "tier": 2,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 16 Scrap + 2 Copper Bar + 1 Iron Bar (crew Tier 2)",
+    "Grizzlecog: 28 Scrap"
+   ],
+   "does": "Stores up to 400,000 energy. Adjacent fire starts a leak that drains 1% of capacity per second; the bag can be patched.",
+   "use": [
+    "Place it in the energy network; patch it after a fire-triggered leak."
+   ],
+   "tips": [
+    "The leak is triggered by an adjacent fire fluid and only processes in active areas."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Gutter_Boiler",
+   "name": "Gutter Boiler",
+   "tier": 2,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 20 Scrap + 4 Iron Bar + 2 Copper Bar (crew Tier 2)",
+    "Grizzlecog: 32 Scrap"
+   ],
+   "does": "Holds 4,000 water and consumes 10 water per second while active. It outputs 60 base power, boosted to 125% at pressure 80-95; pressure 100 pops the boiler.",
+   "use": [
+    "Fill it with Water or Water_Source through a fluid connection, add fuel or lava below, then connect its output."
+   ],
+   "tips": [
+    "Venting above pressure 95 drops pressure by 40; a Fizz Charge burns for 10 seconds."
+   ],
+   "icon": null
+  },
+  {
+   "id": "Craftory_Wellhead",
+   "name": "Glimmerwell Wellhead",
+   "tier": 3,
+   "category": "machine",
+   "obtain": [
+    "Workbench (Tinkering): 12 Scrap + 2 Iron Bar",
+    "Grizzlecog: 20 Scrap"
+   ],
+   "does": "Tap a claimed tethered Well to pump dim glimmer.",
+   "use": [
+    "Place it directly on top of a Well your crew has tethered with Tether Stakes. The Well becomes Tapped.",
+    "Connect it to an energy network: it outputs Dim Glimmer at the Well's strength.",
+    "Feed it lower-grade power (Fizz or Pressurised Fizz) to catalyse it up to the Well's grade."
+   ],
+   "tips": [
+    "Catalysis loses 15%: 20 units in gives 17 out.",
+    "Breaking a Tether Stake makes the Well Dormant and stops the Wellhead.",
+    "A corrupted Well halves both outputs."
+   ],
+   "icon": "Wellhead"
+  },
+  {
+   "id": "Craftory_Boiler_Tank",
+   "name": "Boiler Tank",
+   "tier": 2,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 6 Scrap + 2 Iron Bar (crew Tier 2)"
+   ],
+   "does": "A riveted pressure vessel with a cyan gauge.",
+   "use": [
+    "Part of the Gutter Boiler frame; build the frame, then hammer it together."
+   ],
+   "tips": [],
+   "icon": "Boiler_Tank"
+  },
+  {
+   "id": "Craftory_Boiler_Whistle_Stack",
+   "name": "Boiler Whistle Stack",
+   "tier": 2,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 4 Scrap + 1 Copper Bar + 1 Iron Bar (crew Tier 2)"
+   ],
+   "does": "Brass pipes that sing when the boiler climbs too high.",
+   "use": [
+    "Tops the Gutter Boiler frame. It whistles when pressure climbs too high."
+   ],
+   "tips": [],
+   "icon": "Boiler_Whistle_Stack"
+  },
+  {
+   "id": "Craftory_Gasbag_Frame",
+   "name": "Gasbag Frame",
+   "tier": 2,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 6 Scrap + 1 Iron Bar (crew Tier 2)"
+   ],
+   "does": "A braced scrap frame for a towering gasbag.",
+   "use": [
+    "Part of the Gasbag frame; build the frame, then hammer it together."
+   ],
+   "tips": [],
+   "icon": "Gasbag_Frame"
+  },
+  {
+   "id": "Craftory_Gasbag_Envelope",
+   "name": "Gasbag Envelope",
+   "tier": 2,
+   "category": "fluid",
+   "obtain": [
+    "Workbench (Tinkering): 4 Scrap + 1 Copper Bar (crew Tier 2)"
+   ],
+   "does": "Patched canvas that holds a goblin-sized charge of fizz.",
+   "use": [
+    "The canvas section of the Gasbag frame."
+   ],
+   "tips": [],
+   "icon": "Gasbag_Envelope"
+  }
+ ],
+ "mobs": [
+  {
+   "id": "Craftory_Glimmer_Wisp",
+   "name": "Glimmer Wisp",
+   "where": "No natural spawn yet; admins can spawn it with `/craftory mob spawn`.",
+   "behaviour": "Passive bird-template variant; wanders 12 blocks, at 2-6 blocks above ground, with 18 max health.",
+   "drops": "1-2 Glimmer Dust."
+  },
+  {
+   "id": "Craftory_Sparkjaw",
+   "name": "Sparkjaw",
+   "where": "Guards Wild Steady Wells (one guardian per Well, within 16 blocks). Kill it to calm the Well.",
+   "behaviour": "Predatory melee role with 110 max health, 12-block view and alert ranges, 3-block attack distance, and 22 base physical damage with a 10% random modifier.",
+   "drops": "1-2 Spark Shards."
+  },
+  {
+   "id": "Craftory_Riftmoth",
+   "name": "Riftmoth",
+   "where": "Swarms around Seated or Tapped Wells (every 300 s, 20% chance by default).",
+   "behaviour": "Void-attitude role with 90 max health and 12-block view range. Riftmoth drains 20 stored energy per second when near a qualifying energy source. Feeding on a Well for 60 seconds in total corrupts it.",
+   "drops": "1 Riftmoth Wing."
+  },
+  {
+   "id": "Craftory_Goblin_Poacher",
+   "name": "Goblin Poacher",
+   "where": "Scrap Rush raids, Poacher raids on Seated or Tapped Wells, and ambushes on players carrying a jarred Well.",
+   "behaviour": "Goblin lobber role with 80 max health, 8-block view and attack distance, and maximum speed 3.",
+   "drops": "Weighted drop entries: Scrap 1-2 at weight 90; Gob-Jar 1 at weight 10."
+  },
+  {
+   "id": "Craftory_Vessa",
+   "name": "Vessa Lanternwright",
+   "where": "Can spawn when a crew-tier-2 owned Burner or formed Junk Heart is running and a crystal trigger is within 8 blocks; the system spawns Vessa when there is a free air cell above the machine.",
+   "behaviour": "Generic idle NPC; the role asset sets 70 max health and an Ignore default NPC attitude.",
+   "drops": "No drop list is defined in the Vessa role asset."
+  },
+  {
+   "id": "Craftory_Grizzlecog",
+   "name": "Grizzlecog",
+   "where": "Visits on his own about every 2 in-game days, 8–12 blocks from an online player. Admins can also use `/craftory summon grizzlecog`.",
+   "behaviour": "Trader NPC; its role asset links to the Craftory_Grizzlecog shop.",
+   "drops": "The role asset references Drop_Klops_Merchant; no Craftory-specific drop list is assigned."
+  },
+  {
+   "id": "Craftory_Slurp_Walker",
+   "name": "Slurp Walker",
+   "where": "Comes with Poacher raids on Seated or Tapped Wells.",
+   "behaviour": "Goblin Guardian variant with 150 max health and 12-block view range. It siphons a Well for 120 seconds, then the Well drops one strength band. Killing it stops the siphon.",
+   "drops": "None specific to Craftory."
+  }
+ ],
+ "npcs": [
+  {
+   "name": "Grizzlecog",
+   "where": "Visits on his own about every 2 in-game days, 8–12 blocks from an online player. Admins can also use `/craftory summon grizzlecog`.",
+   "role": "Trader for the Grizzlecog shop; the NPC role links the Craftory_Grizzlecog trade asset.",
+   "dialogue": []
+  },
+  {
+   "name": "Vessa",
+   "where": "First Spark system may spawn her beside a running owned Burner or formed Junk Heart if the crew is tier 2 and a crystal trigger is within 8 blocks.",
+   "role": "First Spark encounter NPC; a successful spawn records Vessa-met knowledge for the owner's crew.",
+   "dialogue": []
+  }
+ ],
+ "systems": [
+  {
+   "key": "energy",
+   "title": "Fizz energy",
+   "facts": [
+    "Energy is solved every 0.2 seconds.",
+    "Machine production and demand are registered in the shared energy network; over-grading and overload affect Jank."
+   ]
+  },
+  {
+   "key": "jank",
+   "title": "Machine Jank",
+   "facts": [
+    "Jank updates on a 20-tick cycle: running gain is 0.25 and idle decay is 0.1.",
+    "Over-grading and overload each multiply gain by 2.0. Rattle starts at 40; fizzle chance starts at 2% at 70 and adds 0.2 percentage points per point above 70.",
+    "A fizzle stalls for 10 seconds and recovers at Jank 50; scrap repair removes 20 Jank."
+   ]
+  },
+  {
+   "key": "bodge",
+   "title": "Bodge parts",
+   "facts": [
+    "Machines accept at most two bodges.",
+    "Boom Valve: speed ×1.25 and Jank ×1.5; Gutter Gear: energy use ×0.8; Scrap Plating Bodge: Jank ×0.5; Squawk Box enables alerts; Muffler suppresses rattling.",
+    "Install or remove bodges with crouch-use on a compatible machine."
+   ]
+  },
+  {
+   "key": "multiblock",
+   "title": "Junk Heart multiblock",
+   "facts": [
+    "A formed Junk Heart grants its owner crew the `craftory:heart/junk` knowledge.",
+    "The Junk Heart counts as running only while its burner is active and its multiblock state is FORMED."
+   ]
+  },
+  {
+   "key": "crews",
+   "title": "Crews",
+   "facts": [
+    "Crew membership, invitations, and knowledge are keyed to player UUIDs; `/craftory crew` supports create, invite, accept, leave, kick, and info.",
+    "Crew names are limited to 32 characters."
+   ]
+  },
+  {
+   "key": "notebook",
+   "title": "Tinker's Notebook",
+   "facts": [
+    "The eight Tinkered pages are Burner, Crank, Canister, Gutterpipe, Gnasher, Oven, Grizzlecog delivery, and Scrap Rush.",
+    "The first six machine pages are associated with their respective machine type; Delivery and Scrap Rush are job pages."
+   ]
+  },
+  {
+   "key": "tier_unlocks",
+   "title": "Crew tiers",
+   "facts": [
+    "Tinkered tier is tier 2.",
+    "A crew reaches tier 2 only when it has all eight notebook page IDs and `craftory:heart/junk` knowledge."
+   ]
+  },
+  {
+   "key": "scrap_rush",
+   "title": "Scrap Rush",
+   "facts": [
+    "Scrap Rush raids target eligible active-area machines; an enabled schedule or `/craftory scraprush start` can start a raid.",
+    "Raids spawn a configured 1-5 Goblin Poachers, and their defeat grants the Scrap Rush notebook page to the machine owner's crew.",
+    "A Goblin Poacher adjacent for the configured steal interval can mark the machine's Jank as stolen."
+   ]
+  },
+  {
+   "key": "anchor_pause",
+   "title": "Wakebell Anchor",
+   "facts": [
+    "Default maximum Anchor charge is 240 minutes; setting the maximum to 0 prevents an active charge.",
+    "An active Anchor refreshes the surrounding 3-by-3 chunk area and removes its keep-loaded handles when charge runs out."
+   ]
+  },
+  {
+   "key": "wells_scan",
+   "title": "Well births and scan",
+   "facts": [
+    "Stormcall default interval is 180 seconds and chance 0.35; rain Flicker chance is 0.1, kill Flicker chance 0.05, and player Flicker cooldown 120 seconds.",
+    "Stormcall uses the strike position for the region cooldown, vane count within 64 blocks, and strong-Well regional budget.",
+    "The strong-Well budget defaults to one per region; region coordinates are `x shr 9` and `z shr 9`."
+   ]
+  },
+  {
+   "key": "insight_codex",
+   "title": "Insight and Codex",
+   "facts": [
+    "First Well read gives 20 points per strength ordinal plus 1, with a perfect read adding half of that base; repeat reads give 10% of base, minimum 1.",
+    "First mob, machine, and ore/crystal scans give 5, 8, and 4 Insight respectively; repeats use the same 10% decay with minimum 1."
+   ]
+  },
+  {
+   "key": "first_spark",
+   "title": "First Spark",
+   "facts": [
+    "A running owned Burner or formed, burning Junk Heart can trigger First Spark for a crew at tier 2 when a crystal trigger is within 8 blocks.",
+    "The first Spark grants knowledge and attempts to spawn Vessa above the machine where an air cell is available."
+   ]
+  },
+  {
+   "key": "cradle_harmony",
+   "title": "Cradle harmony",
+   "facts": [
+    "Harmony counts matching blocks within four blocks in each axis and maps counts 0, 1-2, 3-5, 6-9, and 10+ to harmony 1-5.",
+    "Scrap taste matches Scrap plating; other taste strings match a block with that same ID.",
+    "Cradle output bases are 4/10/25/40 for Flicker/Steady/Roaring/Primal, multiplied by harmony 0-5."
+   ]
+  },
+  {
+   "key": "storm_hunt",
+   "title": "Storm Hunt and Glimmerwells",
+   "facts": [
+    "Recognized storm IDs are `zone1_storm`, `zone2_thunder_storm`, `zone4_storm`, and `zone4_swamp_storm`; IDs containing `rain` classify as rain unless in the storm set.",
+    "Spark dislikes rain; Ember dislikes rain and recognized storms; other Temperaments have no weather penalty in the implemented rule.",
+    "Storm Steady chance is 0.15 plus 0.1 per nearby vane, capped at 0.55. Regions are 512 blocks wide on X and Z.",
+    "Tether stake counts are Flicker/Steady 3, Roaring 4, Primal 6. A Well must be DORMANT, meet the stake count, and have no leaning stakes to become TETHERED.",
+    "Capture uses 3 presses spaced 0.2-2 seconds apart."
+   ]
+  },
+  {
+   "key": "escort",
+   "title": "Jar carrier",
+   "facts": [
+    "A carried filled jar slows base movement to 0.7× while not mounted; the component is present while a filled jar is carried.",
+    "Each jar loses 0.2 stability per second; damage removes 10 stability per instance; disliked weather removes 1 stability per 10 seconds.",
+    "At zero stability the carrier attempts a Wild Well spawn; the jar is consumed only after a successful spawn, otherwise it is retained at stability 1 for retry."
+   ]
+  },
+  {
+   "key": "hurl",
+   "title": "Hurl transport",
+   "facts": [
+    "Hurl uses 16 blocks per energy unit, 100 energy per unit, speed 0.5, lookahead 32, and a 200-tick fall guard by default.",
+    "A ride validates its route, energy, carrier status, and station permissions before starting."
+   ]
+  },
+  {
+   "key": "pipes_sorting",
+   "title": "Gutterpipe sorting",
+   "facts": [
+    "Red, blue, green, and yellow paint daubs set Gutterpipe branch colours.",
+    "The Snatcher Claw filters by item ID or daub colour; an empty-hand interaction clears its filter."
+   ]
+  },
+  {
+   "key": "fluids",
+   "title": "Fluids and Gutter Boiler",
+   "facts": [
+    "The Boiler accepts Water or Water_Source, stores at most 4,000 water, and consumes 10 per second while active.",
+    "Boiler pressure is capped at 100; base output is 60 and output is boosted to 125% at pressure 80-95. At pressure 100 the Boiler pops; venting above 95 drops pressure by 40.",
+    "Gasbag capacity is 400,000; adjacent fire triggers a leak draining 1% capacity per second."
+   ]
+  },
+  {
+   "key": "commands",
+   "title": "Commands",
+   "facts": [
+    "See the `commands` array for registered syntax, player/permission requirements, and command effects."
+   ]
+  },
+  {
+   "key": "wellhead",
+   "title": "Wellhead and catalysis",
+   "facts": [
+    "A Wellhead placed directly above a Well your crew has tethered taps it (state Tapped) and outputs Dim Glimmer at that Well's strength.",
+    "Catalysis: it also takes up to 40 units per tick of lower-grade power and converts it to the Well's grade, losing 15% (20 in, 17 out).",
+    "It stays bound to the Well it was placed on; a replacement Well at the same spot will not feed it.",
+    "Only the owning crew can use or break it, including while it is pumping.",
+    "Removing a stake makes the Well Dormant and the Wellhead stops."
+   ]
+  },
+  {
+   "key": "afflictions",
+   "title": "Riftmoths and Poacher raids",
+   "facts": [
+    "Seated and Tapped Wells attract trouble.",
+    "Riftmoths: every 300 seconds there is a 20% chance a swarm appears around one. After 60 seconds of feeding in total (separate visits add up) the Well is Corrupted: it pulses smoke and its output is halved.",
+    "Cleanse a corrupted Well by killing its Riftmoths or keeping a Tide or Growth Well within 16 blocks.",
+    "Poacher raids: every 1200 seconds there is a 10% chance Goblin Poachers arrive with a Slurp Walker. The Walker siphons for 120 seconds, then the Well drops one strength band (never below Flicker). Kill the Walker to stop it.",
+    "Raids and siphoning pause while the Well's crew is offline."
+   ]
+  },
+  {
+   "key": "grizzlecog-visits",
+   "title": "Grizzlecog visits",
+   "facts": [
+    "Grizzlecog turns up on his own about every 2 in-game days on average, 8–12 blocks from an online player in an active area, and announces himself.",
+    "He leaves after his visit, even across a server restart.",
+    "Admins can still summon him with `/craftory summon grizzlecog`."
+   ]
+  }
+ ],
+ "commands": [
+  {
+   "cmd": "/craftory",
+   "who": "player",
+   "does": "Displays Craftory version and loaded modules."
+  },
+  {
+   "cmd": "/craftory crew create <name> | invite <player> | accept <crew-uuid> | leave | kick <player> | info [player]",
+   "who": "player; `/craftory crew info <player>` requires `craftory.crew.info`",
+   "does": "Manages crew membership and displays crew tier, pages, knowledge, and members."
+  },
+  {
+   "cmd": "/craftory summon grizzlecog",
+   "who": "player with `hytale.command.craftory.summon`",
+   "does": "Summons Grizzlecog above the block the player targets within 8 blocks."
+  },
+  {
+   "cmd": "/craftory well list | spawn <temperament> <strength>",
+   "who": "player with `craftory.well` permission",
+   "does": "Lists nearby Glimmerwells or spawns one at the targeted block within 8 blocks, falling back to the player's position."
+  },
+  {
+   "cmd": "/craftory scraprush start",
+   "who": "player with `hytale.command.craftory.scraprush`; Scrap Rush config must be enabled",
+   "does": "Starts a Scrap Rush at the nearest eligible machine."
+  },
+  {
+   "cmd": "/craftory mob spawn <role>",
+   "who": "player with `craftory.mob` permission",
+   "does": "Spawns a registered Craftory mob above the targeted block within 8 blocks; role aliases include glimmer_wisp, sparkjaw, riftmoth, and goblin_poacher."
+  },
+  {
+   "cmd": "/craftory config anchor-max <minutes>",
+   "who": "player with `hytale.command.craftory.config`",
+   "does": "Sets the maximum Wakebell Anchor charge time to a nonnegative number of minutes."
+  },
+  {
+   "cmd": "/craftory grant <player> <knowledge-id>",
+   "who": "player with `hytale.command.craftory.grant`",
+   "does": "Grants a knowledge page to an online player."
+  },
+  {
+   "cmd": "/craftory net [x y z]",
+   "who": "player",
+   "does": "Displays energy-network diagnostics for a targeted block within 8 blocks or explicit coordinates."
+  },
+  {
+   "cmd": "/craftory selftest",
+   "who": "player with `hytale.command.craftory.selftest`",
+   "does": "Runs Craftory runtime checks; intended for diagnostics rather than ordinary gameplay."
+  }
+ ],
+ "tiers": [
+  {
+   "tier": 0,
+   "unlock": "Default or item-specific tier is not assigned in the inspected item extraction; tier 0 in this file means unspecified, not a claimed in-game tier.",
+   "pages": []
+  },
+  {
+   "tier": 2,
+   "unlock": "Tinkered tier is granted when the crew knows all eight notebook page IDs and Junk Heart knowledge (`craftory:heart/junk`).",
+   "pages": [
+    {
+     "id": "craftory:page/burner",
+     "earned": "Burner page; source key is machines."
+    },
+    {
+     "id": "craftory:page/crank",
+     "earned": "Crank page; source key is machines."
+    },
+    {
+     "id": "craftory:page/canister",
+     "earned": "Canister page; source key is machines."
+    },
+    {
+     "id": "craftory:page/gutterpipe",
+     "earned": "Gutterpipe page; source key is machines."
+    },
+    {
+     "id": "craftory:page/gnasher",
+     "earned": "Gnasher page; source key is machines."
+    },
+    {
+     "id": "craftory:page/oven",
+     "earned": "Oven page; source key is machines."
+    },
+    {
+     "id": "craftory:page/job/grizzlecog_delivery",
+     "earned": "Grizzlecog delivery page; source key is delivery."
+    },
+    {
+     "id": "craftory:page/job/scrap_rush",
+     "earned": "Scrap Rush page; granted when the raid is defeated."
+    }
+   ]
+  }
+ ],
+ "well_reference": {
+  "strengths": [
+   {
+    "name": "Flicker",
+    "description": "The weakest and most common. Catchable from Tier 3. Base Cradle output 4."
+   },
+   {
+    "name": "Steady",
+    "description": "Rarer, usually from Stormcall strikes. Guarded, and must be calmed before tethering. Base output 10, up to grade 2."
+   },
+   {
+    "name": "Roaring",
+    "description": "Base output 25, up to grade 3. Later tiers."
+   },
+   {
+    "name": "Primal",
+    "description": "Base output 40. Later tiers."
+   }
+  ],
+  "states": [
+   {
+    "name": "Wild",
+    "description": "Newly born and restless. A Steady or stronger Well may have a Sparkjaw guardian."
+   },
+   {
+    "name": "Dormant",
+    "description": "Calmed, by killing its guardian or by smothering it with three powered Fizz Dampers. Ready for Tether Stakes."
+   },
+   {
+    "name": "Tethered",
+    "description": "Held by three evenly spaced Tether Stakes and claimed by your crew. Ready to jar."
+   },
+   {
+    "name": "Jarred",
+    "description": "Sealed in a Gob-Jar and being carried home. Its Stability drains, so hurry."
+   },
+   {
+    "name": "Seated",
+    "description": "Sitting on a Glimmerwell Cradle and producing Dim Glimmer."
+   },
+   {
+    "name": "Tapped",
+    "description": "A Wellhead sits on it and pumps its Dim Glimmer straight into your network."
+   },
+   {
+    "name": "Corrupted",
+    "description": "Riftmoths fed on it for 60 seconds. It pulses smoke and its output is halved until you kill the moths or bring a Tide or Growth Well within 16 blocks."
+   },
+   {
+    "name": "Void-touched / Spent",
+    "description": "Later-tier states."
+   }
+  ],
+  "temperaments": [
+   {
+    "name": "Spark",
+    "color": "#5ff3ff",
+    "description": "Dislikes plain rain, but loves a thunderstorm."
+   },
+   {
+    "name": "Ember",
+    "color": "#ff8a2b",
+    "description": "Dislikes rain and storms."
+   },
+   {
+    "name": "Tide",
+    "color": "#3f8cff",
+    "description": "No weather dislike."
+   },
+   {
+    "name": "Growth",
+    "color": "#5fd35a",
+    "description": "No weather dislike."
+   },
+   {
+    "name": "Stone",
+    "color": "#a58c6a",
+    "description": "No weather dislike."
+   },
+   {
+    "name": "Gale",
+    "color": "#d6f2ff",
+    "description": "No weather dislike."
+   },
+   {
+    "name": "Clank",
+    "color": "#8bff3a",
+    "description": "No weather dislike."
+   },
+   {
+    "name": "Hollow",
+    "color": "#6a2a9a",
+    "description": "No weather dislike."
+   }
+  ],
+  "note": "While you carry a jarred Well in weather it dislikes, it loses 1 Stability every 10 seconds on top of the normal drain. For now every Temperament shares the same Taste: surround a seated Well with Scrap Plating to raise its Harmony (up to 5)."
+ },
+ "gaps": [
+  "Glimmer Lens and Codex are only sold by Grizzlecog and have no tier gate, because you need the Lens to reach Tier 3.",
+  "Glimmer Wisp and Sparkjaw have no ambient survival spawn yet. Sparkjaws guard Steady Wells, and Wisps come from the mob command.",
+  "Temperaments only change the Well's colour and weather preferences so far; a Temperament's tastes don't change Harmony yet.",
+  "Look and feel are still unchecked in a real client: animations, beams, mob looks, and the timing of tube and cannon rides and jar capture.",
+  "Void-touched and Spent Well states belong to later tiers."
+ ],
+ "lore": {
+  "intro": "Goblins have been dragging scrap out of the breaches for longer than anyone can remember, and some of it still hums. Craftory starts the day you buy a leaky goblin machine with a handful of Scrap. You learn to bodge your own. Then one of your machines makes a breach crystal sing, and a half-blind crystal archivist turns up to explain what you've done. From there scrap and crystal start to merge.",
+  "beats": [
+   {
+    "tier": 1,
+    "title": "The sealed crate",
+    "text": "Grizzlecog the goblin scrap peddler sells you a sealed crate. It opens with a puff, and the machine inside coughs to life. Sealed goblin junk: you can run it, but you don't understand it yet."
+   },
+   {
+    "tier": 2,
+    "title": "Learning to bodge",
+    "text": "Take machines apart with a cracked Tinker's Wrench, fill your crew's Notebook, and hammer together your own Junk Heart. The goblins notice, and some of them come to take it."
+   },
+   {
+    "tier": 3,
+    "title": "You made it sing",
+    "text": "Your machine whines, a nearby crystal answers with a pillar of light, and Vessa Lanternwright steps out of the glow: \"You made it sing. With… a kettle?\" The goblins back off: \"Void-glass! Bad luck! …Sells though.\""
+   }
+  ],
+  "cast": [
+   {
+    "name": "Grizzlecog",
+    "text": "A goblin scrap peddler, and your first supplier. He trades in Scrap, and he takes it very seriously."
+   },
+   {
+    "name": "Vessa Lanternwright",
+    "text": "A human crystal archivist who has spent her life listening to the breaches. She arrives the first time one of your machines makes a crystal sing."
+   },
+   {
+    "name": "The Wellborn",
+    "text": "Creatures that form around Glimmerwells. They aren't evil. Vessa calls them \"the world trying to sing\"."
+   }
+  ],
+  "wells": "A Glimmerwell is a living knot of light, born where the world's energy runs high: in thunderstorms, in rain and after big fights. Each one has a Temperament, a Strength and a Taste, the kind of place it wants to live."
+ }
 }
