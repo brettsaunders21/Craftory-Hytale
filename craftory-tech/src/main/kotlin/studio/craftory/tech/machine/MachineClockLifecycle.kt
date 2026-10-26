@@ -110,12 +110,12 @@ internal object MachineClock {
         bench: ProcessingBenchBlock?,
     ) {
         state.lastInputProgress = bench?.inputProgress
+        state.lastRecipeId = bench?.recipe?.id
         state.lastRecipeTimeSeconds =
             bench
                 ?.takeIf { it.recipe != null }
                 ?.getRecipeTimeSeconds(1)
         state.status = MachineStatus.IDLE
-        state.inventorySnapshot = bench?.let { OvenInventorySnapshot.capture(it) }
     }
 
     fun pause(

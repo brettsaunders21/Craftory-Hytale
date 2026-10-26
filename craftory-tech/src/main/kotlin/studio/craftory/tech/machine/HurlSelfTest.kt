@@ -47,6 +47,12 @@ internal class HurlSelfTest(
         complete = done
         run.hurlCleanup = ::cleanup
         guarded {
+            for (x in 20..28) clear(pos(x))
+            listOf(
+                BlockPos.pack(10_020, 154, 10_012),
+                BlockPos.pack(10_028, 154, 10_012),
+                storage,
+            ).forEach(::clear)
             val baseline = CraftoryCore.tubeAccess(world).nodeCount
             val networks = CraftoryCore.tubeAccess(world).networkCount
             for (x in 20..28) {

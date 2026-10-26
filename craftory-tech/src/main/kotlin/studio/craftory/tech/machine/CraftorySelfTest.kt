@@ -96,6 +96,10 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var ovenProgressAtNoPower: Float? = null,
         var ovenInputAtNoPower: String? = null,
         var ovenOutputAtNoPower: String? = null,
+        var ovenUnpoweredProbeTick: Long? = null,
+        var ovenPoweredProbeTick: Long? = null,
+        var ovenProbeOutputItemId: String? = null,
+        var ovenProbeOutputQuantity: Int = 0,
         var spawnedGritDrops: Int = 0,
         var spawnedGritQuantity: Int = 0,
         var gnasherBaselineQuantity: Int = 0,
@@ -184,7 +188,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
 
-    @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught")
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "TooGenericExceptionCaught")
     override fun tick(
         dt: Float,
         systemIndex: Int,
@@ -218,6 +222,71 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 tickPowerLossPhase(run, store, tick)
             } catch (failure: Exception) {
                 abort(run, "exception (${failure.message})")
+            }
+            return
+        }
+        if (run.phase == 7) {
+            val started = run.ovenUnpoweredProbeTick ?: tick
+            if (tick >= started + 5) {
+                val ref =
+                    BlockModule.getBlockEntity(
+                        run.world,
+                        CraftorySelfTest.OVEN.x,
+                        CraftorySelfTest.OVEN.y,
+                        CraftorySelfTest.OVEN.z,
+                    )
+                val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+                val power = ref?.let { store.getComponent(it, OvenPower.type) }
+                val input = bench?.inputContainer?.getItemStack(0.toShort())
+                val output = bench?.outputContainer?.getItemStack(0.toShort())
+                val producedOutput = output?.takeIf { it.quantity > 0 }
+                val outputUnchanged =
+                    producedOutput?.itemId == run.ovenProbeOutputItemId &&
+                        (producedOutput?.quantity ?: 0) == run.ovenProbeOutputQuantity
+                val preserved =
+                    input?.itemId == "Ore_Copper" &&
+                        input.quantity == 1 &&
+                        outputUnchanged
+                check(
+                    run,
+                    preserved,
+                    "oven preserves input inserted without power",
+                    "input=$input, output=$output baseline=${run.ovenProbeOutputItemId}x${run.ovenProbeOutputQuantity}",
+                )
+                power?.storedFizz = OvenPower.CAPACITY
+                run.ovenPoweredProbeTick = tick
+                run.phase = 8
+            }
+            return
+        }
+        if (run.phase == 8) {
+            val ref =
+                BlockModule.getBlockEntity(
+                    run.world,
+                    CraftorySelfTest.OVEN.x,
+                    CraftorySelfTest.OVEN.y,
+                    CraftorySelfTest.OVEN.z,
+                )
+            val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+            val output = bench?.outputContainer?.getItemStack(0.toShort())
+            val input = bench?.inputContainer?.getItemStack(0.toShort())
+            val producedOutput = output?.takeIf { it.quantity > 0 }
+            val timedOut = tick >= (run.ovenPoweredProbeTick ?: tick) + 400
+            val completed =
+                producedOutput?.itemId == "Ingredient_Bar_Copper" &&
+                    producedOutput.quantity > run.ovenProbeOutputQuantity &&
+                    (input?.itemId != "Ore_Copper" || input.quantity == 0)
+            if (completed || timedOut) {
+                check(
+                    run,
+                    completed,
+                    "oven completes after capacitor is powered",
+                    "input=$input, output=$output baseline=${run.ovenProbeOutputItemId}x${run.ovenProbeOutputQuantity}",
+                )
+                run.anchorDisableTick = tick + 1
+                run.anchorDisableStartedTick = tick + 1
+                run.phase = 5
+                run.cleanupTick = tick + 100
             }
             return
         }
@@ -259,6 +328,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         }
     }
 
+    @Suppress("CyclomaticComplexMethod")
     private fun tickPowerLossPhase(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
@@ -302,10 +372,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 run.context.sendMessage(Message.raw("selftest: SKIP oven stop-after-power-loss check (NonTicking)"))
             }
             run.stoppedReported = true
-            run.anchorDisableTick = tick + 1
-            run.anchorDisableStartedTick = tick + 1
-            run.phase = 5
-            run.cleanupTick = tick + 100
+            if (run.phase != 7) {
+                run.anchorDisableTick = tick + 1
+                run.anchorDisableStartedTick = tick + 1
+                run.phase = 5
+                run.cleanupTick = tick + 100
+            }
         }
     }
 
@@ -749,6 +821,20 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             "status=${power?.status}, storedFizz=${power?.storedFizz}, progress=$progress, " +
                 "input=$input, output=$output",
         )
+        if (bench != null) {
+            val output = bench.outputContainer.getItemStack(0.toShort())?.takeIf { it.quantity > 0 }
+            run.ovenProbeOutputItemId = output?.itemId
+            run.ovenProbeOutputQuantity = output?.quantity ?: 0
+            val inputSet = bench.inputContainer.setItemStackForSlot(0.toShort(), ItemStack("Ore_Copper", 1))
+            check(
+                run,
+                inputSet.succeeded(),
+                "oven unpowered probe inserts input",
+                "result=$inputSet",
+            )
+            run.ovenUnpoweredProbeTick = run.world.tick
+            run.phase = 7
+        }
     }
 
     @Suppress("CyclomaticComplexMethod", "ComplexCondition", "LongMethod")

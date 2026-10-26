@@ -75,19 +75,45 @@ class OvenPowerMathTest {
     }
 
     @Test
-    fun `processing freezes at the previous progress when fizz is insufficient`() {
+    fun `gate freezes below minimum tick fizz before recipe completion`() {
+        val gate = OvenFizzAccounting.gate(5, true, false, 2.9f, 3f)
         val processing =
             OvenFizzAccounting.process(
-                storedFizz = 59,
-                previousProgress = 1f,
-                currentProgress = 2f,
+                storedFizz = 5,
+                previousProgress = 2.75f,
+                currentProgress = 2.9f,
                 previousRecipeTimeSeconds = 3f,
+                frozenProgress = gate.progress,
+                gateStatus = gate.status,
             )
-
-        assertEquals(59L, processing.storedFizz)
-        assertEquals(1f, processing.inputProgress)
+        assertEquals(MachineStatus.NO_POWER, gate.status)
+        assertEquals(2.75f, gate.progress)
+        assertEquals(2.75f, processing.inputProgress)
         assertEquals(MachineStatus.NO_POWER, processing.status)
-        assertFalse(processing.advanced)
+    }
+
+    @Test
+    fun `gate clamp stays below completion guard`() {
+        val gate = OvenFizzAccounting.gate(0, true, false, 4f, 4f)
+        assertEquals(3.75f, gate.progress)
+        assertTrue(gate.progress < 4f - OvenFizzAccounting.COMPLETION_GUARD_SECONDS + 0.0001f)
+    }
+
+    @Test
+    fun `recipe change accepts reset and charges new progress`() {
+        val processing =
+            OvenFizzAccounting.process(5, 2f, 0.1f, 3f, recipeChanged = true)
+        assertEquals(0L, processing.storedFizz)
+        assertEquals(0.1f, processing.inputProgress)
+        assertEquals(MachineStatus.RUNNING, processing.status)
+    }
+
+    @Test
+    fun `processing cost is clamped to available fizz`() {
+        val processing = OvenFizzAccounting.process(1, 0f, 1f, null)
+        assertEquals(0L, processing.storedFizz)
+        assertEquals(1f, processing.inputProgress)
+        assertEquals(MachineStatus.RUNNING, processing.status)
     }
 
     @Test

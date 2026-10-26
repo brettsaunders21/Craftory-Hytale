@@ -226,6 +226,79 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
     }
 }
 
+internal class ScorchOvenGateSystem : EntityTickingSystem<ChunkStore>() {
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(
+            OvenPower.type,
+            Jank.type,
+            ProcessingBenchBlock.getComponentType(),
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
+
+    override fun getDependencies(): Set<Dependency<ChunkStore>> =
+        setOf(
+            SystemDependency(Order.BEFORE, BenchSystems.ProcessingBenchTick::class.java),
+            SystemDependency(Order.BEFORE, EnergySolveSystem::class.java),
+        )
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val power = chunk.getComponent(index, OvenPower.type) ?: return
+        val jank = chunk.getComponent(index, Jank.type) ?: return
+        val bench = chunk.getComponent(index, ProcessingBenchBlock.getComponentType()) ?: return
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val recipe = bench.recipe
+        val recipeId = recipe?.id
+        val recipeTime = recipe?.let { bench.getRecipeTimeSeconds(1) }
+        val recipeChanged = power.lastRecipeId != recipeId
+        val progressBeforeTick =
+            if (recipeChanged) {
+                bench.inputProgress
+            } else {
+                power.lastInputProgress ?: bench.inputProgress
+            }
+        power.tickStartProgress = progressBeforeTick
+        power.tickRecipeId = recipeId
+        power.tickRecipeTimeSeconds = recipeTime
+        power.recipeChangedBeforeTick = recipeChanged
+
+        val gate =
+            OvenFizzAccounting.gate(
+                storedFizz = power.storedFizz,
+                activeArea = CraftoryCore.isAreaActive(store, blockState),
+                stalled = jank.isStalled,
+                progress = bench.inputProgress,
+                recipeTimeSeconds = recipeTime,
+            )
+        power.gateStatus = gate.status
+        power.frozenProgress = gate.progress.takeIf { gate.status != null }
+        if (gate.status != null && bench.inputProgress != gate.progress) {
+            bench.setInputProgress(gate.progress)
+            val benchBlock = chunk.getComponent(index, BenchBlock.getComponentType()) ?: return
+            bench.sendProgress(gate.progress, benchBlock.windows)
+        }
+    }
+}
+
 internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
         Query.and(
@@ -279,105 +352,62 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         ScorchOvenWindowTargets.update(world, position, benchBlock.windows.keys)
         val id = BlockPos.pack(position.x, position.y, position.z)
         val energy = CraftoryCore.energyAccess(world)
-        val previousProgress = power.lastInputProgress ?: bench.inputProgress
-        val previousRecipeTime = power.lastRecipeTimeSeconds
         val activeArea = CraftoryCore.isAreaActive(store, blockState)
-
-        fun freeze(
-            status: MachineStatus,
-            suspendDemand: Boolean = true,
-            storedBefore: Long? = null,
-        ) {
-            val frozenProgress = previousProgress.coerceAtLeast(0f)
-            var inventoryRestored = false
-            power.inventorySnapshot?.let { snapshot ->
-                snapshot.inputStacks.forEachIndexed { slot, saved ->
-                    val index = slot.toShort()
-                    val current = bench.inputContainer.getItemStack(index)
-                    if (current != saved) {
-                        bench.inputContainer.setItemStackForSlot(
-                            index,
-                            saved?.withQuantity(saved.quantity) ?: ItemStack.EMPTY,
-                        )
-                        inventoryRestored = true
-                    }
-                }
-                snapshot.outputStacks.forEachIndexed { slot, saved ->
-                    val index = slot.toShort()
-                    val current = bench.outputContainer.getItemStack(index)
-                    if (current != saved) {
-                        bench.outputContainer.setItemStackForSlot(
-                            index,
-                            saved?.withQuantity(saved.quantity) ?: ItemStack.EMPTY,
-                        )
-                        inventoryRestored = true
-                    }
-                }
-            }
-            if (inventoryRestored) {
-                bench.checkForRecipeUpdate(benchBlock)
-                bench.sendProcessingSlots(benchBlock.windows)
-            }
-            if (bench.inputProgress != frozenProgress) {
-                bench.setInputProgress(frozenProgress)
-                bench.sendProgress(frozenProgress, benchBlock.windows)
-            }
-            power.inventorySnapshot = OvenInventorySnapshot.capture(bench)
-            power.lastInputProgress = frozenProgress
-            power.status = status
-            power.lastRecipeTimeSeconds =
-                bench.recipe?.let { bench.getRecipeTimeSeconds(1) }
-            if (suspendDemand && member.demand != 0L) energy.setDemand(id, 0)
-            setBlockState(world, blockState, commandBuffer, "Off")
-            if (inventoryRestored || (storedBefore != null && power.storedFizz != storedBefore)) {
-                blockState.markNeedsSaving(commandBuffer)
-            }
-        }
-
-        if (!activeArea) {
-            freeze(MachineStatus.IDLE)
-            return
-        }
-        if (jank.isStalled) {
-            freeze(MachineStatus.STALLED)
-            return
-        }
-        val completedSolveTick = energy.lastSolveTick()
-        val fizzUpdate =
-            OvenFizzAccounting.update(
-                power.storedFizz,
-                power.lastFizzSolveTick,
-                completedSolveTick,
-                member.delivered,
-                slots.modifiers().energyUse.toDouble(),
-            )
-        if (member.demand != fizzUpdate.demand) energy.setDemand(id, fizzUpdate.demand)
+        val gateStatus = power.gateStatus
         val previousStoredFizz = power.storedFizz
-        power.lastFizzSolveTick = fizzUpdate.lastFizzSolveTick
-        if (fizzUpdate.storedFizz > previousStoredFizz) power.receivedFizzFromNetwork = true
-        power.storedFizz = fizzUpdate.storedFizz
+        if (!activeArea || jank.isStalled) {
+            if (member.demand != 0L) energy.setDemand(id, 0)
+        } else {
+            val completedSolveTick = energy.lastSolveTick()
+            val fizzUpdate =
+                OvenFizzAccounting.update(
+                    power.storedFizz,
+                    power.lastFizzSolveTick,
+                    completedSolveTick,
+                    member.delivered,
+                    slots.modifiers().energyUse.toDouble(),
+                )
+            if (member.demand != fizzUpdate.demand) energy.setDemand(id, fizzUpdate.demand)
+            power.lastFizzSolveTick = fizzUpdate.lastFizzSolveTick
+            if (fizzUpdate.storedFizz > power.storedFizz) power.receivedFizzFromNetwork = true
+            power.storedFizz = fizzUpdate.storedFizz
+        }
+        val currentRecipeId = bench.recipe?.id
+        val currentRecipeTime = bench.recipe?.let { bench.getRecipeTimeSeconds(1) }
+        val recipeChanged =
+            power.recipeChangedBeforeTick ||
+                power.tickRecipeId != currentRecipeId
         val processing =
             OvenFizzAccounting.process(
                 storedFizz = power.storedFizz,
-                previousProgress = previousProgress,
+                previousProgress = power.tickStartProgress ?: power.lastInputProgress,
                 currentProgress = bench.inputProgress,
-                previousRecipeTimeSeconds = previousRecipeTime,
+                previousRecipeTimeSeconds = power.tickRecipeTimeSeconds ?: power.lastRecipeTimeSeconds,
+                recipeChanged = recipeChanged,
+                currentRecipeTimeSeconds = currentRecipeTime,
+                frozenProgress = power.frozenProgress,
+                gateStatus =
+                    gateStatus
+                        ?: if (!activeArea) {
+                            MachineStatus.IDLE
+                        } else if (jank.isStalled) {
+                            MachineStatus.STALLED
+                        } else {
+                            null
+                        },
             )
-        if (processing.status == MachineStatus.NO_POWER) {
-            power.storedFizz = processing.storedFizz
-            freeze(MachineStatus.NO_POWER, suspendDemand = false, storedBefore = previousStoredFizz)
-            return
-        }
         if (bench.inputProgress != processing.inputProgress) {
             bench.setInputProgress(processing.inputProgress)
             bench.sendProgress(processing.inputProgress, benchBlock.windows)
         }
         power.storedFizz = processing.storedFizz
         power.lastInputProgress = processing.inputProgress
-        power.lastRecipeTimeSeconds =
-            bench.recipe?.let { bench.getRecipeTimeSeconds(1) }
+        power.lastRecipeId = currentRecipeId
+        power.lastRecipeTimeSeconds = currentRecipeTime
         power.status = processing.status
-        power.inventorySnapshot = OvenInventorySnapshot.capture(bench)
+        power.gateStatus = null
+        power.frozenProgress = null
+        power.recipeChangedBeforeTick = false
         setBlockState(world, blockState, commandBuffer, if (processing.advanced) "On" else "Off")
         if (power.storedFizz != previousStoredFizz) blockState.markNeedsSaving(commandBuffer)
     }

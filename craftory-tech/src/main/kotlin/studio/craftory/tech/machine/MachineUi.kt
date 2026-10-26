@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
@@ -151,11 +152,28 @@ internal object ScorchOvenWindowTargets {
     fun forPlayer(
         world: World,
         playerId: UUID,
-    ): Vector3i? =
-        targets[world]
-            ?.get(playerId)
-            ?.lastOrNull()
-            ?.let { Vector3i(it.x, it.y, it.z) }
+        playerPosition: org.joml.Vector3d,
+        isOven: (Vector3i) -> Boolean,
+    ): Vector3i? {
+        val playerTargets = targets[world]?.get(playerId) ?: return null
+        val candidate =
+            playerTargets.toList().asReversed().firstOrNull { target ->
+                val position = Vector3i(target.x, target.y, target.z)
+                val dx = playerPosition.x - target.x
+                val dy = playerPosition.y - target.y
+                val dz = playerPosition.z - target.z
+                dx * dx + dy * dy + dz * dz <= 100.0 && isOven(position)
+            }
+        playerTargets.removeIf { target ->
+            val dx = playerPosition.x - target.x
+            val dy = playerPosition.y - target.y
+            val dz = playerPosition.z - target.z
+            dx * dx + dy * dy + dz * dz > 100.0 ||
+                !isOven(Vector3i(target.x, target.y, target.z))
+        }
+        if (playerTargets.isEmpty()) targets[world]?.remove(playerId)
+        return candidate?.let { Vector3i(it.x, it.y, it.z) }
+    }
 }
 
 interface EnergyHudPort {
@@ -515,8 +533,17 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                     ?.armor
                     ?.getItemStack(0.toShort())
                     ?.itemId == CraftoryIds.SQUINT_GOGGLES
+            val playerPosition =
+                commandBuffer.getComponent(playerEntity, TransformComponent.getComponentType())?.position
+            val windowTarget =
+                playerPosition?.let { position ->
+                    ScorchOvenWindowTargets.forPlayer(world, playerRef.uuid, position) { oven ->
+                        val ref = BlockModule.getBlockEntity(world, oven.x, oven.y, oven.z)
+                        ref != null && world.chunkStore.store.getComponent(ref, OvenPower.type) != null
+                    }
+                }
             val target =
-                ScorchOvenWindowTargets.forPlayer(world, playerRef.uuid)
+                windowTarget
                     ?: if (goggles) {
                         TargetUtil.getTargetBlock(chunk.getReferenceTo(index), 8.0, commandBuffer)
                     } else {

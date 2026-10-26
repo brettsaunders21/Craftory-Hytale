@@ -83,6 +83,7 @@ import studio.craftory.tech.machine.ResonatorRuntimeConfig
 import studio.craftory.tech.machine.ResonatorState
 import studio.craftory.tech.machine.ResonatorSystem
 import studio.craftory.tech.machine.ResonatorUseInteraction
+import studio.craftory.tech.machine.ScorchOvenGateSystem
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.ScrapRushRaid
 import studio.craftory.tech.machine.ScrapRushSystem
@@ -496,6 +497,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(RattlewheelSystem())
         chunkRegistry.registerSystem(ShroomBedSystem())
         chunkRegistry.registerSystem(GnasherSystem())
+        chunkRegistry.registerSystem(ScorchOvenGateSystem())
         chunkRegistry.registerSystem(ScorchOvenSystem())
         chunkRegistry.registerSystem(JankSystem())
         chunkRegistry.registerSystem(ScrapRushSystem(config.get().scrapRush))
