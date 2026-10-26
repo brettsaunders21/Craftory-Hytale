@@ -79,6 +79,7 @@ internal class MachineOwnerSelfTestRun(
     val blockRefs = mutableListOf<Ref<ChunkStore>>()
     val playerRefs = mutableListOf<Ref<EntityStore>>()
     val players = mutableListOf<PlayerRef>()
+    val placedFixtures = mutableListOf<Pair<String, Position>>()
     var owner: PlayerRef? = null
     var foreign: PlayerRef? = null
     var chunkIndex: Long? = null
@@ -149,8 +150,11 @@ internal class MachineOwnerSelfTestRun(
 private object MachineOwnerSelfTestSetup {
     fun setup(run: MachineOwnerSelfTestRun) {
         val (sectionRef, section) = fixtureSection(run)
+        val blockSection =
+            run.chunkStore.getComponent(sectionRef, BlockSection.getComponentType())
+                ?: error("owner fixture block section is missing")
+        preflightFixtures(blockSection)
         holdFixtureChunk(run)
-        machineOwnerFixtures.forEach { (_, position) -> FluidSelfTestSetup.clearBlock(run.world, position) }
         run.owner = createPlayer(run)
         run.foreign = createPlayer(run)
         createCrewService(run)
@@ -169,6 +173,16 @@ private object MachineOwnerSelfTestSetup {
             run.chunkStore.getComponent(ref, BlockComponentSection.getComponentType())
                 ?: error("owner fixture block section is missing")
         return ref to section
+    }
+
+    private fun preflightFixtures(section: BlockSection) {
+        val occupied =
+            machineOwnerFixtures.filter { (_, position) ->
+                section.get(position.x and 31, position.y and 31, position.z and 31) != BlockType.EMPTY_ID
+            }
+        if (occupied.isNotEmpty()) {
+            error("position occupied: ${occupied.joinToString { (_, position) -> position.toString() }}")
+        }
     }
 
     private fun holdFixtureChunk(run: MachineOwnerSelfTestRun) {
@@ -235,6 +249,7 @@ private object MachineOwnerSelfTestSetup {
                 SetBlockSettings.NO_UPDATE_STATE,
             )
         if (!placed) error("failed to place owner test block $itemId at $position")
+        run.placedFixtures += itemId to position
         BlockEntity.ensureBlockEntity(
             run.world.chunkStore.store,
             sectionRef,
@@ -256,7 +271,7 @@ private object MachineOwnerSelfTestSetup {
 
     private fun dispatchPlacementEvents(run: MachineOwnerSelfTestRun) {
         val ownerRef = run.owner?.reference ?: error("owner synthetic player entity is missing")
-        machineOwnerFixtures.forEach { (itemId, position) ->
+        run.placedFixtures.forEach { (itemId, position) ->
             run.world.entityStore.store.invoke(
                 ownerRef,
                 PlaceBlockEvent(
@@ -344,6 +359,7 @@ private object MachineOwnerSelfTestCleanup {
             remainingExclusions,
             remainingKeepLoaded,
             run.cleanupFailure == null,
+            blocksRemoved == run.placedFixtures.size,
             playersRemoved == run.players.size,
         )
     }
@@ -364,7 +380,7 @@ private object MachineOwnerSelfTestCleanup {
     private fun removeBlocks(run: MachineOwnerSelfTestRun): Int {
         val section = currentBlockSection(run)
         var removed = 0
-        machineOwnerFixtures.forEach { (_, position) ->
+        run.placedFixtures.forEach { (_, position) ->
             val existed = section?.get(position.x and 31, position.y and 31, position.z and 31) != BlockType.EMPTY_ID
             runCatching { FluidSelfTestSetup.clearBlock(run.world, position) }
                 .onSuccess { if (existed) removed++ }
@@ -401,13 +417,13 @@ private object MachineOwnerSelfTestCleanup {
     }
 
     private fun countOwners(run: MachineOwnerSelfTestRun): Int =
-        machineOwnerFixtures.count { (_, position) ->
+        run.placedFixtures.count { (_, position) ->
             machineOwnerAt(run.world, run.chunkStore, position) != null
         }
 
     private fun countRemainingBlocks(run: MachineOwnerSelfTestRun): Int {
-        val section = currentBlockSection(run) ?: return machineOwnerFixtures.size
-        return machineOwnerFixtures.count { (_, position) ->
+        val section = currentBlockSection(run) ?: return run.placedFixtures.size
+        return run.placedFixtures.count { (_, position) ->
             section.get(position.x and 31, position.y and 31, position.z and 31) != BlockType.EMPTY_ID
         }
     }
@@ -449,11 +465,13 @@ private data class MachineOwnerCleanupCounts(
     val remainingExclusions: Int,
     val remainingKeepLoaded: Int,
     val noFailures: Boolean,
+    val allPlacedBlocksRemoved: Boolean,
     val allPlayersRemoved: Boolean,
 ) {
     val passed: Boolean
         get() =
             noFailures &&
+                allPlacedBlocksRemoved &&
                 allPlayersRemoved &&
                 remainingBlocks == 0 &&
                 remainingOwners == 0 &&
