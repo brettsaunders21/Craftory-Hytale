@@ -174,8 +174,7 @@ internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
                 JunkHeartTemplate.CHIMNEY_TOP,
                 controller.rotation,
             )
-        val top =
-            MachineVents.position(CraftoryIds.JUNK_HEART, chimneyTop.x, chimneyTop.y, chimneyTop.z) ?: return
+        val top = MachineVents.position(CraftoryIds.JUNK_HEART, chimneyTop.x, chimneyTop.y, chimneyTop.z)
         world.execute {
             ParticleUtil.spawnParticleEffect(
                 CraftoryIds.CHIMNEY_SMOKE_PARTICLE,

@@ -52,22 +52,36 @@ internal object MachineVents {
         x: Int,
         y: Int,
         z: Int,
-    ): Vector3d? =
-        entries[blockId]?.let { vent ->
-            Vector3d(x + vent.x, y + vent.y, z + vent.z)
-        }
+    ): Vector3d = positionForBlockId(blockId, x, y, z)
+
+    internal fun positionForBlockId(
+        blockId: String?,
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Vector3d {
+        val vent = blockId?.let(entries::get) ?: return fallback(x, y, z)
+        return Vector3d(x + vent.x, y + vent.y, z + vent.z)
+    }
+
+    fun fallback(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Vector3d = Vector3d(x + 0.5, y + 1.0, z + 0.5)
 
     fun position(
         blockState: BlockModule.BlockStateInfo,
         blockPos: Vector3i,
         store: Store<ChunkStore>,
-    ): Vector3d? {
-        val section =
-            store.getComponent(blockState.sectionRef, BlockSection.getComponentType())
-                ?: return null
-        val type =
-            BlockType.getAssetMap().getAsset(section.get(blockPos.x, blockPos.y, blockPos.z))
-                ?: return null
-        return position(baseBlockId(type), blockPos.x, blockPos.y, blockPos.z)
+    ): Vector3d {
+        val blockId =
+            store.getComponent(blockState.sectionRef, BlockSection.getComponentType())?.let { section ->
+                BlockType
+                    .getAssetMap()
+                    .getAsset(section.get(blockPos.x, blockPos.y, blockPos.z))
+                    ?.let(::baseBlockId)
+            }
+        return positionForBlockId(blockId, blockPos.x, blockPos.y, blockPos.z)
     }
 }

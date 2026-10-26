@@ -79,7 +79,7 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
 
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
-        val ventPosition = MachineVents.position(blockState, position, store) ?: return
+        val ventPosition = MachineVents.position(blockState, position, store)
         val memberId = BlockPos.pack(position.x, position.y, position.z)
         val worldUuid = store.externalData.world.worldConfig.uuid
         var dirty = false

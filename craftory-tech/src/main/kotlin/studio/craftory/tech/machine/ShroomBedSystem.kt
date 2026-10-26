@@ -228,7 +228,7 @@ internal class ShroomBedSystem(
     ) {
         state.stored = 0
         state.twitch = 0
-        val vent = MachineVents.position(CraftoryIds.SHROOM_BED, position.x, position.y, position.z) ?: return
+        val vent = MachineVents.position(CraftoryIds.SHROOM_BED, position.x, position.y, position.z)
         ParticleUtil.spawnParticleEffect(
             "Impact_Spark",
             vent,

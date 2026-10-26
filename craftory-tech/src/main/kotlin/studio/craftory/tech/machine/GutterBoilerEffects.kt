@@ -83,7 +83,6 @@ internal object GutterBoilerEffects {
             )
         val position =
             MachineVents.position(CraftoryIds.GUTTER_BOILER, stackOrigin.x, stackOrigin.y, stackOrigin.z)
-                ?: return
         ParticleUtil.spawnParticleEffect(STEAM_PARTICLE_ID, position, store)
         playSound(store, VENT_POP_SOUND_ID, position)
     }
