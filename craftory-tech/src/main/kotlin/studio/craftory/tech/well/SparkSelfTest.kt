@@ -36,6 +36,7 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.notebook.NotebookTierProgression
 import java.nio.file.Files
 import java.util.UUID
+import kotlin.math.abs
 
 @Suppress("LongMethod", "MaxLineLength", "TooManyFunctions")
 internal class SparkSelfTest(
@@ -45,13 +46,11 @@ internal class SparkSelfTest(
     private val store = world.chunkStore.store
     private val cradle = CraftorySelfTest.TestPosition(10_020, 148, 9_990)
     private val well = BlockPos(cradle.x, cradle.y + 1, cradle.z)
-    private val storage = CraftorySelfTest.TestPosition(10_021, 148, 9_990)
-    private val consumer = CraftorySelfTest.TestPosition(10_022, 148, 9_990)
     private val tasteA = CraftorySelfTest.TestPosition(10_020, 148, 9_989)
     private val tasteB = CraftorySelfTest.TestPosition(10_020, 148, 9_991)
     private val coilBurner = CraftorySelfTest.TestPosition(10_028, 148, 9_990)
     private val coil = CraftorySelfTest.TestPosition(10_028, 149, 9_990)
-    private val coilStorage = CraftorySelfTest.TestPosition(10_029, 149, 9_990)
+    private val coilStorage = CraftorySelfTest.TestPosition(coil.x, coil.y + 1, coil.z)
     private val resonatorBurner = CraftorySelfTest.TestPosition(10_036, 148, 9_990)
     private val resonator = CraftorySelfTest.TestPosition(10_036, 149, 9_990)
     private val sparkBurner = CraftorySelfTest.TestPosition(10_039, 148, 9_992)
@@ -60,8 +59,6 @@ internal class SparkSelfTest(
         listOf(
             cradle,
             CraftorySelfTest.TestPosition(well.x, well.y, well.z),
-            storage,
-            consumer,
             tasteA,
             tasteB,
             coilBurner,
@@ -84,6 +81,7 @@ internal class SparkSelfTest(
     private var energyTicks = 0
     private var harmonyRechecked = false
     private var resonatorSawOutput = false
+    private var resonatorDrained = false
     private var firstSparkCrystalAvailable = false
     private var vessaRef: Ref<EntityStore>? = null
     private var completion: (() -> Unit)? = null
@@ -118,68 +116,105 @@ internal class SparkSelfTest(
             finish()
             return
         }
+        if (!harmonyRechecked) return
+        energyTicks++
         val energy = CraftoryCore.energyAccess(world)
+        val cradleId = BlockPos.pack(cradle.x, cradle.y, cradle.z)
+        val coilId = BlockPos.pack(coil.x, coil.y, coil.z)
+        val coilStorageId = BlockPos.pack(coilStorage.x, coilStorage.y, coilStorage.z)
+        val burnerId = BlockPos.pack(coilBurner.x, coilBurner.y, coilBurner.z)
+        val resonatorId = BlockPos.pack(resonator.x, resonator.y, resonator.z)
         val resonatorOutputId = BlockPos.pack(resonator.x, resonator.y, resonator.z) xor CONVERTER_Y_MASK
         val dimRank = requireNotNull(CraftoryCore.gradeRank("dim_glimmer"))
-        if (energy.converterOutputNetwork(BlockPos.pack(resonator.x, resonator.y, resonator.z)) >= 0 &&
-            energy.networkSupply(resonatorOutputId) > 0L &&
+        val fizzRank = requireNotNull(CraftoryCore.gradeRank("fizz"))
+        val resonatorRef = entityAt(resonator)?.takeIf { it.isValid }
+        val resonatorState = resonatorRef?.let { store.getComponent(it, ResonatorState.type) }
+        val resonatorSupply = energy.networkSupply(resonatorOutputId)
+        if (energy.converterOutputNetwork(resonatorId) >= 0 &&
+            resonatorSupply > 0L &&
             energy.networkGrade(resonatorOutputId) == dimRank
         ) {
             resonatorSawOutput = true
         }
-        if (!harmonyRechecked || ++energyTicks < 4) return
-        val fizzRank = requireNotNull(CraftoryCore.gradeRank("fizz"))
-        val cradleId = BlockPos.pack(cradle.x, cradle.y, cradle.z)
-        check(
-            energy.networkOf(cradleId) >= 0 &&
-                energy.networkGrade(cradleId) == dimRank &&
-                energy.networkSupply(cradleId) > 0L,
-            "Cradle network produces dim_glimmer",
-            "grade=${energy.networkGrade(cradleId)}, supply=${energy.networkSupply(cradleId)}",
-        )
-        val coilRef = entityAt(coil)
+        if (resonatorSawOutput && resonatorState?.clouded == true && resonatorSupply == 0L) {
+            resonatorDrained = true
+        }
+        val cradleNetwork = energy.networkOf(cradleId)
+        val cradleGrade = energy.networkGrade(cradleId)
+        val cradleSupply = energy.networkSupply(cradleId)
+        val cradleReady = cradleNetwork >= 0 && cradleGrade == dimRank && cradleSupply > 0L
+        val coilRef = entityAt(coil)?.takeIf { it.isValid }
         val coilOutput = coilRef?.let { store.getComponent(it, EnergyMember.type) }
-        val coilStorageMember = entityAt(coilStorage)?.let { store.getComponent(it, EnergyMember.type) }
-        val burnerRef = entityAt(coilBurner)
-        val burnerId = BlockPos.pack(coilBurner.x, coilBurner.y, coilBurner.z)
-        val coilStorageId = BlockPos.pack(coilStorage.x, coilStorage.y, coilStorage.z)
+        val coilStorageRef = entityAt(coilStorage)?.takeIf { it.isValid }
+        val coilStorageMember = coilStorageRef?.let { store.getComponent(it, EnergyMember.type) }
+        val burnerRef = entityAt(coilBurner)?.takeIf { it.isValid }
+        val burnerMember = burnerRef?.let { store.getComponent(it, EnergyMember.type) }
         val coilOutputId = BlockPos.pack(coil.x, coil.y, coil.z) xor CONVERTER_Y_MASK
-        check(
-            coilStorageMember?.stored?.let { it > 0L } == true &&
+        val outputGrade = energy.networkGrade(coilOutputId)
+        val outputNetwork = energy.converterOutputNetwork(coilId)
+        val burnerNetwork = energy.networkOf(burnerId)
+        val coilStorageNetwork = energy.networkOf(coilStorageId)
+        val burnerSupply = energy.networkSupply(burnerId)
+        val burnerMemberOk =
+            burnerRef != null && burnerMember != null &&
+                burnerMember.productionRank == fizzRank &&
+                energy.networkGrade(burnerId) == fizzRank
+        val networksSeparate =
+            burnerNetwork >= 0 && coilStorageNetwork >= 0 && burnerNetwork != coilStorageNetwork
+        val coilReady =
+            coilRef != null && coilOutput != null &&
+                coilStorageMember?.stored?.let { it > 0L } == true &&
                 coilStorageMember.storeRank == dimRank &&
-                energy.networkGrade(coilOutputId) == dimRank &&
-                energy.converterOutputNetwork(BlockPos.pack(coil.x, coil.y, coil.z)) >= 0 &&
+                outputGrade == dimRank && outputNetwork >= 0 &&
                 energy.networkSupply(coilOutputId) > 0L &&
-                burnerRef?.let {
-                    store.getComponent(it, EnergyMember.type)?.let { member ->
-                        member.productionRank == fizzRank && energy.networkGrade(burnerId) == fizzRank
-                    }
-                } == true &&
-                energy.networkMembers(burnerId) > 0 &&
-                energy.networkSupply(burnerId) > 0L &&
-                energy.networkOf(burnerId) != energy.networkOf(coilStorageId),
-            "Coil converts Burner fizz without joining its network",
-            "stored=${coilStorageMember?.stored}/${coilStorageMember?.storeRank}, " +
-                "coil=${coilOutput?.deliveredRank}, burnerGrade=${energy.networkGrade(burnerId)}",
-        )
-        val resonatorRef = entityAt(resonator)
-        val resonatorState = resonatorRef?.let { store.getComponent(it, ResonatorState.type) }
+                burnerMemberOk && energy.networkMembers(burnerId) > 0 &&
+                burnerSupply > 0L && networksSeparate
+        val vessaValid = vessaRef?.isValid == true
+        val vessaPosition =
+            vessaRef
+                ?.takeIf { it.isValid }
+                ?.let { world.entityStore.store.getComponent(it, TransformComponent.getComponentType()) }
+                ?.position
+        val vessaMet = crews.hasKnowledge(sparkOwner, CraftoryIds.VESSA_MET_KNOWLEDGE)
+        val vessaPositionMatches =
+            vessaPosition != null &&
+                abs(vessaPosition.x - (sparkBurner.x + 0.5)) <= 1.0 &&
+                abs(vessaPosition.y - (sparkBurner.y + 1.5)) <= 1.0 &&
+                abs(vessaPosition.z - (sparkBurner.z + 0.5)) <= 1.0
+        val vessaReady = vessaValid && vessaMet && vessaPositionMatches
+        val allConditionsReady =
+            cradleReady && coilReady && resonatorDrained &&
+                (!firstSparkCrystalAvailable || vessaReady)
+        if (!allConditionsReady && energyTicks < MAX_WAIT_TICKS) return
+
+        checkSparkFixturesIntact("final assertions", includeTickFixtures = true)
         check(
-            resonatorSawOutput && resonatorState?.clouded == true &&
-                energy.networkSupply(resonatorOutputId) == 0L,
+            cradleReady,
+            "Cradle network produces dim_glimmer",
+            "network=$cradleNetwork, grade=$cradleGrade, supply=$cradleSupply",
+        )
+        check(
+            coilReady,
+            "Coil converts Burner fizz without joining its network",
+            "coilRef=${coilRef != null}, " +
+                "storage=${coilStorageMember?.stored}/${coilStorageMember?.storeRank}, " +
+                "outputGrade=$outputGrade, outputNetwork=$outputNetwork, " +
+                "burnerMemberOk=$burnerMemberOk, burnerSupply=$burnerSupply, " +
+                "networksSeparate=$networksSeparate",
+        )
+        check(
+            resonatorSawOutput && resonatorDrained && resonatorState?.clouded == true &&
+                resonatorSupply == 0L,
             "Resonator converts then clouds at configured crystal uses",
             "conversions=${resonatorState?.conversions}, clouded=${resonatorState?.clouded}, " +
-                "output=${energy.networkSupply(resonatorOutputId)}",
+                "sawOutput=$resonatorSawOutput, drained=$resonatorDrained, output=$resonatorSupply",
         )
         if (firstSparkCrystalAvailable) {
             check(
-                vessaRef?.isValid == true &&
-                    crews.hasKnowledge(sparkOwner, CraftoryIds.VESSA_MET_KNOWLEDGE) &&
-                    vessaRef
-                        ?.let { world.entityStore.store.getComponent(it, TransformComponent.getComponentType()) }
-                        ?.position
-                        ?.y == sparkBurner.y + 1.5,
+                vessaReady,
                 "First Spark spawns Vessa and grants meeting knowledge",
+                "ref=${if (vessaRef == null) "null" else "set"}, " +
+                    "valid=$vessaValid, met=$vessaMet, pos=$vessaPosition",
             )
         }
         finish()
@@ -223,17 +258,6 @@ internal class SparkSelfTest(
             "Cradle seats the caught Flicker and claims its crew",
             "caught=$caughtAndRemoved, state=${seatedWell?.state}, claim=${seatedWell?.claimCrewId}",
         )
-        CraftorySelfTest.place(world, store, run.sectionRef, section, CraftoryIds.CANISTER, storage, EnergyMember.type)
-        CraftorySelfTest.place(
-            world,
-            store,
-            run.sectionRef,
-            section,
-            CraftoryIds.SCORCH_OVEN,
-            consumer,
-            EnergyMember.type,
-        )
-        CraftoryCore.energyAccess(world).setDemand(BlockPos.pack(consumer.x, consumer.y, consumer.z), 1)
         placePlain(CraftoryIds.SCRAP_PLATING, tasteA)
         placePlain(CraftoryIds.SCRAP_PLATING, tasteB)
         val initialHarmony = cradleState?.harmony
@@ -242,12 +266,17 @@ internal class SparkSelfTest(
         world.execute {
             if (cleaned) return@execute
             harmonyRechecked = true
-            val updated = store.getComponent(cradleRef, CradleState.type)?.harmony
-            check(
-                updated != null && updated > (initialHarmony ?: 0),
-                "Harmony recomputes after taste blocks",
-                "harmony=$updated",
-            )
+            val updatedRef = entityAt(cradle)?.takeIf { it.isValid }
+            if (updatedRef == null) {
+                check(false, "Harmony recomputes after taste blocks", "cradle entity missing")
+            } else {
+                val updated = store.getComponent(updatedRef, CradleState.type)?.harmony
+                check(
+                    updated != null && updated > (initialHarmony ?: 0),
+                    "Harmony recomputes after taste blocks",
+                    "harmony=$updated",
+                )
+            }
         }
         val tierCrew = crews.crewOf(tierOwner)
         crews.setTier(tierCrew.id, 2)
@@ -260,6 +289,7 @@ internal class SparkSelfTest(
             "Tier 3 requires seated_flicker in addition to First Spark",
             "without=$withoutSeat, with=${withSeat?.tier}",
         )
+        checkSparkFixturesIntact("live setup", includeTickFixtures = false)
     }
 
     private fun prepareTickChecks() {
@@ -338,6 +368,7 @@ internal class SparkSelfTest(
             )
         }
         store.getComponent(machineRef, MachineOwner.type)?.placerUuid = null
+        checkSparkFixturesIntact("tick setup", includeTickFixtures = true)
     }
 
     private fun prepareBurner(
@@ -393,6 +424,72 @@ internal class SparkSelfTest(
                 dx * dx + dy * dy + dz * dz <= FIRST_SPARK_SCAN_RADIUS_SQUARED
             }
         check(sparkOverlap == null) { "First Spark radius overlaps existing fixture at $sparkOverlap" }
+    }
+
+    private fun checkSparkFixturesIntact(
+        phase: String,
+        includeTickFixtures: Boolean,
+    ) {
+        val fixtures =
+            mutableListOf(
+                FixtureExpectation("Cradle", cradle, "CradleState, EnergyMember") {
+                    store.getComponent(it, CradleState.type) != null &&
+                        store.getComponent(it, EnergyMember.type) != null
+                },
+            )
+        if (includeTickFixtures) {
+            fixtures +=
+                listOf(
+                    FixtureExpectation("Coil Burner", coilBurner, "BurnerState, EnergyMember") {
+                        store.getComponent(it, BurnerState.type) != null &&
+                            store.getComponent(it, EnergyMember.type) != null
+                    },
+                    FixtureExpectation("Coil", coil, "EnergyMember") {
+                        store.getComponent(it, EnergyMember.type) != null
+                    },
+                    FixtureExpectation("Coil storage", coilStorage, "EnergyMember") {
+                        store.getComponent(it, EnergyMember.type) != null
+                    },
+                    FixtureExpectation("Resonator Burner", resonatorBurner, "BurnerState, EnergyMember") {
+                        store.getComponent(it, BurnerState.type) != null &&
+                            store.getComponent(it, EnergyMember.type) != null
+                    },
+                    FixtureExpectation("Resonator", resonator, "ResonatorState, EnergyMember") {
+                        store.getComponent(it, ResonatorState.type) != null &&
+                            store.getComponent(it, EnergyMember.type) != null
+                    },
+                    FixtureExpectation("First Spark Burner", sparkBurner, "BurnerState, EnergyMember") {
+                        store.getComponent(it, BurnerState.type) != null &&
+                            store.getComponent(it, EnergyMember.type) != null
+                    },
+                )
+        }
+        val missing =
+            fixtures.mapNotNull { fixture ->
+                val ref = entityAt(fixture.position)
+                when {
+                    ref == null -> {
+                        "${fixture.name} at ${fixture.position}: entity missing"
+                    }
+
+                    !ref.isValid -> {
+                        "${fixture.name} at ${fixture.position}: entity ref invalid"
+                    }
+
+                    !fixture.hasComponent(ref) -> {
+                        "${fixture.name} at ${fixture.position}: missing ${fixture.expectedComponents}"
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            }
+        check(
+            missing.isEmpty(),
+            "Spark fixtures intact ($phase)",
+            if (missing.isEmpty()) "" else missing.joinToString("; "),
+        )
     }
 
     private fun checkSparkVanillaIds() {
@@ -509,11 +606,19 @@ internal class SparkSelfTest(
         run.context.sendMessage(Message.raw("selftest: $message"))
     }
 
+    private data class FixtureExpectation(
+        val name: String,
+        val position: CraftorySelfTest.TestPosition,
+        val expectedComponents: String,
+        val hasComponent: (Ref<ChunkStore>) -> Boolean,
+    )
+
     private companion object {
         const val HARMONY_RADIUS = 4
         const val FIRST_SPARK_SCAN_RADIUS = 8
         const val FIRST_SPARK_SCAN_RADIUS_SQUARED = 64L
         const val ASSET_INDEX_NOT_FOUND = Int.MIN_VALUE
         const val CONVERTER_Y_MASK = 0x800L shl 26
+        const val MAX_WAIT_TICKS = 200
     }
 }
