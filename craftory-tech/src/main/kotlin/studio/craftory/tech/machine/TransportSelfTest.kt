@@ -1751,7 +1751,11 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             CarrierAcceptanceSelfTest.start(
                 run.world,
                 report = { run.context.sendMessage(Message.raw(it)) },
-                onComplete = { FluidSelfTest.start(run.context, run.world) },
+                onComplete = {
+                    FluidSelfTest.start(run.context, run.world) {
+                        MachineOwnerSelfTest.start(run.context, run.world)
+                    }
+                },
             )
         }
     }
