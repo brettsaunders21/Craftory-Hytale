@@ -598,7 +598,7 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                 Vector3i(PolishSelfTest.CANNON.x, PolishSelfTest.CANNON.y, PolishSelfTest.CANNON.z),
                 null,
                 Vector3i(0, 0, 0),
-            )
+            ) == null
         val cannonState = PolishSelfTest.stateName(run, PolishSelfTest.CANNON, CraftoryIds.HURL_CANNON)
         val cannonRef = PolishSelfTest.controllerAt(run, PolishSelfTest.CANNON) ?: error("cannon block entity missing")
         val launchTick = store.getComponent(cannonRef, HurlCannonChargeState.type)?.launchTick ?: Long.MIN_VALUE

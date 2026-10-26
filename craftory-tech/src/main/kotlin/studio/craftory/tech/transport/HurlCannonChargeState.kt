@@ -11,12 +11,17 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem
+import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3i
+import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.transport.HurlPoint
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.MachineOwner
 import studio.craftory.tech.machine.TimedBlockAnimation
 import studio.craftory.tech.machine.setBlockAnimationState
 
@@ -60,7 +65,11 @@ class HurlCannonChargeState(
 
 internal class HurlCannonChargeSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(HurlCannonChargeState.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            HurlCannonChargeState.type,
+            TimedBlockAnimation.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun tick(
         dt: Float,
@@ -70,16 +79,32 @@ internal class HurlCannonChargeSystem : EntityTickingSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val state = chunk.getComponent(index, HurlCannonChargeState.type) ?: return
-        if (state.launchTick == Long.MIN_VALUE || store.externalData.world.tick < state.launchTick) return
         val world = store.externalData.world
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val animation = chunk.getComponent(index, TimedBlockAnimation.type) ?: return
+        val pending = state.launchTick != Long.MIN_VALUE
+        val decision =
+            CannonChargePolicy.decide(
+                CraftoryCore.isAreaActive(store, blockState),
+                pending,
+                world.tick >= state.launchTick,
+            )
+        if (decision == CannonChargeDecision.CLEAR) {
+            state.clear()
+            val source = Vector3i()
+            if (blockState.fillWorldPos(commandBuffer, source)) {
+                setBlockAnimationState(world, source.x, source.y, source.z, animation.idleState)
+            }
+            return
+        }
+        if (decision != CannonChargeDecision.LAUNCH) return
         val rider = state.rider?.takeIf { it.isValid }
         val player = rider?.let { world.entityStore.store.getComponent(it, PlayerRef.getComponentType()) }
         if (rider != null && player != null) {
             val target = Vector3i(state.targetX, state.targetY, state.targetZ)
             if (blockId(world, target.x, target.y, target.z) == CraftoryIds.CATCH_NET) {
-                val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType())
                 val source = Vector3i()
-                if (blockState?.fillWorldPos(commandBuffer, source) == true) {
+                if (blockState.fillWorldPos(commandBuffer, source)) {
                     launchHurlCannonArc(world, source, target, rider, player)
                 }
             }
@@ -88,16 +113,48 @@ internal class HurlCannonChargeSystem : EntityTickingSystem<ChunkStore>() {
     }
 }
 
+internal enum class CannonChargeDecision {
+    IDLE,
+    WAIT,
+    LAUNCH,
+    CLEAR,
+}
+
+internal object CannonChargePolicy {
+    fun decide(
+        areaActive: Boolean,
+        pending: Boolean,
+        due: Boolean,
+    ): CannonChargeDecision =
+        when {
+            !pending -> CannonChargeDecision.IDLE
+            !areaActive -> CannonChargeDecision.CLEAR
+            due -> CannonChargeDecision.LAUNCH
+            else -> CannonChargeDecision.WAIT
+        }
+}
+
 internal fun beginHurlCannonCharge(
-    world: com.hypixel.hytale.server.core.universe.world.World,
+    world: World,
     position: Vector3i,
     rider: Ref<EntityStore>?,
     target: Vector3i,
-): Boolean {
-    val blockRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return false
+): HurlStartFailure? {
+    val blockRef =
+        BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return HurlStartFailure.SPAWN_FAILED
     val store = world.chunkStore.store
-    val charge = store.getComponent(blockRef, HurlCannonChargeState.type) ?: return false
-    val animation = store.getComponent(blockRef, TimedBlockAnimation.type) ?: return false
+    val charge = store.getComponent(blockRef, HurlCannonChargeState.type) ?: return HurlStartFailure.SPAWN_FAILED
+    val animation = store.getComponent(blockRef, TimedBlockAnimation.type) ?: return HurlStartFailure.SPAWN_FAILED
+    if (rider != null) {
+        val player =
+            world.entityStore.store.getComponent(rider, PlayerRef.getComponentType())
+                ?: return HurlStartFailure.FORBIDDEN
+        val owner = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
+        if (!StationPermissions.mayVisit(owner, CraftoryCore.crewService().crewOf(player.uuid).members)) {
+            return HurlStartFailure.FORBIDDEN
+        }
+        hurlArcPreflightFailure(world.entityStore.store, rider)?.let { return it }
+    }
     val launchTick = world.tick + HURL_CANNON_CHARGE_TICKS
     charge.launchTick = launchTick
     charge.targetX = target.x
@@ -106,13 +163,13 @@ internal fun beginHurlCannonCharge(
     charge.rider = rider
     animation.start(world.tick, HURL_CANNON_CHARGE_TICKS)
     setBlockAnimationState(world, position.x, position.y, position.z, animation.animatedState)
-    return true
+    return null
 }
 
 internal const val HURL_CANNON_CHARGE_TICKS = 5L
 
 internal fun launchHurlCannonArc(
-    world: com.hypixel.hytale.server.core.universe.world.World,
+    world: World,
     source: Vector3i,
     target: Vector3i,
     rider: Ref<EntityStore>,
@@ -121,10 +178,8 @@ internal fun launchHurlCannonArc(
     val result =
         HurlRides.startArc(
             world,
-            studio.craftory.core.api.transport
-                .HurlPoint(source.x + 0.5, source.y + 1.0, source.z + 0.5),
-            studio.craftory.core.api.transport
-                .HurlPoint(target.x + 0.5, target.y + 1.0, target.z + 0.5),
+            HurlPoint(source.x + 0.5, source.y + 1.0, source.z + 0.5),
+            HurlPoint(target.x + 0.5, target.y + 1.0, target.z + 0.5),
             rider,
             player.uuid,
         )
@@ -140,15 +195,11 @@ internal fun launchHurlCannonArc(
                 HurlStartFailure.JAR_CARRIER -> "jar-carrier"
 
                 HurlStartFailure.FORBIDDEN -> return player.sendMessage(
-                    com.hypixel.hytale.server.core.Message
-                        .translation("server.craftory.wrench.foreign-crew"),
+                    Message.translation("server.craftory.wrench.foreign-crew"),
                 )
 
                 else -> "no-net"
             }
-        player.sendMessage(
-            com.hypixel.hytale.server.core.Message
-                .translation("server.craftory.hurl.$key"),
-        )
+        player.sendMessage(Message.translation("server.craftory.hurl.$key"))
     }
 }

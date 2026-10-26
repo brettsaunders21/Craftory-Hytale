@@ -248,12 +248,17 @@ Common/Items/Craftory/Tinkers_Hammer/Tinkers_Hammer.blockymodel
 Common/Items/Craftory/Tinkers_Hammer/Tinkers_Hammer_Texture.png
 Common/Items/Craftory/Tinkers_Wrench/Tinkers_Wrench.blockymodel
 Common/Items/Craftory/Tinkers_Wrench/Tinkers_Wrench_Texture.png
+Common/NPC/Craftory/Glimmer_Wisp/Texture.png
+Common/NPC/Craftory/Goblin_Poacher/Texture.png
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Backpack.blockymodel
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Backpack_Texture.png
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Goggles.blockymodel
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Goggles_Texture.png
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Hat.blockymodel
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Hat_Texture.png
+Common/NPC/Craftory/Riftmoth/Texture.png
+Common/NPC/Craftory/Sparkjaw/Texture.png
+Common/NPC/Craftory/Vessa/Texture.png
 Common/Particles/Craftory/Fizz_Spark.png
 Common/Particles/Craftory/Glimmer_Mote.png
 Common/Particles/Craftory/Smoke_Black.png

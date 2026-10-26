@@ -7,6 +7,7 @@ Usage: python3 tools/art/build.py            (writes assets)
 from __future__ import annotations
 
 import json
+import os
 import sys
 import zlib
 from pathlib import Path
@@ -121,6 +122,14 @@ def main() -> None:
     export_particles(manifest)
     export_beams(manifest)
     grizzlecog.export(manifest, COMMON, build)
+    vanilla_ref = os.environ.get("CRAFTORY_VANILLA_REF")
+    if vanilla_ref:
+        import retint
+
+        manifest.extend(
+            path.relative_to(COMMON.parent).as_posix()
+            for path in retint.retint(Path(vanilla_ref).expanduser(), COMMON)
+        )
     out = HERE / "manifest.txt"
     out.write_text("\n".join(sorted(set(manifest))) + "\n")
     print(f"wrote {len(set(manifest))} files; list in {out.relative_to(HERE.parents[1])}")

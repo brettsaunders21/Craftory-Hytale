@@ -1,0 +1,5 @@
+{
+  "Parent": "Bat",
+  "Model": "NPC/Flying_Critter/Bat/Models/Model.blockymodel",
+  "Texture": "NPC/Craftory/Glimmer_Wisp/Texture.png"
+}

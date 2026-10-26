@@ -47,6 +47,21 @@ internal object GutterBoilerEffects {
         }
     }
 
+    fun running(
+        world: World,
+        x: Int,
+        y: Int,
+        z: Int,
+    ) {
+        world.execute {
+            playSound(
+                world.entityStore.store,
+                RUNNING_SOUND_ID,
+                Vector3d(x + 0.5, y + 1.0, z + 0.5),
+            )
+        }
+    }
+
     private fun spawnSteam(
         world: World,
         x: Int,
@@ -108,5 +123,6 @@ internal object GutterBoilerEffects {
     const val STEAM_PARTICLE_ID = "Goblin_Decorative_Steam"
     const val VENT_POP_SOUND_ID = "SFX_Emit_Goblin_Steam_A"
     const val HIGH_PRESSURE_SOUND_ID = "SFX_Emit_Goblin_Machine_A_Steam_Bursts_Winding"
+    const val RUNNING_SOUND_ID = "SFX_Emit_Goblin_Liquid_Bubbling_Steam_Bursts"
     private const val PLAYER_RADIUS_SQUARED = 16.0
 }

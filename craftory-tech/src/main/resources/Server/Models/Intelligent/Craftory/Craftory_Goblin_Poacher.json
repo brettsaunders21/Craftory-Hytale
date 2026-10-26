@@ -1,0 +1,5 @@
+{
+  "Parent": "Goblin_Lobber",
+  "Model": "NPC/Intelligent/Goblin/Models/Model.blockymodel",
+  "Texture": "NPC/Craftory/Goblin_Poacher/Texture.png"
+}

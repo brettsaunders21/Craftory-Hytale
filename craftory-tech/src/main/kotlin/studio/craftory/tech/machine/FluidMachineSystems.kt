@@ -152,10 +152,18 @@ private fun updateBoilerState(
         state.lastWhistleTick = world.tick
         GutterBoilerEffects.whistle(world, x, y, z)
     }
+    var runningSoundPlayed = false
+    if (boilerVisualState(state, lavaBelow) == "On" &&
+        BoilerRunningSoundCadence.isDue(world.tick, state.lastRunningSoundTick)
+    ) {
+        state.lastRunningSoundTick = world.tick
+        runningSoundPlayed = true
+        GutterBoilerEffects.running(world, x, y, z)
+    }
     val stateChanged =
         hasBoilerStateChanged(beforePressure, beforeWater, beforeFuelTicks, beforeOnline, beforeLastWhistleTick, state)
     val visualChanged = setBlockState(world, blockState, commandBuffer, boilerVisualState(state, lavaBelow))
-    if (stateChanged || visualChanged) blockState.markNeedsSaving(commandBuffer)
+    if (stateChanged || visualChanged || runningSoundPlayed) blockState.markNeedsSaving(commandBuffer)
     if (update.popped) GutterBoilerEffects.pop(world, x, y, z)
 }
 

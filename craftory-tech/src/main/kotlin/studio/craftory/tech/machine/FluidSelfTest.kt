@@ -1947,6 +1947,9 @@ private object FluidSelfTestAssetChecks {
         check(run, GutterBoilerEffects.HIGH_PRESSURE_SOUND_ID) {
             SoundEvent.getAssetMap().getIndex(GutterBoilerEffects.HIGH_PRESSURE_SOUND_ID) >= 0
         }
+        check(run, GutterBoilerEffects.RUNNING_SOUND_ID) {
+            SoundEvent.getAssetMap().getIndex(GutterBoilerEffects.RUNNING_SOUND_ID) >= 0
+        }
         check(run, GutterBoilerEffects.STEAM_PARTICLE_ID) {
             ParticleSystem.getAssetMap().getAsset(GutterBoilerEffects.STEAM_PARTICLE_ID) != null
         }

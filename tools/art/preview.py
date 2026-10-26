@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import zipfile
 from pathlib import Path
@@ -128,6 +129,32 @@ def icon_rows():
     return out
 
 
+def mob_preview(out: Path, vanilla_root: Path) -> None:
+    mapping = (
+        ("Glimmer Wisp", "Flying_Critter/Bat", "Glimmer_Wisp"),
+        ("Sparkjaw", "Swimming_Beast/Crocodile", "Sparkjaw"),
+        ("Riftmoth", "Void/Spawn_Void", "Riftmoth"),
+        ("Goblin Poacher", "Intelligent/Goblin/Goblin_Lobber", "Goblin_Poacher"),
+        ("Vessa", "Intelligent/Klops/Klops_Merchant", "Vessa"),
+    )
+    row_height = CELL + 34
+    sheet = Image.new("RGBA", (CELL * 6, row_height * len(mapping)), BG)
+    draw = ImageDraw.Draw(sheet)
+    for row, (label, model_id, craftory_name) in enumerate(mapping):
+        spec = json.loads((vanilla_root / "Server/Models" / f"{model_id}.json").read_text())
+        model = json.loads((vanilla_root / "Common" / spec["Model"]).read_text())
+        vanilla = Image.open(vanilla_root / "Common" / spec["Texture"]).convert("RGBA")
+        craftory = Image.open(COMMON / "NPC/Craftory" / craftory_name / "Texture.png").convert("RGBA")
+        views = [render(model, vanilla, yaw, pitch, CELL) for _, yaw, pitch in ANGLES]
+        views.extend(render(model, craftory, yaw, pitch, CELL) for _, yaw, pitch in ANGLES)
+        y = row * row_height
+        draw.text((5, y + 3), f"{label} / vanilla", fill=INK)
+        draw.text((CELL * 3 + 5, y + 3), f"{label} / Craftory", fill=INK)
+        for col, view in enumerate(views):
+            sheet.alpha_composite(view, (col * CELL, y + 22))
+    sheet.save(out / "mobs.png")
+
+
 def main():
     out = Path(sys.argv[1])
     zip_path = Path(sys.argv[2]) if len(sys.argv) > 2 else None
@@ -171,6 +198,9 @@ def main():
         d.text((x + 8, y + 4), name, fill=INK)
         big.save(out / "renders" / f"icon4x_{name}.png", format="PNG")
         im.save(out / "renders" / f"icon1x_{name}.png", format="PNG")
+    vanilla_ref = os.environ.get("CRAFTORY_VANILLA_REF")
+    if vanilla_ref:
+        mob_preview(out, Path(vanilla_ref).expanduser())
     sheet.save(out / "art_preview.png", optimize=True)
     print(f"{len(rows)} model rows, {len(icons)} icons -> {out / 'art_preview.png'} {sheet.size}")
 

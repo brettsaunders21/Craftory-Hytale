@@ -13,8 +13,10 @@ class BoilerState(
     var fuelTicks: Long = 0,
     var online: Boolean = true,
     var lastWhistleTick: Long = Long.MIN_VALUE,
+    var lastRunningSoundTick: Long = Long.MIN_VALUE,
 ) : Component<ChunkStore> {
-    override fun clone(): Component<ChunkStore> = BoilerState(pressure, water, fuelTicks, online, lastWhistleTick)
+    override fun clone(): Component<ChunkStore> =
+        BoilerState(pressure, water, fuelTicks, online, lastWhistleTick, lastRunningSoundTick)
 
     companion object {
         lateinit var type: ComponentType<ChunkStore, BoilerState>
@@ -43,6 +45,20 @@ class BoilerState(
                     { state, value -> state.lastWhistleTick = value },
                     { it.lastWhistleTick },
                 ).add()
+                .append(
+                    KeyedCodec("LastRunningSoundTick", Codec.LONG),
+                    { state, value -> state.lastRunningSoundTick = value },
+                    { it.lastRunningSoundTick },
+                ).add()
                 .build()
     }
+}
+
+internal object BoilerRunningSoundCadence {
+    const val INTERVAL_TICKS = 80L
+
+    fun isDue(
+        tick: Long,
+        lastPlayedTick: Long,
+    ): Boolean = lastPlayedTick == Long.MIN_VALUE || tick - lastPlayedTick >= INTERVAL_TICKS
 }

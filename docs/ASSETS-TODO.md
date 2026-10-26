@@ -23,12 +23,10 @@ Regenerate generated assets with `python3 tools/art/build.py`. Preview models wi
 - Tether beams use a custom cyan Beam asset and texture.
 - Snatcher Claw `Grab`, Hurl Cannon `Charge` and Catch Net `Land` animations are event-triggered.
   Claw and Net hold for 10 ticks; Cannon uses a 5-tick (0.25-second) pre-launch charge.
+- Vanilla-derived Craftory textures are generated for Glimmer Wisp, Sparkjaw, Riftmoth, Goblin
+  Poacher and Vessa. Boiler running audio uses the verified liquid-bubbling steam-bursts event.
 
 ## Remaining
 
-- Mob re-tints for Wisp, Sparkjaw, Riftmoth and Poacher, plus Vessa, are blocked on vanilla rig
-  assets; Hytale asset authentication/download is pending.
-- Boiler sound IDs are blocked pending the vanilla sound files.
-- All appearance remains client-unverified; offline previews are not a substitute for a live-client
-  check.
+- Tier 1–3 appearance work is complete; client verification remains for every appearance.
 - Storm Hunt part 2-owned items remain excluded from this work.

@@ -2,7 +2,7 @@
   "Type": "Variant",
   "Reference": "Template_Goblin_Lobber",
   "Modify": {
-    "Appearance": "Goblin_Lobber",
+    "Appearance": "Craftory_Goblin_Poacher",
     "DropList": "Drop_Craftory_Goblin_Poacher",
     "MaxHealth": 80,
     "ViewRange": 8,

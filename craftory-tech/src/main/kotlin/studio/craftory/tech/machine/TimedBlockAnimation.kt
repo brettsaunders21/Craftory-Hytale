@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.CraftoryCore
 
 class TimedBlockAnimation(
     var idleState: String = "Off",
@@ -88,6 +89,7 @@ internal class TimedBlockAnimationSystem : EntityTickingSystem<ChunkStore>() {
     ) {
         val animation = chunk.getComponent(index, TimedBlockAnimation.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
         if (setBlockState(
                 store.externalData.world,
                 blockState,

@@ -60,7 +60,13 @@ private fun fireCannon(
         player.sendMessage(Message.translation("server.craftory.hurl.no-net"))
         return
     }
-    if (!beginHurlCannonCharge(world, position, rider, Vector3i(target.x, target.y, target.z))) {
-        player.sendMessage(Message.translation("server.craftory.hurl.spawn-failed"))
-    }
+    val failure = beginHurlCannonCharge(world, position, rider, Vector3i(target.x, target.y, target.z)) ?: return
+    val key =
+        when (failure) {
+            HurlStartFailure.JAR_CARRIER -> "jar-carrier"
+            HurlStartFailure.ALREADY_RIDING -> "already-riding"
+            HurlStartFailure.FORBIDDEN -> "cannon-foreign"
+            else -> "spawn-failed"
+        }
+    player.sendMessage(Message.translation("server.craftory.hurl.$key"))
 }
