@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
@@ -134,7 +135,8 @@ internal class CrackleCoilSystem : EntityTickingSystem<ChunkStore>() {
             setBlockState(world, blockState, commandBuffer, "Off")
             return
         }
-        val production = burningProduction(store, cursor.x, cursor.y - 1, cursor.z)
+        val burnerPosition = BlockFootprints.origin(store, cursor.x, cursor.y - 1, cursor.z)
+        val production = burningProduction(store, burnerPosition.x, burnerPosition.y, burnerPosition.z)
         val id = BlockPos.pack(cursor.x, cursor.y, cursor.z)
         energy.setDemand(id, ConverterMath.skim(production, 5))
         val output = energy.converterInputDelivered(id)

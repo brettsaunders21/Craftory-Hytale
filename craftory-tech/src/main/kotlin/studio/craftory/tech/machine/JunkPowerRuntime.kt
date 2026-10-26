@@ -51,6 +51,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
 import org.joml.Vector3d
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
@@ -980,11 +981,12 @@ class CraftoryWrenchUseInteraction : SimpleBlockInteraction() {
     ) {
         if (heldItem?.itemId != CraftoryIds.TINKERS_WRENCH) return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
-        val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
+        val origin = BlockFootprints.origin(world.chunkStore.store, position.x, position.y, position.z)
+        val ref = BlockModule.getBlockEntity(world, origin.x, origin.y, origin.z) ?: return
         if (openHurlStation(
                 world,
                 ref,
-                BlockPos.pack(position.x, position.y, position.z),
+                BlockPos.pack(origin.x, origin.y, origin.z),
                 context.entity,
                 commandBuffer,
                 true,
@@ -992,7 +994,7 @@ class CraftoryWrenchUseInteraction : SimpleBlockInteraction() {
         ) {
             return
         }
-        val result = MachineActions.useWrench(world, ref, position, player, world.chunkStore.store)
+        val result = MachineActions.useWrench(world, ref, origin, player, world.chunkStore.store)
         val message =
             when (result) {
                 WrenchActionResult.NotMachine -> {
@@ -1117,13 +1119,14 @@ internal object MachineActions {
         store: Store<ChunkStore>,
         bypassOwnership: Boolean = false,
     ): WrenchActionResult {
+        val origin = BlockFootprints.origin(store, position.x, position.y, position.z)
         val member = store.getComponent(blockRef, EnergyMember.type)
         if (member == null) {
             val shroomBed = store.getComponent(blockRef, ShroomBedState.type) ?: return WrenchActionResult.NotMachine
             return packGenerator(
                 world,
                 blockRef,
-                position,
+                origin,
                 playerUuid,
                 playerRef,
                 crews,
@@ -1138,7 +1141,7 @@ internal object MachineActions {
             return packGenerator(
                 world,
                 blockRef,
-                position,
+                origin,
                 playerUuid,
                 playerRef,
                 crews,
@@ -1148,7 +1151,7 @@ internal object MachineActions {
                 bypassOwnership,
             )
         }
-        return usePageMachineWrench(world, blockRef, position, playerUuid, playerRef, crews, store, bypassOwnership)
+        return usePageMachineWrench(world, blockRef, origin, playerUuid, playerRef, crews, store, bypassOwnership)
     }
 
     private fun usePageMachineWrench(

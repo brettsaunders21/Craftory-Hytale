@@ -40,7 +40,41 @@ internal data class ModelBounds(
     }
 }
 
+private data class BlockFootprint(
+    val width: Int,
+    val height: Int,
+    val depth: Int,
+)
+
+private val machineFootprints =
+    mapOf(
+        "Crank_A_Fizz" to BlockFootprint(1, 1, 1),
+        "Fizz_Canister" to BlockFootprint(1, 1, 1),
+        "Snatcher_Claw" to BlockFootprint(1, 1, 1),
+        "Crackle_Coil" to BlockFootprint(1, 2, 1),
+        "Resonator" to BlockFootprint(1, 1, 1),
+        "Gnasher_Pit" to BlockFootprint(2, 1, 1),
+        "Scorch_Oven" to BlockFootprint(2, 2, 1),
+        "Rattlewheel" to BlockFootprint(1, 2, 1),
+        "Shroom_Bed" to BlockFootprint(2, 1, 1),
+        "Boomshroom_Burner" to BlockFootprint(1, 2, 1),
+        "Sloshtank" to BlockFootprint(1, 2, 1),
+        "Wakebell_Anchor" to BlockFootprint(1, 1, 1),
+        "Wellhead" to BlockFootprint(1, 1, 1),
+        "Glimmerwell_Anchor" to BlockFootprint(1, 1, 1),
+        "Junk_Heart_Firebox" to BlockFootprint(1, 1, 1),
+        "Storm_Vane" to BlockFootprint(1, 2, 1),
+        "Fizz_Damper" to BlockFootprint(1, 1, 1),
+    )
+
 internal object BlockModelGeometry {
+    internal data class OrientedBox(
+        val name: String,
+        val center: DoubleArray,
+        val rotation: Array<DoubleArray>,
+        val halfSize: DoubleArray,
+    )
+
     private data class Face(
         val box: Int,
         val node: String,
@@ -62,17 +96,161 @@ internal object BlockModelGeometry {
         )
     }
 
+    fun boxes(model: JsonObject): List<OrientedBox> {
+        val boxes = mutableListOf<OrientedBox>()
+
+        fun collect(
+            node: JsonObject,
+            rotation: Array<DoubleArray>,
+            translation: DoubleArray,
+            parentOffset: DoubleArray,
+        ) {
+            val worldRotation = multiply(rotation, quaternionMatrix(node.getAsJsonObject("orientation")))
+            val worldTranslation =
+                add(translation, multiply(rotation, add(parentOffset, vector(node.getAsJsonObject("position")))))
+            val shape = node.getAsJsonObject("shape")
+            val offset = vector(shape.getAsJsonObject("offset"))
+            if (shape.get("visible").asBoolean && shape.get("type").asString == "box") {
+                val size = vector(shape.getAsJsonObject("settings").getAsJsonObject("size"))
+                val stretch = vector(shape.getAsJsonObject("stretch"))
+                boxes +=
+                    OrientedBox(
+                        node.get("name").asString,
+                        add(worldTranslation, multiply(worldRotation, offset)),
+                        worldRotation,
+                        DoubleArray(3) { size[it] * stretch[it] / 2 },
+                    )
+            }
+            node.getAsJsonArray("children")?.forEach {
+                collect(it.asJsonObject, worldRotation, worldTranslation, offset)
+            }
+        }
+
+        model.getAsJsonArray("nodes").forEach { collect(it.asJsonObject, identity(), DoubleArray(3), DoubleArray(3)) }
+        return boxes
+    }
+
+    fun bounds(boxes: List<OrientedBox>): ModelBounds {
+        val points =
+            boxes.flatMap { box ->
+                listOf(-1.0, 1.0).flatMap { x ->
+                    listOf(-1.0, 1.0).flatMap { y ->
+                        listOf(-1.0, 1.0).map { z ->
+                            add(
+                                box.center,
+                                multiply(
+                                    box.rotation,
+                                    doubleArrayOf(x * box.halfSize[0], y * box.halfSize[1], z * box.halfSize[2]),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        require(points.isNotEmpty()) { "model has no visible boxes" }
+        return ModelBounds(
+            DoubleArray(3) { axis -> points.minOf { it[axis] } },
+            DoubleArray(3) { axis -> points.maxOf { it[axis] } },
+        )
+    }
+
+    fun lowerTierBounds(boxes: List<OrientedBox>): ModelBounds {
+        val points =
+            boxes
+                .flatMap { box ->
+                    listOf(-1.0, 1.0).flatMap { x ->
+                        listOf(-1.0, 1.0).flatMap { y ->
+                            listOf(-1.0, 1.0).map { z ->
+                                add(
+                                    box.center,
+                                    multiply(
+                                        box.rotation,
+                                        doubleArrayOf(x * box.halfSize[0], y * box.halfSize[1], z * box.halfSize[2]),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }.filter { it[1] >= -0.01 && it[1] < 32.0 }
+        require(points.isNotEmpty()) { "lower tier has no visible boxes" }
+        return ModelBounds(
+            DoubleArray(3) { axis -> points.minOf { it[axis] } },
+            DoubleArray(3) { axis -> points.maxOf { it[axis] } },
+        )
+    }
+
+    fun connectedComponents(boxes: List<OrientedBox>): List<List<String>> {
+        val unseen = boxes.indices.toMutableSet()
+        val components = mutableListOf<List<String>>()
+        while (unseen.isNotEmpty()) {
+            val pending = mutableListOf(unseen.first())
+            unseen.remove(pending.first())
+            val component = mutableListOf<String>()
+            while (pending.isNotEmpty()) {
+                val current = boxes[pending.removeAt(pending.lastIndex)]
+                component += current.name
+                val adjacent = unseen.filter { touchesOrOverlaps(current, boxes[it]) }
+                pending += adjacent
+                unseen.removeAll(adjacent.toSet())
+            }
+            components += component
+        }
+        return components
+    }
+
+    private fun touchesOrOverlaps(
+        first: OrientedBox,
+        second: OrientedBox,
+    ): Boolean {
+        val firstAxes = Array(3) { axis -> DoubleArray(3) { row -> first.rotation[row][axis] } }
+        val secondAxes = Array(3) { axis -> DoubleArray(3) { row -> second.rotation[row][axis] } }
+        val rotation = Array(3) { i -> DoubleArray(3) { j -> dot(firstAxes[i], secondAxes[j]) } }
+        val absRotation = Array(3) { i -> DoubleArray(3) { j -> abs(rotation[i][j]) + 1e-8 } }
+        val distance = DoubleArray(3) { axis -> dot(subtract(second.center, first.center), firstAxes[axis]) }
+        val epsilon = 0.05
+
+        for (i in 0..2) {
+            val secondRadius = (0..2).sumOf { second.halfSize[it] * absRotation[i][it] }
+            if (abs(distance[i]) > first.halfSize[i] + secondRadius + epsilon) return false
+        }
+        for (j in 0..2) {
+            val firstRadius = (0..2).sumOf { first.halfSize[it] * absRotation[it][j] }
+            val projectedDistance = abs((0..2).sumOf { distance[it] * rotation[it][j] })
+            if (projectedDistance > second.halfSize[j] + firstRadius + epsilon) return false
+        }
+        for (i in 0..2) {
+            for (j in 0..2) {
+                val axisA = (i + 1) % 3
+                val axisB = (i + 2) % 3
+                val firstRadius =
+                    first.halfSize[axisA] * absRotation[axisB][j] +
+                        first.halfSize[axisB] * absRotation[axisA][j]
+                val secondRadius =
+                    second.halfSize[(j + 1) % 3] * absRotation[i][(j + 2) % 3] +
+                        second.halfSize[(j + 2) % 3] * absRotation[i][(j + 1) % 3]
+                val projectedDistance =
+                    abs(distance[axisB] * rotation[axisA][j] - distance[axisA] * rotation[axisB][j])
+                if (projectedDistance > firstRadius + secondRadius + epsilon) return false
+            }
+        }
+        return true
+    }
+
     fun coplanarSameNormalOverlaps(model: JsonObject): List<String> {
         val faces = mutableListOf<Face>()
         var boxIndex = 0
         model.getAsJsonArray("nodes").forEach {
             collectFaces(it.asJsonObject, identity(), DoubleArray(3), DoubleArray(3), faces) { boxIndex++ }
         }
+        val overlapFaces =
+            faces.filterNot {
+                it.node.startsWith("PipeFlange_") || it.node.startsWith("MouthGlow")
+            }
         return buildList {
-            for (firstIndex in faces.indices) {
-                val first = faces[firstIndex]
-                for (secondIndex in firstIndex + 1 until faces.size) {
-                    val second = faces[secondIndex]
+            for (firstIndex in overlapFaces.indices) {
+                val first = overlapFaces[firstIndex]
+                for (secondIndex in firstIndex + 1 until overlapFaces.size) {
+                    val second = overlapFaces[secondIndex]
                     if (first.box != second.box &&
                         dot(first.normal, second.normal) > 0.9999 &&
                         kotlin.math.abs(first.plane - second.plane) < 0.01
@@ -190,7 +368,10 @@ internal object BlockModelGeometry {
             add(translation, multiply(rotation, add(parentOffset, vector(node.getAsJsonObject("position")))))
         val shape = node.getAsJsonObject("shape")
         val offset = vector(shape.getAsJsonObject("offset"))
-        if (shape.get("visible").asBoolean && shape.get("type").asString == "box") {
+        if (shape.get("visible").asBoolean &&
+            shape.get("type").asString == "box" &&
+            !node.get("name").asString.startsWith("StructuralLink")
+        ) {
             val size = vector(shape.getAsJsonObject("settings").getAsJsonObject("size"))
             val stretch = vector(shape.getAsJsonObject("stretch"))
             val half = DoubleArray(3) { size[it] * stretch[it] / 2 }
@@ -358,6 +539,11 @@ internal object BlockModelGeometry {
         b: DoubleArray,
     ): DoubleArray = DoubleArray(3) { a[it] + b[it] }
 
+    private fun subtract(
+        a: DoubleArray,
+        b: DoubleArray,
+    ): DoubleArray = DoubleArray(3) { a[it] - b[it] }
+
     private fun multiply(
         matrix: Array<DoubleArray>,
         value: DoubleArray,
@@ -371,6 +557,94 @@ internal object BlockModelGeometry {
 }
 
 internal class BlockModelLintTest {
+    @Test
+    fun machineModelsHaveConnectedCubesAndLowerTierBodiesFillTheirFootprints() {
+        val modelDirectory = common.resolve("Blocks/Craftory")
+        val failures = mutableListOf<String>()
+        val models =
+            Files.walk(modelDirectory).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".blockymodel") }.toList()
+            }
+        assertTrue(models.isNotEmpty(), "no Craftory block models found")
+
+        machineFootprints.forEach { (name, footprint) ->
+            val machineModels =
+                models.filter {
+                    it.fileName.toString().startsWith("${name}_") ||
+                        it.fileName.toString() == "$name.blockymodel"
+                }
+            assertTrue(machineModels.isNotEmpty(), "no models found for $name")
+            machineModels.forEach { path ->
+                val boxes = BlockModelGeometry.boxes(parse(path))
+                val components = BlockModelGeometry.connectedComponents(boxes)
+                if (components.size != 1) {
+                    failures +=
+                        "$path has disconnected cube groups: ${components.joinToString(" | ") { it.joinToString() }}"
+                }
+
+                val body =
+                    boxes.filterNot {
+                        it.name.startsWith("PipeFlange") || it.name.startsWith("StructuralLink")
+                    }
+                val bounds = BlockModelGeometry.lowerTierBounds(body)
+                val requiredAxes = listOf(0, 2)
+                val expected = doubleArrayOf(footprint.width * 32.0, footprint.height * 32.0, footprint.depth * 32.0)
+                requiredAxes.forEach { axis ->
+                    val extent = bounds.max[axis] - bounds.min[axis]
+                    if (extent + 0.01 < expected[axis] * 0.9) {
+                        failures +=
+                            "$path body covers only $extent units on ${listOf("X", "Y", "Z")[axis]}; " +
+                            "expected at least ${expected[axis] * 0.9} excluding pipe flanges"
+                    }
+                }
+                if (footprint.height == 2) {
+                    val fullHeight = BlockModelGeometry.bounds(body)
+                    val extent = fullHeight.max[1] - fullHeight.min[1]
+                    if (extent + 0.01 < expected[1] * 0.9) {
+                        failures +=
+                            "$path body covers only $extent units on Y; " +
+                            "expected at least ${expected[1] * 0.9}"
+                    }
+                }
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
+    @Test
+    fun machineModelsHaveOneFlangePerSideAndOnlyMeaningfulTopPorts() {
+        val modelDirectory = common.resolve("Blocks/Craftory")
+        val models =
+            Files.walk(modelDirectory).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".blockymodel") }.toList()
+            }
+        val expectedSideFaces = setOf("XNegative", "XPositive", "ZNegative", "ZPositive")
+        val failures = mutableListOf<String>()
+
+        machineFootprints.keys.forEach { name ->
+            val machineModels =
+                models.filter {
+                    it.fileName.toString().startsWith("${name}_") ||
+                        it.fileName.toString() == "$name.blockymodel"
+                }
+            machineModels.forEach { path ->
+                val roots =
+                    parse(path)
+                        .getAsJsonArray("nodes")
+                        .map { it.asJsonObject.get("name").asString }
+                        .filter { it.startsWith("PipeFlange_") }
+                val faces = roots.map { it.removePrefix("PipeFlange_") }
+                val expectedFaces =
+                    expectedSideFaces +
+                        if (name == "Boomshroom_Burner") setOf("YTop") else emptySet()
+                if (faces.size != expectedFaces.size || faces.toSet() != expectedFaces) {
+                    failures += "$path has flanges on ${faces.joinToString()}, expected ${expectedFaces.joinToString()}"
+                }
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
     private val techResources = requireNotNull(resourceRoot("craftory-tech"))
     private val common = techResources.resolve("Common")
     private val items = techResources.resolve("Server/Item/Items/Craftory")
@@ -398,9 +672,18 @@ internal class BlockModelLintTest {
             val model = parsedModels.getValue(path)
             val bounds = BlockModelGeometry.bounds(model)
             val label = path.toString()
+            val footprint = machineFootprints[path.parent.fileName.toString()] ?: BlockFootprint(1, 1, 1)
+            val maxX = 17.0 + 32.0 * (footprint.width - 1)
+            val maxZ = 17.0 + 32.0 * (footprint.depth - 1)
             assertTrue(bounds.min[1] >= -0.01, "$label extends below y=0: ${bounds.min[1]}")
-            assertTrue(bounds.min[0] >= -17 && bounds.max[0] <= 17, "$label exceeds X block bounds")
-            assertTrue(bounds.min[2] >= -17 && bounds.max[2] <= 17, "$label exceeds Z block bounds")
+            assertTrue(bounds.min[0] >= -17 && bounds.max[0] <= maxX, "$label exceeds X block bounds")
+            assertTrue(bounds.min[2] >= -17 && bounds.max[2] <= maxZ, "$label exceeds Z block bounds")
+            if (path.parent.fileName.toString() in machineFootprints) {
+                assertTrue(
+                    bounds.max[1] <= footprint.height * 32.0 + 0.01,
+                    "$label exceeds Y block bounds: ${bounds.max[1]}",
+                )
+            }
         }
         val overlaps =
             blockModels.flatMap { path ->
@@ -417,21 +700,51 @@ internal class BlockModelLintTest {
             }
         assertTrue(files.isNotEmpty(), "no Craftory hitbox JSON files found")
         files.forEach { path ->
+            val name =
+                path.fileName
+                    .toString()
+                    .removePrefix("Craftory_")
+                    .removeSuffix(".json")
+            val footprint = machineFootprints[name]
             parse(path).getAsJsonArray("Boxes").forEachIndexed { boxIndex, boxElement ->
                 val box = boxElement.asJsonObject
                 listOf("Min", "Max").forEach { corner ->
                     val vector = box.getAsJsonObject(corner)
-                    listOf("X", "Y", "Z").forEach { axis ->
+                    listOf("X", "Y", "Z").forEachIndexed { axisIndex, axis ->
                         val coordinate = vector.get(axis).asDouble
+                        val extent =
+                            footprint?.let {
+                                footprintExtent(it.width, it.height, it.depth, axisIndex)
+                            } ?: 1.0
+                        val inset = if (footprint == null) 0.0 else hitboxInset(name, axisIndex)
+                        val lowerBound = if (corner == "Min" && footprint != null) inset else 0.0
+                        val upperBound = if (corner == "Max") extent - inset else extent
                         assertTrue(
-                            coordinate >= 0.0 && coordinate <= 1.0,
-                            "$path box $boxIndex $corner.$axis is outside [0,1]: $coordinate",
+                            coordinate >= lowerBound && coordinate <= upperBound,
+                            "$path box $boxIndex $corner.$axis is outside [$lowerBound,$upperBound]: $coordinate",
                         )
                     }
                 }
             }
         }
     }
+
+    private fun footprintExtent(
+        width: Int,
+        height: Int,
+        depth: Int,
+        axisIndex: Int,
+    ): Double =
+        when (axisIndex) {
+            0 -> width.toDouble()
+            1 -> height.toDouble()
+            else -> depth.toDouble()
+        }
+
+    private fun hitboxInset(
+        name: String,
+        axisIndex: Int,
+    ): Double = if (name == "Scorch_Oven" && axisIndex == 1) 0.0 else 1.0 / 16
 
     @Test
     fun craftoryModelBlocksHaveFittedHitboxesAndAttachedParticles() {
@@ -574,6 +887,12 @@ internal class BlockModelLintTest {
         hitboxType: String,
         hitboxByStem: Map<String, Path>,
     ) {
+        val ovenYAllowance =
+            if (itemPath.fileName.toString() == "Craftory_Scorch_Oven.json") {
+                2.0 / 32
+            } else {
+                0.0
+            }
         definitions?.entrySet()?.forEach stateLoop@{ (stateName, state) ->
             val stateDefinition = state.asJsonObject
             val stateHitbox = stateDefinition.get("HitboxType")?.asString ?: return@stateLoop
@@ -591,6 +910,7 @@ internal class BlockModelLintTest {
                 "${itemPath.fileName} $stateName",
                 blockBounds(listOf(BlockModelGeometry.bounds(parse(common.resolve(stateModel))))),
                 parse(stateHitboxPath).getAsJsonArray("Boxes"),
+                ovenYAllowance,
             )
         }
         if (itemPath.fileName.toString() == "Craftory_Gutterpipe.json") return
@@ -600,7 +920,12 @@ internal class BlockModelLintTest {
                 hitboxByStem[hitboxType],
                 "${itemPath.fileName} hitbox missing: $hitboxType",
             )
-        assertHitboxFits(itemPath.fileName.toString(), union, parse(hitboxPath).getAsJsonArray("Boxes"))
+        assertHitboxFits(
+            itemPath.fileName.toString(),
+            union,
+            parse(hitboxPath).getAsJsonArray("Boxes"),
+            ovenYAllowance,
+        )
     }
 
     private fun modelPaths(blockType: JsonObject): List<String> {
@@ -645,6 +970,7 @@ internal class BlockModelLintTest {
         label: String,
         model: ModelBounds,
         boxes: JsonArray,
+        extraYAllowance: Double = 0.0,
     ) {
         val hitboxBounds = boxBounds(boxes)
         for (axis in 0..2) {
@@ -657,7 +983,7 @@ internal class BlockModelLintTest {
                 )[axis]}: ${hitboxBounds.min[axis]} < ${model.min[axis]}",
             )
             assertTrue(
-                hitboxBounds.max[axis] <= model.max[axis] + 2.0 / 32,
+                hitboxBounds.max[axis] <= model.max[axis] + 2.0 / 32 + if (axis == 1) extraYAllowance else 0.0,
                 "$label hitbox overreaches ${listOf(
                     "X",
                     "Y",

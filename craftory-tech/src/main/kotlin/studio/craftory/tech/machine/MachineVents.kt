@@ -20,11 +20,11 @@ internal data class MachineVent(
 internal object MachineVents {
     val entries =
         mapOf(
-            CraftoryIds.BURNER to MachineVent("Smoke-Emitter", 18.0 / 32, 35.0 / 32, 17.0 / 32),
-            CraftoryIds.CRANK to MachineVent("Steam-Emitter", 0.5, 23.0 / 32, 0.5),
-            CraftoryIds.CANISTER to MachineVent("Smoke-Emitter", 0.5, 28.0 / 32, 0.5),
-            CraftoryIds.FIZZ_DAMPER to MachineVent("Steam-Emitter", 0.5, 29.0 / 32, 0.5),
-            CraftoryIds.GNASHER_PIT to MachineVent("Spark-Emitter", 0.5, 23.0 / 32, 0.5),
+            CraftoryIds.BURNER to MachineVent("Smoke-Emitter", 0.5 + 2.14286 / 32, 63.35923 / 32, 0.5 + 1.07143 / 32),
+            CraftoryIds.CRANK to MachineVent("Steam-Emitter", 0.5 - 1.45833 / 32, 30.0 / 32, 0.5),
+            CraftoryIds.CANISTER to MachineVent("Smoke-Emitter", 0.5 + 0.39181 / 32, 30.32399 / 32, 0.5 - 0.1145 / 32),
+            CraftoryIds.FIZZ_DAMPER to MachineVent("Steam-Emitter", 0.5, 30.52631 / 32, 0.5),
+            CraftoryIds.GNASHER_PIT to MachineVent("Spark-Emitter", 1.0, 29.8994 / 32, 0.5 - 1.73873 / 32),
             CraftoryIds.GUTTER_BOILER to
                 MachineVent(
                     "Steam-Emitter",
@@ -41,10 +41,10 @@ internal object MachineVents {
                     0.5,
                     "Blocks/Craftory/Junk_Heart_Chimney/Junk_Heart_Chimney_Cap.blockymodel",
                 ),
-            CraftoryIds.RATTLEWHEEL to MachineVent("Spark-Emitter", 0.5, 29.0 / 32, 0.5),
-            CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 0.5, 38.0 / 32, 0.5),
-            CraftoryIds.SHROOM_BED to MachineVent("Spore-Emitter", 0.5, 30.0 / 32, 0.5),
-            CraftoryIds.STORM_VANE to MachineVent("Spark-Emitter", 0.5, 31.5 / 32, 0.5),
+            CraftoryIds.RATTLEWHEEL to MachineVent("Spark-Emitter", 0.5, 63.80003 / 32, 0.5),
+            CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 1.0, 60.03174 / 32, 0.5 - 0.94854 / 32),
+            CraftoryIds.SHROOM_BED to MachineVent("Spore-Emitter", 1.0, 29.29885 / 32, 0.5),
+            CraftoryIds.STORM_VANE to MachineVent("Spark-Emitter", 0.5, 63.0 / 32, 0.5),
         )
 
     fun position(

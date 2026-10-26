@@ -15,6 +15,8 @@ RUSTY = metal((0.50, 0.40, 0.33), rust=0.6)
 CORRUGATED = metal(TIN, rust=0.35, corrugated=True)
 CORRUGATED_RUST = metal(RUST, rust=0.25, corrugated=True, bolt=TIN)
 DARK_TIN = metal(TIN_DARK, rust=0.25)
+PIPE_FLANGE = metal(RUST, rust=0.3, rivets=True, bolt=TIN_DARK)
+PIPE_MOUTH = solid((0.10, 0.08, 0.07))
 BRASS_P = brass()
 BRASS_RIV = brass(rivets=True)
 SOOT_P = soot()
@@ -598,29 +600,81 @@ def gnasher_pit():
 
 
 def scorch_oven(lit: bool):
-    oven = Box("Oven", (24, 22, 22), pos=(0, 11, 0), paint=SOOT_RUST)
-    oven.add(
-        Box("Door", (12, 10, 2), pos=(-2, -1, 11.2), rot=(0, 0, -3), paint=BRASS_RIV).add(
-            Box("DoorSlot", (8, 2, 1), pos=(0, 2, 1), paint=EMBER_GLOW if lit else DEAD_EMBER,
-                shading="fullbright" if lit else "standard"),
-            Box("DoorLatch", (2, 3, 2), pos=(5.2, -1, 1.2), paint=DARK_TIN),
+    firebox = Box("Firebox", (56, 27, 28), pos=(0, 17.5, 0), paint=solid((0.39, 0.34, 0.29), noise=0.08))
+    firebox.add(
+        Box("Ashpan", (56, 3, 28), pos=(0, -15.5, 0), paint=DARK_TIN),
+        Box("CopperPlinth", (62, 4, 30), pos=(0, -15.5, 0), paint=CORRUGATED_RUST),
+        Box("BrickCourseLow", (60, 3, 29), pos=(0, -12.5, 0), paint=RUSTY),
+        Box("BrickCourseFront", (54, 2, 1), pos=(0, -6.5, 13.7), paint=solid((0.48, 0.31, 0.23), noise=0.06)),
+        Box("BrickCourseBack", (54, 2, 1), pos=(0, -6.5, -14), paint=solid((0.48, 0.31, 0.23), noise=0.06)),
+        Box("FireboxRibL", (2, 24, 2), pos=(-26, 0.5, 12), paint=SOOT_RUST),
+        Box("FireboxRibR", (2, 24, 2), pos=(26, 0.5, 12), paint=SOOT_RUST),
+        Box("Mouth", (20, 19, 1), pos=(-6, 3.0, 13.8), paint=SOOT_P),
+        Box(
+            "MouthGlow",
+            (14, 10, 1),
+            pos=(-6, 0.5, 14),
+            paint=EMBER_GLOW if lit else DEAD_EMBER,
+            shading="fullbright" if lit else "standard",
         ),
-        Box("Ashpan", (14, 3, 3), pos=(-2, -8.8, 11), paint=DARK_TIN),
-        Box("RoofSheet", (26, 2, 24), pos=(0, 11.5, 0), rot=(0, 0, 3), paint=CORRUGATED_RUST),
-        Box("SidePatchL", (1, 10, 12), pos=(-12.4, 2, 1), rot=(5, 0, 0), paint=CORRUGATED),
-        Box("SidePatchR", (1, 8, 8), pos=(12.4, -4, -3), rot=(-4, 0, 0), paint=metal(RUST, rust=0.3)),
-        Box("Thermo", (3, 6, 1), pos=(8, 4, 11.3), paint=glass(EMBER if lit else (0.3, 0.3, 0.3), 0.7 if lit else 0.2)),
-        lashing("RopeBand", (25, 2, 23), pos=(0, 6, 0), rot=(0, 0, -2)),
-        Box("Chimney", (6, 14, 6), pos=(0, 18, 0), paint=SOOT_P).add(
-            Box("ChimneyCap", (9, 2, 9), pos=(0, 7.5, 0), rot=(0, 15, 6), paint=RUSTY),
+        Box(
+            "MouthGlowShoulderL",
+            (7, 4, 1),
+            pos=(-10.5, 7.5, 14),
+            rot=(0, 0, -25),
+            paint=EMBER_GLOW if lit else DEAD_EMBER,
+            shading="fullbright" if lit else "standard",
         ),
-        Box("Smoke-Emitter", pos=(0, 27, 0)),
-        Box("Foot0", (4, 2, 4), pos=(-9, -9.5, -8), paint=DARK_TIN),
-        Box("Foot1", (4, 3, 4), pos=(9, -8.5, -8), paint=DARK_TIN),
-        Box("Foot2", (4, 2, 4), pos=(-9, -9.5, 8), paint=DARK_TIN),
-        Box("Foot3", (4, 2, 4), pos=(9, -9.5, 8), paint=DARK_TIN),
+        Box(
+            "MouthGlowShoulderR",
+            (7, 4, 1),
+            pos=(-1.5, 7.5, 14),
+            rot=(0, 0, 25),
+            paint=EMBER_GLOW if lit else DEAD_EMBER,
+            shading="fullbright" if lit else "standard",
+        ),
+        Box(
+            "MouthGlowCrown",
+            (7, 3, 1),
+            pos=(-6, 10, 14),
+            paint=EMBER_GLOW if lit else DEAD_EMBER,
+            shading="fullbright" if lit else "standard",
+        ),
+        Box("MouthArchLeft", (4, 19, 3), pos=(-18, 3.5, 13.5), paint=RUSTY),
+        Box("MouthArchRight", (4, 19, 3), pos=(6, 3.5, 13.5), paint=RUSTY),
+        Box("MouthArchShoulderL", (7, 4, 3), pos=(-14.5, 13.5, 13.2), rot=(0, 0, -25), paint=RUSTY),
+        Box("MouthArchShoulderR", (7, 4, 3), pos=(2.5, 13.5, 13.2), rot=(0, 0, 25), paint=RUSTY),
+        Box("MouthArchCrown", (8, 4, 3), pos=(-6, 15.5, 13.2), paint=RUSTY),
+        Box("IronDoor", (11, 18, 2), pos=(-22.5, 2.5, 13.2), rot=(0, -15, 0), paint=metal(TIN_DARK, rust=0.45, corrugated=True)).add(
+            Box("DoorSeam", (1, 16, 1), pos=(0, 0, 1.1), paint=SOOT_P),
+            bolt("DoorRivetTL", (-4, 6, 0.8), s=2.2, paint=RUSTY),
+            bolt("DoorRivetTR", (4, 6, 0.8), s=2.2, paint=RUSTY),
+            bolt("DoorRivetBL", (-4, -6, 0.8), s=2.2, paint=RUSTY),
+            bolt("DoorRivetBR", (4, -6, 0.8), s=2.2, paint=RUSTY),
+            Box("DoorLatch", (3, 7, 2), pos=(5, -2, 1.1), paint=BRASS_RIV),
+        ),
+        Box("DoorHinge", (2, 21, 3), pos=(-18.5, 3.5, 14.5), paint=DARK_TIN),
+        Box("Hood", (44, 20, 24), pos=(0, 24.5, 0), paint=CORRUGATED_RUST),
+        Box("HoodLowerBand", (48, 3, 26), pos=(0, 14.5, 0), paint=RUSTY),
+        Box("HoodRibL", (3, 16, 26), pos=(-22, 24.5, 0), paint=RUSTY),
+        Box("HoodRibR", (3, 16, 26), pos=(22, 24.5, 0), paint=RUSTY),
+        Box("ThermoCase", (8, 11, 3), pos=(15, 25.5, 12), paint=BRASS_RIV),
+        Box(
+            "Thermo",
+            (4, 7, 1),
+            pos=(15, 25.5, 14),
+            paint=glass(EMBER if lit else (0.3, 0.3, 0.3), 0.7 if lit else 0.2),
+        ),
+        Box("RoofPlate", (50, 4, 30), pos=(0, 36.5, 0), paint=SOOT_RUST),
+        Box("RoofRidge", (48, 2, 4), pos=(0, 39.5, 0), paint=CORRUGATED_RUST),
+        Box("Chimney", (14, 16, 14), pos=(0, 36.5, 0), paint=SOOT_P).add(
+            Box("ChimneyBandLow", (18, 3, 18), pos=(0, -5, 0), paint=PIPE_FLANGE),
+            Box("ChimneyBandHigh", (18, 3, 18), pos=(0, 5, 0), paint=RUSTY),
+            Box("ChimneyCap", (20, 2, 20), pos=(0, 8, 0), paint=CORRUGATED_RUST),
+            Box("Smoke-Emitter", pos=(0, 7, 0)),
+        ),
     )
-    return Model([oven]), {}
+    return Model([firebox]), {}
 
 
 # ------------------------------------------------------------------ Wakebell Anchor
@@ -672,7 +726,7 @@ def wellhead(pumping: bool):
         Box("GaugeHub", (2, 2, 1), pos=(0, 1, 12.5), paint=BRASS_P),
         Box("FeedPipe", (4, 12, 4), pos=(6.8, 12, -5), paint=DARK_TIN),
         Box("FeedElbow", (3.8, 4, 7.8), pos=(7, 18, -7), paint=BRASS_P),
-        Box("OutputPipe", (4, 9, 4), pos=(-6.8, 12, 4), paint=DARK_TIN),
+        Box("OutputPipe", (4, 8, 4), pos=(-6.8, 12, 4), paint=DARK_TIN),
         Box("OutputCap", (6, 2, 6), pos=(-7, 17, 4), paint=BRASS_RIV),
         Box(
             "OutputPortGlow",

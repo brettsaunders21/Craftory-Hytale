@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.util.TargetUtil
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyAccess
@@ -581,14 +582,15 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
         )
 
     @Suppress("CyclomaticComplexMethod")
-    private fun snapshotForTarget(
+    internal fun snapshotForTarget(
         world: World,
         position: Vector3i,
         energy: EnergyAccess,
     ): EnergyHudSnapshot? {
-        val id = BlockPos.pack(position.x, position.y, position.z)
+        val origin = BlockFootprints.origin(world.chunkStore.store, position.x, position.y, position.z)
+        val id = BlockPos.pack(origin.x, origin.y, origin.z)
         val blockStore = world.chunkStore.store
-        val memberRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+        val memberRef = BlockModule.getBlockEntity(world, origin.x, origin.y, origin.z)
         val member = memberRef?.let { blockStore.getComponent(it, EnergyMember.type) }
         val jank = memberRef?.let { blockStore.getComponent(it, Jank.type) }
         val ovenPower = memberRef?.let { blockStore.getComponent(it, OvenPower.type) }
@@ -612,7 +614,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                 )
             }
         return EnergyHudSnapshot(
-            itemId = machineItemId(member?.typeId, shroomBed != null, blockItemId(world, position)),
+            itemId = machineItemId(member?.typeId, shroomBed != null, blockItemId(world, origin)),
             stored = stored,
             capacity = capacity,
             gradeRank = gradeRank,

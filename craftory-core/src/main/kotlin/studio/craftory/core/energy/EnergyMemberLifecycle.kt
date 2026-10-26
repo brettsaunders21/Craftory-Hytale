@@ -10,6 +10,7 @@ import com.hypixel.hytale.component.system.RefSystem
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyFaces
@@ -96,56 +97,78 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         converter: studio.craftory.core.api.energy.EnergyConverterType?,
         energy: EnergyWorld,
     ): Array<LongArray> {
-        val ownNodes =
-            if (converter == null) {
-                arrayOf(LinkNode(positionId, linkFaces))
-            } else {
-                arrayOf(
-                    LinkNode(positionId, converter.inputFaces),
-                    LinkNode(energy.converterOutputId(positionId), converter.outputFaces, converterOutput = true),
-                )
-            }
-        val neighbours = Array(ownNodes.size) { ArrayList<Long>(6) }
-        DIRECTIONS.forEach { direction ->
-            if (ownNodes.none { it.faces and direction.face != 0 }) return@forEach
-            val x = position.x + direction.x
-            val y = position.y + direction.y
-            val z = position.z + direction.z
-            val sectionRef =
-                store.externalData.world.chunkStore
-                    .getChunkSectionReferenceAtBlock(x, y, z) ?: return@forEach
-            val neighbourRef = BlockModule.getBlockEntity(store, sectionRef, x, y, z) ?: return@forEach
-            val neighbour = store.getComponent(neighbourRef, EnergyMember.type) ?: return@forEach
-            val neighbourType = CraftoryCore.energyType(neighbour.typeId) ?: return@forEach
-            val neighbourPositionId = BlockPos.pack(x, y, z)
-            val neighbourConverter = CraftoryCore.converterType(neighbour.typeId)
-            val otherNodes =
-                if (neighbourConverter == null) {
-                    arrayOf(LinkNode(neighbourPositionId, neighbourType.linkFaces))
-                } else {
-                    arrayOf(
-                        LinkNode(neighbourPositionId, neighbourConverter.inputFaces),
-                        LinkNode(
-                            energy.converterOutputId(neighbourPositionId),
-                            neighbourConverter.outputFaces,
-                            converterOutput = true,
-                        ),
-                    )
-                }
-            ownNodes.forEachIndexed { ownIndex, ownNode ->
-                otherNodes.forEach { otherNode ->
-                    if (EnergyFaces.connects(ownNode.faces, otherNode.faces, direction.face) &&
-                        if (otherNode.converterOutput) {
-                            energy.containsConverterOutput(otherNode.id)
-                        } else {
-                            energy.containsPhysical(otherNode.id)
-                        }
-                    ) {
-                        neighbours[ownIndex].add(otherNode.id)
-                    }
-                }
+        val ownNodes = linkNodes(positionId, linkFaces, converter, energy)
+        val ownCells = BlockFootprints.cells(store, position.x, position.y, position.z)
+        val ownCellIds = ownCells.mapTo(HashSet()) { BlockPos.pack(it.x, it.y, it.z) }
+        val neighbours = Array(ownNodes.size) { LinkedHashSet<Long>() }
+        ownCells.forEach { ownCell ->
+            DIRECTIONS.forEach directionLoop@{ direction ->
+                if (ownNodes.none { it.faces and direction.face != 0 }) return@directionLoop
+                val otherNodes =
+                    neighbourNodes(store, energy, positionId, ownCellIds, ownCell, direction) ?: return@directionLoop
+                connectNodes(ownNodes, otherNodes, direction, energy, neighbours)
             }
         }
         return Array(ownNodes.size) { index -> neighbours[index].toLongArray() }
+    }
+
+    private fun linkNodes(
+        positionId: Long,
+        linkFaces: Int,
+        converter: studio.craftory.core.api.energy.EnergyConverterType?,
+        energy: EnergyWorld,
+    ): Array<LinkNode> =
+        if (converter == null) {
+            arrayOf(LinkNode(positionId, linkFaces))
+        } else {
+            arrayOf(
+                LinkNode(positionId, converter.inputFaces),
+                LinkNode(energy.converterOutputId(positionId), converter.outputFaces, converterOutput = true),
+            )
+        }
+
+    private fun neighbourNodes(
+        store: Store<ChunkStore>,
+        energy: EnergyWorld,
+        positionId: Long,
+        ownCellIds: Set<Long>,
+        ownCell: Vector3i,
+        direction: Direction,
+    ): Array<LinkNode>? {
+        val neighbourCell = Vector3i(ownCell.x + direction.x, ownCell.y + direction.y, ownCell.z + direction.z)
+        if (BlockPos.pack(neighbourCell.x, neighbourCell.y, neighbourCell.z) in ownCellIds) return null
+        val origin = BlockFootprints.origin(store, neighbourCell.x, neighbourCell.y, neighbourCell.z)
+        val originId = BlockPos.pack(origin.x, origin.y, origin.z)
+        if (originId == positionId) return null
+        val sectionRef =
+            store.externalData.world.chunkStore
+                .getChunkSectionReferenceAtBlock(origin.x, origin.y, origin.z)
+                ?: return null
+        val neighbourRef = BlockModule.getBlockEntity(store, sectionRef, origin.x, origin.y, origin.z) ?: return null
+        val neighbour = store.getComponent(neighbourRef, EnergyMember.type) ?: return null
+        val type = CraftoryCore.energyType(neighbour.typeId) ?: return null
+        return linkNodes(originId, type.linkFaces, CraftoryCore.converterType(neighbour.typeId), energy)
+    }
+
+    private fun connectNodes(
+        ownNodes: Array<LinkNode>,
+        otherNodes: Array<LinkNode>,
+        direction: Direction,
+        energy: EnergyWorld,
+        neighbours: Array<LinkedHashSet<Long>>,
+    ) {
+        ownNodes.forEachIndexed { ownIndex, ownNode ->
+            otherNodes.forEach { otherNode ->
+                val active =
+                    if (otherNode.converterOutput) {
+                        energy.containsConverterOutput(otherNode.id)
+                    } else {
+                        energy.containsPhysical(otherNode.id)
+                    }
+                if (active && EnergyFaces.connects(ownNode.faces, otherNode.faces, direction.face)) {
+                    neighbours[ownIndex].add(otherNode.id)
+                }
+            }
+        }
     }
 }

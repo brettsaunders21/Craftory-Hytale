@@ -55,10 +55,10 @@ internal class SparkSelfTest(
     private val tasteA = CraftorySelfTest.TestPosition(10_020, 148, 9_989)
     private val tasteB = CraftorySelfTest.TestPosition(10_020, 148, 9_991)
     private val coilBurner = CraftorySelfTest.TestPosition(10_028, 148, 9_990)
-    private val coil = CraftorySelfTest.TestPosition(10_028, 149, 9_990)
-    private val coilStorage = CraftorySelfTest.TestPosition(coil.x, coil.y + 1, coil.z)
+    private val coil = CraftorySelfTest.TestPosition(10_028, 150, 9_990)
+    private val coilStorage = CraftorySelfTest.TestPosition(coil.x, coil.y + 2, coil.z)
     private val resonatorBurner = CraftorySelfTest.TestPosition(10_036, 148, 9_990)
-    private val resonator = CraftorySelfTest.TestPosition(10_036, 149, 9_990)
+    private val resonator = CraftorySelfTest.TestPosition(10_036, 150, 9_990)
     private val sparkBurner = CraftorySelfTest.TestPosition(10_039, 148, 9_992)
     private val cyanCrystal = CraftorySelfTest.TestPosition(10_040, 148, 9_990)
     private val positions =
@@ -74,6 +74,10 @@ internal class SparkSelfTest(
             resonator,
             sparkBurner,
             cyanCrystal,
+            CraftorySelfTest.TestPosition(coilBurner.x, coilBurner.y + 1, coilBurner.z),
+            CraftorySelfTest.TestPosition(coil.x, coil.y + 1, coil.z),
+            CraftorySelfTest.TestPosition(resonatorBurner.x, resonatorBurner.y + 1, resonatorBurner.z),
+            CraftorySelfTest.TestPosition(sparkBurner.x, sparkBurner.y + 1, sparkBurner.z),
         )
     private val player = UUID.randomUUID()
     private val sparkOwner = UUID.randomUUID()
@@ -410,9 +414,6 @@ internal class SparkSelfTest(
             check(withinSection(position.x, position.y, position.z)) {
                 "Spark fixture is outside the selftest section at $position (anchor=$sectionAnchor)"
             }
-            check(
-                blockSection.get(position.x and 31, position.y and 31, position.z and 31) == BlockType.EMPTY_ID,
-            ) { "Spark selftest fixture is not empty at $position" }
         }
         val harmonyRadius = HARMONY_RADIUS
         check(
@@ -440,6 +441,21 @@ internal class SparkSelfTest(
                 dx * dx + dy * dy + dz * dz <= FIRST_SPARK_SCAN_RADIUS_SQUARED
             }
         check(sparkOverlap == null) { "First Spark radius overlaps existing fixture at $sparkOverlap" }
+        clearInterruptedFixtures(blockSection)
+        positions.forEach { position ->
+            check(
+                blockSection.get(position.x and 31, position.y and 31, position.z and 31) == BlockType.EMPTY_ID,
+            ) { "Spark selftest fixture is not empty at $position" }
+        }
+    }
+
+    private fun clearInterruptedFixtures(blockSection: BlockSection) {
+        if (positions.any { blockSection.get(it.x and 31, it.y and 31, it.z and 31) == BlockType.EMPTY_ID }) return
+        val cradleRef = entityAt(cradle) ?: return
+        if (store.getComponent(cradleRef, CradleState.type) == null) return
+        if (!CraftoryCore.wells().remove(world, well)) return
+        CraftorySelfTest.clear(world, run.sectionRef, positions)
+        report("cleared interrupted Spark selftest fixtures")
     }
 
     private fun checkSparkFixturesIntact(

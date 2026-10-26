@@ -48,11 +48,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
 import com.hypixel.hytale.server.npc.entities.NPCEntity
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.transport.ItemTransport
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.ScrapRushSettings
 import studio.craftory.tech.machine.jank.BodgePart
@@ -399,6 +401,38 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         when {
             run.phase == 0 && tick >= run.startTick + 8 -> {
                 checkCrank(run, store)
+                checkScorchOvenRotations(run, store)
+                val oven = CraftorySelfTest.OVEN
+                val sidePipe = CraftorySelfTest.OVEN_FILLER_SIDE_PIPE
+                val filler = Vector3i(oven.x + 1, oven.y, oven.z)
+                val fillerOrigin = BlockFootprints.origin(store, filler.x, filler.y, filler.z)
+                val transport = ItemTransport.of(run.world)
+                val receiver = transport.hasReceiverAt(store, filler.x, filler.y, filler.z)
+                check(
+                    run,
+                    receiver && fillerOrigin == Vector3i(oven.x, oven.y, oven.z),
+                    "oven placement exposes its filler receiver",
+                )
+                val snapshot =
+                    JunkPowerHudSystem().snapshotForTarget(
+                        run.world,
+                        filler,
+                        CraftoryCore.energyAccess(run.world),
+                    )
+                check(
+                    run,
+                    snapshot?.itemId == CraftoryIds.SCORCH_OVEN,
+                    "Goggles target Scorch Oven through filler cell",
+                )
+                val inserted =
+                    transport.insert(
+                        sidePipe.x,
+                        sidePipe.y,
+                        sidePipe.z,
+                        "Ore_Copper",
+                        20,
+                    )
+                check(run, inserted, "gutterpipe inserts items into oven through filler")
             }
 
             run.phase == 1 && tick >= run.startTick + 40 -> {
@@ -413,6 +447,118 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 checkSplitAndFinish(run, store)
             }
         }
+    }
+
+    private fun checkScorchOvenRotations(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val x = 10014
+        val y = 150
+        val z = 10014
+        val blockType = BlockType.fromString(CraftoryIds.SCORCH_OVEN)
+        if (blockType == null) {
+            check(run, false, "Scorch Oven rotates across all four placement directions", "missing block type")
+            return
+        }
+        val blockIndex = BlockType.getAssetMap().getIndex(blockType.id)
+        val section = store.getComponent(run.sectionRef, BlockComponentSection.getComponentType())
+        if (section == null) {
+            check(run, false, "Scorch Oven rotates across all four placement directions", "missing block section")
+            return
+        }
+        val rotationResults =
+            (0..3).map { rotation ->
+                checkScorchOvenRotation(run, store, section, blockType, blockIndex, x, y, z, rotation)
+            }
+        check(
+            run,
+            rotationResults.all { it.first },
+            "Scorch Oven rotates across all four placement directions",
+            rotationResults.joinToString("; ") { it.second },
+        )
+    }
+
+    private fun checkScorchOvenRotation(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        section: BlockComponentSection,
+        blockType: BlockType,
+        blockIndex: Int,
+        x: Int,
+        y: Int,
+        z: Int,
+        rotation: Int,
+    ): Pair<Boolean, String> {
+        val placed =
+            BlockOperations.setBlock(
+                run.world.chunkStore,
+                run.sectionRef,
+                x,
+                y,
+                z,
+                blockIndex,
+                blockType,
+                rotation,
+                0,
+                SetBlockSettings.NO_UPDATE_STATE,
+            )
+        val blockEntity =
+            if (placed) {
+                BlockEntity.ensureBlockEntity(
+                    store,
+                    run.sectionRef,
+                    section,
+                    x and 31,
+                    y and 31,
+                    z and 31,
+                    blockType,
+                    0,
+                )
+            } else {
+                null
+            }
+        val cells = BlockFootprints.cells(blockType, rotation, x, y, z)
+        val actualRotation =
+            store
+                .getComponent(run.sectionRef, BlockSection.getComponentType())
+                ?.getRotationIndex(x, y, z)
+        val expectedWidth = if (rotation % 2 == 0) 2 else 1
+        val expectedDepth = if (rotation % 2 == 0) 1 else 2
+        val matchesRotation =
+            placed &&
+                blockEntity != null &&
+                actualRotation == rotation &&
+                cells.size == 4 &&
+                cells.toSet().size == 4 &&
+                cells.map { it.x }.distinct().size == expectedWidth &&
+                cells.map { it.z }.distinct().size == expectedDepth &&
+                cells.map { it.y }.distinct().size == 2
+        val details =
+            "$rotation:placed=$placed entity=${blockEntity != null} rotation=$actualRotation " +
+                "cells=${cells.joinToString(prefix = "[", postfix = "]") { "${it.x},${it.y},${it.z}" }}"
+        clearScorchOvenRotation(run, x, y, z)
+        return matchesRotation to details
+    }
+
+    private fun clearScorchOvenRotation(
+        run: SelfTestRun.Run,
+        x: Int,
+        y: Int,
+        z: Int,
+    ) {
+        BlockOperations.setBlock(
+            run.world.chunkStore,
+            run.sectionRef,
+            x,
+            y,
+            z,
+            BlockType.EMPTY_ID,
+            BlockType.EMPTY,
+            0,
+            0,
+            SetBlockSettings.NO_DROP_ITEMS,
+        )
     }
 
     private fun checkCrank(
@@ -610,6 +756,36 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val energy = CraftoryCore.energyAccess(run.world)
         val burnerNetwork = energy.networkOf(pack(CraftorySelfTest.BURNER))
         val ovenNetwork = energy.networkOf(pack(ovenPosition))
+        val sidePipe = CraftorySelfTest.OVEN_FILLER_SIDE_PIPE
+        val topPipe = CraftorySelfTest.ovenFillerPipePositions().last()
+        val sidePipeNetwork = energy.networkOf(pack(sidePipe))
+        val topPipeNetwork = energy.networkOf(pack(topPipe))
+        check(
+            run,
+            sidePipeNetwork >= 0 && sidePipeNetwork == ovenNetwork && topPipeNetwork == ovenNetwork,
+            "oven filler pipes join its energy network",
+            "oven=$ovenNetwork side=$sidePipeNetwork top=$topPipeNetwork",
+        )
+        val pipeType = BlockType.fromString(CraftoryIds.PIPE)
+        val sideArm = pipeType?.getBlockForState(GutterpipeMask.stateName(1 shl 1))?.id
+        val topArm = pipeType?.getBlockForState(GutterpipeMask.stateName(1 shl 3))?.id
+        check(
+            run,
+            blockTypeAt(run.world, sidePipe)?.id == sideArm &&
+                blockTypeAt(run.world, topPipe)?.id == topArm,
+            "gutterpipe arms meet oven side and top fillers",
+            "side=${blockTypeAt(run.world, sidePipe)?.id}, top=${blockTypeAt(run.world, topPipe)?.id}",
+        )
+        val bench = ovenRef?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+        val input = bench?.inputContainer?.getItemStack(0.toShort())
+        val output = bench?.outputContainer?.getItemStack(0.toShort())
+        check(
+            run,
+            (input?.itemId == "Ore_Copper" && input.quantity > 0) ||
+                (output?.itemId == "Ingredient_Bar_Copper" && output.quantity > 0),
+            "oven receives items from filler-connected pipe",
+            "input=${input?.itemId}x${input?.quantity}, output=${output?.itemId}x${output?.quantity}",
+        )
         val chargedFromNetwork = power?.receivedFizzFromNetwork == true
         val solverPathUsed = power?.lastFizzSolveTick?.let { it > run.startTick } == true
         val poweredNetwork = burnerNetwork >= 0 && ovenNetwork == burnerNetwork
@@ -1031,6 +1207,19 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
 
     private fun stackDescription(stack: ItemStack?): String? = stack?.let { "${it.itemId}x${it.quantity}" }
 
+    private fun blockTypeAt(
+        world: World,
+        position: CraftorySelfTest.TestPosition,
+    ): BlockType? {
+        val sectionRef =
+            world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return null
+        val section =
+            world.chunkStore.store.getComponent(sectionRef, BlockSection.getComponentType()) ?: return null
+        return BlockType
+            .getAssetMap()
+            .getAsset(section.get(ChunkUtil.indexBlock(position.x, position.y, position.z)))
+    }
+
     private fun check(
         run: SelfTestRun.Run,
         passed: Boolean,
@@ -1421,6 +1610,9 @@ object CraftorySelfTest {
             pipePositions().forEach {
                 place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)
             }
+            ovenFillerPipePositions().forEach {
+                place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)
+            }
             place(world, store, sectionRef, section, CraftoryIds.CANISTER, CANISTER, EnergyMember.type)
             place(world, store, sectionRef, section, CraftoryIds.CRANK, CRANK, CrankState.type)
             place(world, store, sectionRef, section, CraftoryIds.SCORCH_OVEN, OVEN, OvenPower.type)
@@ -1496,14 +1688,6 @@ object CraftorySelfTest {
         world: World,
         store: Store<ChunkStore>,
     ) {
-        val ovenRef = BlockModule.getBlockEntity(world, OVEN.x, OVEN.y, OVEN.z) ?: error("oven block entity missing")
-        val bench =
-            store.getComponent(ovenRef, ProcessingBenchBlock.getComponentType())
-                ?: error("processing bench missing")
-        check(bench.inputContainer.setItemStackForSlot(0.toShort(), ItemStack("Ore_Copper", 20)).succeeded()) {
-            "oven copper input setup failed"
-        }
-
         val gnasherRef =
             BlockModule.getBlockEntity(world, GNASHER.x, GNASHER.y, GNASHER.z)
                 ?: error("gnasher block entity missing")
@@ -2326,7 +2510,27 @@ object CraftorySelfTest {
         val bodgeItem = BodgePart.SCRAP_PLATING.itemId
         bed.stored = 1
         bodges.slot0 = bodgeItem
-        val position = Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z)
+        val position = Vector3i(WRENCH_TAKE_APART.x + 1, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z)
+        val origin = BlockFootprints.origin(store, position.x, position.y, position.z)
+        check(
+            run,
+            origin == Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z),
+            "Shroom Bed filler resolves to its origin",
+        )
+        completeShroomBedWrenchPacking(run, store, bedRef, bed, position, playerUuid, crews, bodgeItem)
+        checkShroomBedBreakFromFiller(run, store, section, position)
+    }
+
+    private fun completeShroomBedWrenchPacking(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        bedRef: Ref<ChunkStore>,
+        bed: ShroomBedState,
+        position: Vector3i,
+        playerUuid: UUID,
+        crews: CrewService,
+        bodgeItem: String,
+    ) {
         val refused =
             MachineActions.useWrench(
                 run.world,
@@ -2371,7 +2575,42 @@ object CraftorySelfTest {
                 blockEntityMissing(run.world, WRENCH_TAKE_APART) &&
                 itemQuantityNear(run.world, WRENCH_TAKE_APART, CraftoryIds.SHROOM_BED) >= 1 &&
                 itemQuantityNear(run.world, WRENCH_TAKE_APART, bodgeItem) >= 1,
-            "wrench packs harvested Shroom Bed and fitted Bodge",
+            "wrench packs harvested Shroom Bed from its filler",
+        )
+    }
+
+    private fun checkShroomBedBreakFromFiller(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        section: BlockComponentSection,
+        position: Vector3i,
+    ) {
+        place(
+            run.world,
+            store,
+            run.sectionRef,
+            section,
+            CraftoryIds.SHROOM_BED,
+            WRENCH_TAKE_APART,
+            ShroomBedState.type,
+        )
+        val brokenAtFiller =
+            BlockOperations.setBlock(
+                run.world.chunkStore,
+                run.sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                BlockType.EMPTY_ID,
+                BlockType.EMPTY,
+                0,
+                0,
+                SetBlockSettings.NO_DROP_ITEMS,
+            )
+        check(
+            run,
+            brokenAtFiller && blockEntityMissing(run.world, WRENCH_TAKE_APART),
+            "breaking Shroom Bed at its filler removes the machine",
         )
     }
 
@@ -3521,12 +3760,14 @@ object CraftorySelfTest {
         val z: Int,
     )
 
-    internal val BURNER = TestPosition(10_018, 148, 10_000)
+    internal val BURNER = TestPosition(10_018, 147, 10_000)
     internal val PIPE = TestPosition(10_018, 149, 10_000)
     internal val CANISTER = TestPosition(10_018, 150, 10_000)
     internal val CRANK = TestPosition(10_026, 150, 10_006)
     internal val OVEN = TestPosition(10_034, 150, 10_000)
     internal val OVEN_LINK_PIPE = TestPosition(10_034, 149, 10_000)
+    internal val OVEN_FILLER_SIDE_PIPE = TestPosition(10_036, 150, 10_000)
+    private val OVEN_FILLER_TOP_PIPE = TestPosition(10_035, 152, 10_000)
     internal val GNASHER = TestPosition(10_044, 150, 10_006)
     internal val ANCHOR = TestPosition(10_040, 150, 10_012)
     private val RATTLEWHEEL = TestPosition(10_036, 148, 10_004)
@@ -3534,7 +3775,7 @@ object CraftorySelfTest {
     private val RATTLEWHEEL_DRY = TestPosition(10_040, 100, 10_004)
     private val SHROOM_BED = TestPosition(10_038, 148, 10_004)
     private val SHROOM_BED_COVER = TestPosition(SHROOM_BED.x, SHROOM_BED.y + 2, SHROOM_BED.z)
-    private val CHAIN_SHROOM_BED = TestPosition(10_039, 148, 10_004)
+    private val CHAIN_SHROOM_BED = TestPosition(10_040, 148, 10_004)
     private val WRENCH_SHROOM_BED = TestPosition(10_016, 148, 10_012)
     private val WRENCH_RATTLEWHEEL = TestPosition(10_020, 148, 10_012)
     private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
@@ -3553,6 +3794,8 @@ object CraftorySelfTest {
 
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
+
+    internal fun ovenFillerPipePositions(): List<TestPosition> = listOf(OVEN_FILLER_SIDE_PIPE, OVEN_FILLER_TOP_PIPE)
 
     internal fun staticTestPositions(): List<TestPosition> =
         (
@@ -3574,9 +3817,33 @@ object CraftorySelfTest {
                     SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
+                ovenFillerPipePositions() +
+                footprintCells(OVEN, 2, 2, 1) +
+                footprintCells(GNASHER, 2, 1) +
+                footprintCells(SHROOM_BED, 2, 1) +
+                footprintCells(WRENCH_TAKE_APART, 2, 1) +
+                footprintCells(BURNER, 1, 2) +
+                footprintCells(RATTLEWHEEL, 1, 2) +
+                footprintCells(CRANK, 1, 1) +
                 PolishSelfTest.fixturePositions() +
                 heartPositions()
         ).distinct()
+
+    private fun footprintCells(
+        origin: TestPosition,
+        width: Int,
+        height: Int,
+        depth: Int = 1,
+    ): List<TestPosition> =
+        buildList {
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    for (z in 0 until depth) {
+                        if (x != 0 || y != 0 || z != 0) add(TestPosition(origin.x + x, origin.y + y, origin.z + z))
+                    }
+                }
+            }
+        }
 
     internal fun testPositions(world: World): List<TestPosition> =
         (

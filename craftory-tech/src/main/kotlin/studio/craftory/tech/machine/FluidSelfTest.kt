@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
-import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.fluid.FireFluidTicker
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid
@@ -36,7 +35,7 @@ import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
-import com.hypixel.hytale.server.core.util.FillerBlockUtil
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
@@ -630,12 +629,12 @@ internal object FluidSelfTestCases {
     fun testPositions(): List<Position> {
         val positions = fixturePositions()
         val gnasherType = BlockType.fromString(CraftoryIds.GNASHER_PIT) ?: error("missing fluid test Gnasher")
-        val gnasherFootprints =
+        val multiCellFootprints =
             listOf(PRESSURISED_GNASHER, PLAIN_GNASHER)
                 .associateWith { position -> FluidSelfTestFootprint.fixture(position, gnasherType) }
         val otherFixtures =
             CraftorySelfTest.staticTestPositions().map { Position(it.x, it.y, it.z) }
-        FluidSelfTestFootprint.assertSafe(positions, gnasherFootprints, otherFixtures)
+        FluidSelfTestFootprint.assertSafe(positions, multiCellFootprints, otherFixtures)
         return positions
     }
 
@@ -691,7 +690,7 @@ internal object FluidSelfTestCases {
     val F1_PIPE = Position(BASE.x + 1, BASE.y, BASE.z)
     val F1_TANK = Position(BASE.x + 2, BASE.y, BASE.z)
     val F2_BOTTOM = Position(BASE.x + 4, BASE.y, BASE.z)
-    val F2_TOP = Position(BASE.x + 4, BASE.y + 1, BASE.z)
+    val F2_TOP = Position(BASE.x + 4, BASE.y + 2, BASE.z)
     val F2_SIDE = Position(BASE.x + 5, BASE.y, BASE.z)
     val BOILER = Position(BASE.x + 6, BASE.y, BASE.z)
     val BOILER_PIPE = Position(BASE.x + 6, BASE.y - 1, BASE.z)
@@ -1247,16 +1246,10 @@ internal object FluidSelfTestFootprint {
     fun fixture(
         position: Position,
         type: BlockType,
-    ): Set<Position> {
-        val hitbox =
-            BlockBoundingBoxes.getAssetMap().getAsset(type.getHitboxTypeIndex())
-                ?: error("missing hitbox ${type.getHitboxType()} for ${type.id}")
-        val positions = linkedSetOf<Position>()
-        FillerBlockUtil.forEachFillerBlock(hitbox.get(0)) { x, y, z ->
-            positions += Position(position.x + x, position.y + y, position.z + z)
-        }
-        return positions
-    }
+    ): Set<Position> =
+        BlockFootprints
+            .cells(type, 0, position.x, position.y, position.z)
+            .mapTo(linkedSetOf()) { cell -> Position(cell.x, cell.y, cell.z) }
 
     fun isSafe(positions: Collection<Position>): Boolean {
         val fluidChunk =
@@ -1272,13 +1265,13 @@ internal object FluidSelfTestFootprint {
 
     fun assertSafe(
         fixturePositions: List<Position>,
-        gnasherFootprints: Map<Position, Set<Position>>,
+        multiCellFootprints: Map<Position, Set<Position>>,
         otherFixtures: Collection<Position> = emptyList(),
     ) {
-        assertGnasherFillersDoNotOverlap(fixturePositions, gnasherFootprints)
+        assertFootprintsDoNotOverlap(fixturePositions, multiCellFootprints)
         val footprint =
             fixturePositions.toMutableSet().apply {
-                gnasherFootprints.values.forEach { addAll(it) }
+                multiCellFootprints.values.forEach { addAll(it) }
             }
         val overlappingFixture = footprint.firstOrNull { it in otherFixtures }
         check(overlappingFixture == null) { "fluid test fixture overlaps another selftest at $overlappingFixture" }
@@ -1287,27 +1280,23 @@ internal object FluidSelfTestFootprint {
         assertInsideRetainedChunk(footprint)
     }
 
-    private fun assertGnasherFillersDoNotOverlap(
+    private fun assertFootprintsDoNotOverlap(
         fixturePositions: List<Position>,
-        gnasherFootprints: Map<Position, Set<Position>>,
+        footprints: Map<Position, Set<Position>>,
     ) {
-        gnasherFootprints.forEach { (origin, footprint) ->
-            val fillers = footprint - origin
-            val overlappingFixture =
-                fillers.firstOrNull { filler ->
-                    fixturePositions.any { fixture -> fixture != origin && fixture == filler }
-                }
+        footprints.forEach { (origin, footprint) ->
+            val overlappingFixture = footprint.firstOrNull { cell -> cell != origin && cell in fixturePositions }
             check(overlappingFixture == null) {
-                "fluid test fixture $overlappingFixture overlaps Gnasher filler at $origin"
+                "fluid test fixture $overlappingFixture overlaps multi-cell fixture at $origin"
             }
-            val overlappingGnasher =
-                fillers.firstOrNull { filler ->
-                    gnasherFootprints.any { (otherOrigin, otherFootprint) ->
-                        otherOrigin != origin && filler in otherFootprint
+            val overlappingFootprint =
+                footprint.firstOrNull { cell ->
+                    footprints.any { (otherOrigin, otherFootprint) ->
+                        otherOrigin != origin && cell in otherFootprint
                     }
                 }
-            check(overlappingGnasher == null) {
-                "fluid test fixture $overlappingGnasher overlaps Gnasher filler at $origin"
+            check(overlappingFootprint == null) {
+                "fluid test fixture $overlappingFootprint overlaps another multi-cell fixture at $origin"
             }
         }
     }
