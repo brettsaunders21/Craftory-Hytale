@@ -75,7 +75,7 @@ class ResonatorState(
 }
 
 class CradleState(
-    var harmony: Int = 1,
+    var harmony: Int = 0,
     var seatedStrength: String = "",
 ) : Component<ChunkStore> {
     override fun clone(): Component<ChunkStore> = CradleState(harmony, seatedStrength)
@@ -88,7 +88,7 @@ class CradleState(
                 .builder(CradleState::class.java, ::CradleState)
                 .append(
                     KeyedCodec("Harmony", Codec.INTEGER),
-                    { state, value -> state.harmony = value.coerceIn(1, 5) },
+                    { state, value -> state.harmony = value.coerceIn(0, 5) },
                     { it.harmony },
                 ).add()
                 .append(
@@ -101,6 +101,8 @@ class CradleState(
 }
 
 internal class CrackleCoilSystem : EntityTickingSystem<ChunkStore>() {
+    private val cursor = Vector3i()
+
     override fun getQuery(): Query<ChunkStore> =
         Query.and(EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
 
@@ -125,14 +127,13 @@ internal class CrackleCoilSystem : EntityTickingSystem<ChunkStore>() {
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val world = store.externalData.world
         val energy = CraftoryCore.energyAccess(world)
-        val position = Vector3i()
-        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        if (!blockState.fillWorldPos(commandBuffer, cursor)) return
         if (!CraftoryCore.isAreaActive(store, blockState)) {
-            energy.setDemand(BlockPos.pack(position.x, position.y, position.z), 0)
+            energy.setDemand(BlockPos.pack(cursor.x, cursor.y, cursor.z), 0)
             return
         }
-        val production = burningProduction(store, position.x, position.y - 1, position.z)
-        val id = BlockPos.pack(position.x, position.y, position.z)
+        val production = burningProduction(store, cursor.x, cursor.y - 1, cursor.z)
+        val id = BlockPos.pack(cursor.x, cursor.y, cursor.z)
         energy.setDemand(id, ConverterMath.skim(production, 5))
         energy.setConverterOutput(id, energy.converterInputDelivered(id), DIM_GLIMMER_RANK)
     }
@@ -168,6 +169,8 @@ internal class CrackleCoilSystem : EntityTickingSystem<ChunkStore>() {
 }
 
 internal class ResonatorSystem : EntityTickingSystem<ChunkStore>() {
+    private val cursor = Vector3i()
+
     override fun getQuery(): Query<ChunkStore> =
         Query.and(ResonatorState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
 
@@ -192,9 +195,8 @@ internal class ResonatorSystem : EntityTickingSystem<ChunkStore>() {
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         if (member.typeId != CraftoryIds.RESONATOR_TYPE) return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        val position = Vector3i()
-        if (!blockState.fillWorldPos(commandBuffer, position)) return
-        val id = BlockPos.pack(position.x, position.y, position.z)
+        if (!blockState.fillWorldPos(commandBuffer, cursor)) return
+        val id = BlockPos.pack(cursor.x, cursor.y, cursor.z)
         val energy = CraftoryCore.energyAccess(store.externalData.world)
         if (!CraftoryCore.isAreaActive(store, blockState)) {
             energy.setDemand(id, 0)
@@ -225,6 +227,8 @@ internal class ResonatorSystem : EntityTickingSystem<ChunkStore>() {
 }
 
 internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
+    private val cursor = Vector3i()
+
     override fun getQuery(): Query<ChunkStore> =
         Query.and(CradleState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
 
@@ -248,16 +252,21 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         if (member.typeId != CraftoryIds.WELL_CRADLE_TYPE) return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        val position = Vector3i()
-        if (!blockState.fillWorldPos(commandBuffer, position)) return
-        val above = BlockPos(position.x, position.y + 1, position.z)
-        val wellRef = findWell(store, above)
-        val well = wellRef?.let { store.getComponent(it, Glimmerwell.type) }
-        val base = well?.strength?.productionBase ?: 0L
-        val amount = if (well?.state == WellState.SEATED) base * state.harmony.coerceIn(1, 5) else 0L
-        CraftoryCore
-            .energyAccess(store.externalData.world)
-            .setProduction(BlockPos.pack(position.x, position.y, position.z), amount, DIM_GLIMMER_RANK)
+        if (!blockState.fillWorldPos(commandBuffer, cursor)) return
+        val base =
+            when (state.seatedStrength) {
+                "FLICKER" -> 4L
+                "STEADY" -> 10L
+                "ROARING" -> 25L
+                "PRIMAL" -> 40L
+                else -> 0L
+            }
+        val amount = if (base > 0L) base * state.harmony.coerceIn(0, 5) else 0L
+        if (member.production != amount) {
+            CraftoryCore
+                .energyAccess(store.externalData.world)
+                .setProduction(BlockPos.pack(cursor.x, cursor.y, cursor.z), amount, DIM_GLIMMER_RANK)
+        }
     }
 
     companion object {

@@ -47,6 +47,20 @@ internal class CradleIndex : Resource<ChunkStore> {
                     kotlin.math.abs(cradle.z - position.z) <= HARMONY_RADIUS
             }.toLongArray()
 
+    fun clearSeatedWell(
+        world: com.hypixel.hytale.server.core.universe.world.World,
+        wellPosition: BlockPos,
+    ) {
+        val cradle = BlockPos(wellPosition.x, wellPosition.y - 1, wellPosition.z)
+        if (cradle.pack() !in positions) return
+        val ref = BlockModule.getBlockEntity(world, cradle.x, cradle.y, cradle.z) ?: return
+        val store = world.chunkStore.store
+        val state = store.getComponent(ref, CradleState.type) ?: return
+        state.seatedStrength = ""
+        state.harmony = 0
+        store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+    }
+
     companion object {
         const val HARMONY_RADIUS = 4
         lateinit var type: ResourceType<ChunkStore, CradleIndex>
@@ -120,18 +134,17 @@ internal class CradleBreakSystem : EntityEventSystem<EntityStore, BreakBlockEven
     }
 }
 
-private object CradleHarmonyEvents {
-    fun recheck(
+internal object CradleHarmonyEvents {
+    internal fun recheck(
         store: Store<EntityStore>,
         target: org.joml.Vector3ic,
     ) {
         val world = store.externalData.world
         val position = BlockPos(target.x(), target.y(), target.z())
-        val chunks = world.chunkStore.store
-        val positions = chunks.getResource(CradleIndex.type).near(position)
-        if (positions.isEmpty()) return
         world.execute {
             val liveStore = world.chunkStore.store
+            val positions = liveStore.getResource(CradleIndex.type).near(position)
+            if (positions.isEmpty()) return@execute
             positions.forEach { packed ->
                 val cradle = BlockPos.unpack(packed)
                 val ref =

@@ -110,6 +110,7 @@ class CraftoryTechPlugin(
     private var crewKnowledgeSubscription: AutoCloseable? = null
     private var crewChangedSubscription: AutoCloseable? = null
     private var heartFormedSubscription: AutoCloseable? = null
+    private var wellRemovedSubscription: AutoCloseable? = null
     private var energyEventsSubscription: AutoCloseable? = null
 
     @Suppress("LongMethod")
@@ -400,6 +401,12 @@ class CraftoryTechPlugin(
         crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }
         crewChangedSubscription = crews.onCrewChanged(::evaluateTier)
         heartFormedSubscription = CraftoryCore.multiblocks().onFormed(JunkHeartKnowledge::onFormed)
+        wellRemovedSubscription =
+            CraftoryCore.wells().onWellRemoved { event ->
+                event.world.chunkStore.store
+                    .getResource(CradleIndex.type)
+                    .clearSeatedWell(event.world, event.pos)
+            }
         energyEventsSubscription =
             CraftoryEnergyEventsApi.subscribe(
                 MachineEnergyConditionListener { event ->
@@ -430,6 +437,8 @@ class CraftoryTechPlugin(
         crewChangedSubscription = null
         heartFormedSubscription?.close()
         heartFormedSubscription = null
+        wellRemovedSubscription?.close()
+        wellRemovedSubscription = null
         energyEventsSubscription?.close()
         energyEventsSubscription = null
     }

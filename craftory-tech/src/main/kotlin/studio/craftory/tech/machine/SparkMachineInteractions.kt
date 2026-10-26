@@ -34,15 +34,9 @@ class CradleUseInteraction : SimpleBlockInteraction() {
         val container = context.heldItemContainer ?: return
         val slot = context.heldItemSlot.toShort()
         val original = container.getItemStack(slot) ?: return
-        if (original.itemId != CraftoryIds.GOB_JAR_FILLED) return
+        if (original.itemId != CraftoryIds.GOB_JAR_FILLED || original.quantity != 1) return
         val replacement =
-            if (original.quantity >
-                1
-            ) {
-                original.withQuantity(original.quantity - 1)
-            } else {
-                ItemStack(CraftoryIds.GOB_JAR, 1)
-            }
+            ItemStack(CraftoryIds.GOB_JAR, 1)
         if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
         if (CradleActions.seat(
                 world,

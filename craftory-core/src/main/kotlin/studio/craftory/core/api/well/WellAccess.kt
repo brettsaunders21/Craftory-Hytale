@@ -23,9 +23,15 @@ data class WellRef(
     val well: Glimmerwell,
 )
 
+data class WellRemovalEvent(
+    val world: World,
+    val pos: BlockPos,
+)
+
 @Suppress("TooGenericExceptionCaught")
 class WellAccess internal constructor() {
     private val bornListeners = CopyOnWriteArrayList<(WellEvent) -> Unit>()
+    private val removedListeners = CopyOnWriteArrayList<(WellRemovalEvent) -> Unit>()
     private val scannedListeners = CopyOnWriteArrayList<(WellScanEvent) -> Unit>()
 
     fun wellsNear(
@@ -129,13 +135,34 @@ class WellAccess internal constructor() {
                 0,
                 SetBlockSettings.NO_DROP_ITEMS,
             )
-        if (removed) store.getResource(WellIndex.type).remove(pos.pack())
+        if (removed) {
+            store.getResource(WellIndex.type).remove(pos.pack())
+        }
         return removed
     }
 
     fun onWellBorn(listener: (WellEvent) -> Unit): AutoCloseable {
         bornListeners.add(listener)
         return AutoCloseable { bornListeners.remove(listener) }
+    }
+
+    fun onWellRemoved(listener: (WellRemovalEvent) -> Unit): AutoCloseable {
+        removedListeners.add(listener)
+        return AutoCloseable { removedListeners.remove(listener) }
+    }
+
+    internal fun fireWellRemoved(
+        world: World,
+        pos: BlockPos,
+    ) {
+        val event = WellRemovalEvent(world, pos)
+        removedListeners.forEach { listener ->
+            try {
+                listener(event)
+            } catch (exception: Exception) {
+                LOGGER.log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
+            }
+        }
     }
 
     fun onWellScanned(listener: (WellScanEvent) -> Unit): AutoCloseable {

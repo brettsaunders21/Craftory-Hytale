@@ -17,9 +17,6 @@ internal object TasteBlocks {
     private val blocksByTaste =
         mapOf(
             "Ingredient_Scraps" to setOf("Craftory_Scrap_Plating"),
-            "Ingredient_Boomshroom" to setOf("Craftory_Boomshroom_Burner"),
-            "Ingredient_Crystal_Cyan" to setOf("Craftory_Resonator"),
-            "Ingredient_Crystal_Void" to setOf("Craftory_Resonator"),
         )
 
     fun blocksFor(taste: String): Set<String> = blocksByTaste[taste] ?: setOf(taste)
