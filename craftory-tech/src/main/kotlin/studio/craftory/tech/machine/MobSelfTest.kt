@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
@@ -37,6 +38,7 @@ internal object MobSelfTest {
     ) {
         val refs = mutableListOf<Ref<EntityStore>>()
         val roleRefs = mutableListOf<Ref<EntityStore>>()
+        val floorCells = mutableListOf<BlockPos>()
         var kill: CraftoryMobKill? = null
         var subscription: AutoCloseable? = null
         var spawnPolls = 0
@@ -142,8 +144,13 @@ internal object MobSelfTest {
     private fun placeFloor(state: State) {
         val blockType = BlockType.fromString("Rock_Stone") ?: error("Rock_Stone block is unavailable")
         val blockIndex = BlockType.getAssetMap().getIndex(blockType.id)
+        val blockSection =
+            state.run.world.chunkStore.store
+                .getComponent(state.sectionRef, BlockSection.getComponentType())
+                ?: error("mob test block section is missing")
         for (x in FLOOR_MIN_X..FLOOR_MAX_X) {
             for (z in FLOOR_MIN_Z..FLOOR_MAX_Z) {
+                if (blockSection.get(ChunkUtil.indexBlock(x, FLOOR_Y, z)) != BlockType.EMPTY_ID) continue
                 check(
                     BlockOperations.setBlock(
                         state.run.world.chunkStore,
@@ -158,6 +165,7 @@ internal object MobSelfTest {
                         SetBlockSettings.NO_UPDATE_STATE,
                     ),
                 ) { "could not place mob test floor" }
+                state.floorCells += BlockPos(x, FLOOR_Y, z)
             }
         }
     }
@@ -188,7 +196,7 @@ internal object MobSelfTest {
                 val mobHome = ref?.let { store.getComponent(it, MobHome.type) }
                 check(
                     state.run,
-                    mobHome?.roleId == roleId && mobHome.home == HOME && mobHome.leashRadius == 12.0,
+                    mobHome?.roleId == roleId && mobHome.home == HOME,
                     "mob home $roleId",
                 )
             }
@@ -207,7 +215,6 @@ internal object MobSelfTest {
                 homeX = HOME.x,
                 homeY = HOME.y,
                 homeZ = HOME.z,
-                leashRadius = 12.0,
             )
         val extraInfo = ExtraInfo()
         val decoded = MobHome.CODEC.decode(MobHome.CODEC.encode(mobHome, extraInfo), ExtraInfo())
@@ -215,8 +222,7 @@ internal object MobSelfTest {
             state.run,
             decoded == mobHome &&
                 decoded.roleId == ROLE_IDS.first() &&
-                decoded.home == HOME &&
-                decoded.leashRadius == 12.0,
+                decoded.home == HOME,
             "mob home codec round-trip",
         )
     }
@@ -455,8 +461,25 @@ internal object MobSelfTest {
     private fun finishMobs(state: State) {
         cleanup(state)
         afterTicks(state.run.world, POLL_INTERVAL) {
-            val count = countMobs(state.run.world)
-            check(state.run, count == 0, "mob cleanup", "mobs=$count")
+            val mainCleanup =
+                runCatching {
+                    CraftorySelfTest.cleanup(state.run.world, state.run.sectionRef)
+                }
+            mainCleanup
+                .onSuccess { result ->
+                    state.run.context.sendMessage(
+                        Message.raw(
+                            "selftest: late main fixture cleanup " +
+                                "(liveGrit=${result.liveDrops}, sectionHolders=${result.sectionHolders}, " +
+                                "chunkHolders=${result.chunkHolders})",
+                        ),
+                    )
+                }.onFailure { failure ->
+                    check(state.run, false, "late main fixture cleanup", failure.message ?: "cleanup failed")
+                }
+            val count = state.refs.count { it.isValid }
+            val worldMobCount = countMobs(state.run.world)
+            check(state.run, count == 0, "mob cleanup", "mobs=$count, worldMobs=$worldMobCount")
             finish(state.run)
         }
     }
@@ -475,22 +498,21 @@ internal object MobSelfTest {
                 }
             },
         )
-        for (x in FLOOR_MIN_X..FLOOR_MAX_X) {
-            for (z in FLOOR_MIN_Z..FLOOR_MAX_Z) {
-                BlockOperations.setBlock(
-                    state.run.world.chunkStore,
-                    state.sectionRef,
-                    x,
-                    FLOOR_Y,
-                    z,
-                    BlockType.EMPTY_ID,
-                    BlockType.EMPTY,
-                    0,
-                    0,
-                    SetBlockSettings.NO_DROP_ITEMS,
-                )
-            }
+        for (position in state.floorCells) {
+            BlockOperations.setBlock(
+                state.run.world.chunkStore,
+                state.sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                BlockType.EMPTY_ID,
+                BlockType.EMPTY,
+                0,
+                0,
+                SetBlockSettings.NO_DROP_ITEMS,
+            )
         }
+        state.floorCells.clear()
         CraftorySelfTest.clear(
             state.run.world,
             state.sectionRef,

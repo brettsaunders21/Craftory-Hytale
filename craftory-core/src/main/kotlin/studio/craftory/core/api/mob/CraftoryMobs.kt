@@ -32,12 +32,11 @@ object CraftoryMobs {
         roleId: String,
         position: Vector3d,
         home: BlockPos?,
-        leashRadius: Double = 12.0,
     ): com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>? {
         world.debugAssertInTickingThread()
         val resolvedRoleId = aliases[roleId] ?: roleId
         val npcPlugin = NPCPlugin.get()
-        return spawnRole(npcPlugin, world, resolvedRoleId, position, home, leashRadius)
+        return spawnRole(npcPlugin, world, resolvedRoleId, position, home)
     }
 
     private fun spawnRole(
@@ -46,7 +45,6 @@ object CraftoryMobs {
         roleId: String,
         position: Vector3d,
         home: BlockPos?,
-        leashRadius: Double,
     ): com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>? {
         val spawnDetails = resolveSpawnDetails(npcPlugin, roleId) ?: return null
         val store = world.entityStore.store
@@ -58,7 +56,7 @@ object CraftoryMobs {
                 spawnPosition,
                 Rotation3f(0f, 0f, 0f),
                 spawnDetails.model,
-                { npc, holder, _ -> initializeMobBeforeAdd(npc, holder, roleId, home, leashRadius) },
+                { npc, holder, _ -> initializeMobBeforeAdd(npc, holder, roleId, home) },
                 null,
             ) ?: return null
         return spawned.left()
@@ -88,7 +86,6 @@ object CraftoryMobs {
         holder: Holder<EntityStore>,
         roleId: String,
         home: BlockPos?,
-        leashRadius: Double,
     ) {
         holder.addComponent(
             MobHome.type,
@@ -98,7 +95,6 @@ object CraftoryMobs {
                 homeX = home?.x ?: 0,
                 homeY = home?.y ?: 0,
                 homeZ = home?.z ?: 0,
-                leashRadius = leashRadius,
             ),
         )
         home?.let { npc.setLeashPoint(it.leashPoint()) }

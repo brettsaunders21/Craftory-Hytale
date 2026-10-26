@@ -50,11 +50,12 @@ internal class RiftmothDrainSystem : EntityTickingSystem<EntityStore>() {
             val member = ref?.let { chunkStore.getComponent(it, EnergyMember.type) }
             val role = member?.let { CraftoryCore.energyType(it.typeId)?.spec?.role } ?: 0
             if ((role and MemberSpec.STORAGE) != 0) {
-                CraftoryCore.energyAccess(world).requestDebit(
-                    BlockPos.pack(x, y, z),
-                    RIFTMOTH_DRAIN_PER_SECOND,
-                )
-                return
+                val removed =
+                    CraftoryCore.energyAccess(world).requestDebit(
+                        BlockPos.pack(x, y, z),
+                        RIFTMOTH_DRAIN_PER_SECOND,
+                    )
+                if (removed > 0) return
             }
         }
     }

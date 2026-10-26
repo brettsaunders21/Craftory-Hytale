@@ -14,7 +14,6 @@ data class MobHome(
     var homeX: Int = 0,
     var homeY: Int = 0,
     var homeZ: Int = 0,
-    var leashRadius: Double = 12.0,
 ) : Component<EntityStore> {
     val home: BlockPos? get() = if (hasHome) BlockPos(homeX, homeY, homeZ) else null
 
@@ -50,11 +49,6 @@ data class MobHome(
                     KeyedCodec("HomeZ", Codec.INTEGER),
                     { component, value -> component.homeZ = value },
                     { it.homeZ },
-                ).add()
-                .append(
-                    KeyedCodec("LeashRadius", Codec.DOUBLE),
-                    { component, value -> component.leashRadius = value },
-                    { it.leashRadius },
                 ).add()
                 .build()
     }
