@@ -15,6 +15,8 @@ class ShroomBedState(
     var lastUpdateTick: Long = Long.MIN_VALUE,
 ) : Component<ChunkStore>,
     Inspectable {
+    var darknessSource: String = "open"
+
     override fun clone(): Component<ChunkStore> = ShroomBedState(growth, stored, twitch, lastUpdateTick)
 
     override fun describe(): List<Pair<String, String>> =

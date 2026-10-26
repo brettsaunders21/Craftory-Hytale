@@ -2,6 +2,20 @@ package studio.craftory.tech.machine
 
 import kotlin.math.roundToInt
 
+private const val DARK_LIGHT_THRESHOLD = 4
+
+internal fun resolveDarkness(
+    skyLight: Int?,
+    blockLight: Int?,
+    isNight: Boolean,
+    isCovered: Boolean,
+): Boolean =
+    if (skyLight != null && blockLight != null) {
+        skyLight < DARK_LIGHT_THRESHOLD && blockLight < DARK_LIGHT_THRESHOLD
+    } else {
+        isNight || isCovered
+    }
+
 internal fun shroomGrowth(
     dark: Boolean,
     density: Int,

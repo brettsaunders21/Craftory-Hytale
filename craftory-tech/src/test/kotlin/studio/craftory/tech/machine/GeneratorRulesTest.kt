@@ -40,6 +40,15 @@ class GeneratorRulesTest {
     }
 
     @Test
+    fun `darkness prefers available light and falls back to night or cover`() {
+        assertTrue(resolveDarkness(3, 2, false, false))
+        assertFalse(resolveDarkness(8, 9, true, true))
+        assertTrue(resolveDarkness(null, null, true, false))
+        assertTrue(resolveDarkness(null, null, false, true))
+        assertFalse(resolveDarkness(null, null, false, false))
+    }
+
+    @Test
     fun `twitch combines stimuli scales density and decays when calm`() {
         assertEquals(5, twitchDelta(true, false, 0))
         assertEquals(10, twitchDelta(false, true, 0))

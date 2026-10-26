@@ -6,12 +6,16 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3d
 import org.joml.Vector3i
@@ -21,9 +25,50 @@ import studio.craftory.tech.machine.jank.Jank
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 
+private const val COVER_DISTANCE = 8
+
+private fun isCovered(
+    world: World,
+    store: Store<ChunkStore>,
+    position: Vector3i,
+): Boolean {
+    val x = position.x
+    val z = position.z
+    val localX = x and 31
+    val localZ = z and 31
+    val lastY = position.y + COVER_DISTANCE
+    var y = position.y + 1
+    while (y <= lastY) {
+        val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(x, y, z)
+        if (sectionRef != null) {
+            val section = store.getComponent(sectionRef, BlockSection.getComponentType())
+            if (section != null && section.get(localX, y and 31, localZ) != BlockType.EMPTY_ID) {
+                val fluidSection = store.getComponent(sectionRef, FluidSection.getComponentType())
+                if (fluidSection?.getFluid(localX, y and 31, localZ) == null) return true
+            }
+        }
+        y++
+    }
+    return false
+}
+
+private fun requestLightCalculation(
+    world: World,
+    store: Store<ChunkStore>,
+    blockState: BlockModule.BlockStateInfo,
+    position: Vector3i,
+) {
+    val section = store.getComponent(blockState.sectionRef, ChunkSection.getComponentType()) ?: return
+    position.set(section.x, section.y, section.z)
+    world.chunkLighting.addToQueue(position)
+}
+
 internal class ShroomBedSystem(
     private val directSpawnForSelfTest: Boolean = false,
 ) : EntityTickingSystem<ChunkStore>() {
+    internal var lastLightLevels: Pair<Int, Int>? = null
+        private set
+
     override fun isParallel(
         systemIndex: Int,
         archetypeChunkSize: Int,
@@ -82,7 +127,8 @@ internal class ShroomBedSystem(
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val density = density(store, position)
-        val dark = forcedDarkness[blockRef] ?: isDark(store, blockState)
+        val sampledDark = sampleDarkness(world, store, blockState, position, state)
+        val dark = forcedDarkness[blockRef] ?: sampledDark
         val playerWithin2 = playerWithin(world, position, 2.0)
         val lightOrDay = !dark
         val forcePop = blockRef in forcedPops
@@ -101,14 +147,31 @@ internal class ShroomBedSystem(
             pop(world, commandBuffer, state, blockState, position)
         }
         blockState.markNeedsSaving(commandBuffer)
+        if (lastLightLevels == null) requestLightCalculation(world, store, blockState, position)
     }
 
-    internal fun isDark(
+    internal fun sampleDarkness(
+        world: World,
         store: Store<ChunkStore>,
         blockState: BlockModule.BlockStateInfo,
+        position: Vector3i,
+        state: ShroomBedState,
     ): Boolean {
-        val lightLevels = lightLevels(store, blockState) ?: return false
-        return lightLevels.first < DARK_LIGHT_THRESHOLD && lightLevels.second < DARK_LIGHT_THRESHOLD
+        val lightLevels = lightLevels(store, blockState)
+        lastLightLevels = lightLevels
+        val isNight =
+            !world.entityStore.store
+                .getResource(WorldTimeResource.getResourceType())
+                .isScaledDayTimeWithinRange(DAY_START, DAY_END)
+        val isCovered = isCovered(world, store, position)
+        state.darknessSource =
+            when {
+                lightLevels != null -> "light"
+                isNight -> "night"
+                isCovered -> "covered"
+                else -> "open"
+            }
+        return resolveDarkness(lightLevels?.first, lightLevels?.second, isNight, isCovered)
     }
 
     internal fun lightLevels(
@@ -213,7 +276,8 @@ internal class ShroomBedSystem(
 
     companion object {
         private const val UPDATE_INTERVAL_TICKS = 20L
-        private const val DARK_LIGHT_THRESHOLD = 4
+        private const val DAY_START = 6.0
+        private const val DAY_END = 18.0
         private const val MAX_GROWTH = 1000.0
         private const val MAX_STORED = 9
         private const val CHAIN_TWITCH = 80

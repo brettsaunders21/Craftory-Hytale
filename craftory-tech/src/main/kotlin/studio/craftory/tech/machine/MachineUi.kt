@@ -211,7 +211,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
 
             shroomBed != null -> {
                 "Growth: ${shroomBed.growth.toInt()}/1000  Stored: ${shroomBed.stored}\n" +
-                    "Twitch: ${shroomBed.twitch}/100"
+                    "Twitch: ${shroomBed.twitch}/100  Darkness: ${shroomBed.darknessSource}"
             }
 
             else -> {

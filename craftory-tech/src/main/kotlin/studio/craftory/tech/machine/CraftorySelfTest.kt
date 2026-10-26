@@ -1455,11 +1455,12 @@ object CraftorySelfTest {
         val liveBlockState =
             store.getComponent(bedRef, BlockModule.BlockStateInfo.getComponentType())
                 ?: error("Shroom Bed block state missing")
-        checkLiveShroomBedLight(run, store, liveBlockState)
-        ShroomBedSystem.forceDarknessForSelfTest(bedRef, true)
         val bed = store.getComponent(bedRef, ShroomBedState.type) ?: error("Shroom Bed component missing")
         val neighbour =
             store.getComponent(neighbourRef, ShroomBedState.type) ?: error("chain Shroom Bed component missing")
+        placeShroomBedCover(world, run.sectionRef, SHROOM_BED_COVER)
+        checkLiveShroomBedDarkness(run, world, store, liveBlockState, bed)
+        ShroomBedSystem.forceDarknessForSelfTest(bedRef, true)
         bed.growth = 990.0
         ShroomBedSystem.advanceForSelfTest(bedRef, bed, false, 0, false, false, 1.0)
         check(run, bed.stored == 1 && bed.growth == 0.0, "forced-dark Shroom Bed grows a Boomshroom")
@@ -1468,19 +1469,55 @@ object CraftorySelfTest {
         checkShroomPopAndReload(run, store, bedRef, bed, neighbour)
     }
 
-    private fun checkLiveShroomBedLight(
+    private fun placeShroomBedCover(
+        world: World,
+        sectionRef: Ref<ChunkStore>,
+        position: TestPosition,
+    ) {
+        val blockType =
+            BlockType.getAssetMap().getAsset("Wood_Softwood_Planks")
+                ?: error("cover block is missing")
+        check(
+            BlockOperations.setBlock(
+                world.chunkStore,
+                sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                BlockType.getAssetMap().getIndex(blockType.id),
+                blockType,
+                0,
+                0,
+                SetBlockSettings.NO_UPDATE_STATE,
+            ),
+        ) { "failed to place Shroom Bed cover block" }
+    }
+
+    private fun checkLiveShroomBedDarkness(
         run: SelfTestRun.Run,
+        world: World,
         store: Store<ChunkStore>,
         blockState: BlockModule.BlockStateInfo,
+        bed: ShroomBedState,
     ) {
         val lightSampler = ShroomBedSystem()
-        val liveLightLevels = runCatching { lightSampler.lightLevels(store, blockState) }.getOrNull()
-        val liveDarkness = runCatching { lightSampler.isDark(store, blockState) }
+        val liveDarkness =
+            runCatching {
+                lightSampler.sampleDarkness(
+                    world,
+                    store,
+                    blockState,
+                    Vector3i(SHROOM_BED.x, SHROOM_BED.y, SHROOM_BED.z),
+                    bed,
+                )
+            }
+        val liveLightLevels = lightSampler.lastLightLevels
         check(
             run,
-            liveDarkness.isSuccess,
-            "Shroom Bed samples live light",
-            "skyLight=${liveLightLevels?.first ?: "unavailable"}, " +
+            liveDarkness.getOrNull() == true,
+            "covered Shroom Bed resolves dark without forced darkness",
+            "resolved=${liveDarkness.getOrNull()}, source=${bed.darknessSource}, " +
+                "skyLight=${liveLightLevels?.first ?: "unavailable"}, " +
                 "blockLight=${liveLightLevels?.second ?: "unavailable"}",
         )
     }
@@ -3223,6 +3260,7 @@ object CraftorySelfTest {
     private val RATTLEWHEEL_WATER = TestPosition(10_037, 148, 10_004)
     private val RATTLEWHEEL_DRY = TestPosition(10_040, 100, 10_004)
     private val SHROOM_BED = TestPosition(10_038, 148, 10_004)
+    private val SHROOM_BED_COVER = TestPosition(SHROOM_BED.x, SHROOM_BED.y + 2, SHROOM_BED.z)
     private val CHAIN_SHROOM_BED = TestPosition(10_039, 148, 10_004)
     private val WRENCH_SHROOM_BED = TestPosition(10_010, 148, 10_016)
     private val WRENCH_RATTLEWHEEL = TestPosition(10_014, 148, 10_016)
@@ -3260,6 +3298,7 @@ object CraftorySelfTest {
                     RATTLEWHEEL,
                     RATTLEWHEEL_WATER,
                     SHROOM_BED,
+                    SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
                 heartPositions()
