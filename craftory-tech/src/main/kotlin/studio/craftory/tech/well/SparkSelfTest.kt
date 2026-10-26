@@ -4,6 +4,10 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.item.config.Item
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset
+import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
@@ -11,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponen
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.hypixel.hytale.server.npc.NPCPlugin
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
@@ -38,19 +43,19 @@ internal class SparkSelfTest(
 ) {
     private val world = run.world
     private val store = world.chunkStore.store
-    private val cradle = CraftorySelfTest.TestPosition(10_020, 148, 10_020)
+    private val cradle = CraftorySelfTest.TestPosition(10_020, 148, 9_990)
     private val well = BlockPos(cradle.x, cradle.y + 1, cradle.z)
-    private val storage = CraftorySelfTest.TestPosition(10_021, 148, 10_020)
-    private val consumer = CraftorySelfTest.TestPosition(10_022, 148, 10_020)
-    private val tasteA = CraftorySelfTest.TestPosition(10_020, 148, 10_019)
-    private val tasteB = CraftorySelfTest.TestPosition(10_020, 148, 10_021)
-    private val coilBurner = CraftorySelfTest.TestPosition(10_028, 148, 10_020)
-    private val coil = CraftorySelfTest.TestPosition(10_028, 149, 10_020)
-    private val coilStorage = CraftorySelfTest.TestPosition(10_029, 149, 10_020)
-    private val resonatorBurner = CraftorySelfTest.TestPosition(10_036, 148, 10_020)
-    private val resonator = CraftorySelfTest.TestPosition(10_036, 149, 10_020)
-    private val sparkBurner = CraftorySelfTest.TestPosition(10_042, 148, 10_020)
-    private val cyanCrystal = CraftorySelfTest.TestPosition(10_040, 148, 10_020)
+    private val storage = CraftorySelfTest.TestPosition(10_021, 148, 9_990)
+    private val consumer = CraftorySelfTest.TestPosition(10_022, 148, 9_990)
+    private val tasteA = CraftorySelfTest.TestPosition(10_020, 148, 9_989)
+    private val tasteB = CraftorySelfTest.TestPosition(10_020, 148, 9_991)
+    private val coilBurner = CraftorySelfTest.TestPosition(10_028, 148, 9_990)
+    private val coil = CraftorySelfTest.TestPosition(10_028, 149, 9_990)
+    private val coilStorage = CraftorySelfTest.TestPosition(10_029, 149, 9_990)
+    private val resonatorBurner = CraftorySelfTest.TestPosition(10_036, 148, 9_990)
+    private val resonator = CraftorySelfTest.TestPosition(10_036, 149, 9_990)
+    private val sparkBurner = CraftorySelfTest.TestPosition(10_039, 148, 9_992)
+    private val cyanCrystal = CraftorySelfTest.TestPosition(10_040, 148, 9_990)
     private val positions =
         listOf(
             cradle,
@@ -88,6 +93,10 @@ internal class SparkSelfTest(
         run.sparkCleanup = ::cleanup
         run.sparkTest = this
         try {
+            if (!checkSparkVanillaIds()) {
+                finish()
+                return
+            }
             ensureEmpty()
             fixturesStarted = true
             runLiveChecks()
@@ -285,7 +294,7 @@ internal class SparkSelfTest(
             ResonatorState.type,
         )
         CraftorySelfTest.place(world, store, run.sectionRef, section, CraftoryIds.BURNER, sparkBurner, BurnerState.type)
-        placePlain(CraftoryIds.CYAN_CRYSTAL_BLOCK, cyanCrystal)
+        placePlain(CraftoryIds.CRYSTAL_CYAN_BLOCK, cyanCrystal)
         prepareBurner(coilBurner)
         prepareBurner(resonatorBurner)
         prepareBurner(sparkBurner, sparkOwner)
@@ -342,11 +351,80 @@ internal class SparkSelfTest(
     private fun ensureEmpty() {
         val blockSection =
             store.getComponent(run.sectionRef, BlockSection.getComponentType()) ?: error("block section missing")
+        val sectionAnchor = CraftorySelfTest.BURNER
         positions.forEach { position ->
+            check(withinSection(position.x, position.y, position.z)) {
+                "Spark fixture is outside the selftest section at $position (anchor=$sectionAnchor)"
+            }
             check(
                 blockSection.get(position.x and 31, position.y and 31, position.z and 31) == BlockType.EMPTY_ID,
             ) { "Spark selftest fixture is not empty at $position" }
         }
+        val harmonyRadius = HARMONY_RADIUS
+        check(
+            withinSection(cradle.x - harmonyRadius, cradle.y - harmonyRadius, cradle.z - harmonyRadius) &&
+                withinSection(cradle.x + harmonyRadius, cradle.y + harmonyRadius, cradle.z + harmonyRadius),
+        ) { "Spark Harmony radius leaves the selftest section" }
+        val scanRadius = FIRST_SPARK_SCAN_RADIUS
+        check(
+            withinSection(sparkBurner.x - scanRadius, sparkBurner.y - scanRadius, sparkBurner.z - scanRadius) &&
+                withinSection(sparkBurner.x + scanRadius, sparkBurner.y + scanRadius, sparkBurner.z + scanRadius),
+        ) { "First Spark radius leaves the selftest section" }
+        val existingFixtures = CraftorySelfTest.testPositions()
+        val harmonyOverlap =
+            existingFixtures.firstOrNull { existing ->
+                existing.x in (cradle.x - harmonyRadius)..(cradle.x + harmonyRadius) &&
+                    existing.y in (cradle.y - harmonyRadius)..(cradle.y + harmonyRadius) &&
+                    existing.z in (cradle.z - harmonyRadius)..(cradle.z + harmonyRadius)
+            }
+        check(harmonyOverlap == null) { "Spark Harmony radius overlaps existing fixture at $harmonyOverlap" }
+        val sparkOverlap =
+            existingFixtures.firstOrNull { existing ->
+                val dx = existing.x.toLong() - sparkBurner.x
+                val dy = existing.y.toLong() - sparkBurner.y
+                val dz = existing.z.toLong() - sparkBurner.z
+                dx * dx + dy * dy + dz * dz <= FIRST_SPARK_SCAN_RADIUS_SQUARED
+            }
+        check(sparkOverlap == null) { "First Spark radius overlaps existing fixture at $sparkOverlap" }
+    }
+
+    private fun checkSparkVanillaIds(): Boolean {
+        val missing = mutableListOf<String>()
+        val blockAssets = BlockType.getAssetMap()
+        CraftoryIds.CRYSTAL_TRIGGER_BLOCKS.forEach { id ->
+            if (blockAssets.getAsset(id) == null) missing += "block $id"
+        }
+        val shardIds = listOf(CraftoryIds.CYAN_CRYSTAL_SHARD, CraftoryIds.VOID_CRYSTAL_SHARD)
+        val itemAssets = Item.getAssetMap()
+        shardIds.forEach { id ->
+            if (itemAssets.getAsset(id) == null) missing += "item $id"
+        }
+        if (NPCPlugin.get().getIndex(CraftoryIds.VESSA_ROLE) == ASSET_INDEX_NOT_FOUND) {
+            missing += "NPC role ${CraftoryIds.VESSA_ROLE}"
+        }
+        if (ModelAsset.getAssetMap().getAsset(CraftoryIds.VESSA_ROLE) == null) {
+            missing += "model ${CraftoryIds.VESSA_ROLE}"
+        }
+        if (ParticleSystem.getAssetMap().getAsset(CraftoryIds.SPARK_PARTICLE) == null) {
+            missing += "particle ${CraftoryIds.SPARK_PARTICLE}"
+        }
+        if (SoundEvent.getAssetMap().getIndex(CraftoryIds.SPARK_SOUND) == ASSET_INDEX_NOT_FOUND) {
+            missing += "sound ${CraftoryIds.SPARK_SOUND}"
+        }
+        val passed = missing.isEmpty()
+        check(passed, "Spark vanilla ids resolve", if (passed) "" else "missing=${missing.joinToString()}")
+        return passed
+    }
+
+    private fun withinSection(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Boolean {
+        val anchor = CraftorySelfTest.BURNER
+        return (x shr 5) == (anchor.x shr 5) &&
+            (y shr 5) == (anchor.y shr 5) &&
+            (z shr 5) == (anchor.z shr 5)
     }
 
     private fun placePlain(
@@ -426,6 +504,10 @@ internal class SparkSelfTest(
     }
 
     private companion object {
+        const val HARMONY_RADIUS = 4
+        const val FIRST_SPARK_SCAN_RADIUS = 8
+        const val FIRST_SPARK_SCAN_RADIUS_SQUARED = 64L
+        const val ASSET_INDEX_NOT_FOUND = Int.MIN_VALUE
         const val CONVERTER_Y_MASK = 0x800L shl 26
     }
 }

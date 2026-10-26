@@ -127,7 +127,7 @@ class ResonatorUseInteraction : SimpleBlockInteraction() {
     ) = Unit
 
     companion object {
-        private val SHARD_ITEMS = setOf("Item_Crystal_Cyan_Shard", "Item_Crystal_Void_Shard")
+        private val SHARD_ITEMS = setOf(CraftoryIds.CYAN_CRYSTAL_SHARD, CraftoryIds.VOID_CRYSTAL_SHARD)
 
         @JvmField
         val CODEC: BuilderCodec<ResonatorUseInteraction> =

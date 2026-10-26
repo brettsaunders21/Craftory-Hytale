@@ -41,13 +41,13 @@ internal object LensScanner {
         if (perfect) {
             playerRef.sendMessage(Message.translation("server.craftory.lens.perfect").param("taste", well.taste))
             ParticleUtil.spawnParticleEffect(
-                "Impact_Spark",
+                CraftoryIds.SPARK_PARTICLE,
                 Vector3d(session.pos.x + 0.5, session.pos.y + 1.2, session.pos.z + 0.5),
                 store,
             )
             SoundUtil.playSoundEvent2dToPlayer(
                 playerRef,
-                "SFX_Interact",
+                CraftoryIds.SPARK_SOUND,
                 SoundCategory.SFX,
             )
         } else {

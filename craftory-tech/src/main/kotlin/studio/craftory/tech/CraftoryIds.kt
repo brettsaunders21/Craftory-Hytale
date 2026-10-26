@@ -53,7 +53,9 @@ object CraftoryIds {
     const val HAMMER_USE_INTERACTION = "Craftory_HammerUse"
     const val GHOST_PARTICLE = "Dust_Sparkles_Fine"
     const val CHIMNEY_SMOKE_PARTICLE = "Dungeon_Goblin_Smoke_Pipe_Small"
+    const val SPARK_PARTICLE = "Ability_ChainHook_Sparks"
     const val HAMMER_SOUND = "SFX_Metal_Hit"
+    const val SPARK_SOUND = "SFX_Crystal_Hit"
     const val FIZZ_RESOURCE_TYPE = "Craftory_Fizz"
     const val CRANK_COMPONENT = "CraftoryCrank"
     const val BURNER_COMPONENT = "CraftoryBurner"
@@ -84,8 +86,18 @@ object CraftoryIds {
     const val VESSA_ROLE = "Craftory_Vessa"
     const val FIRST_SPARK_KNOWLEDGE = "craftory:experiment/first_spark"
     const val VESSA_MET_KNOWLEDGE = "craftory:npc/vessa_met"
-    const val CYAN_CRYSTAL_BLOCK = "Block_Crystal_Cyan"
-    const val VOID_CRYSTAL_BLOCK = "Block_Crystal_Void"
-    const val CYAN_CRYSTAL_SHARD = "Item_Crystal_Cyan_Shard"
-    const val VOID_CRYSTAL_SHARD = "Item_Crystal_Void_Shard"
+    const val CRYSTAL_CYAN_BLOCK = "Rock_Crystal_Cyan_Block"
+    val CRYSTAL_TRIGGER_BLOCKS =
+        listOf(
+            CRYSTAL_CYAN_BLOCK,
+            "Rock_Crystal_Cyan_Small",
+            "Rock_Crystal_Cyan_Medium",
+            "Rock_Crystal_Cyan_Large",
+            "Rock_Crystal_Void_Block",
+            "Rock_Crystal_Void_Small",
+            "Rock_Crystal_Void_Medium",
+            "Rock_Crystal_Void_Large",
+        )
+    const val CYAN_CRYSTAL_SHARD = "Ingredient_Crystal_Cyan"
+    const val VOID_CRYSTAL_SHARD = "Ingredient_Crystal_Void"
 }

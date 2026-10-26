@@ -76,8 +76,12 @@ internal class FirstSparkSystem : EntityTickingSystem<ChunkStore>() {
 internal object FirstSpark {
     private const val SCAN_RADIUS = 8
     private const val MAX_DISTANCE_SQUARED = 64L
-    private const val SPARK_PARTICLE = "Impact_Spark"
-    private const val SPARK_SOUND = "SFX_Interact"
+    private val crystalTriggerIndexes by lazy {
+        val blockTypes = BlockType.getAssetMap()
+        IntArray(CraftoryIds.CRYSTAL_TRIGGER_BLOCKS.size) { index ->
+            blockTypes.getIndex(CraftoryIds.CRYSTAL_TRIGGER_BLOCKS[index])
+        }
+    }
     private val pendingVessaSpawns = FirstSparkPendingSpawns()
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
@@ -135,10 +139,14 @@ internal object FirstSpark {
                             nearest.first.y + 0.5 + (machineY - nearest.first.y) * amount,
                             nearest.first.z + 0.5 + (machineZ - nearest.first.z) * amount,
                         )
-                        ParticleUtil.spawnParticleEffect(SPARK_PARTICLE, arcPosition, world.entityStore.store)
+                        ParticleUtil.spawnParticleEffect(
+                            CraftoryIds.SPARK_PARTICLE,
+                            arcPosition,
+                            world.entityStore.store,
+                        )
                     }
-                    val soundIndex = SoundEvent.getAssetMap().getIndex(SPARK_SOUND)
-                    if (soundIndex > 0) {
+                    val soundIndex = SoundEvent.getAssetMap().getIndex(CraftoryIds.SPARK_SOUND)
+                    if (soundIndex != Int.MIN_VALUE) {
                         SoundUtil.playSoundEvent3d(
                             soundIndex,
                             SoundCategory.SFX,
@@ -190,8 +198,7 @@ internal object FirstSpark {
                             ?: continue
                     val section = store.getComponent(sectionRef, BlockSection.getComponentType()) ?: continue
                     val blockId = section.get(cursor.x and 31, cursor.y and 31, cursor.z and 31)
-                    val name = BlockType.getAssetMap().getAsset(blockId)?.id ?: continue
-                    if (name == CraftoryIds.CYAN_CRYSTAL_BLOCK || name == CraftoryIds.VOID_CRYSTAL_BLOCK) {
+                    if (blockId in crystalTriggerIndexes) {
                         nearest = distance
                         nearestX = cursor.x
                         nearestY = cursor.y

@@ -34,6 +34,7 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
+import studio.craftory.tech.CraftoryIds
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
@@ -253,10 +254,10 @@ internal class WellBirthSystem(
         position: Vector3d,
         store: ComponentAccessor<EntityStore>,
     ) {
-        ParticleUtil.spawnParticleEffect("Impact_Spark", position, store)
+        ParticleUtil.spawnParticleEffect(CraftoryIds.SPARK_PARTICLE, position, store)
         SoundUtil.playSoundEvent2dToPlayer(
             player,
-            "SFX_Interact",
+            CraftoryIds.SPARK_SOUND,
             SoundCategory.SFX,
         )
     }

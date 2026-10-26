@@ -4,7 +4,7 @@
   "DisplayNames": ["Vessa Lanternwright"],
   "DefaultNPCAttitude": "Ignore",
   "DefaultPlayerAttitude": "Neutral",
-  "Appearance": "Human_Trader",
+  "Appearance": "Craftory_Vessa",
   "MaxHealth": 70,
   "DisableDamageGroups": ["Self"],
   "MotionControllerList": [

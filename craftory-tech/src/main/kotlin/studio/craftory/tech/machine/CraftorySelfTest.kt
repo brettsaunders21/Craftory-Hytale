@@ -1024,6 +1024,7 @@ object CraftorySelfTest {
         val missingPaths = referencedPaths.filterNot { CommonAssetRegistry.hasCommonAsset(it) }
         val wiringFailures = requiredCraftoryWiringFailures(itemsById, modelPathsByItemId)
         val grizzlecogResolves = ModelAsset.getAssetMap().getAsset("Craftory_Grizzlecog") != null
+        val vessaResolves = ModelAsset.getAssetMap().getAsset("Craftory_Vessa") != null
         val problems =
             buildList {
                 if (missingPaths.isNotEmpty()) add("missing paths=${missingPaths.joinToString()}")
@@ -1031,6 +1032,7 @@ object CraftorySelfTest {
                 addAll(unresolvedBlockStates)
                 addAll(wiringFailures)
                 if (!grizzlecogResolves) add("model asset Craftory_Grizzlecog did not resolve")
+                if (!vessaResolves) add("model asset Craftory_Vessa did not resolve")
             }
         val detail =
             buildString {
@@ -2793,7 +2795,7 @@ object CraftorySelfTest {
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
-    private fun testPositions(): List<TestPosition> =
+    internal fun testPositions(): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
                 listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK, SCRAP_RUSH_TEST) +
