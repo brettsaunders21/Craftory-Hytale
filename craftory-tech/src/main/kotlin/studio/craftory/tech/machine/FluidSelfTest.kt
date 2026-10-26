@@ -12,6 +12,7 @@ import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.fluid.FireFluidTicker
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid
@@ -35,6 +36,7 @@ import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
+import com.hypixel.hytale.server.core.util.FillerBlockUtil
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
@@ -575,31 +577,41 @@ internal object FluidSelfTestCases {
         }
     }
 
-    fun testPositions(): List<Position> =
-        listOf(
-            SOURCE,
-            F1_PIPE,
-            F1_TANK,
-            F2_BOTTOM,
-            F2_TOP,
-            F2_SIDE,
-            BOILER,
-            BOILER_PIPE,
-            BOILER_LINK_PIPE,
-            PRESSURISED_GNASHER_PIPE,
-            F3_LINK_GAP_A,
-            F3_LINK_GAP_B,
-            PRESSURISED_GNASHER,
-            BURNER,
-            BURNER_PIPE,
-            BURNER_LINK_PIPE,
-            PLAIN_GNASHER_PIPE,
-            PLAIN_GNASHER,
-            GASBAG_BURNER,
-            GASBAG_PIPE,
-            GASBAG,
-            GASBAG_FIRE,
-        )
+    fun testPositions(): List<Position> {
+        val positions =
+            listOf(
+                SOURCE,
+                F1_PIPE,
+                F1_TANK,
+                F2_BOTTOM,
+                F2_TOP,
+                F2_SIDE,
+                BOILER,
+                BOILER_PIPE,
+                BOILER_LINK_PIPE,
+                PRESSURISED_GNASHER_PIPE,
+                F3_LINK_GAP_A,
+                F3_LINK_GAP_B,
+                PRESSURISED_GNASHER,
+                BURNER,
+                BURNER_PIPE,
+                BURNER_LINK_PIPE,
+                PLAIN_GNASHER_PIPE,
+                PLAIN_GNASHER,
+                GASBAG_BURNER,
+                GASBAG_PIPE,
+                GASBAG,
+                GASBAG_FIRE,
+            )
+        val gnasherType = BlockType.fromString(CraftoryIds.GNASHER_PIT) ?: error("missing fluid test Gnasher")
+        val footprint =
+            positions.toMutableSet().apply {
+                addAll(FluidSelfTestFootprint.fixture(PRESSURISED_GNASHER, gnasherType))
+                addAll(FluidSelfTestFootprint.fixture(PLAIN_GNASHER, gnasherType))
+            }
+        FluidSelfTestFootprint.assertSafe(footprint)
+        return positions
+    }
 
     const val MAX_RUNTIME_TICKS = 8_000L
     const val CASE_TIMEOUT_TICKS = 120L
@@ -1126,7 +1138,10 @@ internal object FluidSelfTestF6 {
                 !type.isState() &&
                     type.getData()?.let { data ->
                         configs.any { config -> config.getTagPattern()?.test(data.getTags()) == true }
-                    } == true
+                    } == true &&
+                    FluidSelfTestFootprint.isSafe(
+                        FluidSelfTestFootprint.fixture(FluidSelfTestCases.GASBAG_FIRE, type),
+                    )
             }
     }
 
@@ -1159,6 +1174,49 @@ internal object FluidSelfTestF6 {
             "expected=${run.f6FireFluid?.id ?: "none"} seen=$seen ticker=$ticker level=$level " +
             "support=$support reasserts=${run.f6FireReasserts} face=+Y} " +
             fluidSelfTestMachineComponentDetails(run, store)
+    }
+}
+
+private object FluidSelfTestFootprint {
+    fun fixture(
+        position: Position,
+        type: BlockType,
+    ): Set<Position> {
+        val hitbox =
+            BlockBoundingBoxes.getAssetMap().getAsset(type.getHitboxTypeIndex())
+                ?: error("missing hitbox ${type.getHitboxType()} for ${type.id}")
+        val positions = linkedSetOf<Position>()
+        FillerBlockUtil.forEachFillerBlock(hitbox.get(0)) { x, y, z ->
+            positions += Position(position.x + x, position.y + y, position.z + z)
+        }
+        return positions
+    }
+
+    fun isSafe(positions: Collection<Position>): Boolean {
+        val fluidChunk =
+            ChunkUtil.indexChunk(
+                FluidSelfTestCases.BASE.x shr 5,
+                FluidSelfTestCases.BASE.z shr 5,
+            )
+        return positions.all { position ->
+            position.x !in 10_200..10_260 &&
+                ChunkUtil.indexChunk(position.x shr 5, position.z shr 5) == fluidChunk
+        }
+    }
+
+    fun assertSafe(positions: Set<Position>) {
+        val overlap = positions.firstOrNull { it.x in 10_200..10_260 }
+        check(overlap == null) { "fluid test fixture overlaps transport range at $overlap" }
+        val fluidChunk =
+            ChunkUtil.indexChunk(
+                FluidSelfTestCases.BASE.x shr 5,
+                FluidSelfTestCases.BASE.z shr 5,
+            )
+        val outsideChunk =
+            positions.firstOrNull {
+                ChunkUtil.indexChunk(it.x shr 5, it.z shr 5) != fluidChunk
+            }
+        check(outsideChunk == null) { "fluid test fixture is outside retained chunk at $outsideChunk" }
     }
 }
 
@@ -1477,7 +1535,7 @@ internal object FluidSelfTestSetup {
                 0,
                 SetBlockSettings.NO_UPDATE_STATE,
             ),
-        ) { "failed to place $blockId at $position" }
+        ) { placementFailureDetail(run, store, sectionRef, blockId, position) }
         BlockEntity.ensureBlockEntity(
             store,
             sectionRef,
@@ -1488,6 +1546,26 @@ internal object FluidSelfTestSetup {
             type,
             0,
         ) ?: error("failed to create fluid test block entity for $blockId at $position")
+    }
+
+    private fun placementFailureDetail(
+        run: FluidSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        sectionRef: com.hypixel.hytale.component.Ref<ChunkStore>,
+        blockId: String,
+        position: Position,
+    ): String {
+        val blockSection = store.getComponent(sectionRef, BlockSection.getComponentType())
+        val foundIndex = blockSection?.get(position.x, position.y, position.z) ?: BlockType.EMPTY_ID
+        val foundType = BlockType.getAssetMap().getAsset(foundIndex)
+        val foundId = foundType?.id ?: "index=$foundIndex"
+        val baseId = foundType?.let { baseBlockId(it) } ?: foundId
+        val filler = blockSection?.getFiller(position.x, position.y, position.z) ?: -1
+        val rotation = blockSection?.getRotationIndex(position.x, position.y, position.z) ?: -1
+        val blockEntity =
+            BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)?.isValid == true
+        return "failed to place $blockId at $position " +
+            "(found=$foundId base=$baseId filler=$filler rotation=$rotation blockEntity=$blockEntity)"
     }
 
     fun addBurnerFuel(

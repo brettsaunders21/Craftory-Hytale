@@ -33,6 +33,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
@@ -504,6 +505,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
 
     private fun startT3(run: TransportSelfTestRun.Run) {
         clearCurrentBlocks(run)
+        run.stage = 3
         val layout =
             placeClawCase(
                 run,
@@ -516,7 +518,6 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         run.destinationA = layout.destinationA
         run.destinationB = layout.destinationB
         run.caseTimerStartTick = null
-        run.stage = 3
         run.stageStartTick = run.world.tick
     }
 
@@ -1443,8 +1444,32 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         val section =
             store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                 ?: error("transport block section missing at $position")
+        val blockSection =
+            store.getComponent(sectionRef, BlockSection.getComponentType())
+                ?: error("transport block data missing at $position")
         val blockType = BlockType.fromString(blockId) ?: error("missing transport test block $blockId")
         val blockIndex = BlockType.getAssetMap().getIndex(blockType.id)
+        if (
+            blockSection.get(position.x, position.y, position.z) == blockIndex &&
+            blockSection.getRotationIndex(position.x, position.y, position.z) == rotation
+        ) {
+            check(
+                BlockOperations.setBlock(
+                    world.chunkStore,
+                    sectionRef,
+                    position.x,
+                    position.y,
+                    position.z,
+                    BlockType.EMPTY_ID,
+                    BlockType.EMPTY,
+                    0,
+                    0,
+                    SetBlockSettings.NO_DROP_ITEMS,
+                ),
+            ) { placementFailureDetail(run, sectionRef, blockId, position, "failed to clear existing block") }
+        }
+        if (!keepAcrossCases) run.currentBlocks.add(position)
+        run.allBlocks.add(position)
         check(
             BlockOperations.setBlock(
                 world.chunkStore,
@@ -1458,7 +1483,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                 0,
                 SetBlockSettings.NO_UPDATE_STATE,
             ),
-        ) { "failed to place $blockId at $position" }
+        ) { placementFailureDetail(run, sectionRef, blockId, position, "failed to place") }
         BlockEntity.ensureBlockEntity(
             store,
             sectionRef,
@@ -1469,8 +1494,27 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             blockType,
             rotation,
         ) ?: error("failed to create block entity for $blockId at $position")
-        if (!keepAcrossCases) run.currentBlocks.add(position)
-        run.allBlocks.add(position)
+    }
+
+    private fun placementFailureDetail(
+        run: TransportSelfTestRun.Run,
+        sectionRef: Ref<ChunkStore>,
+        blockId: String,
+        position: Position,
+        failure: String,
+    ): String {
+        val store = run.world.chunkStore.store
+        val blockSection = store.getComponent(sectionRef, BlockSection.getComponentType())
+        val foundIndex = blockSection?.get(position.x, position.y, position.z) ?: BlockType.EMPTY_ID
+        val foundType = BlockType.getAssetMap().getAsset(foundIndex)
+        val foundId = foundType?.id ?: "index=$foundIndex"
+        val baseId = foundType?.let { baseBlockId(it) } ?: foundId
+        val filler = blockSection?.getFiller(position.x, position.y, position.z) ?: -1
+        val rotation = blockSection?.getRotationIndex(position.x, position.y, position.z) ?: -1
+        val blockEntity =
+            BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)?.isValid == true
+        return "$failure $blockId at $position " +
+            "(found=$foundId base=$baseId filler=$filler rotation=$rotation blockEntity=$blockEntity)"
     }
 
     private fun containerAt(
