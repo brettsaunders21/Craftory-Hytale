@@ -16,10 +16,11 @@ class Glimmerwell(
     var taste: String = "Ingredient_Scraps",
     var birthTick: Long = 0,
     var claimCrewId: UUID? = null,
+    var corrupted: Boolean = false,
 ) : Component<ChunkStore>,
     Inspectable {
     override fun clone(): Component<ChunkStore> =
-        Glimmerwell(temperament, strength, state, taste, birthTick, claimCrewId)
+        Glimmerwell(temperament, strength, state, taste, birthTick, claimCrewId, corrupted)
 
     override fun describe(): List<Pair<String, String>> =
         listOf(
@@ -28,6 +29,7 @@ class Glimmerwell(
             "state" to state.name,
             "birthTick" to birthTick.toString(),
             "claimCrewId" to claimCrewId?.toString().orEmpty(),
+            "corrupted" to corrupted.toString(),
         )
 
     companion object {
@@ -65,6 +67,11 @@ class Glimmerwell(
                     KeyedCodec("ClaimCrewId", Codec.STRING),
                     { well, value -> well.claimCrewId = value.toUuidOrNull() },
                     { it.claimCrewId?.toString().orEmpty() },
+                ).add()
+                .append(
+                    KeyedCodec("Corrupted", Codec.BOOLEAN),
+                    { well, value -> well.corrupted = value },
+                    { it.corrupted },
                 ).add()
                 .build()
 

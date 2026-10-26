@@ -34,4 +34,26 @@ class ConverterMathTest {
         assertThrows(IllegalArgumentException::class.java) { ConverterMath.convert(100, 41) }
         assertThrows(IllegalArgumentException::class.java) { ConverterMath.convert(-1, 30) }
     }
+
+    @Test
+    fun `catalysis subtracts rounded up loss`() {
+        assertEquals(0L, ConverterMath.catalyse(0))
+        assertEquals(85L, ConverterMath.catalyse(100))
+        assertEquals(34L, ConverterMath.catalyse(40))
+        assertEquals(0L, ConverterMath.catalyse(1))
+        assertEquals(5L, ConverterMath.catalyse(7))
+        assertEquals(7L, ConverterMath.catalyse(7, 0))
+        assertEquals(0L, ConverterMath.catalyse(7, 100))
+    }
+
+    @Test
+    fun `catalysis is overflow safe and validates its inputs`() {
+        val quotient = Long.MAX_VALUE / 100
+        val remainder = Long.MAX_VALUE % 100
+        val loss = quotient * 15 + (remainder * 15 + 99) / 100
+        assertEquals(Long.MAX_VALUE - loss, ConverterMath.catalyse(Long.MAX_VALUE))
+        assertThrows(IllegalArgumentException::class.java) { ConverterMath.catalyse(-1) }
+        assertThrows(IllegalArgumentException::class.java) { ConverterMath.catalyse(1, -1) }
+        assertThrows(IllegalArgumentException::class.java) { ConverterMath.catalyse(1, 101) }
+    }
 }

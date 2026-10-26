@@ -141,6 +141,44 @@ class WellAccess internal constructor() {
         return removed
     }
 
+    fun setState(
+        world: World,
+        pos: BlockPos,
+        state: WellState,
+    ): Boolean =
+        updateWell(world, pos) { well ->
+            if (well.state == state) return@updateWell false
+            well.state = state
+            true
+        }
+
+    fun setStrength(
+        world: World,
+        pos: BlockPos,
+        strength: WellStrength,
+    ): Boolean =
+        updateWell(world, pos) { well ->
+            if (well.strength == strength) return@updateWell false
+            well.strength = strength
+            true
+        }
+
+    fun setCorrupted(
+        world: World,
+        pos: BlockPos,
+        corrupted: Boolean,
+    ): Boolean {
+        world.debugAssertInTickingThread()
+        val store = world.chunkStore.store
+        val wellRef = wellsNear(store, pos, 0).firstOrNull() ?: return false
+        if (wellRef.well.corrupted != corrupted) {
+            wellRef.well.corrupted = corrupted
+            store.getComponent(wellRef.ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        }
+        setCorruptedVisual(world, pos, corrupted)
+        return true
+    }
+
     fun onWellBorn(listener: (WellEvent) -> Unit): AutoCloseable {
         bornListeners.add(listener)
         return AutoCloseable { bornListeners.remove(listener) }
@@ -190,8 +228,44 @@ class WellAccess internal constructor() {
         return dx * dx + dy * dy + dz * dz
     }
 
+    private inline fun updateWell(
+        world: World,
+        pos: BlockPos,
+        update: (Glimmerwell) -> Boolean,
+    ): Boolean {
+        world.debugAssertInTickingThread()
+        val store = world.chunkStore.store
+        val wellRef = wellsNear(store, pos, 0).firstOrNull() ?: return false
+        if (!update(wellRef.well)) return false
+        store.getComponent(wellRef.ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        return true
+    }
+
+    private fun setCorruptedVisual(
+        world: World,
+        pos: BlockPos,
+        corrupted: Boolean,
+    ) {
+        val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(pos.x, pos.y, pos.z) ?: return
+        val blockType = BlockType.fromString(ANCHOR_BLOCK_ID) ?: return
+        val state = if (corrupted) CORRUPTED_STATE else NORMAL_STATE
+        if (blockType.getBlockForState(state) == null) return
+        BlockOperations.setBlockInteractionState(
+            world.chunkStore,
+            sectionRef,
+            pos.x,
+            pos.y,
+            pos.z,
+            blockType,
+            state,
+            false,
+        )
+    }
+
     companion object {
         const val ANCHOR_BLOCK_ID = "Craftory_Glimmerwell_Anchor"
+        private const val NORMAL_STATE = "Normal"
+        private const val CORRUPTED_STATE = "Corrupted"
         private val LOGGER: Logger = Logger.getLogger(WellAccess::class.java.name)
 
         fun defaultTaste(temperament: Temperament): String =
