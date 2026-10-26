@@ -559,16 +559,16 @@ internal object MobSelfTest {
     private const val NETWORK_SETTLE_TICKS = 25L
     private const val DRAIN_AREA_CHARGE_SECONDS = 60L
     private const val FLOOR_Y = 149
-    private const val FLOOR_MIN_X = 10_043
-    private const val FLOOR_MAX_X = 10_047
-    private const val FLOOR_MIN_Z = 9_996
-    private const val FLOOR_MAX_Z = 10_000
-    private val MOB_AREA = BlockPos(10_045, 150, 9_998)
-    private val HOME = BlockPos(10_045, FLOOR_Y, 9_998)
-    private val MOB_ANCHOR = CraftorySelfTest.TestPosition(10_043, 150, 10_000)
-    private val MOB_BURNER = CraftorySelfTest.TestPosition(10_047, 150, 10_000)
-    private val MOB_PIPE = CraftorySelfTest.TestPosition(10_047, 151, 10_000)
-    private val MOB_CANISTER = CraftorySelfTest.TestPosition(10_047, 152, 10_000)
+    private const val FLOOR_MIN_X = 10_004
+    private const val FLOOR_MAX_X = 10_008
+    private const val FLOOR_MIN_Z = 10_008
+    private const val FLOOR_MAX_Z = 10_012
+    private val MOB_AREA = BlockPos(10_006, 150, 10_010)
+    private val HOME = BlockPos(10_006, FLOOR_Y, 10_010)
+    private val MOB_ANCHOR = CraftorySelfTest.TestPosition(10_004, 150, 10_012)
+    private val MOB_BURNER = CraftorySelfTest.TestPosition(10_008, 150, 10_012)
+    private val MOB_PIPE = CraftorySelfTest.TestPosition(10_008, 151, 10_012)
+    private val MOB_CANISTER = CraftorySelfTest.TestPosition(10_008, 152, 10_012)
     private val ROLE_IDS =
         listOf(
             CraftoryIds.GLIMMER_WISP,
