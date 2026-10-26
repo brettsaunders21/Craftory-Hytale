@@ -49,10 +49,15 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.transport.FluidTank
+import studio.craftory.core.api.transport.FluidTransport
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.notebook.NotebookPage
 import studio.craftory.tech.notebook.NotebookPages
 import java.util.logging.Level
+
+private const val BUCKET_VOLUME = 1_000L
+private const val BOILER_FIZZ_CHARGE_BURN_TICKS = 200L
 
 internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
@@ -243,6 +248,7 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
                 power.lastFizzSolveTick,
                 completedSolveTick,
                 member.delivered,
+                member.deliveredRank,
                 hasRecipeInput(bench),
                 chargeCount,
                 fuelSlotAvailable,
@@ -338,13 +344,14 @@ internal class GnasherSystem : EntityTickingSystem<ChunkStore>() {
                 commandBuffer,
                 world.tick,
                 member.delivered,
+                member.deliveredRank,
                 position,
             )
         if (!result.pulse.accepted) return
     }
 }
 
-private fun BlockModule.BlockStateInfo.worldPosition(store: ComponentAccessor<ChunkStore>): BlockPos? {
+internal fun BlockModule.BlockStateInfo.worldPosition(store: ComponentAccessor<ChunkStore>): BlockPos? {
     val sectionRef = this.sectionRef
     if (!sectionRef.isValid) return null
     val section = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return null
@@ -464,6 +471,43 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val store = world.chunkStore.store
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val tick = world.tick
+        val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+        if (!mayUseMachine(owner, player.uuid, player, CraftoryCore.crewService())) {
+            player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+            return
+        }
+        val fluidTank = store.getComponent(ref, FluidTank.type)
+        if (fluidTank != null) {
+            val transport = FluidTransport.of(world)
+            val filledBucket =
+                heldItem != null &&
+                    heldItem.itemId == CraftoryIds.WATER_WOODEN_BUCKET &&
+                    heldItem.quantity == 1
+            val accepted =
+                if (
+                    filledBucket &&
+                    transport.capacity(position.x, position.y, position.z) -
+                    transport.amount(position.x, position.y, position.z) >= BUCKET_VOLUME
+                ) {
+                    transport.insert(position.x, position.y, position.z, "Water_Source", BUCKET_VOLUME)
+                } else {
+                    0
+                }
+            if (accepted == BUCKET_VOLUME && context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)) {
+                blockState.markNeedsSaving(store)
+                player.sendMessage(Message.raw("Added $BUCKET_VOLUME mB of water."))
+            } else {
+                player.sendMessage(
+                    Message.raw(
+                        "Fluid: ${transport.fluid(position.x, position.y, position.z) ?: "empty"}; " +
+                            "${transport.amount(position.x, position.y, position.z)}/" +
+                            "${transport.capacity(position.x, position.y, position.z)} mB",
+                    ),
+                )
+            }
+            return
+        }
         val anchor = store.getComponent(ref, AnchorState.type)
         if (anchor != null) {
             val message =
@@ -479,6 +523,67 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
             return
         }
         val member = store.getComponent(ref, EnergyMember.type) ?: return
+        val boiler = store.getComponent(ref, BoilerState.type)
+        if (boiler != null) {
+            when {
+                boiler.online && heldItem == null && GutterBoilerRules.vent(boiler.pressure) != null -> {
+                    boiler.pressure = requireNotNull(GutterBoilerRules.vent(boiler.pressure))
+                    blockState.markNeedsSaving(store)
+                    player.sendMessage(Message.raw("Vented boiler; pressure is ${boiler.pressure}."))
+                }
+
+                !boiler.online && heldItem?.itemId == "Ingredient_Scraps" && heldItem.quantity >= 2 -> {
+                    if (context.consumeHeld(2)) {
+                        boiler.online = true
+                        boiler.pressure = 0
+                        blockState.markNeedsSaving(store)
+                        player.sendMessage(Message.raw("Boiler re-riveted."))
+                    }
+                }
+
+                heldItem != null &&
+                    heldItem.itemId == CraftoryIds.WATER_WOODEN_BUCKET &&
+                    heldItem.quantity == 1 &&
+                    boiler.water <= GutterBoilerRules.CAPACITY - BUCKET_VOLUME -> {
+                    if (context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)) {
+                        boiler.water += BUCKET_VOLUME
+                        blockState.markNeedsSaving(store)
+                        player.sendMessage(Message.raw("Added $BUCKET_VOLUME mB of water."))
+                    }
+                }
+
+                heldItem != null -> {
+                    context.addBoilerFuel(heldItem, boiler, blockState, store)
+                }
+
+                else -> {
+                    player.sendMessage(
+                        Message.raw(
+                            "Boiler: ${if (boiler.online) "online" else "offline"}; " +
+                                "pressure ${boiler.pressure}%; water ${boiler.water}/${GutterBoilerRules.CAPACITY} mB.",
+                        ),
+                    )
+                }
+            }
+            return
+        }
+        val gasbag = store.getComponent(ref, GasbagState.type)
+        if (gasbag != null) {
+            if (heldItem?.itemId == CraftoryIds.SCRAP_PLATING && context.consumeHeld()) {
+                GasbagRules.patched(gasbag)
+                blockState.markNeedsSaving(store)
+                player.sendMessage(Message.raw("Gasbag leak patched."))
+            } else {
+                val energy = CraftoryCore.energyAccess(world)
+                player.sendMessage(
+                    Message.raw(
+                        "Gasbag: ${energy.stored(BlockPos.pack(position.x, position.y, position.z))}/400000 fizz; " +
+                            if (gasbag.leaking) "leaking" else "sealed",
+                    ),
+                )
+            }
+            return
+        }
         val gnasher = store.getComponent(ref, GnasherState.type)
         if (gnasher != null) {
             val message =
@@ -945,12 +1050,13 @@ internal object MachineActions {
         store: ComponentAccessor<ChunkStore>,
         tick: Long,
         deliveredFizz: Long,
+        deliveredRank: Int,
         position: BlockPos?,
     ): GnasherPulseActionResult =
         persistGnasherPulse(
             world,
             state,
-            GnasherMachine.autoCrank(state, tick, deliveredFizz),
+            GnasherMachine.autoCrank(state, tick, deliveredFizz, deliveredRank),
             blockState,
             store,
             position,
@@ -1095,6 +1201,47 @@ private fun InteractionContext.addFuelTo(
         }
     if (!container.setItemStackForSlot(slot, replacement).succeeded()) return
     MachineActions.addFuel(state, member, blockState, store, tick, heldItem.itemId)
+}
+
+private fun InteractionContext.replaceHeldStack(
+    heldItem: ItemStack?,
+    itemId: String,
+): Boolean {
+    if (heldItem == null || heldItem.quantity != 1) return false
+    val container = heldItemContainer ?: return false
+    val slot = heldItemSlot.toShort()
+    val slotItem = container.getItemStack(slot) ?: return false
+    if (slotItem.itemId != heldItem.itemId || slotItem.quantity != heldItem.quantity) return false
+    return container.setItemStackForSlot(slot, ItemStack(itemId, 1)).succeeded()
+}
+
+private fun InteractionContext.consumeHeld(quantity: Int = 1): Boolean {
+    val container = heldItemContainer ?: return false
+    val slot = heldItemSlot.toShort()
+    val held = container.getItemStack(slot) ?: return false
+    if (held.quantity < quantity) return false
+    val replacement = if (held.quantity == quantity) null else held.withQuantity(held.quantity - quantity)
+    return container.setItemStackForSlot(slot, replacement).succeeded()
+}
+
+private fun InteractionContext.addBoilerFuel(
+    heldItem: ItemStack,
+    state: BoilerState,
+    blockState: BlockModule.BlockStateInfo,
+    store: Store<ChunkStore>,
+) {
+    val burnTicks =
+        if (heldItem.itemId == CraftoryIds.FIZZ_CHARGE) {
+            BOILER_FIZZ_CHARGE_BURN_TICKS
+        } else {
+            JunkPowerFuels.definitions.firstOrNull { it.itemId == heldItem.itemId }?.burnTicks ?: return
+        }
+    val container = heldItemContainer ?: return
+    val slot = heldItemSlot.toShort()
+    val stack = container.getItemStack(slot) ?: return
+    if (stack.itemId != heldItem.itemId || stack.quantity != heldItem.quantity || !consumeHeld()) return
+    state.fuelTicks = (state.fuelTicks + burnTicks).coerceAtMost(Long.MAX_VALUE)
+    blockState.markNeedsSaving(store)
 }
 
 private fun InteractionContext.useAnchor(

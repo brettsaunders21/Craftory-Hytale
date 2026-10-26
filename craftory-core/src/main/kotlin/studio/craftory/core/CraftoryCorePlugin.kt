@@ -16,6 +16,7 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.transport.FluidTransportRegistration
 import studio.craftory.core.api.transport.ItemTransportRegistration
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
@@ -53,6 +54,7 @@ class CraftoryCorePlugin(
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
         ItemTransportRegistration.register(this, config)
+        FluidTransportRegistration.register(this)
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)

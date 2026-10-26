@@ -1,0 +1,12 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Scrap_Plating.name",
+    "Description": "items.Craftory_Scrap_Plating.description"
+  },
+  "ItemLevel": 1,
+  "PlayerAnimationsId": "Item",
+  "Categories": ["Items.Materials"],
+  "Quality": "Common",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scrap_Plating.png",
+  "MaxStack": 20
+}

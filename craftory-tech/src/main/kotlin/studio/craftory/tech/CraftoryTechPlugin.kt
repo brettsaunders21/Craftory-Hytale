@@ -15,6 +15,7 @@ import studio.craftory.tech.machine.AnchorLifecycle
 import studio.craftory.tech.machine.AnchorRefreshIndex
 import studio.craftory.tech.machine.AnchorState
 import studio.craftory.tech.machine.AnchorSystem
+import studio.craftory.tech.machine.BoilerState
 import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
@@ -27,8 +28,11 @@ import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.DaubUseInteraction
 import studio.craftory.tech.machine.EnergyHudState
+import studio.craftory.tech.machine.GasbagState
+import studio.craftory.tech.machine.GasbagSystem
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
+import studio.craftory.tech.machine.GutterBoilerSystem
 import studio.craftory.tech.machine.JunkPowerHudSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
 import studio.craftory.tech.machine.MachineClockLifecycle
@@ -82,6 +86,14 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.CONSUMER, 0, 15, 0, 0, 1),
         )
         CraftoryCore.registerEnergyType(
+            CraftoryIds.GUTTER_BOILER_TYPE,
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 1),
+        )
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.GASBAG_TYPE,
+            MemberSpec(MemberSpec.STORAGE, 400_000, 400, 400, 0, 1),
+        )
+        CraftoryCore.registerEnergyType(
             CraftoryIds.SNATCHER_CLAW_TYPE,
             MemberSpec(MemberSpec.CONSUMER, 0, 4, 0, 0, 1),
         )
@@ -110,6 +122,20 @@ class CraftoryTechPlugin(
                 CraftoryIds.OVEN_COMPONENT,
                 OvenPower.CODEC,
             )
+        BoilerState.type =
+            chunkRegistry.registerComponent(
+                BoilerState::class.java,
+                CraftoryIds.BOILER_COMPONENT,
+                BoilerState.CODEC,
+            )
+        GasbagState.type =
+            chunkRegistry.registerComponent(
+                GasbagState::class.java,
+                CraftoryIds.GASBAG_COMPONENT,
+                GasbagState.CODEC,
+            )
+        studio.craftory.tech.machine
+            .registerBoilerFluidHandler()
         SnatcherClawState.type =
             chunkRegistry.registerComponent(
                 SnatcherClawState::class.java,
@@ -153,6 +179,8 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(BurnerSystem())
         chunkRegistry.registerSystem(GnasherSystem())
         chunkRegistry.registerSystem(ScorchOvenSystem())
+        chunkRegistry.registerSystem(GutterBoilerSystem())
+        chunkRegistry.registerSystem(GasbagSystem())
         chunkRegistry.registerSystem(SnatcherClawSystem())
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())

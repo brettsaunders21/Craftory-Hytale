@@ -264,6 +264,7 @@ internal object GnasherMachine {
         state: GnasherState,
         currentTick: Long,
         deliveredFizz: Long,
+        deliveredRank: Int = TinkeredSpeed.PRESSURISED_RANK,
     ): GnasherPulseResult {
         if (state.jammed || GritTable.queuedOreCount(state.oreQueue) == 0 || deliveredFizz < FIZZ_PER_SOLVE_TICK) {
             return GnasherPulseResult(false)
@@ -271,7 +272,10 @@ internal object GnasherMachine {
         val previous = state.lastAutoCrankTick
         if (
             previous != Long.MIN_VALUE &&
-            (currentTick < previous || currentTick - previous < AUTO_PULSE_INTERVAL_TICKS)
+            (
+                currentTick < previous ||
+                    currentTick - previous < AUTO_PULSE_INTERVAL_TICKS * 100 / TinkeredSpeed.percent(deliveredRank)
+            )
         ) {
             return GnasherPulseResult(false)
         }

@@ -49,6 +49,10 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.SNATCHER_CLAW,
                 CraftoryIds.GNASHER_PIT,
                 CraftoryIds.SCORCH_OVEN,
+                CraftoryIds.SLOSHTANK,
+                CraftoryIds.GUTTER_BOILER,
+                CraftoryIds.GASBAG,
+                CraftoryIds.WAKEBELL_ANCHOR,
             )
     }
 }

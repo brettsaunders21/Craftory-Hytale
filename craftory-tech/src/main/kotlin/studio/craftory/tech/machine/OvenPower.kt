@@ -49,13 +49,14 @@ internal object OvenFizzAccounting {
         lastFizzSolveTick: Long,
         completedSolveTick: Long,
         deliveredFizz: Long,
+        deliveredRank: Int = TinkeredSpeed.PRESSURISED_RANK,
         hasRecipeInput: Boolean,
         chargeCount: Int,
         fuelSlotAvailable: Boolean,
     ): OvenFizzUpdate {
         val demand =
             if (hasRecipeInput && chargeCount < MAX_CHARGES && fuelSlotAvailable) {
-                FIZZ_PER_SOLVE_TICK
+                FIZZ_PER_SOLVE_TICK * TinkeredSpeed.percent(deliveredRank) / 100
             } else {
                 0L
             }

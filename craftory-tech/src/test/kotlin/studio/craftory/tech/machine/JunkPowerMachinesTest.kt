@@ -139,6 +139,29 @@ class JunkPowerMachinesTest {
     }
 
     @Test
+    fun `plain fizz runs the oven at half demand and gnasher at half speed`() {
+        assertEquals(100, TinkeredSpeed.percent(1))
+        assertEquals(50, TinkeredSpeed.percent(0))
+        val oven =
+            OvenFizzAccounting.update(
+                accumulatedFizz = 0,
+                lastFizzSolveTick = Long.MIN_VALUE,
+                completedSolveTick = Long.MIN_VALUE,
+                deliveredFizz = 0,
+                deliveredRank = 0,
+                hasRecipeInput = true,
+                chargeCount = 0,
+                fuelSlotAvailable = true,
+            )
+        assertEquals(15L, oven.demand)
+
+        val gnasher = GnasherState(lastAutoCrankTick = 0)
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+        assertFalse(GnasherMachine.autoCrank(gnasher, 39, GnasherMachine.FIZZ_PER_SOLVE_TICK, 0).accepted)
+        assertTrue(GnasherMachine.autoCrank(gnasher, 40, GnasherMachine.FIZZ_PER_SOLVE_TICK, 0).accepted)
+    }
+
+    @Test
     fun `throttled crank persistence retries until saved`() {
         val crank = CrankState(spinTicks = 12, lastAdvancedTick = 172)
         assertTrue(CrankMachine.advanceTo(crank, 184))

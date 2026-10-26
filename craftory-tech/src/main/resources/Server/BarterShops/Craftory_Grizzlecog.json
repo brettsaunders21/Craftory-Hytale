@@ -121,6 +121,70 @@
       "Type": "Fixed",
       "Trade": {
         "Output": {
+          "ItemId": "Craftory_Sloshtank",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 20
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Gutter_Boiler",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 32
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Gasbag",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 28
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Scrap_Plating",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 8
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
           "ItemId": "Craftory_Tinkers_Wrench",
           "Quantity": 1
         },
