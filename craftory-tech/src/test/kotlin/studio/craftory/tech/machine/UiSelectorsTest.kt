@@ -117,7 +117,7 @@ private fun selectorLiterals(source: String): List<String> {
     ).findAll(source).forEach { match ->
         val method = match.groupValues[1]
         val selector = match.groupValues[2]
-        if (method != "append" || !selector.endsWith(".ui")) selectors += selector
+        if (method != "append" || selector.startsWith("#") || selector.startsWith("$")) selectors += selector
     }
     Regex("""addEventBinding\([^,]+,\s*"([^"]+)"""", RegexOption.DOT_MATCHES_ALL)
         .findAll(source)

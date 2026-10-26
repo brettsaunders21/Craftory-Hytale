@@ -78,8 +78,6 @@ class NotebookPageUi(
                 .set("$tile #FoundMark.Visible", found)
                 .set("$tile #ButtonSelected.Visible", page.id == selectedPageId)
                 .set("$tile #ButtonNotSelected.Visible", page.id != selectedPageId)
-                .set("$tile #ButtonSelected.TooltipText", Message.translation(page.nameKey))
-                .set("$tile #ButtonNotSelected.TooltipText", Message.translation(page.nameKey))
             eventBuilder.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 "$tile #ButtonSelected",
