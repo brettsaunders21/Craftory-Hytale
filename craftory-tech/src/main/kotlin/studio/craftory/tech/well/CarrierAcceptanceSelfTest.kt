@@ -91,8 +91,7 @@ private fun loadCarrierTestSection(
                     }
 
                     else -> {
-                        val origin =
-                            WellBirths.findSurface(world, CARRIER_TEST_X, CARRIER_TEST_Z, WellSelfTest.CAUGHT_POS.y)
+                        val origin = findCarrierTestSurface(world)
                         if (origin == null) {
                             complete(null, "fixture has no surface")
                         } else {
@@ -102,6 +101,25 @@ private fun loadCarrierTestSection(
                 }
             }
         }
+}
+
+private fun findCarrierTestSurface(world: World): BlockPos? {
+    val chunkStartX = (CARRIER_TEST_X shr 5) shl 5
+    val chunkStartZ = (CARRIER_TEST_Z shr 5) shl 5
+    for (radius in 0..31) {
+        val minX = maxOf(chunkStartX, CARRIER_TEST_X - radius)
+        val maxX = minOf(chunkStartX + 31, CARRIER_TEST_X + radius)
+        val minZ = maxOf(chunkStartZ, CARRIER_TEST_Z - radius)
+        val maxZ = minOf(chunkStartZ + 31, CARRIER_TEST_Z + radius)
+        for (x in minX..maxX) {
+            for (z in minZ..maxZ) {
+                if (maxOf(abs(x - CARRIER_TEST_X), abs(z - CARRIER_TEST_Z)) != radius) continue
+                val surface = WellBirths.findSurface(world, x, z, WellSelfTest.CAUGHT_POS.y)
+                if (surface != null) return surface
+            }
+        }
+    }
+    return null
 }
 
 private fun activateCarrierSurfaceSection(
