@@ -21,3 +21,5 @@ craftory.grant.usage = Use /craftory grant <player> <namespaced-page-id>.
 craftory.grant.invalid-id = Page IDs must be namespaced, for example craftory:page/burner.
 craftory.grant.success = Granted {id} to {player}'s crew.
 craftory.grant.already-known = {player}'s crew already knows {id}.
+items.Craftory_Glimmerwell_Anchor.name = Glimmerwell
+items.Craftory_Glimmerwell_Anchor.description = A pocket of humming light. Scan it with a Glimmer Lens.
