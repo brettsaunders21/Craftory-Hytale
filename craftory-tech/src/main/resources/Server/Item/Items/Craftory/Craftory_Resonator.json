@@ -23,7 +23,8 @@
     "BlockEntity": {
       "Components": {
         "Craftory_EnergyMember": {"TypeId": "craftory:resonator", "Stored": 0, "StoreRank": -1},
-        "CraftoryResonator": {"CrystalItemId": "", "Conversions": 0, "Tuning": 30, "Clouded": false}
+        "CraftoryResonator": {"CrystalItemId": "", "Conversions": 0, "Tuning": 30, "Clouded": false},
+        "CraftoryMachineOwner": {}
       }
     }
   },

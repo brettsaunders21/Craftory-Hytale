@@ -23,7 +23,8 @@
     "BlockEntity": {
       "Components": {
         "Craftory_EnergyMember": {"TypeId": "craftory:well_cradle", "Stored": 0, "StoreRank": -1},
-        "CraftoryCradle": {"Harmony": 1, "SeatedStrength": ""}
+        "CraftoryCradle": {"Harmony": 1, "SeatedStrength": ""},
+        "CraftoryMachineOwner": {}
       }
     }
   },
