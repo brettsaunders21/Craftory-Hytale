@@ -3,17 +3,20 @@
     "Name": "server.items.Craftory_Gnasher_Pit.name",
     "Description": "server.items.Craftory_Gnasher_Pit.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
   "PlayerAnimationsId": "Block",
   "Quality": "Developer",
   "MaxStack": 1,
   "BlockType": {
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Benches/Goblin_Workbench_Texture.png"
+        "Texture": "Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Texture.png",
+        "Weight": 1
       }
     ],
-    "CustomModel": "Blocks/Benches/Goblin_Workbench.blockymodel",
+    "CustomModel": "Blocks/Craftory/Gnasher_Pit/Gnasher_Pit.blockymodel",
+    "CustomModelAnimation": "Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Chomp.blockyanim",
+    "Looping": true,
     "DrawType": "Model",
     "VariantRotation": "NESW",
     "Interactions": {

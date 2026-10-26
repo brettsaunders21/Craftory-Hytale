@@ -4,7 +4,7 @@
     "Description": "server.items.Craftory_Gutterpipe.description"
   },
   "ItemLevel": 10,
-  "Icon": "Icons/ItemsGenerated/Build_Grey_Pipe.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gutterpipe.png",
   "Categories": [
     "Tool.TechnicalBlocks"
   ],
@@ -30,10 +30,10 @@
     "Material": "Solid",
     "DrawType": "Model",
     "Opacity": "Transparent",
-    "CustomModel": "Blocks/Structures/Tubes/Dev_Long.blockymodel",
+    "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe.blockymodel",
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Structures/Tubes/Dev_Textures/Dev_Grey.png",
+        "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png",
         "Weight": 1
       }
     ],

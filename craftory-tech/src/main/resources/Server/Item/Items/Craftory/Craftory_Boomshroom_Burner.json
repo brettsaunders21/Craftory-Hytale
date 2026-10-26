@@ -9,7 +9,7 @@
     "Furniture.Lighting"
   ],
   "Set": "Furniture_Goblin",
-  "Icon": "Icons/ItemsGenerated/Furniture_Goblin_Brazier.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boomshroom_Burner.png",
   "BlockType": {
     "BlockParticleSetId": "Metal",
     "DrawType": "Model",
@@ -45,7 +45,7 @@
     "State": {
       "Definitions": {
         "On": {
-          "CustomModelAnimation": "Blocks/Animations/Fire/Fire_Burn.blockyanim",
+          "CustomModelAnimation": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Flicker.blockyanim",
           "DrawType": "Model",
           "Light": {
             "Color": "#dca"
@@ -62,11 +62,11 @@
           "AmbientSoundEventId": "SFX_Campfire_Default_Loop",
           "CustomModelTexture": [
             {
-              "Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/BrazierOn_Texture.png",
+              "Texture": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_On_Texture.png",
               "Weight": 1
             }
           ],
-          "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel"
+          "CustomModel": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_On.blockymodel"
         },
         "Off": {
           "InteractionHint": "server.interactionHints.turnon",
@@ -77,11 +77,11 @@
           "BlockSoundSetId": "Brazier_Metal",
           "CustomModelTexture": [
             {
-              "Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png",
+              "Texture": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Off_Texture.png",
               "Weight": 1
             }
           ],
-          "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
+          "CustomModel": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Off.blockymodel",
           "DrawType": "Model"
         }
       }
@@ -89,11 +89,11 @@
     "InteractionHint": "server.interactionHints.turnoff",
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png",
+        "Texture": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Off_Texture.png",
         "Weight": 1
       }
     ],
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
+    "CustomModel": "Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Off.blockymodel",
     "PhysicalMaterialId": "Metal",
     "VariantRotation": "NESW",
     "RotationYawPlacementOffset": "TwoSeventy",

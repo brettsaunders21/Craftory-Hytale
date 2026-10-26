@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Fizz_Charge.name",
     "Description": "server.items.Craftory_Fizz_Charge.description"
   },
-  "Icon": "Icons/ItemsGenerated/Rubble_Charcoal_Small.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Charge.png",
   "MaxStack": 99,
   "Categories": [
     "Items.Ingredients"

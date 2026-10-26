@@ -18,7 +18,10 @@ import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.protocol.BlockMaterial
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.common.CommonAssetRegistry
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.item.config.Item
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer
@@ -372,6 +375,54 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
         val burner = burnerRef?.let { store.getComponent(it, BurnerState.type) }
         val canister = canisterRef?.let { store.getComponent(it, EnergyMember.type) }
+        val crankRef =
+            BlockModule.getBlockEntity(
+                run.world,
+                CraftorySelfTest.CRANK.x,
+                CraftorySelfTest.CRANK.y,
+                CraftorySelfTest.CRANK.z,
+            )
+        val crank = crankRef?.let { store.getComponent(it, CrankState.type) }
+        val crankMember = crankRef?.let { store.getComponent(it, EnergyMember.type) }
+        val crankBlockState = crankRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        val crankSectionRef =
+            run.world.chunkStore.getChunkSectionReferenceAtBlock(
+                CraftorySelfTest.CRANK.x,
+                CraftorySelfTest.CRANK.y,
+                CraftorySelfTest.CRANK.z,
+            )
+        val crankBlockType =
+            crankSectionRef
+                ?.let { store.getComponent(it, BlockSection.getComponentType()) }
+                ?.get(
+                    ChunkUtil.indexBlock(
+                        CraftorySelfTest.CRANK.x,
+                        CraftorySelfTest.CRANK.y,
+                        CraftorySelfTest.CRANK.z,
+                    ),
+                )?.let { BlockType.getAssetMap().getAsset(it) }
+        val crankType = BlockType.fromString(CraftoryIds.CRANK)
+        val crankStateName = crankBlockType?.let { crankType?.getStateForBlock(it) }
+        val crankActualStateName =
+            crankStateName
+                ?: if (crankType != null && crankBlockType?.id == crankType.id) {
+                    "default"
+                } else {
+                    "unresolved"
+                }
+        val crankStateMatches =
+            when {
+                crank?.visualSpinning == true -> crankStateName == "On"
+
+                crankStateName == "Off" -> true
+
+                crankStateName == null &&
+                    crank?.visualSpinning != true &&
+                    crankType != null &&
+                    crankBlockType?.id == crankType.id -> true
+
+                else -> false
+            }
         reportEnergyTopology(run, store)
         check(
             run,
@@ -385,6 +436,19 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             burner?.visualBurning == true,
             "burner visual",
             "visual=${burner?.visualBurning}, burning=${burner?.burning}",
+        )
+        check(
+            run,
+            crank != null &&
+                crankBlockState != null &&
+                CraftoryCore.isAreaActive(store, crankBlockState) &&
+                crank.visualSpinning == (crank.spinTicks > 0) &&
+                crankStateMatches &&
+                crankMember != null &&
+                (crankMember.production > 0) == (crank.spinTicks > 0),
+            "crank visual state follows spin",
+            "visual=${crank?.visualSpinning}, spin=${crank?.spinTicks}, " +
+                "production=${crankMember?.production}, actualState=$crankActualStateName",
         )
         val anchorRef =
             BlockModule.getBlockEntity(
@@ -853,6 +917,19 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
 
 @Suppress("LargeClass", "TooManyFunctions")
 object CraftorySelfTest {
+    private val craftoryWiredItemIds =
+        setOf(
+            "Craftory_Crank_A_Fizz",
+            "Craftory_Boomshroom_Burner",
+            "Craftory_Fizz_Canister",
+            "Craftory_Gutterpipe",
+            "Craftory_Gnasher_Pit",
+            "Craftory_Scorch_Oven",
+            "Craftory_Wakebell_Anchor",
+            "Craftory_Squint_Goggles",
+            "Craftory_Tinkers_Wrench",
+        )
+
     internal fun retainTestKeepLoaded(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
@@ -899,6 +976,122 @@ object CraftorySelfTest {
         }
     }
 
+    private fun checkAssetReferences(run: SelfTestRun.Run) {
+        val craftoryItems =
+            Item
+                .getAssetMap()
+                .assetMap.values
+                .filter { it.id.startsWith("Craftory_") }
+        val itemsById = craftoryItems.associateBy { it.id }
+        val blockTypesByItemId =
+            craftoryItems.associate { item ->
+                item.id to item.blockId?.let { BlockType.getAssetMap().getAsset(it) }
+            }
+        val referencedPaths = linkedSetOf<String>()
+        val modelPathsByItemId = mutableMapOf<String, MutableSet<String>>()
+        val unresolvedBlockStates = mutableListOf<String>()
+        val missingBlockTypes = mutableListOf<String>()
+        craftoryItems.forEach { item ->
+            item.icon?.let(referencedPaths::add)
+            item.model?.let {
+                referencedPaths.add(it)
+                modelPathsByItemId.getOrPut(item.id) { linkedSetOf() }.add(it)
+            }
+            item.texture?.let(referencedPaths::add)
+            val blockType = blockTypesByItemId[item.id]
+            if (item.blockId != null && blockType == null) {
+                missingBlockTypes.add("${item.id} BlockType ${item.blockId} did not resolve")
+            }
+            blockType?.let {
+                collectBlockAssetReferences(
+                    it,
+                    referencedPaths,
+                    modelPathsByItemId.getOrPut(item.id) { linkedSetOf() },
+                    unresolvedBlockStates,
+                )
+            }
+        }
+
+        val missingPaths = referencedPaths.filterNot { CommonAssetRegistry.hasCommonAsset(it) }
+        val wiringFailures = requiredCraftoryWiringFailures(itemsById, modelPathsByItemId)
+        val grizzlecogResolves = ModelAsset.getAssetMap().getAsset("Craftory_Grizzlecog") != null
+        val problems =
+            buildList {
+                if (missingPaths.isNotEmpty()) add("missing paths=${missingPaths.joinToString()}")
+                addAll(missingBlockTypes)
+                addAll(unresolvedBlockStates)
+                addAll(wiringFailures)
+                if (!grizzlecogResolves) add("model asset Craftory_Grizzlecog did not resolve")
+            }
+        val detail =
+            buildString {
+                append("items=${craftoryItems.size}, references=${referencedPaths.size}")
+                if (problems.isNotEmpty()) append(", ").append(problems.joinToString())
+            }
+        check(
+            run,
+            problems.isEmpty(),
+            "assets",
+            detail,
+        )
+    }
+
+    private fun requiredCraftoryWiringFailures(
+        itemsById: Map<String, Item>,
+        modelPathsByItemId: Map<String, Set<String>>,
+    ): List<String> =
+        buildList {
+            craftoryWiredItemIds.forEach { itemId ->
+                val item = itemsById[itemId]
+                if (item == null) {
+                    add("$itemId item asset is missing")
+                    return@forEach
+                }
+                if (item.icon?.contains("/Craftory/") != true) {
+                    add("$itemId Icon path is not Craftory-specific: ${item.icon ?: "<missing>"}")
+                }
+                val modelPaths = modelPathsByItemId[itemId].orEmpty()
+                if (modelPaths.isEmpty()) {
+                    add("$itemId has no CustomModel/Model path")
+                } else {
+                    modelPaths.filterNot { "/Craftory/" in it }.forEach { path ->
+                        add("$itemId model path is not Craftory-specific: $path")
+                    }
+                }
+            }
+        }
+
+    private fun collectBlockAssetReferences(
+        blockType: BlockType,
+        referencedPaths: MutableSet<String>,
+        modelPaths: MutableSet<String>,
+        unresolvedBlockStates: MutableList<String>,
+        includeStates: Boolean = true,
+    ) {
+        blockType.customModel?.let {
+            referencedPaths.add(it)
+            modelPaths.add(it)
+        }
+        blockType.customModelTexture?.forEach { referencedPaths.add(it.texture) }
+        blockType.customModelAnimation?.let(referencedPaths::add)
+        if (!includeStates) return
+        blockType.state?.stateNames.orEmpty().forEach { stateName ->
+            val variant =
+                blockType.getBlockForState(stateName)
+                    ?: run {
+                        unresolvedBlockStates.add("${blockType.id} state $stateName did not resolve")
+                        return@forEach
+                    }
+            collectBlockAssetReferences(
+                variant,
+                referencedPaths,
+                modelPaths,
+                unresolvedBlockStates,
+                includeStates = false,
+            )
+        }
+    }
+
     fun execute(context: CommandContext): CompletableFuture<Void> {
         val world = Universe.get().defaultWorld
         if (world == null) {
@@ -941,6 +1134,7 @@ object CraftorySelfTest {
             val testWorldChunk =
                 store.getComponent(testChunkRef, WorldChunk.getComponentType()) ?: error("test world chunk is missing")
             if (run.testKeepLoadedChunks.add(testChunkIndex)) testWorldChunk.addKeepLoaded()
+            checkAssetReferences(run)
             val section =
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")

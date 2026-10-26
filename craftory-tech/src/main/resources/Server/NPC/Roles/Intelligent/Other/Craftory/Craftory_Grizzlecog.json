@@ -12,7 +12,7 @@
   ],
   "DefaultNPCAttitude": "Ignore",
   "DefaultPlayerAttitude": "Neutral",
-  "Appearance": "Klops_Merchant",
+  "Appearance": "Craftory_Grizzlecog",
   "DropList": "Drop_Klops_Merchant",
   "MaxHealth": 74,
   "DisableDamageGroups": [
