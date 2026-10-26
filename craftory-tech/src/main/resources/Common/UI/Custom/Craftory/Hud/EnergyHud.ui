@@ -34,6 +34,11 @@ Group {
     Anchor: (Bottom: 3);
   }
 
+  Label #JarStability {
+    Text: "";
+    Anchor: (Bottom: 3);
+  }
+
   Label #Flow {
     Text: "Net flow: 0 Fizz/t";
   }

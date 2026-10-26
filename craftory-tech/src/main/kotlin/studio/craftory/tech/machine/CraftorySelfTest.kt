@@ -32,6 +32,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
+import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
@@ -62,7 +63,10 @@ import studio.craftory.tech.machine.jank.repairWithScraps
 import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.well.CarrierAcceptanceSelfTest
+import studio.craftory.tech.well.WellPersistenceSelfTest
 import studio.craftory.tech.well.WellSelfTest
+import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Random
@@ -181,6 +185,10 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         systemIndex: Int,
         store: Store<ChunkStore>,
     ) {
+        val world = store.externalData.world
+        world.execute {
+            CarrierAcceptanceSelfTest.tick(world, world.entityStore.store)
+        }
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
         CraftorySelfTest.keepTestSectionsTicking(run, store)
@@ -963,7 +971,6 @@ object CraftorySelfTest {
             HurlSelfTest(run).start {
                 run.hurlFinished = true
                 run.cleanupTick = run.world.tick + 20
-                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
             }
         }
     }
@@ -979,7 +986,16 @@ object CraftorySelfTest {
             CraftorySelfTest.releaseTestKeepLoaded(run)
             store.getResource(SelfTestRun.type).active = null
         }
-        TransportSelfTest.start(run.context, run.world)
+        WellPersistenceSelfTest.run(run.world) { passed, detail ->
+            run.world.execute {
+                if (passed) run.passed++ else run.failed++
+                run.context.sendMessage(
+                    Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $detail"),
+                )
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+                TransportSelfTest.start(run.context, run.world)
+            }
+        }
     }
 
     internal fun retainTestKeepLoaded(
@@ -1205,7 +1221,7 @@ object CraftorySelfTest {
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
-            clear(world, sectionRef, testPositions())
+            clear(world, sectionRef, testPositions(world))
             clear(world, drySectionRef, listOf(RATTLEWHEEL_DRY))
             WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
@@ -1435,13 +1451,18 @@ object CraftorySelfTest {
                 Fluid.EMPTY
             }
         val level = if (present) 8.toByte() else 0.toByte()
-        return section.setFluid(
+        section.setFluid(
             RATTLEWHEEL_WATER.x and 31,
             RATTLEWHEEL_WATER.y and 31,
             RATTLEWHEEL_WATER.z and 31,
             fluid,
             level,
         )
+        val fluidX = RATTLEWHEEL_WATER.x and 31
+        val fluidY = RATTLEWHEEL_WATER.y and 31
+        val fluidZ = RATTLEWHEEL_WATER.z and 31
+        return section.getFluid(fluidX, fluidY, fluidZ)?.id == fluid.id &&
+            section.getFluidLevel(fluidX, fluidY, fluidZ) == level
     }
 
     private fun checkDryRattlewheel(
@@ -3274,7 +3295,7 @@ object CraftorySelfTest {
                 lastAutoCrankTick = world.tick
                 lastPulseTick = null
             }
-        testPositions().forEach { position ->
+        testPositions(world).forEach { position ->
             BlockOperations.setBlock(
                 world.chunkStore,
                 sectionRef,
@@ -3331,7 +3352,7 @@ object CraftorySelfTest {
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
-    private fun testPositions(): List<TestPosition> =
+    private fun testPositions(world: World): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
                 listOf(
@@ -3351,6 +3372,7 @@ object CraftorySelfTest {
                     SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
+                WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) } +
                 heartPositions()
         ).distinct()
 }

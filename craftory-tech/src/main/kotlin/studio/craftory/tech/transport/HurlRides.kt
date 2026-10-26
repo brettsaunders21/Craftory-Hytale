@@ -5,6 +5,7 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.inventory.InventoryComponent
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -13,9 +14,19 @@ import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.transport.HurlArc
 import studio.craftory.core.api.transport.HurlPoint
+import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.well.JarCarrier
 import java.util.UUID
 
-enum class HurlStartFailure { NO_ROUTE, ALREADY_RIDING, INSUFFICIENT_ENERGY, SPAWN_FAILED, FORBIDDEN, PENDING }
+enum class HurlStartFailure {
+    NO_ROUTE,
+    ALREADY_RIDING,
+    INSUFFICIENT_ENERGY,
+    SPAWN_FAILED,
+    JAR_CARRIER,
+    FORBIDDEN,
+    PENDING,
+}
 
 data class HurlStartResult(
     val capsule: Ref<EntityStore>? = null,
@@ -35,6 +46,9 @@ internal object HurlRides {
     ): HurlStartResult {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
+        if (rider != null && carriesFilledJar(store, rider)) {
+            return HurlStartResult(failure = HurlStartFailure.JAR_CARRIER)
+        }
         val identity = StationPermissions.riderIdentity(store, rider, riderUuid)
         if (!StationPermissions.mayStart(world, from, to, identity, rider != null || riderUuid != null)) {
             return HurlStartResult(failure = HurlStartFailure.FORBIDDEN)
@@ -83,6 +97,9 @@ internal object HurlRides {
     ): HurlStartResult {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
+        if (rider != null && carriesFilledJar(store, rider)) {
+            return HurlStartResult(failure = HurlStartFailure.JAR_CARRIER)
+        }
         if (rider != null && HurlMounts.occupied(rider, store)) {
             return HurlStartResult(failure = HurlStartFailure.ALREADY_RIDING)
         }
@@ -104,6 +121,17 @@ internal object HurlRides {
                 }
             completePending(world, rider, result, completed)
         })
+    }
+
+    private fun carriesFilledJar(
+        store: com.hypixel.hytale.component.Store<EntityStore>,
+        rider: Ref<EntityStore>,
+    ): Boolean {
+        if (store.getComponent(rider, JarCarrier.type) != null) return true
+        val inventory = InventoryComponent.getCombined(store, rider, *InventoryComponent.EVERYTHING)
+        return (0 until inventory.capacity.toInt()).any { slot ->
+            inventory.getItemStack(slot.toShort())?.itemId == CraftoryIds.GOB_JAR_FILLED
+        }
     }
 
     private fun completePending(

@@ -1,0 +1,47 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Fizz_Damper.name",
+    "Description": "items.Craftory_Fizz_Damper.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Damper.png",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "BlockParticleSetId": "Wood",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {"GatherType": "GoblinMetal", "DropList": "Empty"},
+      "UseDefaultDropWhenPlaced": true
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Craftory/Fizz_Damper/Fizz_Damper_Off.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Fizz_Damper/Fizz_Damper_Off_Texture.png", "Weight": 1}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Damper/Fizz_Damper_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Fizz_Damper/Fizz_Damper_Off_Texture.png", "Weight": 1}]
+        },
+        "On": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Damper/Fizz_Damper_On.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Fizz_Damper/Fizz_Damper_On_Texture.png", "Weight": 1}]
+        }
+      }
+    },
+    "Support": {"Down": [{"FaceType": "Full"}]},
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {"TypeId": "craftory:fizz_damper", "Stored": 0, "StoreRank": -1},
+        "CraftoryFizzDamper": {}
+      }
+    }
+  }
+}

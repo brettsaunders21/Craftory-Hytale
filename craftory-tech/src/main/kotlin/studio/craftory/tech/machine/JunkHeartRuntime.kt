@@ -49,6 +49,7 @@ import studio.craftory.core.api.multiblock.MultiblockQuality
 import studio.craftory.core.api.multiblock.MultiblockState
 import studio.craftory.core.api.multiblock.WorldPart
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.well.straightenTetherStake
 
 /** Restarts the heart clock on load and ejects the fuel slot when the controller block is removed. */
 internal class JunkHeartLifecycle : RefSystem<ChunkStore>() {
@@ -265,6 +266,7 @@ class CraftoryHammerUseInteraction : SimpleBlockInteraction() {
     ) {
         if (heldItem?.itemId != CraftoryIds.TINKERS_HAMMER) return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        if (straightenTetherStake(world, position, player)) return
         val store = world.chunkStore.store
         val target = BlockPos(position.x, position.y, position.z)
         val ref =

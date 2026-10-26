@@ -13,12 +13,14 @@ import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.protocol.BlockMaterial
 import com.hypixel.hytale.protocol.SoundCategory
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
 import com.hypixel.hytale.server.core.universe.world.World
@@ -34,10 +36,48 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
+import studio.craftory.tech.CraftoryIds
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
+
+private fun spawnStormStrikeEffects(
+    world: World,
+    strike: BlockPos,
+) {
+    val store = world.entityStore.store
+    val position = Vector3d(strike.x + 0.5, strike.y + 1.0, strike.z + 0.5)
+    ParticleUtil.spawnParticleEffect("Lightning", position, store)
+    val soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Global_Weather_Thunder")
+    if (soundIndex > 0) {
+        SoundUtil.playSoundEvent3d(
+            soundIndex,
+            SoundCategory.SFX,
+            position.x,
+            position.y,
+            position.z,
+            store,
+        )
+    }
+}
+
+private fun randomLoadedPlayer(
+    world: World,
+    fallback: PlayerRef,
+): PlayerRef {
+    val worldId = world.worldConfig.uuid
+    var selected: PlayerRef? = null
+    var seen = 0
+    Universe.get().getPlayers().forEach { candidate ->
+        if (candidate.worldUuid == worldId && candidate.reference?.isValid == true) {
+            seen++
+            if (Random.nextInt(seen) == 0) selected = candidate
+        }
+    }
+    return selected ?: fallback
+}
 
 object WellBirths {
     fun forceStormcall(
@@ -47,23 +87,22 @@ object WellBirths {
     ): Ref<ChunkStore>? {
         world.debugAssertInTickingThread()
         val strength = WellBirthRules(random).flickerStrength()
-        return CraftoryCore.wells().spawn(world, playerOrPos, Temperament.SPARK, strength, WellState.WILD)
+        val spawned = CraftoryCore.wells().spawn(world, playerOrPos, Temperament.SPARK, strength, WellState.WILD)
+        if (spawned != null) {
+            world.chunkStore.store
+                .getResource(WellBirthState.type)
+                .stormCrackles[playerOrPos.pack()] =
+                world.tick + 30L * 20L
+            spawnStormStrikeEffects(world, playerOrPos)
+        }
+        return spawned
     }
 
     internal fun spawnStormcall(
         world: World,
         position: BlockPos,
-        rules: WellBirthRules,
-        random: Random,
-    ): Ref<ChunkStore>? =
-        spawnNear(
-            world,
-            position,
-            Temperament.SPARK,
-            rules.flickerStrength(),
-            rules.surfaceOffset(),
-            random,
-        )
+        strength: WellStrength,
+    ): Ref<ChunkStore>? = CraftoryCore.wells().spawn(world, position, Temperament.SPARK, strength, WellState.WILD)
 
     internal fun spawnNear(
         world: World,
@@ -80,7 +119,7 @@ object WellBirths {
         return CraftoryCore.wells().spawn(world, target, temperament, strength, WellState.WILD)
     }
 
-    private fun findSurface(
+    internal fun findSurface(
         world: World,
         x: Int,
         z: Int,
@@ -103,6 +142,66 @@ object WellBirths {
         return null
     }
 
+    internal fun stormVanesWithin(
+        world: World,
+        position: BlockPos,
+        radius: Int,
+    ): Int {
+        val vaneIndex = BlockType.getAssetMap().getIndex(CraftoryIds.STORM_VANE)
+        if (vaneIndex <= 0) return 0
+        var count = 0
+        val radiusSquared = radius * radius
+        for (x in position.x - radius..position.x + radius) {
+            for (z in position.z - radius..position.z + radius) {
+                val dx = x - position.x
+                val dz = z - position.z
+                if (dx * dx + dz * dz <= radiusSquared && hasVaneAtSurface(world, x, z, vaneIndex)) {
+                    count++
+                }
+            }
+        }
+        return count
+    }
+
+    internal fun highestSurfaceWithin(
+        world: World,
+        origin: BlockPos,
+        radius: Int,
+    ): BlockPos? {
+        val radiusSquared = radius * radius
+        var highest: BlockPos? = null
+        for (dx in -radius..radius) {
+            for (dz in -radius..radius) {
+                val horizontalSquared = dx * dx + dz * dz
+                if (horizontalSquared > radiusSquared) continue
+                val verticalRadius = floor(sqrt((radiusSquared - horizontalSquared).toDouble())).toInt()
+                val x = origin.x + dx
+                val z = origin.z + dz
+                val minimumY = origin.y - verticalRadius
+                val maximumY = origin.y + verticalRadius
+                val heightmap =
+                    world.chunkStore.getChunkComponent(
+                        ChunkUtil.indexChunkFromBlock(x, z),
+                        HeightmapColumn.getComponentType(),
+                    )
+                val surfaceY = heightmap?.getCollisionHeight(x and 31, z and 31)
+                val candidate =
+                    if (surfaceY != null && surfaceY != HeightmapColumn.NO_HEIGHT &&
+                        surfaceY + 1 in minimumY..maximumY
+                    ) {
+                        BlockPos(x, surfaceY + 1, z).takeIf { isSurface(world, it) }
+                    } else {
+                        (maximumY downTo minimumY)
+                            .firstNotNullOfOrNull { y ->
+                                BlockPos(x, y, z).takeIf { isSurface(world, it) }
+                            }
+                    }
+                if (candidate != null && (highest == null || candidate.y > highest.y)) highest = candidate
+            }
+        }
+        return highest
+    }
+
     private fun isSurface(
         world: World,
         target: BlockPos,
@@ -113,7 +212,7 @@ object WellBirths {
         return targetIndex == BlockType.EMPTY_ID && below?.material == BlockMaterial.Solid
     }
 
-    private fun blockIndexAt(
+    internal fun blockIndexAt(
         world: World,
         x: Int,
         y: Int,
@@ -147,6 +246,7 @@ internal class WellBirthSystem(
         val world = store.externalData.world
         val settings = config.get()
         val birthState = world.chunkStore.store.getResource(WellBirthState.type)
+        tickStormCrackles(world, birthState, store)
         val weatherResource =
             store.getResource(WeatherResource.getResourceType())
         for (index in 0 until chunk.size()) {
@@ -179,10 +279,10 @@ internal class WellBirthSystem(
                 ?.id
                 ?.lowercase()
                 .orEmpty()
-        if (weatherId.contains("thunder")) {
-            tryStormcall(world, settings, birthState, player, position, playerPos, store)
-        } else {
-            tryRainFlicker(world, settings, birthState, player, position, playerPos, weatherId, store)
+        when (StormHuntRules.weatherKind(weatherId)) {
+            WeatherKind.STORM -> tryStormcall(world, settings, birthState, player, position, store)
+            WeatherKind.RAIN -> tryRainFlicker(world, settings, birthState, player, position, playerPos, store)
+            else -> Unit
         }
     }
 
@@ -192,20 +292,38 @@ internal class WellBirthSystem(
         state: WellBirthState,
         player: PlayerRef,
         position: Vector3d,
-        playerPos: BlockPos,
         store: ComponentAccessor<EntityStore>,
     ) {
         val now = world.tick
         val interval = settings.stormcallIntervalSeconds.coerceAtLeast(1) * 20L
         if (!WellBirthRules.cooldownElapsed(state.lastStormcallByPlayer[player.uuid], now, interval)) return
-        val region = regionId(playerPos.x shr 9, playerPos.z shr 9)
-        if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
         val chancePassed = rules.stormcall(settings.stormcallChance)
         state.lastStormcallByPlayer[player.uuid] = now
-        if (!chancePassed || !noStrongWellInRegion(world, playerPos)) return
-        if (WellBirths.spawnStormcall(world, playerPos, rules, Random) != null) {
+        if (!chancePassed) return
+        val strikeTarget = randomLoadedPlayer(world, player)
+        val strikeTargetPosition = strikeTarget.transform.position
+        val strikeOrigin =
+            BlockPos(
+                floor(strikeTargetPosition.x).toInt(),
+                floor(strikeTargetPosition.y).toInt(),
+                floor(strikeTargetPosition.z).toInt(),
+            )
+        val strikePosition = highestStrikePosition(world, strikeOrigin) ?: return
+        val region = regionId(strikePosition.x shr 9, strikePosition.z shr 9)
+        if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
+        val strength = StormHuntRules.rollStormStrength(WellBirths.stormVanesWithin(world, strikePosition, 64), Random)
+        if (strength != WellStrength.FLICKER &&
+            !StormHuntRules.canSpawnStrongWell(
+                strongWildWellsInRegion(world, strikePosition),
+                settings.strongWildWellRegionBudget,
+            )
+        ) {
+            return
+        }
+        if (WellBirths.spawnStormcall(world, strikePosition, strength) != null) {
             state.lastStormcallByRegion[region] = now
-            pulseEffects(player, position, store)
+            state.stormCrackles[strikePosition.pack()] = now + 30L * 20L
+            stormEffects(player, strikePosition, position, store)
         }
     }
 
@@ -216,10 +334,8 @@ internal class WellBirthSystem(
         player: PlayerRef,
         position: Vector3d,
         playerPos: BlockPos,
-        weatherId: String,
         store: ComponentAccessor<EntityStore>,
     ) {
-        if (!weatherId.contains("rain") && !weatherId.contains("storm")) return
         val now = world.tick
         val cooldown = settings.playerFlickerCooldownSeconds.coerceAtLeast(0) * 20L
         if (!WellBirthRules.cooldownElapsed(state.lastFlickerByPlayer[player.uuid], now, cooldown)) return
@@ -239,32 +355,94 @@ internal class WellBirthSystem(
         }
     }
 
-    private fun noStrongWellInRegion(
+    private fun strongWildWellsInRegion(
         world: World,
         position: BlockPos,
-    ): Boolean =
-        CraftoryCore
-            .wells()
-            .wellsNear(world.chunkStore.store, position, 512)
-            .none { it.well.strength != WellStrength.FLICKER && it.well.state == WellState.WILD }
+    ): Int {
+        val region = StormHuntRules.regionOf(position.x, position.z)
+        val center = BlockPos(region.first * 512 + 256, position.y, region.second * 512 + 256)
+        val strongWells =
+            CraftoryCore
+                .wells()
+                .wellsNear(world.chunkStore.store, center, 725)
+                .filter { it.well.strength != WellStrength.FLICKER && it.well.state == WellState.WILD }
+                .map { it.pos.x to it.pos.z }
+        return StormHuntRules.strongWellCountInRegion(position.x, position.z, strongWells)
+    }
 
-    private fun pulseEffects(
+    private fun highestStrikePosition(
+        world: World,
+        player: BlockPos,
+    ): BlockPos? = WellBirths.highestSurfaceWithin(world, player, 24)
+
+    private fun stormEffects(
         player: PlayerRef,
-        position: Vector3d,
+        strike: BlockPos,
+        playerPosition: Vector3d,
         store: ComponentAccessor<EntityStore>,
     ) {
-        ParticleUtil.spawnParticleEffect("Impact_Spark", position, store)
-        SoundUtil.playSoundEvent2dToPlayer(
-            player,
-            "SFX_Interact",
-            SoundCategory.SFX,
-        )
+        spawnStormStrikeEffects(store.externalData.world, strike)
+        pulseEffects(player, playerPosition, store)
+    }
+
+    private fun tickStormCrackles(
+        world: World,
+        state: WellBirthState,
+        store: ComponentAccessor<EntityStore>,
+    ) {
+        if (world.tick % 20L != 0L) return
+        val iterator = state.stormCrackles.iterator()
+        while (iterator.hasNext()) {
+            val (packed, expiresAt) = iterator.next()
+            if (world.tick >= expiresAt) {
+                iterator.remove()
+                continue
+            }
+            val position = BlockPos.unpack(packed)
+            ParticleUtil.spawnParticleEffect(
+                "Lightning",
+                Vector3d(position.x + 0.5, position.y + 1.0, position.z + 0.5),
+                store,
+            )
+        }
     }
 
     private fun regionId(
         x: Int,
         z: Int,
     ): Long = (x.toLong() shl 32) or (z.toLong() and 0xffffffffL)
+}
+
+private fun hasVaneAtSurface(
+    world: World,
+    x: Int,
+    z: Int,
+    vaneIndex: Int,
+): Boolean {
+    val heightmap =
+        world.chunkStore.getChunkComponent(
+            ChunkUtil.indexChunkFromBlock(x, z),
+            HeightmapColumn.getComponentType(),
+        ) ?: return false
+    val y = heightmap.getCollisionHeight(x and 31, z and 31)
+    return y != HeightmapColumn.NO_HEIGHT &&
+        (
+            WellBirths.blockIndexAt(world, x, y, z) == vaneIndex ||
+                WellBirths.blockIndexAt(world, x, y + 1, z) == vaneIndex
+        )
+}
+
+private fun pulseEffects(
+    player: PlayerRef,
+    position: Vector3d,
+    store: ComponentAccessor<EntityStore>,
+) {
+    ParticleUtil.spawnParticleEffect("Magic_Sparks_GS", position, store)
+    SoundUtil.playSoundEvent2dToPlayer(
+        player,
+        "SFX_Global_Weather_Thunder",
+        SoundCategory.SFX,
+    )
 }
 
 internal class WellKillBirthSystem(

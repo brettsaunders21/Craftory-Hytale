@@ -10,8 +10,10 @@ import com.hypixel.hytale.server.core.inventory.InventoryComponent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction
+import com.hypixel.hytale.server.core.modules.physics.component.Velocity
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
@@ -20,6 +22,7 @@ import com.hypixel.hytale.server.core.util.TargetUtil
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.CrewService
+import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.tech.CraftoryIds
 
 class GobJarUseInteraction : SimpleInteraction() {
@@ -63,30 +66,24 @@ class GobJarUseInteraction : SimpleInteraction() {
             return
         }
         val crews = CraftoryCore.crewService()
-        val result = JarActions.checkCatch(ref, playerRef.uuid, crews, world.chunkStore.store)
-        handleCatchResult(result, world, position, ref, playerRef, crews, container, slot, originalStack)
-    }
-
-    private fun targetPosition(
-        context: InteractionContext,
-        commandBuffer: CommandBuffer<EntityStore>,
-    ): BlockPos? =
-        TargetUtil
-            .getTargetBlock(context.entity, 8.0, commandBuffer)
-            ?.let { BlockPos(it.x, it.y, it.z) }
-
-    private fun wellRef(
-        world: World,
-        position: BlockPos,
-    ): Ref<ChunkStore>? {
-        val sectionRef =
-            world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return null
-        return BlockModule.getBlockEntity(
-            world.chunkStore.store,
-            sectionRef,
-            position.x,
-            position.y,
-            position.z,
+        val result =
+            JarActions.checkCatch(
+                ref,
+                playerRef.uuid,
+                crews,
+                world.chunkStore.store,
+                position.pack().toString(),
+            )
+        handleCatchResult(
+            result,
+            world,
+            position,
+            ref,
+            playerRef,
+            crews,
+            container,
+            slot,
+            originalStack,
         )
     }
 
@@ -114,10 +111,56 @@ class GobJarUseInteraction : SimpleInteraction() {
                 playerRef.sendMessage(Message.translation("server.craftory.tier.locked"))
             }
 
+            JarCatchResult.ForeignCrew -> {
+                playerRef.sendMessage(Message.translation("server.craftory.jar.foreign-crew"))
+            }
+
             is JarCatchResult.Caught -> {
+                if (!advanceCapture(world, playerRef, ref, result.wellId)) return
                 commitJarCatch(result, world, position, ref, playerRef, crews, container, slot, originalStack)
             }
         }
+    }
+
+    private fun advanceCapture(
+        world: World,
+        playerRef: PlayerRef,
+        wellRef: Ref<ChunkStore>,
+        wellId: String,
+    ): Boolean {
+        val state = world.entityStore.store.getResource(WellCaptureState.type)
+        return when (val result = recordCapturePress(state, playerRef.uuid, wellId, world.tick)) {
+            is CapturePressResult.Progress -> {
+                playerRef.sendMessage(
+                    Message.translation("server.craftory.jar.capture-press").param("press", result.pressCount),
+                )
+                false
+            }
+
+            CapturePressResult.Miss -> {
+                resetStakeAndKnockBack(world, wellRef, playerRef, wellId)
+                playerRef.sendMessage(Message.translation("server.craftory.jar.capture-missed"))
+                false
+            }
+
+            CapturePressResult.Complete -> {
+                true
+            }
+        }
+    }
+
+    private fun resetStakeAndKnockBack(
+        world: World,
+        wellRef: Ref<ChunkStore>,
+        playerRef: PlayerRef,
+        wellId: String,
+    ) {
+        val store = world.chunkStore.store
+        if (store.getComponent(wellRef, Glimmerwell.type) == null) return
+        val wellPosition = BlockPos.unpack(wellId.toLongOrNull() ?: return)
+        val packedWellId = wellPosition.pack().toString()
+        markStakeLeaning(world, wellPosition, packedWellId)
+        knockBackAfterMiss(world, playerRef, wellPosition)
     }
 
     private fun commitJarCatch(
@@ -241,4 +284,84 @@ class GobJarUseInteraction : SimpleInteraction() {
                 .builder(GobJarUseInteraction::class.java, ::GobJarUseInteraction, SimpleInteraction.CODEC)
                 .build()
     }
+}
+
+private fun targetPosition(
+    context: InteractionContext,
+    commandBuffer: CommandBuffer<EntityStore>,
+): BlockPos? =
+    TargetUtil
+        .getTargetBlock(context.entity, 8.0, commandBuffer)
+        ?.let { BlockPos(it.x, it.y, it.z) }
+
+private fun wellRef(
+    world: World,
+    position: BlockPos,
+): Ref<ChunkStore>? {
+    val sectionRef =
+        world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return null
+    return BlockModule.getBlockEntity(
+        world.chunkStore.store,
+        sectionRef,
+        position.x,
+        position.y,
+        position.z,
+    )
+}
+
+private fun markStakeLeaning(
+    world: World,
+    wellPosition: BlockPos,
+    packedWellId: String,
+) {
+    val stake = findStakeToLean(world, wellPosition, packedWellId) ?: return
+    val store = world.chunkStore.store
+    val state = store.getComponent(stake, TetherStakeState.type) ?: return
+    state.leaning = true
+    store.getComponent(stake, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+}
+
+private fun findStakeToLean(
+    world: World,
+    center: BlockPos,
+    packedWellId: String,
+): Ref<ChunkStore>? {
+    val store = world.chunkStore.store
+    for (x in center.x - 6..center.x + 6) {
+        for (y in center.y - 2..center.y + 2) {
+            for (z in center.z - 6..center.z + 6) {
+                val stake = stakeRefAt(world, store, x, y, z, packedWellId)
+                if (stake != null) return stake
+            }
+        }
+    }
+    return null
+}
+
+private fun stakeRefAt(
+    world: World,
+    store: com.hypixel.hytale.component.Store<ChunkStore>,
+    x: Int,
+    y: Int,
+    z: Int,
+    packedWellId: String,
+): Ref<ChunkStore>? {
+    val section = world.chunkStore.getChunkSectionReferenceAtBlock(x, y, z) ?: return null
+    val stake = BlockModule.getBlockEntity(store, section, x, y, z) ?: return null
+    return stake.takeIf { store.getComponent(it, TetherStakeState.type)?.wellId == packedWellId }
+}
+
+private fun knockBackAfterMiss(
+    world: World,
+    playerRef: PlayerRef,
+    wellPosition: BlockPos,
+) {
+    val entity = playerRef.reference ?: return
+    val store = world.entityStore.store
+    val transform = store.getComponent(entity, TransformComponent.getComponentType()) ?: return
+    val velocity = store.getComponent(entity, Velocity.getComponentType()) ?: return
+    val dx = transform.position.x - wellPosition.x - 0.5
+    val dz = transform.position.z - wellPosition.z - 0.5
+    val length = kotlin.math.sqrt(dx * dx + dz * dz).coerceAtLeast(0.1)
+    velocity.addVelocity(dx / length * 0.6, 0.35, dz / length * 0.6)
 }

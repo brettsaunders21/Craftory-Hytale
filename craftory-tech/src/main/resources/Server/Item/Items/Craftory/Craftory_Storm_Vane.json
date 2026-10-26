@@ -1,0 +1,42 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Storm_Vane.name",
+    "Description": "items.Craftory_Storm_Vane.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Storm_Vane.png",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "BlockParticleSetId": "Wood",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {"GatherType": "GoblinMetal", "DropList": "Empty"},
+      "UseDefaultDropWhenPlaced": true
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Craftory/Storm_Vane/Storm_Vane_Off.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Storm_Vane/Storm_Vane_Off_Texture.png", "Weight": 1}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Storm_Vane/Storm_Vane_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Storm_Vane/Storm_Vane_Off_Texture.png", "Weight": 1}]
+        },
+        "On": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Storm_Vane/Storm_Vane_On.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Storm_Vane/Storm_Vane_On_Texture.png", "Weight": 1}]
+        }
+      }
+    },
+    "Support": {"Down": [{"FaceType": "Full"}]},
+    "BlockEntity": {"Components": {"CraftoryStormVane": {}}}
+  }
+}
