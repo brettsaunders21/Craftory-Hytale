@@ -1,0 +1,78 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Gnasher_Pit.name",
+    "Description": "server.items.Craftory_Gnasher_Pit.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
+  "PlayerAnimationsId": "Block",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "CustomModel": "Blocks/Craftory/Gnasher_Pit/Gnasher_Pit.blockymodel",
+    "CustomModelAnimation": "Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Chomp.blockyanim",
+    "Looping": true,
+    "DrawType": "Model",
+    "VariantRotation": "NESW",
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "HitboxType": "Bench_Workbench3",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:gnasher_pit",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {},
+        "CraftoryGnasherState": {
+          "OreQueue": "",
+          "ProgressPulses": 0,
+          "Jammed": false
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
+        }
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {
+        "ItemId": "Ingredient_Scraps",
+        "Quantity": 20
+      },
+      {
+        "ItemId": "Ingredient_Bar_Iron",
+        "Quantity": 4
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Tinkering"
+        ]
+      }
+    ]
+  }
+}

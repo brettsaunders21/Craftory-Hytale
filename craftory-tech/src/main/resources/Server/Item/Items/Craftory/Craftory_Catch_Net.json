@@ -1,0 +1,54 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Catch_Net.name",
+    "Description": "server.items.Craftory_Catch_Net.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Catch_Net.png",
+  "Categories": ["Tool.TechnicalBlocks"],
+  "PlayerAnimationsId": "Block",
+  "ItemLevel": 2,
+  "MaxStack": 100,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "CustomModel": "Blocks/Craftory/Catch_Net/Catch_Net.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Catch_Net/Catch_Net_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Catch_Net/Catch_Net.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Catch_Net/Catch_Net_Texture.png"}]
+        },
+        "Land": {
+          "CustomModel": "Blocks/Craftory/Catch_Net/Catch_Net.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Catch_Net/Catch_Net_Land.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Catch_Net/Catch_Net_Texture.png"}],
+          "Looping": false
+        }
+      }
+    },
+    "HitboxType": "Full",
+    "Gathering": {"Soft": {}},
+    "BlockParticleSetId": "Grass",
+    "BlockSoundSetId": "LeavesGround",
+    "PhysicalMaterialId": "Foliage",
+    "BlockEntity": {
+      "Components": {
+        "CraftoryTimedBlockAnimation": {"IdleState": "Off", "AnimatedState": "Land"}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 6},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1},
+      {"ItemId": "Ingredient_Fibre", "Quantity": 2}
+    ],
+    "Output": [{"ItemId": "Craftory_Catch_Net"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

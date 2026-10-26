@@ -1,0 +1,30 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Paint_Daub_Red.name",
+    "Description": "server.items.Craftory_Paint_Daub_Red.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Paint_Daub_Red.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_DaubUse"
+        }
+      ]
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 2},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Paint_Daub_Red", "Quantity": 4}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Boiler_Tank.name",
+    "Description": "items.Craftory_Boiler_Tank.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Quality": "Technical",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boiler_Tank.png",
+  "MaxStack": 16,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "HitboxType": "Full",
+    "CustomModel": "Blocks/Craftory/Boiler_Tank/Boiler_Tank.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Boiler_Tank/Boiler_Tank_Texture.png"}]
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 6},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2}
+    ],
+    "Output": [{"ItemId": "Craftory_Boiler_Tank"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

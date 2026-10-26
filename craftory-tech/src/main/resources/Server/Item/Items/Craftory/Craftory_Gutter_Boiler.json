@@ -1,0 +1,80 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Gutter_Boiler.name",
+    "Description": "items.Craftory_Gutter_Boiler.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture.Lighting"],
+  "Set": "Furniture_Goblin",
+  "Quality": "Technical",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gutter_Boiler.png",
+  "MaxStack": 1,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "Group": "GoblinLab_Generator",
+    "HitboxType": "Full",
+    "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Off.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Off_Texture.png"}],
+    "Interactions": {
+      "Use": {
+        "Interactions": [{"Type": "Craftory_BlockUse"}]
+      }
+    },
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Off_Texture.png"}]
+        },
+        "On": {
+          "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On_Texture.png"}],
+          "Particles": [
+            {
+              "SystemId": "Goblin_Decorative_Steam",
+              "TargetNodeName": "Steam-Emitter",
+              "Scale": 1
+            }
+          ]
+        },
+        "Offline": {
+          "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Offline.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Offline_Texture.png"}]
+        }
+      }
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_MultiblockController": {
+          "TemplateId": "craftory:gutter_boiler",
+          "Rotation": -1,
+          "State": "ASSEMBLING",
+          "Quality": "NONE"
+        },
+        "CraftoryBoilerState": {},
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:gutter_boiler",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 4,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 20},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 4},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 2}
+    ],
+    "Output": [{"ItemId": "Craftory_Gutter_Boiler"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

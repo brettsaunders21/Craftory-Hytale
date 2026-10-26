@@ -1,0 +1,68 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Shroom_Bed.name",
+    "Description": "server.items.Craftory_Shroom_Bed.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": [
+    "Furniture"
+  ],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Shroom_Bed.png",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "BlockParticleSetId": "Wood",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "GoblinMetal",
+        "DropList": "Empty"
+      },
+      "UseDefaultDropWhenPlaced": true
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "VariantRotation": "NESW",
+    "CustomModel": "Blocks/Craftory/Shroom_Bed/Shroom_Bed.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Craftory/Shroom_Bed/Shroom_Bed_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full"
+        }
+      ]
+    },
+    "BlockEntity": {
+      "Components": {
+        "CraftoryMachineOwner": {},
+        "CraftoryShroomBed": {
+          "Growth": 0.0,
+          "Stored": 0,
+          "Twitch": 0
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
+        }
+      }
+    }
+  }
+}

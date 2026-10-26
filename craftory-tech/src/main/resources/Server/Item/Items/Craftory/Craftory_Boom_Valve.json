@@ -1,0 +1,19 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Boom_Valve.name",
+    "Description": "server.items.Craftory_Boom_Valve.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boom_Valve.png",
+  "MaxStack": 16,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Common",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_BodgeUse"
+        }
+      ]
+    }
+  }
+}

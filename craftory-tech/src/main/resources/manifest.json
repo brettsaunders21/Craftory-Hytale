@@ -1,0 +1,26 @@
+{
+    "Group": "Craftory",
+    "Name": "CraftoryTech",
+    "Version": "0.1.0",
+    "Description": "Technology modules for Craftory Hytale.",
+    "Authors": [
+        {
+            "Name": "Brett_Saunders"
+        }
+    ],
+    "Website": "https://github.com/brettsaunders21/Craftory-Hytale",
+    "ServerVersion": ">=0.7.0 <0.8.0",
+    "Dependencies": {
+        "Hytale:AssetModule": "*",
+        "Craftory:CraftoryCore": "*"
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "studio.craftory.tech.CraftoryTechPlugin",
+    "IncludesAssetPack": true,
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}

@@ -1,0 +1,12 @@
+{
+  "TranslationProperties": { "Name": "server.items.Craftory_Grit_Thorium.name" },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Thorium.png",
+  "Categories": ["Items.Ingredients"],
+  "MaxStack": 100,
+  "Recipe": {
+    "Input": [{ "ItemId": "Craftory_Grit_Thorium", "Quantity": 1 }],
+    "BenchRequirement": [{ "Type": "Processing", "Id": "Furnace" }],
+    "Output": [{ "ItemId": "Ingredient_Bar_Thorium", "Quantity": 1 }],
+    "TimeSeconds": 6
+  }
+}

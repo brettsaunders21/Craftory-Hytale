@@ -1,0 +1,276 @@
+# Craftory for Hytale: Architecture & Design
+
+This document covers how Craftory Tech is being rebuilt for Hytale. It keeps the features and the two
+core ideas of the original plugin, **expandability** and **high performance**, and rebuilds them on
+Hytale's ECS, asset and UI systems.
+
+References:
+- [CraftoryStudios/Craftory-Tech](https://github.com/CraftoryStudios/Craftory-Tech): the original Spigot plugin, v0.9.x, Java.
+- [CraftoryStudios/Craftory](https://github.com/CraftoryStudios/Craftory): the unfinished "Craftory Core" rewrite, a shared core for all Craftory addons.
+
+## 1. What we keep from Craftory Tech
+
+| Area | Craftory Tech (Spigot) | Hytale direction |
+|---|---|---|
+| Power storage | Iron / Gold / Diamond / Emerald cells | Capacitor banks. Tiers become data, and the core glows and fills to show charge |
+| Generators | Solid fuel, geothermal, rotary (wind/water), solar (basic, compacted, array) | The same set. Output depends on Hytale biome/zone, weather, time of day and nearby fluids |
+| Machines | Electric furnace, macerator, foundry and electric foundry (4 tiers each) | Powered smelter, grinder (ore doubling) and multi-block alloy foundry |
+| Magnetism | Magnetiser, magnetising table | Magnetised components, plus an item-magnet accessory |
+| Automation | Block placer / breaker | Placer, breaker, and item extractors/inserters |
+| Transmission | Power connectors with beams, early wires/pipes | Visible conduits that connect through block states, plus long-range crystal relays |
+| Tools | Wrench, configurator, powered tools (chainsaw...) | Engineer's wrench, configurator, powered tools, and goggles that show a machine-status HUD |
+| UI | Chest-menu GUIs: battery bar, indicators, side output config, tanks | Custom UI pages that share one widget kit (energy bar, progress, IO sides, tanks, upgrades) |
+| Fluids | Early fluid storage | Tanks and pipes, built on Hytale's fluid system |
+| Localisation | 34 languages through Crowdin | Hytale `.lang` files, keeping the Crowdin workflow |
+
+Craftory Tech's own roadmap also included multi-block generators, a full tech tree and magic as a
+companion system. Hytale's prefabs, zones and progression make all three a better fit than they were on Spigot.
+
+## 2. Lessons from the old architecture
+
+Craftory Tech:
+- One `PowerGrid` per connected network. Each tick it sums demand, storage space and production, then distributes energy. That per-network solver model was sound and we keep it.
+- The hot path was slow. Every tick looked each member up by `Location` (`getPoweredBlock(location)` over `HashSet<Location>`), used `instanceof` dispatch, and each grid ran as its own `BukkitRunnable`. Grid state lived outside the world and needed a separate `PowerGridSaver`.
+- `@Ticking(ticks = N)` lowered the tick rate for each block type.
+
+Craftory Core (rewrite):
+- A clean split into an API module and an example addon, the right shape for expandability.
+- `@Tickable(ticks, async)` with tick groups, a sync manager, and a 4-thread async worker pool. Methods were called through reflection.
+- Capabilities as interfaces (`EnergyInput`, `EnergyOutput`, `EnergyStorage`, fluid equivalents), with limits declared in annotations.
+- Persistent data and volatile data held separately for each block.
+
+Carried forward: per-network solving, capabilities instead of class hierarchies, and the core/addon split.
+Dropped: location hash lookups on the hot path, reflection in tick loops, our own thread pools that
+mutate world state, and side-car save files.
+
+## 3. Platform facts we build on (Hytale)
+
+- Server plugins are JVM jars (`JavaPlugin`, `manifest.json`) and can bundle an asset pack. We build with
+  Kotlin on Java 25.
+- Data is ECS: block data is a `Component<ChunkStore>` and logic runs in systems such as
+  `EntityTickingSystem`. Chunk sections carry a `NonTicking` marker when no player is tracking them;
+  `WorldChunk.addKeepLoaded()` keeps a chunk loaded but does not force it to tick.
+- Each `World` is its own `TickingThread`. The ECS supports parallel work through `CommandBuffer.fork()` /
+  `mergeParallel`.
+- Components are persisted through codecs (`BuilderCodec`), so machine and network state saves with the chunk.
+- UI is server-driven: `InteractiveCustomUIPage` with `.ui` markup, plus `CustomUIHud`. Hytale plans to move
+  this to NoesisGUI.
+- Models and animations are Blockbench `.blockymodel` / `.blockyanim`. Block states handle visual changes such as on/off and fill level.
+- Benches (`Crafting` / `Processing`, with tiers) and JSON recipes with `BenchRequirement`.
+
+## 4. Module layout
+
+```
+craftory-engine/   Pure Kotlin, no Hytale dependency. Generic energy-network solver and math,
+                   unit tested and benchmarked in isolation.
+craftory-core/     Hytale plugin "CraftoryCore". Bridges the engine to Hytale ECS: block
+                   components, systems, persistence codecs, UI kit, debug tooling and the public
+                   addon API.
+craftory-tech/     Hytale plugin "CraftoryTech". Content: machines, generators, items, recipes
+                   and assets. Uses only the public core API, so it doubles as the reference addon.
+```
+
+Third-party addons depend on `CraftoryCore` the same way `CraftoryTech` does.
+
+Core also owns opt-in crews and shared research knowledge. Players without an explicit crew receive a
+lazy solo crew. Accepting an invite merges solo knowledge into the destination; leaving or being kicked
+copies the crew's knowledge and Insight into a new solo crew. Core persists this state in `crews.json`
+with debounced atomic replacement. Tech uses only the public Core API to render the Tinker's Notebook
+and Codex, award research Insight, and advance crew tiers.
+
+## 5. Performance design
+
+Block-entity components are the source of truth for gameplay state. The Core energy graph is a derived
+solver/index cache rebuilt from loaded components; solver output is written back to components for
+machines, commands, UI and debugging to read.
+
+1. **Data-oriented networks.** Each energy network keeps its members in dense index-addressed arrays
+   (`LongArray` stored/capacity, `IntArray` max in/out, a role bitmask). The per-tick solve is a few linear
+   passes with no allocation, hashing or virtual dispatch. Persisted gameplay state lives in block-entity
+   components; `EnergyGraph` is a derived cache rebuilt as members load.
+2. **Incremental topology.** Placing a block merges networks (union-find). Only breaking a block can split a
+   network, and only then do we flood-fill that one network. Placing or breaking never triggers a global rebuild.
+3. **Sleeping networks.** A network with no production and no demand is marked idle and skipped until a
+   member changes. A large idle base then costs nearly nothing.
+4. **Query-driven systems.** Machine systems query their state, energy member and block-state components.
+   The Core energy clock gates the solver cadence; there are no per-machine maps or custom schedulers.
+   Machines in `NonTicking` sections are inactive unless covered by a charged Wakebell Anchor. The Core
+   keeps that coverage in a per-world chunk index, and the energy solve treats inactive members as having
+   no production or demand without changing their configured values or stored energy. Anchors refresh
+   chunk and section active timers and request `SET_TICKING`; loaded references alone do not provide
+   ticking.
+5. **World-thread ownership.** All mutation happens on the world's own thread through the ECS. Solver
+   write-back and machine state updates remain serial because they mutate shared graph and component state.
+6. **No reflection on hot paths.** Tick intervals, capabilities and limits are resolved once at registration.
+7. **Measured, not assumed.**
+   - JMH benchmarks for the engine solver.
+   - A `/craftory stress` command that places N machines.
+   - Tick-time metrics for each world.
+
+   Budget targets get set once we have the first benchmark numbers.
+
+### Hurl transport prototype (Server 0.7.4)
+
+Tech owns one non-serialized capsule per ride and a query-only ride ticker, consuming Core's public
+route wrappers. Each ride holds its own keep-loaded chunk leases and requests `SET_TICKING` sections
+ahead; asynchronous completions check ride lifetime before acquiring leases. Removal releases leases,
+including disconnect/unload cleanup. No capsule is saved across restart.
+
+Core retains tube topology on chunk UNLOAD for the current world session; LOAD is idempotent,
+while real block removal still splits routes and triggers mid-ride ejection. After a restart,
+never-loaded chunks are not indexed until loaded. Energy caches remain loaded-member-only so
+debits never target unloaded storage components. Ride clones share lease state and lifetime flags,
+including pending load callbacks, so cleanup releases each lease once.
+On section LOAD/SPAWN or NonTicking removal, a deferred world-thread reconciliation checks retained nodes against both
+live block entities and serialized block holders after vanilla block registration has finished.
+Missing TubeNodes are removed from that section's index without scanning the world.
+Pending launch activation returns a warming-up result and resumes via `world.execute` when the
+section future completes. Boarding then rechecks rider, permissions, topology, ticking state and
+energy before spawning and debiting; failed activation never consumes energy.
+
+The primary driver is the official `MountedComponent(capsuleRef, Vector3f(), MountController.Minecart)`
+with a `MountedByComponent` passenger list. Capsules copy vanilla minecart spawn's model, persistent-model
+reference and bounding box, plus UUID/NetworkId for tracking, but omit minecart physics and interactions.
+`BlockMount` is for block seating; Minecart is the entity-riding controller. The ride system explicitly runs
+AFTER `MountSystems.HandleMountInput` and overwrites the capsule transform, including while waiting for
+chunks, so client movement cannot change the baked path. Removing MountedComponent invokes vanilla
+`RemoveMounted` passenger cleanup; arrival/ejection then uses `Teleport.createForPlayer`.
+`RideDriver` defaults to `mount`; `teleport` selects the per-tick Teleport fallback. Runtime mount attachment
+failure or loss also falls back to Teleport. Mount camera behavior and smoothness are not live-verified.
+Tech's `hurl.json` config (the same Hytale `withConfig` mechanism used by Core) sets `CostGrade`
+(default `fizz`), `BlocksPerUnit` (16), `EnergyPerUnit` (100), and `Speed` (0.5 blocks/tick).
+The T2 cannon uses `TargetUtil.getTargetBlock(ref, netPredicate, 64, accessor)` along the player's look,
+filtering for Catch Nets so the cannon being used does not intercept its own targeting ray. Other blocks
+do not occlude this prototype targeting ray. The net must also be within 64 blocks of the launch point.
+One Core `HurlArc` is baked per launch,
+and ARC rides sample ahead at quarter-tick intervals to request ticking chunks/sections. The flight timer
+pauses while chunks load, and landing dismounts at the exact target with a fall guard. Catch Nets also
+cancel ordinary player fall damage via a loaded block-section lookup only when fall damage fires.
+Boom Powder consumption and cannon energy cost are intentionally deferred.
+See official Javadocs: `https://docs.hytale.com/api/com/hypixel/hytale/builtin/mounts/MountedComponent`
+and `https://docs.hytale.com/api/com/hypixel/hytale/server/core/modules/entity/teleport/Teleport`.
+Targeting: `https://docs.hytale.com/api/com/hypixel/hytale/server/core/util/TargetUtil`.
+
+## 6. Expandability design
+
+- **Capabilities, not inheritance.** `EnergyStorage`, `EnergyProducer`, `EnergyConsumer`, `ItemIO`,
+  `FluidTank` and `Upgradable` are separate components. A machine is a combination of them, and other
+  mods can attach the same components to their own blocks and join Craftory networks.
+- **Data-driven definitions.** Tiers, capacities, transfer rates, process times and recipes live in JSON
+  assets, so a new tier or a simple machine needs no new code.
+- **Registries with namespaced keys.** Addons register machine types, recipe types, network types (energy
+  now, then fluids and items) and UI widgets.
+- **Events.** For example network formed/split, machine started/finished, and energy produced, so addons can react.
+- **Stable public API surface.** Kept in `studio.craftory.core.api` and versioned with the plugin.
+
+### Multi-block framework (Slice 2b)
+
+Core owns the framework in `studio.craftory.core.api.multiblock`; content only registers templates and reacts to listeners.
+
+- **Templates.** `MultiblockTemplate(id, parts)` lists `TemplatePart(offset, blockIds, itemId)` offsets around the controller at (0,0,0), north-facing. `CraftoryCore.multiblocks().register` rejects templates wider or deeper than 7×7 in plan. The controller block's placed yaw picks one of four rotations, using the same `rotateY` mapping as Hytale's `Rotation`.
+- **State is a component.** `MultiblockController` is a persisted `ChunkStore` block-entity component on the controller only: template id, rotation, state (`ASSEMBLING`, `READY_TO_START`, `FORMED`, `DAMAGED`) and quality. Whether the structure is complete is never stored; it is rescanned from world blocks. The missing-part set is a transient cache.
+- **Shells are plain blocks.** Shell parts carry no components, so vanilla blocks work as parts.
+- **`MultiblockIndex` is a derived cache.** A per-world `ChunkStore` resource maps footprint positions to controller positions. A `RefSystem` adds controllers on LOAD/SPAWN and removes them on REMOVE/UNLOAD, so it is rebuilt from components whenever chunks load. It is never the source of truth.
+- **Event-driven formation.** `PlaceBlockEvent` and `BreakBlockEvent` systems look up the index and recheck only the one affected controller, on the world thread after the block change lands. Losing a part moves `FORMED` to `DAMAGED` (quality and contents kept); restoring it moves back to `FORMED` without a new kick-start. Footprints may overlap, so the index maps a position to every controller covering it. A slow staggered `MultiblockValidationSystem` (every 40 ticks, active areas only) rescans each controller as a safety net for changes that raise no player event (explosions, server edits) and for shell sections that load after their controller.
+- **Ghost frame.** Content shows an assembling frame's missing parts in one of two ways, chosen by the Core config key `GhostMode` (`preview`, `particles` or `both`; read with `CraftoryCore.ghostMode()`, default `both`). Preview mode spawns one non-persisted `EntityStore` entity per assembling controller carrying the documented `PrefabPreview` component (each missing part's placed block, relative to the controller). The entity tracker sends it to every nearby client. It exists only while a player within 16 blocks has that frame as their nearest. It is refreshed after every hammer hit and despawned on `READY_TO_START`, `FORMED`, controller removal, unload or an inactive area. The controller-to-entity map is a derived cache like `MultiblockIndex`. Preview visuals are not yet verified in a real client.
+- **Hooks.** `missingParts`, `isFormed`, `recheck`, `completeKickStart`, `onFormed` and `onDamaged` let content add assembly verbs (Tech's Tinker's Hammer and kick-start) and react to formation (the Junk Heart knowledge grant).
+
+The Gutter Boiler and Gasbag use the same controller lifecycle. Their existing single-block
+placements now begin as unformed controllers; build the listed frame parts with the Tinker's Hammer
+and kick-start the completed frame. Boiler pressure/fuel processing and Gasbag charging/leak
+processing pause while the controller is unformed or damaged, preserving the controller's saved
+machine state. Removing a part damages the frame; restoring it reforms the structure.
+
+## 7. Gameplay direction
+
+The gameplay and art direction lives in [DESIGN.md](DESIGN.md): a goblin junk-tech start, then
+crystal-and-scrap hybrid tiers, then pure arcane magic. It builds on Hytale Update 7's goblin content
+(Scrap, the Goblin Lab, goblin traders, the Void). Architectural consequences:
+
+- **Tiers are data.** Tier definitions (grade, max throughput, visuals, unlock key) are loaded from
+  asset JSON, so we can add or split tiers without code changes.
+- **Graded energy.** Each network packet carries a grade (Fizz, then Dim/Bright/Radiant/Prismatic
+  Glimmer). The solver respects each device's `minGrade`/`maxGrade` and each link's max grade.
+  Over-grade flow becomes an overload event, not an error. Resonators and Dampeners are converter
+  nodes between sub-networks.
+- **One transport graph, several payloads.** Pipes carry energy, items, fluids and (via Hurl Tubes)
+  players. The engine models a shared graph with per-payload channels. Item transit is
+  simulated as data (position along a segment), and only the client-visible part is rendered:
+  capped display entities per chunk, with LOD/batching for distant pipes. Visuals never drive
+  simulation.
+- **Per-player progression.** Knowledge, the Tinker's Notebook, Insight and Codex state are stored
+  as player components with the save hook, and can be optionally shared per team or server.
+- **Glimmerwell targeting.** The anchor uses `HitboxType: Plant_Small` with `Material: Empty`,
+  following vanilla `Plant_Grass_Lush`'s targetable foliage hitbox without solid collision.
+- **Machine state machine.** Machines move through Frame → Assembling → Running/Stalled/Overloaded
+  → Fizzled. Assembly progress, build quality, Jank and upgrade slots are machine components that
+  the UI and block-state animations read.
+- **Effects are events.** Research discoveries, overloads, infusions and fizzles go through an
+  effect-event bus. Content defines the particles, sounds and animations in data, and the core
+  throttles them per player.
+- **Golems on Hytale NPCs.** Tinklings use Hytale's NPC/role system with Craftory job sigils as
+   world markers. Job logic runs on the world thread through query-based systems.
+
+### Mobs
+
+Core's persisted `MobHome` entity component marks Craftory mobs and stores their role and optional home.
+Leash distance remains defined by each NPC role. `CraftoryMobs.spawn` attaches that marker and initializes the
+vanilla NPC leash point before entity insertion;
+the Core kill hook reports deaths to listeners. If the target section is not entity-ticking, spawn returns null
+while Hytale stores the mob with the chunk, including its home, for loading when the section ticks. Core refreshes
+leash points periodically and relies on role leash behavior for movement. Tech's Riftmoth drain finds adjacent
+energy storage and debits it through the public `EnergyAccess.requestDebit` API.
+
+Tech's Well affliction system persists Riftmoth, Void-larva, and raid NPC UUIDs on the Well entity and
+uses a separate NPC follower component for pathing. NPC spawns are deferred to the world thread and
+reacquire the Well before recording IDs. Feed and siphon timers are in-memory counters; spawn, death,
+corruption, cleansing, siphon, and raid transitions are the persisted boundaries. Well mutations and
+strength changes go through Core's public Well API.
+
+## 8. Milestones
+
+### Slice 2c implementation notes
+
+Powered machines persist `CraftoryJank` and two `CraftoryBodgeSlots` on their block entities.
+The slots are a dedicated component rather than `BenchBlock.upgradeItems`, since only the Scorch
+Oven is a bench. Jank evaluation runs after energy solving and pauses in inactive areas. Bodge parts
+use their item `Secondary` interaction; Scrap repairs Jank through the machine block interaction so
+vanilla Scrap assets are not overridden. The Core energy-condition facade exposes under-grade and
+overload events to Tech without exposing Core internals.
+The oven interaction repairs with Scrap and otherwise delegates to
+`OpenProcessingBenchInteraction`; the server selftest checks that the vanilla interaction resolves.
+Boom Valve speed currently scales generators and the Gnasher; vanilla ProcessingBench timing
+does not expose a safe per-machine speed multiplier, so Scorch Oven processing speed is unchanged.
+Scrap Rush raids persist their goblin UUIDs and theft timer on the target machine. A game-time
+probability roll selects one powered owned machine per eligible crew; vanilla
+`Coffer_Goblin_Scrapper` NPCs spawn through the column-probe API and follow a transient path to it,
+stall it after stealing, and grant the crew's Scrap Rush notebook page when defeated.
+`/craftory scraprush start` is the operator-only, schedule-bypassing entry point.
+
+0. **Repository & dev environment**
+   - Gradle multi-project build, local dev server, debugging and hot swap, CI, lint and tests.
+1. **Engine**
+   - Generic graded energy network solver.
+   - Transport graph with item/fluid channels.
+   - Unit tests and benchmarks.
+2. **Core integration**
+   - Block components, network building from placed blocks, persistence and debug commands.
+   - UI kit (machine page, Codex page shell).
+3. **Goblin era vertical slice (Tier 1)**
+   - Boomshroom Burner, Fizz Canister, Gnasher, Scorch Oven and Gutterpipe energy.
+   - Tinker's Wrench, Squint Goggles, and Grizzlecog selling sealed machines.
+4. **Know-how and assembly**
+   - Tinker's Notebook, goblin job questline and Ramshackle Assembly.
+5. **Visible transport**
+   - Item/fluid Gutterpipes, Sloshtank and Hurl Tubes.
+6. **Tinkered (Tier 2)**
+   - Bodging, Jank and upgrade slots, plus the rest of the goblin-era machines and turrets.
+7. **Research foundation**
+   - Glimmer Lens scanning, Insight, the Research Bench puzzle, Codex map and field experiments.
+8. **Hybrid tiers (3–5)**
+   - Crystals, Resonators/Dampeners, Sparkline/Glimmer Conduits, Infusion Altar and Tinklings.
+9. **Arcane tiers (6–7)**
+   - Ley Channels, Rune Rings, Wards, and endgame devices.
+
+An art and UI pass runs alongside milestone 3 onward, with each era's look locked in
+before its content milestone starts.

@@ -1,0 +1,24 @@
+{
+  "Type": "Variant",
+  "Reference": "Template_Birds_Passive",
+  "Modify": {
+    "Appearance": "Craftory_Glimmer_Wisp",
+    "DropList": "Drop_Craftory_Glimmer_Wisp",
+    "FlockArray": [
+      "Craftory_Glimmer_Wisp"
+    ],
+    "WanderRadius": 12,
+    "MinHeightOverGround": 2,
+    "MaxHeightOverGround": 6,
+    "MaxHealth": 18,
+    "NameTranslationKey": {
+      "Compute": "NameTranslationKey"
+    }
+  },
+  "Parameters": {
+    "NameTranslationKey": {
+      "Value": "server.npcRoles.Craftory_Glimmer_Wisp.name",
+      "Description": "Translation key for NPC name display"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+# Gradle and Kotlin
+.gradle/
+**/build/
+.kotlin/
+
+# Hytale development server data
+run/
+**/run/
+
+# IDE files (shared run configurations live in .run/)
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Local editor state
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Python art tooling
+__pycache__/

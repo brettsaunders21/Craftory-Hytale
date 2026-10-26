@@ -1,0 +1,24 @@
+{
+  "Type": "Variant",
+  "Reference": "Template_Goblin_Guardian",
+  "Modify": {
+    "Appearance": "Coffer_Goblin_Guardian",
+    "MaxHealth": 150,
+    "MaxSpeed": 3,
+    "ViewRange": 12,
+    "LeashDistance": 16,
+    "HardLeashDistance": 16,
+    "IsMemory": true,
+    "MemoriesCategory": "Goblin",
+    "MemoriesNameOverride": "Slurp_Walker",
+    "NameTranslationKey": {
+      "Compute": "NameTranslationKey"
+    }
+  },
+  "Parameters": {
+    "NameTranslationKey": {
+      "Value": "server.npcRoles.Craftory_Slurp_Walker.name",
+      "Description": "Translation key for the Slurp Walker"
+    }
+  }
+}

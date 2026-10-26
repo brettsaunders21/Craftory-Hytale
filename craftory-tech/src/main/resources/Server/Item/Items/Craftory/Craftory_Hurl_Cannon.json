@@ -1,0 +1,60 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Hurl_Cannon.name",
+    "Description": "server.items.Craftory_Hurl_Cannon.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Hurl_Cannon.png",
+  "Categories": ["Tool.TechnicalBlocks"],
+  "PlayerAnimationsId": "Block",
+  "Quality": "Technical",
+  "ItemLevel": 2,
+  "MaxStack": 100,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}]
+        },
+        "Charge": {
+          "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Charge.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}],
+          "Looping": false
+        }
+      }
+    },
+    "HitboxType": "Branch",
+    "Gathering": {"Breaking": {"GatherType": "Rocks"}},
+    "BlockSoundSetId": "Soft",
+    "PhysicalMaterialId": "Wool",
+    "Interactions": {
+      "Use": {"Interactions": [{"Type": "Craftory_BlockUse"}]},
+      "Secondary": {"Interactions": [{"Type": "Craftory_BlockUse"}]}
+    },
+    "BlockEntity": {
+      "Components": {
+        "CraftoryMachineOwner": {},
+        "CraftoryTimedBlockAnimation": {"IdleState": "Off", "AnimatedState": "Charge"},
+        "CraftoryHurlCannonCharge": {}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 4,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 20},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 4},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 2}
+    ],
+    "Output": [{"ItemId": "Craftory_Hurl_Cannon"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

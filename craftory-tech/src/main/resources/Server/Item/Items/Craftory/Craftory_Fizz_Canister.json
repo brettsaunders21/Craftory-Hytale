@@ -1,0 +1,159 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Fizz_Canister.name",
+    "Description": "server.items.Craftory_Fizz_Canister.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Canister.png",
+  "PlayerAnimationsId": "Block",
+  "Quality": "Developer",
+  "IconProperties": {
+    "Scale": 0.58823,
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ],
+    "Translation": [
+      0,
+      -13.5
+    ]
+  },
+  "MaxStack": 1,
+  "BlockType": {
+    "Group": "GoblinLab_Power_Switch_Unpowered",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "State": {
+      "Definitions": {
+        "Empty": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Empty_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "Quarter": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Quarter.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Quarter_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "Half": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Half.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Half_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "ThreeQuarter": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "Full": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Full.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Fizz_Canister/Fizz_Canister_Full_Texture.png",
+              "Weight": 1
+            }
+          ]
+        }
+      }
+    },
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full",
+          "Support": "Ignored"
+        }
+      ]
+    },
+    "VariantRotation": "NESW",
+    "HitboxType": "GoblinLab_Generator",
+    "AmbientSoundEventId": "SFX_GoblinLab_Broken_Device",
+    "Particles": [
+      {
+        "SystemId": "Goblin_Decorative_Broken",
+        "PositionOffset": {
+          "Z": -1,
+          "X": 0.8
+        },
+        "RotationOffset": {
+          "Yaw": 180
+        }
+      }
+    ],
+    "Material": "Solid",
+    "RequiresAlphaBlending": true,
+    "InteractionHint": "server.interactionHints.repair",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:fizz_canister",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {}
+      }
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "OpenCustomUI",
+            "Page": {
+              "Id": "Craftory_Canister"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {
+        "ItemId": "Ingredient_Scraps",
+        "Quantity": 12
+      },
+      {
+        "ItemId": "Ingredient_Bar_Copper",
+        "Quantity": 4
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Tinkering"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Snatcher_Claw.name",
+    "Description": "server.items.Craftory_Snatcher_Claw.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Snatcher_Claw.png",
+  "Categories": [
+    "Furniture.Benches"
+  ],
+  "MaxStack": 1,
+  "ItemLevel": 1,
+  "PlayerAnimationsId": "Block",
+  "Quality": "Technical",
+  "ItemSoundSetId": "ISS_Blocks_Stone",
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Texture.png"}]
+        },
+        "Grab": {
+          "CustomModel": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Grab.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Texture.png"}],
+          "Looping": false
+        }
+      }
+    },
+    "VariantRotation": "NESW",
+    "RotationYawPlacementOffset": "TwoSeventy",
+    "HitboxType": "Full",
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full"
+        }
+      ]
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_ClawUse"
+          }
+        ]
+      }
+    },
+    "BlockEntity": {
+      "Components": {
+        "CraftorySnatcherClaw": {},
+        "CraftoryTimedBlockAnimation": {"IdleState": "Off", "AnimatedState": "Grab"},
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:snatcher_claw",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 8},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Snatcher_Claw"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

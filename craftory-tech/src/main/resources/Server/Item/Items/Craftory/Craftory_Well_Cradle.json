@@ -1,0 +1,54 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Well_Cradle.name",
+    "Description": "server.items.Craftory_Well_Cradle.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Well_Cradle.png",
+  "BlockType": {
+    "DrawType": "Model",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "HitboxType": "Brazier_Goblin",
+    "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Empty": {
+          "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty_Texture.png"}]
+        },
+        "Seated": {
+          "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Seated.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Seated_Texture.png"}]
+        },
+        "Harmony": {
+          "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Harmony.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Harmony_Texture.png"}]
+        }
+      }
+    },
+    "Interactions": {
+      "Use": {"Interactions": [{"Type": "Craftory_CradleUse"}]}
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {"TypeId": "craftory:well_cradle", "Stored": 0, "StoreRank": -1},
+        "CraftoryCradle": {"Harmony": 1, "SeatedStrength": ""},
+        "CraftoryMachineOwner": {}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 12},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2}
+    ],
+    "BenchRequirement": [{"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}]
+  }
+}

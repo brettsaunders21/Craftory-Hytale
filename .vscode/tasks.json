@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Hytale: Setup development server",
+      "type": "shell",
+      "command": "./gradlew setupHytaleDev",
+      "problemMatcher": []
+    },
+    {
+      "label": "Hytale: Run all Craftory mods",
+      "type": "shell",
+      "command": "./gradlew runAllMods",
+      "problemMatcher": []
+    },
+    {
+      "label": "Hytale: Run all mods with debug and hot swap",
+      "type": "shell",
+      "command": "./gradlew runAllMods -Ddebug=true -Dhotswap=true",
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Check",
+      "type": "shell",
+      "command": "./gradlew check",
+      "problemMatcher": []
+    }
+  ]
+}

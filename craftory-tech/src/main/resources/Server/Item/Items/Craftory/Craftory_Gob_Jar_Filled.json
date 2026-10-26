@@ -1,0 +1,10 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Gob_Jar_Filled.name",
+    "Description": "server.items.Craftory_Gob_Jar_Filled.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gob_Jar_Filled.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Developer"
+}

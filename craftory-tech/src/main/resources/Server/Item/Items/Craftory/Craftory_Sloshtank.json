@@ -1,0 +1,70 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Sloshtank.name",
+    "Description": "items.Craftory_Sloshtank.description"
+  },
+  "ItemLevel": 10,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Tool.TechnicalBlocks"],
+  "SubCategory": "BlockSets",
+  "Set": "Furniture_Goblin",
+  "Quality": "Technical",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Sloshtank.png",
+  "MaxStack": 1,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "Group": "GoblinLab",
+    "HitboxType": "Full",
+    "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_Empty.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_Empty_Texture.png"}],
+    "Interactions": {
+      "Use": {
+        "Interactions": [{"Type": "Craftory_BlockUse"}]
+      }
+    },
+    "State": {
+      "Definitions": {
+        "Empty": {
+          "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_Empty.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_Empty_Texture.png"}]
+        },
+        "Quarter": {
+          "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_Quarter.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_Quarter_Texture.png"}]
+        },
+        "Half": {
+          "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_Half.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_Half_Texture.png"}]
+        },
+        "ThreeQuarter": {
+          "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_ThreeQuarter.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_ThreeQuarter_Texture.png"}]
+        },
+        "Full": {
+          "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_Full.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_Full_Texture.png"}]
+        }
+      }
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_FluidTank": {},
+        "CraftoryMachineOwner": {}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 12},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2}
+    ],
+    "Output": [{"ItemId": "Craftory_Sloshtank"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

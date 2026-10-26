@@ -1,0 +1,50 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Crackle_Coil.name",
+    "Description": "server.items.Craftory_Crackle_Coil.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture.Lighting"],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Crackle_Coil.png",
+  "BlockType": {
+    "DrawType": "Model",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "HitboxType": "Brazier_Goblin",
+    "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off_Texture.png"}]
+        },
+        "Active": {
+          "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Active.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Arc.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Active_Texture.png"}],
+          "Looping": true
+        }
+      }
+    },
+    "Interactions": {
+      "Use": {"Interactions": [{"Type": "Craftory_BlockUse"}]}
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {"TypeId": "craftory:crackle_coil", "Stored": 0, "StoreRank": -1}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 12},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2}
+    ],
+    "BenchRequirement": [{"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}]
+  }
+}

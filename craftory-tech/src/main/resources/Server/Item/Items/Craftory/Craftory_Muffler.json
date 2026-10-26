@@ -1,0 +1,19 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Muffler.name",
+    "Description": "server.items.Craftory_Muffler.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Muffler.png",
+  "MaxStack": 16,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Common",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_BodgeUse"
+        }
+      ]
+    }
+  }
+}

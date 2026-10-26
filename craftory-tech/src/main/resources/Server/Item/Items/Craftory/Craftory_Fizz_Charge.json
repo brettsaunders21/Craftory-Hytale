@@ -1,0 +1,36 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Fizz_Charge.name",
+    "Description": "server.items.Craftory_Fizz_Charge.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Charge.png",
+  "MaxStack": 99,
+  "Categories": [
+    "Items.Ingredients"
+  ],
+  "ResourceTypes": [
+    {
+      "Id": "Craftory_Fizz"
+    }
+  ],
+  "FuelQuality": 2,
+  "PlayerAnimationsId": "Item",
+  "Tags": {
+    "Type": [
+      "Ingredient"
+    ]
+  },
+  "DropOnDeath": true,
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 4},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Fizz_Charge", "Quantity": 2}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

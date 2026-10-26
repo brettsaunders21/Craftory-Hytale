@@ -1,0 +1,142 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Crank_A_Fizz.name",
+    "Description": "server.items.Craftory_Crank_A_Fizz.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Crank_A_Fizz.png",
+  "PlayerAnimationsId": "Block",
+  "Quality": "Developer",
+  "IconProperties": {
+    "Scale": 0.58823,
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ],
+    "Translation": [
+      0,
+      -13.5
+    ]
+  },
+  "MaxStack": 1,
+  "BlockType": {
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
+    "DrawType": "Model",
+    "VariantRotation": "NESW",
+    "State": {
+      "Definitions": {
+        "Off": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "On": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",
+              "Weight": 1
+            }
+          ],
+          "CustomModelAnimation": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Crank.blockyanim",
+          "Looping": true
+        }
+      }
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "Bench": {
+      "Type": "Crafting",
+      "Id": "GoblinLab_Workbench",
+      "CompletedSoundEventId": "SFX_Workbench_Craft",
+      "FailedSoundEventId": "SFX_Generic_Crafting_Failed",
+      "Categories": [
+        {
+          "Id": "GoblinLab_Gadgets",
+          "Name": "server.benchCategories.goblinLab.gadgets",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Gadgets.png"
+        },
+        {
+          "Id": "GoblinLab_Fragments",
+          "Name": "server.benchCategories.goblinLab.fragments",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Fragments.png"
+        },
+        {
+          "Id": "GoblinLab_Decoration",
+          "Name": "server.benchCategories.goblinLab.decoration",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Decoration.png"
+        },
+        {
+          "Id": "GoblinLab_Runes",
+          "Name": "server.benchCategories.goblinLab.runes",
+          "Icon": "Icons/CraftingCategories/GoblinLab/Runes.png"
+        }
+      ],
+      "TierLevels": [
+        {}
+      ]
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:crank_a_fizz",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {},
+        "CraftoryCrank": {
+          "SpinTicks": 0
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
+        }
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {
+        "ItemId": "Ingredient_Scraps",
+        "Quantity": 12
+      },
+      {
+        "ItemId": "Ingredient_Stick",
+        "Quantity": 4
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Tinkering"
+        ]
+      }
+    ]
+  }
+}

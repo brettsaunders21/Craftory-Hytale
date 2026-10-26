@@ -1,0 +1,19 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Gob_Jar.name",
+    "Description": "server.items.Craftory_Gob_Jar.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gob_Jar.png",
+  "MaxStack": 1,
+  "PlayerAnimationsId": "Item",
+  "Quality": "Developer",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_JarUse"
+        }
+      ]
+    }
+  }
+}

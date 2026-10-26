@@ -1,0 +1,45 @@
+Group {
+  Anchor: (Top: 24, Right: 24, Width: 320);
+  LayoutMode: Top;
+  Background: #000000(0.55);
+  Padding: (Full: 12);
+
+  Label #Title {
+    Text: "Craftory energy";
+    Style: (FontSize: 18, RenderBold: true);
+    Anchor: (Bottom: 6);
+  }
+
+  Group #EnergyBar {
+    Anchor: (Bottom: 8);
+  }
+
+  Label #Grade {
+    Text: "Grade: Fizz";
+    Anchor: (Bottom: 3);
+  }
+
+  Label #Members {
+    Text: "Members: 0";
+    Anchor: (Bottom: 3);
+  }
+
+  Label #Jank {
+    Text: "";
+    Anchor: (Bottom: 3);
+  }
+
+  Label #Status {
+    Text: "";
+    Anchor: (Bottom: 3);
+  }
+
+  Label #JarStability {
+    Text: "";
+    Anchor: (Bottom: 3);
+  }
+
+  Label #Flow {
+    Text: "Net flow: 0 Fizz/t";
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "Parent": "Klops",
+  "Model": "NPC/Intelligent/Klops/Models/Model.blockymodel",
+  "Texture": "NPC/Craftory/Vessa/Texture.png",
+  "DefaultAttachments": [
+    {
+      "Model": "NPC/Intelligent/Klops/Models/Attachments/Cosmetics/Tail/Tail.blockymodel",
+      "Texture": "NPC/Intelligent/Klops/Models/Attachments/Cosmetics/Tail/Tail_Default.png"
+    },
+    {
+      "Model": "NPC/Intelligent/Klops/Models/Attachments/Merchant/Shoes.blockymodel",
+      "Texture": "NPC/Intelligent/Klops/Models/Attachments/Merchant/Shoes_Texture.png"
+    },
+    {
+      "Model": "NPC/Intelligent/Klops/Models/Attachments/Merchant/Tunic.blockymodel",
+      "Texture": "NPC/Intelligent/Klops/Models/Attachments/Merchant/Tunic_Brown.png"
+    },
+    {
+      "Model": "NPC/Intelligent/Klops/Models/Attachments/Cosmetics/Head/Eyebrows/Eyebrows.blockymodel",
+      "Texture": "NPC/Intelligent/Klops/Models/Attachments/Cosmetics/Head/Eyebrows/Eyebrows_White.png"
+    }
+  ]
+}

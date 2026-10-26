@@ -1,0 +1,109 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Junk_Heart_Firebox.name",
+    "Description": "server.items.Craftory_Junk_Heart_Firebox.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": [
+    "Furniture.Lighting"
+  ],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Junk_Heart_Firebox.png",
+  "BlockType": {
+    "BlockParticleSetId": "Metal",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "GoblinMetal",
+        "DropList": "Empty"
+      },
+      "UseDefaultDropWhenPlaced": true
+    },
+    "HitboxType": "Brazier_Goblin",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "ParticleColor": "#716d65",
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full"
+        }
+      ]
+    },
+    "InteractionSoundEventId": "SFX_Flame_Ignite",
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "CustomModelTexture": [
+      {"Texture": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off_Texture.png"}
+    ],
+    "CustomModel": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off.blockymodel",
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off_Texture.png"}]
+        },
+        "On": {
+          "CustomModel": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_On.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_On_Texture.png"}]
+        }
+      }
+    },
+    "PhysicalMaterialId": "Metal",
+    "VariantRotation": "NESW",
+    "RotationYawPlacementOffset": "TwoSeventy",
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:junk_heart",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {},
+        "CraftoryJunkHeart": {
+          "FuelItemId": "",
+          "FuelCount": 0,
+          "BurnTicks": 0,
+          "Burning": false
+        },
+        "Craftory_MultiblockController": {
+          "TemplateId": "craftory:junk_heart",
+          "Rotation": -1,
+          "State": "ASSEMBLING",
+          "Quality": "NONE"
+        }
+      }
+    }
+  },
+  "Tags": {
+    "Type": [
+      "Furniture",
+      "Fireproof"
+    ],
+    "Family": [
+      "Goblin"
+    ]
+  },
+  "ItemSoundSetId": "ISS_Items_Metal",
+  "IconProperties": {
+    "Scale": 0.58823,
+    "Rotation": [
+      22.5,
+      45,
+      22.5
+    ],
+    "Translation": [
+      0,
+      -13.5
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+$C = "../../Common.ui";
+
+Group {
+  LayoutMode: Top;
+  Anchor: (Height: 42);
+
+  Label #EnergyLabel {
+    Text: "0 / 0 Fizz";
+    Style: (...$C.@DefaultLabelStyle, FontSize: 13);
+    Anchor: (Bottom: 4);
+  }
+
+  $C.@ProgressBar #Energy {
+    @Anchor = (Height: 12);
+    Value: 0;
+  }
+}

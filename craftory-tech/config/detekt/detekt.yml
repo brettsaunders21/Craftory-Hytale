@@ -1,0 +1,8 @@
+style:
+  ForbiddenImport:
+    active: true
+    forbiddenImports:
+      - value: "studio.craftory.engine.*"
+        reason: "Use types re-exported through Craftory Core's public API."
+      - value: "studio.craftory.core.energy.*"
+        reason: "Use Craftory Core's public API instead of its implementation."

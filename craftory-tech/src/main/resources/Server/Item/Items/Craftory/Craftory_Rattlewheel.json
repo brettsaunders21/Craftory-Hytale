@@ -1,0 +1,98 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Rattlewheel.name",
+    "Description": "server.items.Craftory_Rattlewheel.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": [
+    "Furniture"
+  ],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Rattlewheel.png",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "BlockParticleSetId": "Wood",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "GoblinMetal",
+        "DropList": "Empty"
+      },
+      "UseDefaultDropWhenPlaced": true
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "VariantRotation": "NESW",
+    "CustomModel": "Blocks/Craftory/Rattlewheel/Rattlewheel_Off.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Craftory/Rattlewheel/Rattlewheel_Off_Texture.png",
+        "Weight": 1
+      }
+    ],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Rattlewheel/Rattlewheel_Off.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Rattlewheel/Rattlewheel_Off_Texture.png",
+              "Weight": 1
+            }
+          ]
+        },
+        "On": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Rattlewheel/Rattlewheel_On.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Rattlewheel/Rattlewheel_On_Texture.png",
+              "Weight": 1
+            }
+          ]
+        }
+      }
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_BlockUse"
+          }
+        ]
+      }
+    },
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full"
+        }
+      ]
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:rattlewheel",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {},
+        "CraftoryRattlewheel": {
+          "WaterFlow": 0,
+          "WindMode": false,
+          "WeatherMultiplier": 1.0,
+          "FizzPerSecond": 0
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
+        }
+      }
+    }
+  }
+}
