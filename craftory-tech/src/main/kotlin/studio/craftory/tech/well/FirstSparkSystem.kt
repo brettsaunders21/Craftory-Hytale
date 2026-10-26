@@ -33,6 +33,7 @@ import studio.craftory.core.api.multiblock.MultiblockController
 import studio.craftory.core.api.multiblock.MultiblockState
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.CraftoryTechPlugin
 import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.JunkHeartState
 import studio.craftory.tech.machine.MachineOwner
@@ -164,11 +165,14 @@ internal object FirstSpark {
                 if (CraftoryIds.VESSA_MET_KNOWLEDGE !in crews.crewOf(owner).knowledge) {
                     val airY = (machineY + 1..machineY + 3).firstOrNull { isAir(store, machineX, it, machineZ) }
                     if (airY != null) {
-                        val spawned = VessaSpawner.spawn(world.entityStore.store, machineX, airY, machineZ)
-                        if (spawned != null) {
-                            (spawned as? Ref<EntityStore>)?.let(onVessaSpawned)
+                        val spawnedRef = VessaSpawner.spawn(world.entityStore.store, machineX, airY, machineZ)
+                        val spawnSucceeded = spawnedRef?.isValid == true
+                        if (spawnedRef != null && FirstSparkRules.shouldGrantVessaMet(action, spawnSucceeded)) {
+                            onVessaSpawned(spawnedRef)
                             crews.grantKnowledge(owner, CraftoryIds.VESSA_MET_KNOWLEDGE)
                         }
+                    } else {
+                        VessaSpawner.recordNoAirCell(machineX, machineY, machineZ)
                     }
                 }
             } finally {
@@ -229,24 +233,72 @@ internal object FirstSpark {
 }
 
 internal object VessaSpawner {
+    internal var lastSpawnDiagnostic: String = ""
+        private set
+
+    fun recordNoAirCell(
+        machineX: Int,
+        machineY: Int,
+        machineZ: Int,
+    ) {
+        val npcPlugin = NPCPlugin.get()
+        val roleIndex = npcPlugin.getIndex(CraftoryIds.VESSA_ROLE)
+        val modelResolved = ModelAsset.getAssetMap().getAsset(CraftoryIds.VESSA_ROLE) != null
+        lastSpawnDiagnostic =
+            "roleIndex=$roleIndex, modelResolved=$modelResolved, " +
+            "spawnPosition=none (no air cell above $machineX,$machineY,$machineZ), result=no air cell"
+        CraftoryTechPlugin.LOGGER.atWarning().log("First Spark Vessa spawn: $lastSpawnDiagnostic")
+    }
+
+    @Suppress("TooGenericExceptionCaught")
     fun spawn(
         store: Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>,
         x: Int,
         y: Int,
         z: Int,
-    ): Any? {
+    ): Ref<EntityStore>? {
         val npcPlugin = NPCPlugin.get()
-        if (npcPlugin.getIndex(CraftoryIds.VESSA_ROLE) == Int.MIN_VALUE ||
-            ModelAsset.getAssetMap().getAsset(CraftoryIds.VESSA_ROLE) == null
-        ) {
-            return null
+        val roleIndex = npcPlugin.getIndex(CraftoryIds.VESSA_ROLE)
+        val modelResolved = ModelAsset.getAssetMap().getAsset(CraftoryIds.VESSA_ROLE) != null
+        val spawnPosition = Vector3d(x + 0.5, y.toDouble(), z + 0.5)
+        val preflightPassed = roleIndex != Int.MIN_VALUE && modelResolved
+        val spawned =
+            if (preflightPassed) {
+                try {
+                    npcPlugin.spawnNPC(
+                        store,
+                        CraftoryIds.VESSA_ROLE,
+                        null,
+                        spawnPosition,
+                        Rotation3f.IDENTITY,
+                    )
+                } catch (exception: Exception) {
+                    lastSpawnDiagnostic =
+                        "roleIndex=$roleIndex, modelResolved=$modelResolved, " +
+                        "spawnPosition=$spawnPosition, result=spawn exception " +
+                        "${exception.javaClass.simpleName}: ${exception.message}"
+                    CraftoryTechPlugin.LOGGER.atWarning().log("First Spark Vessa spawn: $lastSpawnDiagnostic")
+                    return null
+                }
+            } else {
+                null
+            }
+        val ref = spawned?.left()?.takeIf { it.isValid }
+        val result =
+            when {
+                spawned == null -> "null pair"
+                ref == null -> "null left"
+                else -> "ref valid"
+            }
+        lastSpawnDiagnostic =
+            "roleIndex=$roleIndex, modelResolved=$modelResolved, " +
+            "spawnPosition=$spawnPosition, result=$result" +
+            if (preflightPassed) "" else ", preflight failed"
+        if (ref == null) {
+            CraftoryTechPlugin.LOGGER.atWarning().log("First Spark Vessa spawn: $lastSpawnDiagnostic")
+        } else {
+            CraftoryTechPlugin.LOGGER.atInfo().log("First Spark Vessa spawn: $lastSpawnDiagnostic")
         }
-        return npcPlugin.spawnNPC(
-            store,
-            CraftoryIds.VESSA_ROLE,
-            null,
-            Vector3d(x + 0.5, y + 0.5, z + 0.5),
-            Rotation3f.IDENTITY,
-        )
+        return ref
     }
 }

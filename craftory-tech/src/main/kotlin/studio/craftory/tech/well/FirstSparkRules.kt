@@ -31,6 +31,11 @@ internal object FirstSparkRules {
             else -> Action.GRANT_AND_SPAWN
         }
 
+    fun shouldGrantVessaMet(
+        action: Action,
+        spawnedRefValid: Boolean,
+    ): Boolean = action != Action.NONE && spawnedRefValid
+
     fun conditionMet(
         machineRunning: Boolean,
         ownerCrewTier: Int,

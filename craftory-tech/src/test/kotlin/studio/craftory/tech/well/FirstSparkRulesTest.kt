@@ -26,6 +26,15 @@ class FirstSparkRulesTest {
     }
 
     @Test
+    fun `Vessa meeting knowledge requires a valid spawn result`() {
+        assertFalse(FirstSparkRules.shouldGrantVessaMet(FirstSparkRules.Action.GRANT_AND_SPAWN, false))
+        assertFalse(FirstSparkRules.shouldGrantVessaMet(FirstSparkRules.Action.RETRY_VESSA, false))
+        assertTrue(FirstSparkRules.shouldGrantVessaMet(FirstSparkRules.Action.GRANT_AND_SPAWN, true))
+        assertTrue(FirstSparkRules.shouldGrantVessaMet(FirstSparkRules.Action.RETRY_VESSA, true))
+        assertFalse(FirstSparkRules.shouldGrantVessaMet(FirstSparkRules.Action.NONE, true))
+    }
+
+    @Test
     fun `a pending Vessa spawn is shared by owners in the same crew`() {
         val crewId = UUID.randomUUID()
         val pending = FirstSparkPendingSpawns()

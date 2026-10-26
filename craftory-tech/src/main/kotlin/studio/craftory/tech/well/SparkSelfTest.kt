@@ -1,7 +1,10 @@
 package studio.craftory.tech.well
 
+import com.hypixel.hytale.component.ArchetypeChunk
+import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
+import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.item.config.Item
@@ -16,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.npc.NPCPlugin
+import com.hypixel.hytale.server.npc.entities.NPCEntity
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
@@ -36,6 +40,7 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.notebook.NotebookTierProgression
 import java.nio.file.Files
 import java.util.UUID
+import java.util.function.BiConsumer
 import kotlin.math.abs
 
 @Suppress("LongMethod", "MaxLineLength", "TooManyFunctions")
@@ -84,6 +89,7 @@ internal class SparkSelfTest(
     private var resonatorDrained = false
     private var firstSparkCrystalAvailable = false
     private var vessaRef: Ref<EntityStore>? = null
+    private var vessaTriggerTick: Long? = null
     private var completion: (() -> Unit)? = null
 
     @Suppress("TooGenericExceptionCaught")
@@ -118,6 +124,7 @@ internal class SparkSelfTest(
         }
         if (!harmonyRechecked) return
         energyTicks++
+        resolveVessaRef()
         val energy = CraftoryCore.energyAccess(world)
         val cradleId = BlockPos.pack(cradle.x, cradle.y, cradle.z)
         val coilId = BlockPos.pack(coil.x, coil.y, coil.z)
@@ -179,7 +186,7 @@ internal class SparkSelfTest(
         val vessaPositionMatches =
             vessaPosition != null &&
                 abs(vessaPosition.x - (sparkBurner.x + 0.5)) <= 1.0 &&
-                abs(vessaPosition.y - (sparkBurner.y + 1.5)) <= 1.0 &&
+                abs(vessaPosition.y - (sparkBurner.y + 1.0)) <= 1.0 &&
                 abs(vessaPosition.z - (sparkBurner.z + 0.5)) <= 1.0
         val vessaReady = vessaValid && vessaMet && vessaPositionMatches
         val allConditionsReady =
@@ -214,7 +221,8 @@ internal class SparkSelfTest(
                 vessaReady,
                 "First Spark spawns Vessa and grants meeting knowledge",
                 "ref=${if (vessaRef == null) "null" else "set"}, " +
-                    "valid=$vessaValid, met=$vessaMet, pos=$vessaPosition",
+                    "valid=$vessaValid, met=$vessaMet, pos=$vessaPosition, " +
+                    "spawn=${VessaSpawner.lastSpawnDiagnostic}",
             )
         }
         finish()
@@ -353,6 +361,7 @@ internal class SparkSelfTest(
                     crews,
                     shouldContinue = { !cleaned },
                 ) { vessaRef = it }
+            if (triggered) vessaTriggerTick = world.tick
             val triggeredAgain =
                 FirstSpark.tryTrigger(
                     world,
@@ -562,7 +571,11 @@ internal class SparkSelfTest(
         if (cleaned) return
         cleaned = true
         if (fixturesStarted) CraftoryCore.wells().remove(world, well)
-        vessaRef?.takeIf { it.isValid }?.let { world.entityStore.store.removeEntity(it, RemoveReason.REMOVE) }
+        val entityStore = world.entityStore.store
+        vessaNpcsWithin(VESSA_CLEANUP_RADIUS).forEach { ref ->
+            if (ref.isValid) runCatching { entityStore.removeEntity(ref, RemoveReason.REMOVE) }
+        }
+        vessaRef = null
         if (fixturesStarted) runCatching { CraftorySelfTest.clear(world, run.sectionRef, positions) }
         ResonatorRuntimeConfig.crystalUses = originalCrystalUses
         runCatching { crews.close() }
@@ -573,7 +586,7 @@ internal class SparkSelfTest(
                 .getBlockEntity(world, well.x, well.y, well.z)
                 ?.takeIf { store.getComponent(it, studio.craftory.core.api.well.Glimmerwell.type) != null }
                 ?.let { 1 } ?: 0
-        val remainingVessa = if (vessaRef?.isValid == true) 1 else 0
+        val remainingVessa = vessaNpcsWithin(VESSA_CLEANUP_RADIUS).count { it.isValid }
         val blockSection = store.getComponent(run.sectionRef, BlockSection.getComponentType())
         val remainingBlocks =
             positions.count { position ->
@@ -582,6 +595,43 @@ internal class SparkSelfTest(
         report(
             "spark cleanup (wells=$remainingWells, vessa=$remainingVessa, blocks=$remainingBlocks, config=${ResonatorRuntimeConfig.crystalUses == originalCrystalUses})",
         )
+    }
+
+    private fun resolveVessaRef() {
+        if (vessaRef?.isValid == true) return
+        val triggeredAt = vessaTriggerTick ?: return
+        if (world.tick - triggeredAt > VESSA_SPAWN_TIMEOUT_TICKS) return
+        vessaRef = vessaNpcsWithin(VESSA_POLL_RADIUS).firstOrNull()
+    }
+
+    private fun vessaNpcsWithin(radius: Int): List<Ref<EntityStore>> {
+        val npcType = NPCEntity.getComponentType() ?: return emptyList()
+        val entityStore = world.entityStore.store
+        val refs = mutableListOf<Ref<EntityStore>>()
+        val radiusSquared = radius.toLong() * radius
+        val centerX = sparkBurner.x + 0.5
+        val centerY = sparkBurner.y + 0.5
+        val centerZ = sparkBurner.z + 0.5
+        entityStore.forEachChunk(
+            Query.and(npcType),
+            BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, _ ->
+                for (index in 0 until chunk.size()) {
+                    val ref = chunk.getReferenceTo(index)
+                    val npc = chunk.getComponent(index, npcType)
+                    if (npc?.roleName == CraftoryIds.VESSA_ROLE && ref.isValid) {
+                        val position =
+                            entityStore.getComponent(ref, TransformComponent.getComponentType())?.position
+                        if (position != null) {
+                            val dx = position.x - centerX
+                            val dy = position.y - centerY
+                            val dz = position.z - centerZ
+                            if (dx * dx + dy * dy + dz * dz <= radiusSquared) refs += ref
+                        }
+                    }
+                }
+            },
+        )
+        return refs
     }
 
     private fun finish() {
@@ -617,6 +667,9 @@ internal class SparkSelfTest(
         const val HARMONY_RADIUS = 4
         const val FIRST_SPARK_SCAN_RADIUS = 8
         const val FIRST_SPARK_SCAN_RADIUS_SQUARED = 64L
+        const val VESSA_POLL_RADIUS = 4
+        const val VESSA_CLEANUP_RADIUS = 16
+        const val VESSA_SPAWN_TIMEOUT_TICKS = 100L
         const val ASSET_INDEX_NOT_FOUND = Int.MIN_VALUE
         const val CONVERTER_Y_MASK = 0x800L shl 26
         const val MAX_WAIT_TICKS = 200

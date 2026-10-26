@@ -459,7 +459,7 @@ class CraftoryTechPlugin(
             }
     }
 
-    private companion object {
+    internal companion object {
         val LOGGER: HytaleLogger = HytaleLogger.get("CraftoryTech")
     }
 }
