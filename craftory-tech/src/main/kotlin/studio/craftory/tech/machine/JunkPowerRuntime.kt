@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package studio.craftory.tech.machine
 
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock

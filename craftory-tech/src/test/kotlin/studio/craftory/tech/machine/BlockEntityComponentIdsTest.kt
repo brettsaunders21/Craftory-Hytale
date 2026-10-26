@@ -24,6 +24,8 @@ class BlockEntityComponentIdsTest {
                     "Craftory_FluidTank",
                     "Craftory_FluidPipe",
                     "Craftory_ItemPipe",
+                    "Craftory_MultiblockController",
+                    "CraftoryTubeNode",
                     "BenchBlock",
                     "ProcessingBenchBlock",
                 )

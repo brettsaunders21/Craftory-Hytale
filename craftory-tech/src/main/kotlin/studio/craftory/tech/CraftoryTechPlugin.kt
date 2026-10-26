@@ -25,8 +25,8 @@ import studio.craftory.tech.machine.AnchorState
 import studio.craftory.tech.machine.AnchorSystem
 import studio.craftory.tech.machine.AssemblyViewIndex
 import studio.craftory.tech.machine.BodgeUseInteraction
-import studio.craftory.tech.machine.BuildableMachineCraftGate
 import studio.craftory.tech.machine.BoilerState
+import studio.craftory.tech.machine.BuildableMachineCraftGate
 import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
@@ -45,20 +45,20 @@ import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.DaubUseInteraction
 import studio.craftory.tech.machine.EnergyHudState
-import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.FluidSelfTestRun
 import studio.craftory.tech.machine.FluidSelfTestSystem
 import studio.craftory.tech.machine.GasbagState
 import studio.craftory.tech.machine.GasbagSystem
+import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
+import studio.craftory.tech.machine.GutterBoilerSystem
 import studio.craftory.tech.machine.JankSystem
 import studio.craftory.tech.machine.JunkHeartKnowledge
 import studio.craftory.tech.machine.JunkHeartLifecycle
 import studio.craftory.tech.machine.JunkHeartState
 import studio.craftory.tech.machine.JunkHeartSystem
 import studio.craftory.tech.machine.JunkHeartTemplate
-import studio.craftory.tech.machine.GutterBoilerSystem
 import studio.craftory.tech.machine.JunkPowerHudSystem
 import studio.craftory.tech.machine.JunkPowerKickSystem
 import studio.craftory.tech.machine.MachineClockLifecycle
@@ -103,13 +103,13 @@ import studio.craftory.tech.transport.HurlRiderLifecycle
 import studio.craftory.tech.transport.HurlStation
 import studio.craftory.tech.well.CodexPageUi
 import studio.craftory.tech.well.CodexUseInteraction
-import studio.craftory.tech.well.FizzDamperState
-import studio.craftory.tech.well.FizzDamperSystem
 import studio.craftory.tech.well.CradleBreakSystem
 import studio.craftory.tech.well.CradleIndex
 import studio.craftory.tech.well.CradleLifecycle
 import studio.craftory.tech.well.CradlePlaceSystem
 import studio.craftory.tech.well.FirstSparkSystem
+import studio.craftory.tech.well.FizzDamperState
+import studio.craftory.tech.well.FizzDamperSystem
 import studio.craftory.tech.well.GobJarUseInteraction
 import studio.craftory.tech.well.JarCarrier
 import studio.craftory.tech.well.JarCarrierDamageSystem
@@ -335,13 +335,13 @@ class CraftoryTechPlugin(
         ResonatorState.type =
             chunkRegistry.registerComponent(
                 ResonatorState::class.java,
-                "CraftoryResonator",
+                CraftoryIds.RESONATOR_COMPONENT,
                 ResonatorState.CODEC,
             )
         CradleState.type =
             chunkRegistry.registerComponent(
                 CradleState::class.java,
-                "CraftoryCradle",
+                CraftoryIds.CRADLE_COMPONENT,
                 CradleState.CODEC,
             )
         CraftoryCore.registerInspectableComponent(CraftoryIds.JUNK_HEART_COMPONENT) { accessor, ref ->

@@ -51,6 +51,7 @@ class CraftoryCorePlugin(
     private val config: Config<CraftoryCoreConfig> = withConfig("config", CraftoryCoreConfig.CODEC)
     private var crewService: CrewService? = null
 
+    @Suppress("LongMethod")
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
         CraftoryCore.registerModule("CraftoryCore", pluginVersion)
