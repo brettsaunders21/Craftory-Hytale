@@ -52,8 +52,6 @@ object CraftoryIds {
     const val GOB_JAR = "Craftory_Gob_Jar"
     const val GOB_JAR_FILLED = "Craftory_Gob_Jar_Filled"
     const val CODEX = "Craftory_Codex"
-    const val RESONATOR_COMPONENT = "CraftoryResonator"
-    const val CRADLE_COMPONENT = "CraftoryCradle"
     const val STORM_VANE = "Craftory_Storm_Vane"
     const val FIZZ_DAMPER = "Craftory_Fizz_Damper"
     const val TETHER_STAKE = "Craftory_Tether_Stake"
