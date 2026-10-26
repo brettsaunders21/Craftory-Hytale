@@ -389,7 +389,13 @@ def wakebell_anchor(lit: bool):
 
 
 def wellhead(pumping: bool):
-    tank = Box("PressureTank", (18, 19, 18), pos=(0, 15, 0), rot=(0, 4, 0), paint=CORRUGATED_RUST)
+    tank = Box(
+        "PressureTank",
+        (18, 15 if pumping else 19, 18),
+        pos=(0, 13 if pumping else 15, 0),
+        rot=(0, 4, 0),
+        paint=CORRUGATED_RUST,
+    )
     tank.add(
         Box("TankTop", (20, 2, 20), pos=(0, 10, 0), paint=BRASS_RIV),
         Box("TankBase", (20, 2, 20), pos=(0, -9, 0), paint=DARK_TIN),
@@ -402,6 +408,13 @@ def wellhead(pumping: bool):
         Box("FeedElbow", (4, 4, 8), pos=(7, 18, -7), paint=BRASS_P),
         Box("OutputPipe", (4, 9, 4), pos=(-7, 12, 4), paint=DARK_TIN),
         Box("OutputCap", (6, 2, 6), pos=(-7, 17, 4), paint=BRASS_RIV),
+        Box(
+            "OutputPortGlow",
+            (4, 2, 4),
+            pos=(-7, 18.5, 4),
+            paint=FIZZ_GLOW if pumping else DEAD_GLASS,
+            shading="fullbright" if pumping else "standard",
+        ),
         Box("WellSocket", (12, 3, 12), pos=(0, -11, 0), paint=BRASS_P),
         Box("SocketGlow", (8, 1, 8), pos=(0, -13, 0), paint=CYAN_GLOW if pumping else DEAD_GLASS,
             shading="fullbright" if pumping else "standard"),
@@ -409,6 +422,17 @@ def wellhead(pumping: bool):
         bolt("BoltA", (-7, 8, 9), paint=BRASS_P),
         bolt("BoltB", (7, -7, 9), paint=BRASS_P),
     )
+    bellows = Box(
+        "Bellows",
+        (10, 7 if pumping else 10, 10),
+        pos=(7, 5 if pumping else 6.5, -5),
+        paint=CORRUGATED_RUST,
+    )
+    bellows.add(
+        Box("BellowsRidgeA", (12, 1, 12), pos=(0, -2, 0), paint=RUSTY),
+        Box("BellowsRidgeB", (12, 1, 12), pos=(0, 2, 0), paint=RUSTY),
+    )
+    tank.add(bellows)
     wheel = Box("PumpWheel", pos=(10, 4, -5))
     wheel.add(
         Box("WheelHub", (4, 4, 4), paint=BRASS_P),
