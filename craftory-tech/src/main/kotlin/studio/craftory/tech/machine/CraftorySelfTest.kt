@@ -72,6 +72,7 @@ import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
 import java.util.Random
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -99,6 +100,9 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var ovenInputAtNoPower: String? = null,
         var ovenOutputAtNoPower: String? = null,
         var ovenUnpoweredProbeTick: Long? = null,
+        var ovenGameTimeBeforeJump: Instant? = null,
+        var ovenGameTimeJumpApplied: Boolean = false,
+        var ovenGameTimeRestoreAttempted: Boolean = false,
         var ovenPoweredProbeTick: Long? = null,
         var ovenProbeOutputItemId: String? = null,
         var ovenProbeOutputQuantity: Int = 0,
@@ -170,6 +174,10 @@ private fun abort(
     reason: String,
 ) {
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+    runCatching { CraftorySelfTest.restoreOvenGameTime(run) }
+        .onFailure { failure ->
+            run.context.sendMessage(Message.raw("selftest: game-time restore failed (${failure.message})"))
+        }
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
     runCatching { run.hurlCleanup?.invoke() }
     runCatching { MobSelfTest.cleanup(run) }
@@ -841,16 +849,20 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                     .getResource(WorldTimeResource.getResourceType())
             val previousGameTime = timeResource.gameTime
             if (previousGameTime != null) {
+                val jumpedGameTime = previousGameTime.plus(Duration.ofHours(6))
+                run.ovenGameTimeBeforeJump = previousGameTime
                 timeResource.setGameTime(
-                    previousGameTime.plus(Duration.ofHours(6)),
+                    jumpedGameTime,
                     run.world,
                     run.world.entityStore.store,
                 )
+                val jumpApplied = timeResource.gameTime == jumpedGameTime
+                run.ovenGameTimeJumpApplied = jumpApplied
                 check(
                     run,
-                    timeResource.gameTime == previousGameTime.plus(Duration.ofHours(6)),
+                    jumpApplied,
                     "oven unpowered game-time jump",
-                    "gameTime=${timeResource.gameTime}",
+                    "before=$previousGameTime jumped=${timeResource.gameTime}",
                 )
             } else {
                 check(run, false, "oven unpowered game-time jump", "game time unavailable")
@@ -1112,6 +1124,10 @@ object CraftorySelfTest {
         try {
             reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
         } finally {
+            runCatching { restoreOvenGameTime(run) }
+                .onFailure { failure ->
+                    run.context.sendMessage(Message.raw("selftest: game-time restore failed (${failure.message})"))
+                }
             CraftorySelfTest.releaseTestKeepLoaded(run)
             store.getResource(SelfTestRun.type).active = null
         }
@@ -1125,6 +1141,31 @@ object CraftorySelfTest {
                 TransportSelfTest.start(run.context, run.world)
             }
         }
+    }
+
+    internal fun restoreOvenGameTime(run: SelfTestRun.Run) {
+        val originalGameTime = run.ovenGameTimeBeforeJump ?: return
+        if (!run.ovenGameTimeJumpApplied || run.ovenGameTimeRestoreAttempted) return
+
+        run.ovenGameTimeRestoreAttempted = true
+        val store = run.world.entityStore.store
+        val timeResource = store.getResource(WorldTimeResource.getResourceType())
+        val currentGameTime = timeResource.gameTime
+        if (currentGameTime == null) {
+            check(run, false, "oven game time restored", "before=$originalGameTime current=unavailable")
+            return
+        }
+        val jumpTarget = originalGameTime.plus(Duration.ofHours(6))
+        val elapsedSinceJump = Duration.between(jumpTarget, currentGameTime)
+        val expectedGameTime = originalGameTime.plus(elapsedSinceJump)
+        timeResource.setGameTime(expectedGameTime, run.world, store)
+        check(
+            run,
+            timeResource.gameTime == expectedGameTime,
+            "oven game time restored",
+            "before=$originalGameTime current=$currentGameTime elapsed=$elapsedSinceJump " +
+                "expected=$expectedGameTime actual=${timeResource.gameTime}",
+        )
     }
 
     internal fun retainTestKeepLoaded(
