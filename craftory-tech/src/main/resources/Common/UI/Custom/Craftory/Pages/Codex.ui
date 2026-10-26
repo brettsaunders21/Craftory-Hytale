@@ -1,5 +1,5 @@
 Group {
-  Anchor: (Center: 0, Width: 620, Height: 560);
+  Anchor: (Width: 620, Height: 560);
   Background: #171523(0.96);
   Padding: (Full: 18);
   LayoutMode: Top;
