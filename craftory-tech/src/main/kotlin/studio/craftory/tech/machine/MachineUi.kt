@@ -316,7 +316,7 @@ class CanisterPage private constructor(
     ) {
         if (snapshot == lastSnapshot) return
         lastSnapshot = snapshot
-        commands.set("#Title.Text", snapshot.name)
+        commands.set("#TitleLabel.Text", snapshot.name)
         commands.set("#Energy.Value", progress(snapshot.stored, snapshot.capacity))
         commands.set("#EnergyLabel.Text", "${snapshot.stored} / ${snapshot.capacity} Fizz")
         commands.set("#In.Text", "In: ${snapshot.supply} Fizz/t")

@@ -4,7 +4,7 @@ $C.@PageOverlay {
   LayoutMode: Middle;
   $C.@DecoratedContainer {
     Anchor: (Width: 560, Height: 480);
-    #Title { $C.@Title { @Text = "Hurl Station"; } }
+    #Title { $C.@Title #TitleLabel { @Text = "Hurl Station"; } }
     #Content {
       LayoutMode: Top;
       Padding: (Full: 16);

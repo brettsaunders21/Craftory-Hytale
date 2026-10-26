@@ -92,7 +92,7 @@ class HurlStationPage(
         val station = world.chunkStore.store.getComponent(sourceRef, HurlStation.type) ?: return
         commandBuilder
             .append("Craftory/Pages/HurlStation.ui")
-            .set("#Title.Text", station.displayName(source))
+            .set("#TitleLabel.Text", station.displayName(source))
             .set("#Rename.Visible", rename)
             .set("#Picker.Visible", !rename)
             .set("#Name.Value", station.name)
