@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
@@ -48,9 +49,9 @@ internal object WellSelfTest {
     internal val FORCED_POS = BlockPos(10_029, 148, 10_010)
     internal val BLOCK_REMOVED_POS = BlockPos(10_028, 148, 10_010)
     internal val VANE_POS = BlockPos(10_020, 148, 10_015)
-    internal val STAKED_POS = BlockPos(10_022, 148, 10_020)
-    internal val SMOTHERED_POS = BlockPos(10_010, 148, 10_020)
-    internal val CALMED_POS = BlockPos(10_010, 148, 10_027)
+    internal val STAKED_POS = BlockPos(10_022, 148, 10_004)
+    internal val SMOTHERED_POS = BlockPos(10_022, 148, 9_996)
+    internal val CALMED_POS = BlockPos(10_038, 148, 9_996)
 
     fun run(
         world: World,
@@ -263,6 +264,15 @@ internal object WellSelfTest {
         world: World,
         report: (String) -> Unit,
     ) {
+        val sectionRef =
+            world.chunkStore.getChunkSectionReferenceAtBlock(SMOTHERED_POS.x, SMOTHERED_POS.y, SMOTHERED_POS.z)
+                ?: error("Damper test section is not loaded")
+        val store = world.chunkStore.store
+        val blockSection =
+            store.getComponent(sectionRef, BlockSection.getComponentType())
+                ?: error("Damper test block section is missing")
+        val existingBlockIndex =
+            blockSection.get(SMOTHERED_POS.x and 31, SMOTHERED_POS.y and 31, SMOTHERED_POS.z and 31)
         val wellRef =
             CraftoryCore.wells().spawn(
                 world,
@@ -270,17 +280,17 @@ internal object WellSelfTest {
                 Temperament.SPARK,
                 WellStrength.STEADY,
                 WellState.WILD,
-            ) ?: error("Damper test Well spawn failed")
-        val store = world.chunkStore.store
+            ) ?: error(
+                "Damper test Well spawn failed " +
+                    "(sectionValid=${sectionRef.isValid}, blockIndex=$existingBlockIndex, " +
+                    "blockEmpty=${existingBlockIndex == BlockType.EMPTY_ID})",
+            )
         val positions =
             listOf(
                 CraftorySelfTest.TestPosition(SMOTHERED_POS.x + 2, SMOTHERED_POS.y, SMOTHERED_POS.z),
                 CraftorySelfTest.TestPosition(SMOTHERED_POS.x - 2, SMOTHERED_POS.y, SMOTHERED_POS.z),
                 CraftorySelfTest.TestPosition(SMOTHERED_POS.x, SMOTHERED_POS.y, SMOTHERED_POS.z + 2),
             )
-        val sectionRef =
-            world.chunkStore.getChunkSectionReferenceAtBlock(SMOTHERED_POS.x, SMOTHERED_POS.y, SMOTHERED_POS.z)
-                ?: error("Damper test section is not loaded")
         val section =
             store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                 ?: error("Damper test section is missing")
