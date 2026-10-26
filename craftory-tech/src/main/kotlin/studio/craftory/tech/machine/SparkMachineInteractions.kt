@@ -98,6 +98,11 @@ class ResonatorUseInteraction : SimpleBlockInteraction() {
         val blockState =
             world.chunkStore.store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        val owner = world.chunkStore.store.getComponent(ref, MachineOwner.type)?.placerUuid
+        if (!mayUseMachine(owner, player.uuid, player, CraftoryCore.crewService())) {
+            player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+            return
+        }
         if (heldItem == null) {
             state.tuning =
                 when (state.tuning) {
