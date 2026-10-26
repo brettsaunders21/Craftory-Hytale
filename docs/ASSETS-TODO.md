@@ -18,20 +18,17 @@ Regenerate generated assets with `python3 tools/art/build.py`. Preview models wi
   texture, icon and Grab animation. Junk Heart Firebox has Off/On art; Scorch Oven has an On state.
 - Scrap Plating, Boom Valve, Gutter Gear, Scrap Plating Bodge, Squawk Box and Muffler use generated
   icons. Tinker's Hammer and Tinker's Wrench have generated hand models, textures and icons.
+- Glimmerwell pulses use distinct sparse Flicker and dense Steady particle patterns (Roaring and
+  Primal reuse Steady), tinted at spawn from all eight public Core temperament tint values.
+- Tether beams use a custom cyan Beam asset and texture.
+- Snatcher Claw `Grab`, Hurl Cannon `Charge` and Catch Net `Land` animations are event-triggered.
+  Claw and Net hold for 10 ticks; Cannon uses a 5-tick (0.25-second) pre-launch charge.
 
 ## Remaining
 
-- Glimmerwell Flicker/Steady appearance and temperament tints; Tethered beam colour.
-- Mob re-tints/models for Wisp, Sparkjaw, Riftmoth and Poacher, plus Vessa. These need vanilla rig
+- Mob re-tints for Wisp, Sparkjaw, Riftmoth and Poacher, plus Vessa, are blocked on vanilla rig
   assets; Hytale asset authentication/download is pending.
-- Hurl Cannon `Charge`, Catch Net `Land`, and Snatcher Claw `Grab` animations are assets referenced
-  by block JSON but are not event-triggered.
-- The Glimmerwell discovery anchor still needs its final appearance and effects. Gnasher Pit's
-  planned 3×3×2 visual and the Hurl capsule model/mount animations also remain.
-- The Junk Heart chimney still uses the vanilla grey developer pipe; Scrap Plating still needs a
-  dedicated riveted block texture. Grizzlecog still uses the vanilla Klops body texture and tunic.
-- Craftory smoke/Fizz/Glimmer particle-system JSONs and authored Jank fizzle/rattle effects are
-  still outstanding; current machine effects reuse vanilla particles and sounds.
+- Boiler sound IDs are blocked pending the vanilla sound files.
 - All appearance remains client-unverified; offline previews are not a substitute for a live-client
   check.
-- Storm Hunt part 2-owned items are excluded from this work.
+- Storm Hunt part 2-owned items remain excluded from this work.
