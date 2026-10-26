@@ -26,6 +26,8 @@ import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.well.WellSelfTestExclusions
 
 internal object WellOutput {
+    val GRADE_RANK = requireNotNull(CraftoryCore.gradeRank("dim_glimmer"))
+
     fun base(strength: WellStrength): Long =
         when (strength) {
             WellStrength.FLICKER -> 4
@@ -92,7 +94,7 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
                 }?.takeIf { it.state == WellState.TAPPED }
         if (!CraftoryCore.isAreaActive(store, blockState) || well == null) {
             energy.setDemand(id, 0)
-            energy.setConverterOutput(id, 0, DIM_GLIMMER_RANK)
+            energy.setConverterOutput(id, 0, WellOutput.GRADE_RANK)
             updatePumping(world, position, state, blockState, commandBuffer, false)
             return
         }
@@ -100,7 +102,7 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
         energy.setDemand(id, INPUT_DEMAND)
         val delivered = energy.converterInputDelivered(id)
         val output = WellOutput.total(well.strength, state.harmony, delivered, well.corrupted)
-        energy.setConverterOutput(id, output, DIM_GLIMMER_RANK)
+        energy.setConverterOutput(id, output, WellOutput.GRADE_RANK)
         updatePumping(world, position, state, blockState, commandBuffer, output > 0)
     }
 
@@ -138,7 +140,6 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
     companion object {
         private const val INPUT_DEMAND = 40L
         private const val HARMONY_REFRESH_TICKS = 10L * 20L
-        private val DIM_GLIMMER_RANK = requireNotNull(CraftoryCore.gradeRank("dim_glimmer"))
 
         private fun setVisualState(
             world: com.hypixel.hytale.server.core.universe.world.World,

@@ -20,18 +20,18 @@
     "HitboxType": "Plant_Small",
     "Material": "Empty",
     "Opacity": "Transparent",
-    "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Normal.blockymodel",
+    "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Normal_Texture.png"}],
     "State": {
       "Definitions": {
         "Normal": {
           "DrawType": "Model",
-          "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Normal.blockymodel",
+          "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor.blockymodel",
           "CustomModelTexture": [{"Texture": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Normal_Texture.png"}]
         },
         "Corrupted": {
           "DrawType": "Model",
-          "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Corrupted.blockymodel",
+          "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor.blockymodel",
           "CustomModelTexture": [{"Texture": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Corrupted_Texture.png"}]
         }
       }

@@ -281,13 +281,11 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         if (member.production != amount) {
             CraftoryCore
                 .energyAccess(store.externalData.world)
-                .setProduction(BlockPos.pack(cursor.x, cursor.y, cursor.z), amount, DIM_GLIMMER_RANK)
+                .setProduction(BlockPos.pack(cursor.x, cursor.y, cursor.z), amount, WellOutput.GRADE_RANK)
         }
     }
 
     companion object {
-        private val DIM_GLIMMER_RANK = requireNotNull(CraftoryCore.gradeRank("dim_glimmer"))
-
         fun findWell(
             store: Store<ChunkStore>,
             pos: BlockPos,

@@ -87,6 +87,12 @@ internal class WellheadPlacementSystem :
         CraftoryCore.wells().setState(world, wellPosition, WellState.TAPPED)
     }
 
+    internal fun initializeForSelfTest(
+        world: World,
+        position: BlockPos,
+        wellPosition: BlockPos,
+    ) = initializeWellhead(world, position, wellPosition)
+
     private companion object {
         const val OVERRIDE_PERMISSION = "hytale.command.craftory.wrench.any"
     }

@@ -6,7 +6,6 @@
     "MaxHealth": 150,
     "MaxSpeed": 3,
     "ViewRange": 12,
-    "ViewRangeCombat": 12,
     "LeashDistance": 16,
     "HardLeashDistance": 16,
     "IsMemory": true,

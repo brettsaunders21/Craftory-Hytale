@@ -43,6 +43,7 @@ internal object WellPersistenceSelfTest {
         val expectedStrength: WellStrength = WellStrength.FLICKER,
         val expectedClaimCrew: UUID? = CLAIM_CREW_ID,
         val extraBlockPositions: List<CraftorySelfTest.TestPosition> = emptyList(),
+        val expectedCorrupted: Boolean = false,
     )
 
     fun run(
@@ -158,7 +159,7 @@ internal object WellPersistenceSelfTest {
         }
     }
 
-    private fun saveAndUnload(
+    internal fun saveAndUnload(
         fixture: Fixture,
         complete: (Boolean, String) -> Unit,
         attempt: Int = 0,
@@ -319,9 +320,10 @@ internal object WellPersistenceSelfTest {
         check(
             well.state == fixture.expectedState &&
                 well.strength == fixture.expectedStrength &&
-                well.claimCrewId == fixture.expectedClaimCrew,
+                well.claimCrewId == fixture.expectedClaimCrew &&
+                well.corrupted == fixture.expectedCorrupted,
         ) {
-            "reloaded Well lost its ${fixture.expectedState} state, strength band, or crew claim"
+            "reloaded Well lost its ${fixture.expectedState} state, strength band, crew claim, or corruption"
         }
         check(fixture.stakePositions.all { position -> isRestoredStake(fixture, world, store, position) }) {
             "one or more tether stakes did not persist"
@@ -392,7 +394,13 @@ internal object WellPersistenceSelfTest {
                     fixture.world.execute {
                         releaseSaveHold(worldChunk, markNeedsSaving = failure != null)
                         if (failure == null) {
-                            complete(true, "TETHERED Well and stakes survived real chunk unload/reload")
+                            val detail =
+                                if (fixture.stakePositions.isNotEmpty()) {
+                                    "TETHERED Well and stakes survived real chunk unload/reload"
+                                } else {
+                                    "${fixture.expectedState} Well state survived real chunk unload/reload"
+                                }
+                            complete(true, detail)
                         } else {
                             complete(false, "cleaned chunk save failed (${failure.message})")
                         }

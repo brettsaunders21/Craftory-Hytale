@@ -80,6 +80,8 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.machine.ShroomBedState
 import studio.craftory.tech.machine.ShroomBedSystem
+import studio.craftory.tech.machine.Slice5bSelfTestRun
+import studio.craftory.tech.machine.Slice5bSelfTestSystem
 import studio.craftory.tech.machine.SloshtankStateSystem
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
@@ -444,6 +446,8 @@ class CraftoryTechPlugin(
             chunkRegistry.registerResource(TransportSelfTestRun::class.java, ::TransportSelfTestRun)
         FluidSelfTestRun.type =
             chunkRegistry.registerResource(FluidSelfTestRun::class.java, ::FluidSelfTestRun)
+        Slice5bSelfTestRun.type =
+            chunkRegistry.registerResource(Slice5bSelfTestRun::class.java, ::Slice5bSelfTestRun)
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -480,6 +484,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(SelfTestSystem())
         chunkRegistry.registerSystem(TransportSelfTestSystem())
         chunkRegistry.registerSystem(FluidSelfTestSystem())
+        chunkRegistry.registerSystem(Slice5bSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
         WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)
