@@ -33,6 +33,7 @@ import org.joml.Vector3d
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellState
@@ -191,7 +192,7 @@ internal class FizzDamperSystem : EntityTickingSystem<ChunkStore>() {
         CraftoryCore.wells().wellsNear(store, pos, 4).forEach { near -> smotherIfReady(store, near.pos, near.well) }
     }
 
-    private fun smotherIfReady(
+    internal fun smotherIfReady(
         store: Store<ChunkStore>,
         position: BlockPos,
         well: Glimmerwell,
@@ -207,7 +208,7 @@ internal class FizzDamperSystem : EntityTickingSystem<ChunkStore>() {
             }
     }
 
-    private fun countPoweredDampers(
+    internal fun countPoweredDampers(
         store: Store<ChunkStore>,
         center: BlockPos,
     ): Int {
@@ -361,6 +362,17 @@ internal fun straightenTetherStake(
     position: Vector3i,
     player: PlayerRef,
 ): Boolean {
+    val straightened = straightenTetherStake(world, position, player.uuid, CraftoryCore.crewService())
+    if (straightened) player.sendMessage(Message.raw("The tether stake is straightened."))
+    return straightened
+}
+
+internal fun straightenTetherStake(
+    world: World,
+    position: Vector3i,
+    placerUuid: UUID,
+    crews: CrewService,
+): Boolean {
     val section = world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return false
     val store = world.chunkStore.store
     val ref = BlockModule.getBlockEntity(store, section, position.x, position.y, position.z) ?: return false
@@ -377,17 +389,17 @@ internal fun straightenTetherStake(
     val well = store.getComponent(wellRef, Glimmerwell.type) ?: return false
     state.leaning = false
     store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
-    val placer = runCatching { UUID.fromString(state.placerUuid) }.getOrDefault(player.uuid)
-    recomputeStakeRing(world, wellPosition, well, placer)
-    player.sendMessage(Message.raw("The tether stake is straightened."))
+    val placer = runCatching { UUID.fromString(state.placerUuid) }.getOrDefault(placerUuid)
+    tetherStakeIfComplete(world, wellPosition, well, placer, crews)
     return true
 }
 
-private fun recomputeStakeRing(
+internal fun recomputeStakeRing(
     world: World,
     wellPosition: BlockPos,
     well: Glimmerwell,
     placer: UUID,
+    crews: CrewService = CraftoryCore.crewService(),
 ) {
     val store = world.chunkStore.store
     val stakeRefs = collectStakes(world, store, wellPosition)
@@ -400,10 +412,20 @@ private fun recomputeStakeRing(
         state.leaning = index in leaning
         store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
     }
-    val leaningCount = stakeRefs.count { it.second.leaning }
-    if (!TetherRules.tetherComplete(well.state, well.strength, stakeRefs.size, leaningCount)) return
-    val claimant =
-        runCatching { CraftoryCore.crewService().crewOf(placer).id }.getOrNull() ?: return
+    tetherStakeIfComplete(world, wellPosition, well, placer, crews)
+}
+
+private fun tetherStakeIfComplete(
+    world: World,
+    wellPosition: BlockPos,
+    well: Glimmerwell,
+    placer: UUID,
+    crews: CrewService,
+) {
+    val stakes = collectStakes(world, world.chunkStore.store, wellPosition)
+    val leaningCount = stakes.count { it.second.leaning }
+    if (!TetherRules.tetherComplete(well.state, well.strength, stakes.size, leaningCount)) return
+    val claimant = runCatching { crews.crewOf(placer).id }.getOrNull() ?: return
     well.state = WellState.TETHERED
     well.claimCrewId = claimant
 }

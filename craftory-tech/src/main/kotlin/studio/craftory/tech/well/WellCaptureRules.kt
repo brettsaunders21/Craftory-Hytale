@@ -61,7 +61,8 @@ object TetherRules {
     fun requiredStakeCount(strength: WellStrength): Int =
         when (strength) {
             WellStrength.FLICKER, WellStrength.STEADY -> 3
-            else -> 4
+            WellStrength.ROARING -> 4
+            WellStrength.PRIMAL -> 6
         }
 
     fun stakeSpread(angles: List<Double>): Set<Int> {
@@ -96,6 +97,8 @@ object TetherRules {
 }
 
 object JarCarrierRules {
+    fun slowedSpeed(originalBaseSpeed: Float): Float = originalBaseSpeed * 0.7f
+
     fun stabilityAfter(
         stability: Double,
         elapsedSeconds: Double,

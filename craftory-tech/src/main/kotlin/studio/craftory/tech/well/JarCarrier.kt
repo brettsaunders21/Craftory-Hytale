@@ -287,7 +287,6 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
     }
 }
 
-private const val CARRIER_SPEED_MULTIPLIER = 0.7f
 private const val CREW_READOUT_RADIUS_SQUARED = 32.0 * 32.0
 
 private fun dislikedWeather(
@@ -312,14 +311,14 @@ private fun dislikedWeather(
     return StormHuntRules.dislikesWeather(temperament, StormHuntRules.weatherKind(id))
 }
 
-private fun applySlowdown(
+internal fun applySlowdown(
     playerRef: PlayerRef,
     ref: Ref<EntityStore>,
     store: Store<EntityStore>,
     carrier: JarCarrier,
 ) {
     val movement = store.getComponent(ref, MovementManager.getComponentType()) ?: return
-    val speed = carrier.originalBaseSpeed * CARRIER_SPEED_MULTIPLIER
+    val speed = JarCarrierRules.slowedSpeed(carrier.originalBaseSpeed)
     if (movement.settings.baseSpeed != speed) {
         movement.settings.baseSpeed = speed
         movement.update(playerRef.packetHandler)

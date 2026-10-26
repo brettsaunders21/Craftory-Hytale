@@ -1,43 +1,69 @@
 package studio.craftory.tech.well
 
 import com.hypixel.hytale.component.AddReason
+import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
+import com.hypixel.hytale.component.Store
+import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import org.joml.Vector3d
+import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.CrewService
+import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.transport.HurlPoint
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.CraftorySelfTest
+import studio.craftory.tech.transport.HurlRides
+import studio.craftory.tech.transport.HurlStartFailure
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.random.Random
 
+private typealias BlockEntityRef = Ref<ChunkStore>
+
+private typealias WellSelfTestReport = (String) -> Unit
+
 internal object WellSelfTest {
     private val CAUGHT_POS = BlockPos(10_030, 148, 10_010)
     private val FORCED_POS = BlockPos(10_029, 148, 10_010)
     private val BLOCK_REMOVED_POS = BlockPos(10_028, 148, 10_010)
+    internal val STAKED_POS = BlockPos(10_040, 148, 10_020)
+    internal val SMOTHERED_POS = BlockPos(10_060, 148, 10_020)
+    internal val CALMED_POS = BlockPos(10_080, 148, 10_020)
 
     fun run(
         world: World,
-        report: (String) -> Unit,
+        report: WellSelfTestReport,
     ) {
         val tempDir = Files.createTempDirectory("craftory-well-selftest")
-        listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS).forEach(WellSelfTestExclusions::registerWell)
+        listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS, STAKED_POS, SMOTHERED_POS, CALMED_POS)
+            .forEach(WellSelfTestExclusions::registerWell)
         try {
             testJarAndScan(world, tempDir, report)
             testEmptyBlockRemoval(world, report)
             testStormcall(world, report)
             testChunkReload(world, report)
+            Helpers.testCarrierReload(world, report)
+            testDamperSmothering(world, report)
+            Helpers.testGuardianDeath(world, report)
+            Helpers.testStakeLifecycle(world, tempDir, report)
+            testHurlRefusal(world, report)
             val remaining = CraftoryCore.wells().wellsNear(world.chunkStore.store, CAUGHT_POS, 64).size
             check(remaining == 0) { "well cleanup left $remaining indexed wells within radius 64" }
             report("selftest: cleanup (wells=$remaining)")
@@ -45,9 +71,13 @@ internal object WellSelfTest {
             CraftoryCore.wells().remove(world, CAUGHT_POS)
             CraftoryCore.wells().remove(world, FORCED_POS)
             CraftoryCore.wells().remove(world, BLOCK_REMOVED_POS)
+            CraftoryCore.wells().remove(world, STAKED_POS)
+            CraftoryCore.wells().remove(world, SMOTHERED_POS)
+            CraftoryCore.wells().remove(world, CALMED_POS)
             Files.deleteIfExists(tempDir.resolve("crews.json"))
             Files.deleteIfExists(tempDir)
-            listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS).forEach(WellSelfTestExclusions::releaseWell)
+            listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS, STAKED_POS, SMOTHERED_POS, CALMED_POS)
+                .forEach(WellSelfTestExclusions::releaseWell)
             val exclusions = WellSelfTestExclusions.cleanupCounts()
             val guardians =
                 world.entityStore.store
@@ -191,6 +221,345 @@ internal object WellSelfTest {
         } finally {
             WellSelfTestExclusions.releaseBlock(ref)
             CraftorySelfTest.clear(world, sectionRef, listOf(position))
+        }
+    }
+
+    private fun testDamperSmothering(
+        world: World,
+        report: (String) -> Unit,
+    ) {
+        val wellRef =
+            CraftoryCore.wells().spawn(
+                world,
+                SMOTHERED_POS,
+                Temperament.SPARK,
+                WellStrength.STEADY,
+                WellState.WILD,
+            ) ?: error("Damper test Well spawn failed")
+        val store = world.chunkStore.store
+        val positions =
+            listOf(
+                CraftorySelfTest.TestPosition(SMOTHERED_POS.x + 2, SMOTHERED_POS.y, SMOTHERED_POS.z),
+                CraftorySelfTest.TestPosition(SMOTHERED_POS.x - 2, SMOTHERED_POS.y, SMOTHERED_POS.z),
+                CraftorySelfTest.TestPosition(SMOTHERED_POS.x, SMOTHERED_POS.y, SMOTHERED_POS.z + 2),
+            )
+        val sectionRef =
+            world.chunkStore.getChunkSectionReferenceAtBlock(SMOTHERED_POS.x, SMOTHERED_POS.y, SMOTHERED_POS.z)
+                ?: error("Damper test section is not loaded")
+        val section =
+            store.getComponent(sectionRef, BlockComponentSection.getComponentType())
+                ?: error("Damper test section is missing")
+        val refs = mutableListOf<BlockEntityRef>()
+        try {
+            Helpers.placeTestDampers(world, store, sectionRef, section, positions, refs)
+            val well = store.getComponent(wellRef, Glimmerwell.type) ?: error("Damper test Well is missing")
+            Helpers.assertDamperSmothering(store, well, refs)
+            report("selftest: PASS three powered Fizz Dampers smother and reduce strength")
+        } finally {
+            refs.forEach(WellSelfTestExclusions::releaseBlock)
+            CraftorySelfTest.clear(world, sectionRef, positions)
+            CraftoryCore.wells().remove(world, SMOTHERED_POS)
+        }
+    }
+
+    private object Helpers {
+        fun placeTestDampers(
+            world: World,
+            store: Store<ChunkStore>,
+            sectionRef: Ref<ChunkStore>,
+            section: BlockComponentSection,
+            positions: List<CraftorySelfTest.TestPosition>,
+            refs: MutableList<BlockEntityRef>,
+        ) {
+            positions.forEach { position ->
+                CraftorySelfTest.place(
+                    world,
+                    store,
+                    sectionRef,
+                    section,
+                    CraftoryIds.FIZZ_DAMPER,
+                    position,
+                    FizzDamperState.type,
+                )
+                val ref =
+                    BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+                        ?: error("Damper block entity is missing")
+                refs.add(ref)
+                WellSelfTestExclusions.registerBlock(ref)
+                store.getComponent(ref, FizzDamperState.type)?.visualOn = true
+                val energy = store.getComponent(ref, EnergyMember.type) ?: EnergyMember()
+                energy.delivered = 2
+                energy.demand = 2
+                store.putComponent(ref, EnergyMember.type, energy)
+            }
+        }
+
+        fun assertDamperSmothering(
+            store: Store<ChunkStore>,
+            well: Glimmerwell,
+            refs: List<BlockEntityRef>,
+        ) {
+            val dampers = FizzDamperSystem()
+            check(dampers.countPoweredDampers(store, WellSelfTest.SMOTHERED_POS) == 3) {
+                "three powered Dampers were not counted"
+            }
+            store.getComponent(refs.first(), EnergyMember.type)?.delivered = 1
+            check(dampers.countPoweredDampers(store, WellSelfTest.SMOTHERED_POS) == 2) {
+                "unpowered Damper counted toward smothering"
+            }
+            dampers.smotherIfReady(store, WellSelfTest.SMOTHERED_POS, well)
+            check(well.state == WellState.WILD && well.strength == WellStrength.STEADY) {
+                "fewer than three powered Dampers smothered the Well"
+            }
+            store.getComponent(refs.first(), EnergyMember.type)?.delivered = 2
+            dampers.smotherIfReady(store, WellSelfTest.SMOTHERED_POS, well)
+            check(well.state == WellState.DORMANT && well.strength == WellStrength.FLICKER) {
+                "three powered Dampers did not smother and reduce strength"
+            }
+        }
+
+        fun testCarrierReload(
+            world: World,
+            report: (String) -> Unit,
+        ) {
+            val store = world.entityStore.store
+            val holder = EntityStore.REGISTRY.newHolder()
+            holder.addComponent(
+                JarCarrier.type,
+                JarCarrier(
+                    stability = 73.5,
+                    temperamentId = Temperament.EMBER.id,
+                    strengthId = WellStrength.STEADY.name,
+                    taste = "Ingredient_Scraps",
+                    wellId = WellSelfTest.STAKED_POS.pack().toString(),
+                    lastTick = 17,
+                    nextAmbushTick = 1217,
+                    lastReadoutTick = 100,
+                    originalBaseSpeed = 1.25f,
+                ),
+            )
+            holder.ensureComponent(EntityStore.REGISTRY.nonSerializedComponentType)
+            holder.ensureComponent(UUIDComponent.getComponentType())
+            holder.addComponent(
+                TransformComponent.getComponentType(),
+                TransformComponent(Vector3d(10_020.5, 148.0, 10_015.5), Rotation3f.IDENTITY),
+            )
+            var ref = store.addEntity(holder, AddReason.SPAWN) ?: error("JarCarrier persistence entity did not spawn")
+            WellSelfTestExclusions.registerEntity(ref)
+            try {
+                val unloaded = store.removeEntity(ref, RemoveReason.UNLOAD)
+                WellSelfTestExclusions.releaseEntity(ref)
+                ref = store.addEntity(unloaded, AddReason.LOAD) ?: error("JarCarrier reload failed")
+                WellSelfTestExclusions.registerEntity(ref)
+                val restored = store.getComponent(ref, JarCarrier.type) ?: error("JarCarrier state was not restored")
+                check(
+                    restored.stability == 73.5 &&
+                        restored.temperamentId == Temperament.EMBER.id &&
+                        restored.strengthId == WellStrength.STEADY.name &&
+                        restored.taste == "Ingredient_Scraps" &&
+                        restored.wellId == WellSelfTest.STAKED_POS.pack().toString() &&
+                        restored.lastTick == 17L &&
+                        restored.nextAmbushTick == 1217L &&
+                        restored.lastReadoutTick == 100L &&
+                        restored.originalBaseSpeed == 1.25f,
+                ) { "JarCarrier unload/reload did not preserve its escort state" }
+                report("selftest: PASS JarCarrier unload/reload preserves escort state")
+            } finally {
+                WellSelfTestExclusions.releaseEntity(ref)
+                if (ref.isValid) store.removeEntity(ref, RemoveReason.REMOVE)
+            }
+        }
+
+        fun testGuardianDeath(
+            world: World,
+            report: (String) -> Unit,
+        ) {
+            val ref =
+                CraftoryCore.wells().spawn(
+                    world,
+                    WellSelfTest.CALMED_POS,
+                    Temperament.SPARK,
+                    WellStrength.STEADY,
+                    WellState.WILD,
+                ) ?: error("Guardian-death test Well spawn failed")
+            val well =
+                world.chunkStore.store.getComponent(ref, Glimmerwell.type) ?: error("Guardian test Well is missing")
+            calmWellAfterGuardianDeath(well)
+            check(well.state == WellState.DORMANT && well.strength == WellStrength.STEADY) {
+                "guardian death did not calm the Well without reducing strength"
+            }
+            report("selftest: PASS guardian death calms Well without changing strength")
+            CraftoryCore.wells().remove(world, WellSelfTest.CALMED_POS)
+        }
+
+        fun testStakeLifecycle(
+            world: World,
+            tempDir: Path,
+            report: WellSelfTestReport,
+        ) {
+            val wellRef =
+                CraftoryCore.wells().spawn(
+                    world,
+                    WellSelfTest.STAKED_POS,
+                    Temperament.SPARK,
+                    WellStrength.FLICKER,
+                    WellState.DORMANT,
+                ) ?: error("Stake test Well spawn failed")
+            val store = world.chunkStore.store
+            val well = store.getComponent(wellRef, Glimmerwell.type) ?: error("Stake test Well is missing")
+            val playerUuid = UUID.randomUUID()
+            val positions =
+                listOf(
+                    CraftorySelfTest.TestPosition(
+                        WellSelfTest.STAKED_POS.x + 4,
+                        WellSelfTest.STAKED_POS.y,
+                        WellSelfTest.STAKED_POS.z,
+                    ),
+                    CraftorySelfTest.TestPosition(
+                        WellSelfTest.STAKED_POS.x + 4,
+                        WellSelfTest.STAKED_POS.y,
+                        WellSelfTest.STAKED_POS.z + 3,
+                    ),
+                    CraftorySelfTest.TestPosition(
+                        WellSelfTest.STAKED_POS.x - 4,
+                        WellSelfTest.STAKED_POS.y,
+                        WellSelfTest.STAKED_POS.z,
+                    ),
+                )
+            val sectionRef =
+                world.chunkStore.getChunkSectionReferenceAtBlock(
+                    WellSelfTest.STAKED_POS.x,
+                    WellSelfTest.STAKED_POS.y,
+                    WellSelfTest.STAKED_POS.z,
+                )
+                    ?: error("Stake test section is not loaded")
+            val section =
+                store.getComponent(sectionRef, BlockComponentSection.getComponentType())
+                    ?: error("Stake test section is missing")
+            val crews = CrewService(tempDir.resolve("stake-crews.json"))
+            val refs = mutableListOf<BlockEntityRef>()
+            try {
+                val ownerCrew = crews.crewOf(playerUuid)
+                crews.setTier(ownerCrew.id, 2)
+                placeTestStakes(world, store, sectionRef, section, positions, playerUuid, refs)
+                recomputeStakeRing(world, WellSelfTest.STAKED_POS, well, playerUuid, crews)
+                checkStakeLeaning(store, well, refs)
+                straightenTestStakes(world, positions, playerUuid, crews)
+                checkStakeClaim(well, ownerCrew.id, wellRef, playerUuid, crews, store)
+                report("selftest: PASS Tinker's Hammer tether claim and foreign-crew denial")
+            } finally {
+                refs.forEach(WellSelfTestExclusions::releaseBlock)
+                CraftorySelfTest.clear(world, sectionRef, positions)
+                CraftoryCore.wells().remove(world, WellSelfTest.STAKED_POS)
+                crews.close()
+                Files.deleteIfExists(tempDir.resolve("stake-crews.json"))
+            }
+        }
+
+        private fun placeTestStakes(
+            world: World,
+            store: Store<ChunkStore>,
+            sectionRef: Ref<ChunkStore>,
+            section: BlockComponentSection,
+            positions: List<CraftorySelfTest.TestPosition>,
+            playerUuid: UUID,
+            refs: MutableList<BlockEntityRef>,
+        ) {
+            positions.forEach { position ->
+                CraftorySelfTest.place(
+                    world,
+                    store,
+                    sectionRef,
+                    section,
+                    CraftoryIds.TETHER_STAKE,
+                    position,
+                    TetherStakeState.type,
+                )
+                val ref =
+                    BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+                        ?: error("Stake block entity is missing")
+                refs.add(ref)
+                WellSelfTestExclusions.registerBlock(ref)
+                val stake = store.getComponent(ref, TetherStakeState.type) ?: error("Stake state is missing")
+                stake.wellId = WellSelfTest.STAKED_POS.pack().toString()
+                stake.placerUuid = playerUuid.toString()
+            }
+        }
+
+        private fun checkStakeLeaning(
+            store: Store<ChunkStore>,
+            well: Glimmerwell,
+            refs: List<BlockEntityRef>,
+        ) {
+            check(refs.all { store.getComponent(it, TetherStakeState.type)?.leaning == true }) {
+                "uneven stake gaps did not mark all stakes leaning"
+            }
+            check(well.state == WellState.DORMANT) { "leaning stakes tethered the Well" }
+        }
+
+        private fun straightenTestStakes(
+            world: World,
+            positions: List<CraftorySelfTest.TestPosition>,
+            playerUuid: UUID,
+            crews: CrewService,
+        ) {
+            positions.forEach { position ->
+                check(
+                    straightenTetherStake(
+                        world,
+                        Vector3i(position.x, position.y, position.z),
+                        playerUuid,
+                        crews,
+                    ),
+                ) { "Tinker's Hammer path did not clear a leaning stake" }
+            }
+        }
+
+        private fun checkStakeClaim(
+            well: Glimmerwell,
+            ownerCrewId: UUID,
+            wellRef: Ref<ChunkStore>,
+            playerUuid: UUID,
+            crews: CrewService,
+            store: Store<ChunkStore>,
+        ) {
+            check(well.state == WellState.TETHERED && well.claimCrewId == ownerCrewId) {
+                "straightened stakes did not tether to the placer crew"
+            }
+            val foreignUuid = UUID.randomUUID()
+            val foreignCrew = crews.crewOf(foreignUuid)
+            crews.setTier(foreignCrew.id, 2)
+            check(JarActions.checkCatch(wellRef, playerUuid, crews, store) is JarCatchResult.Caught) {
+                "placer crew could not capture the tethered Well"
+            }
+            check(JarActions.checkCatch(wellRef, foreignUuid, crews, store) == JarCatchResult.ForeignCrew) {
+                "foreign crew was allowed to capture the tethered Well"
+            }
+        }
+    }
+
+    private fun testHurlRefusal(
+        world: World,
+        report: (String) -> Unit,
+    ) {
+        val store = world.entityStore.store
+        val holder = EntityStore.REGISTRY.newHolder()
+        holder.addComponent(JarCarrier.type, JarCarrier())
+        holder.ensureComponent(EntityStore.REGISTRY.nonSerializedComponentType)
+        holder.ensureComponent(UUIDComponent.getComponentType())
+        holder.addComponent(
+            TransformComponent.getComponentType(),
+            TransformComponent(Vector3d(0.0, 100.0, 0.0), Rotation3f.IDENTITY),
+        )
+        val ref = store.addEntity(holder, AddReason.SPAWN) ?: error("Carrier Hurl test entity did not spawn")
+        try {
+            val result = HurlRides.startArc(world, HurlPoint(0.0, 0.0, 0.0), HurlPoint(1.0, 2.0, 3.0), ref)
+            check(result.failure == HurlStartFailure.FORBIDDEN) {
+                "Hurl boarding did not refuse a Gob-Jar carrier: $result"
+            }
+            report("selftest: PASS Hurl refuses Gob-Jar carriers")
+        } finally {
+            if (ref.isValid) store.removeEntity(ref, RemoveReason.REMOVE)
         }
     }
 

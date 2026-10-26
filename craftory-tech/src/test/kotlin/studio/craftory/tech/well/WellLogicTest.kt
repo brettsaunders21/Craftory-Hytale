@@ -97,6 +97,9 @@ class WellLogicTest {
     fun `stake spacing identifies gaps outside forty degrees`() {
         assertEquals(emptySet<Int>(), TetherRules.stakeSpread(listOf(0.0, 120.0, 240.0)))
         assertEquals(setOf(0, 1, 2), TetherRules.stakeSpread(listOf(0.0, 40.0, 180.0)))
+        assertEquals(3, TetherRules.requiredStakeCount(WellStrength.FLICKER))
+        assertEquals(4, TetherRules.requiredStakeCount(WellStrength.ROARING))
+        assertEquals(6, TetherRules.requiredStakeCount(WellStrength.PRIMAL))
         assertTrue(
             TetherRules.tetherComplete(
                 studio.craftory.core.api.well.WellState.DORMANT,
@@ -142,5 +145,11 @@ class WellLogicTest {
         assertFalse(JarCarrierRules.shouldBurst(0.01))
         assertTrue(JarCarrierRules.shouldBurst(0.0))
         assertTrue(JarCarrierRules.shouldBurst(-1.0))
+    }
+
+    @Test
+    fun `jar carrier speed is reduced by thirty percent`() {
+        assertEquals(0.7f, JarCarrierRules.slowedSpeed(1.0f))
+        assertEquals(0.84f, JarCarrierRules.slowedSpeed(1.2f), 0.000001f)
     }
 }

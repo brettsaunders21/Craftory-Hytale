@@ -134,6 +134,10 @@ internal class WellGuardianDeathSystem : DeathSystems.OnDeathSystem() {
                 .wellsNear(store.externalData.world.chunkStore.store, position, 0)
                 .firstOrNull()
                 ?.well ?: return
-        if (well.state != WellState.JARRED) well.state = WellState.DORMANT
+        calmWellAfterGuardianDeath(well)
     }
+}
+
+internal fun calmWellAfterGuardianDeath(well: Glimmerwell) {
+    if (well.state != WellState.JARRED) well.state = WellState.DORMANT
 }
