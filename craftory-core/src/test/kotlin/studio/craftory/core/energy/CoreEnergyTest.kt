@@ -2,13 +2,16 @@ package studio.craftory.core.energy
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyFaces
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.energy.EnergyMemberIds
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.engine.energy.EnergyEventSink
 
@@ -197,5 +200,52 @@ class CoreEnergyTest {
         )
         EnergyRequestValidation.production(1, producer, 1, 0)
         EnergyRequestValidation.demand(2, consumer, 1)
+    }
+
+    @Test
+    fun `face links require both members to expose the shared world axis`() {
+        assertTrue(EnergyFaces.connects(EnergyFaces.DOWN, EnergyFaces.UP, EnergyFaces.DOWN))
+        assertTrue(EnergyFaces.connects(EnergyFaces.NORTH, EnergyFaces.SOUTH, EnergyFaces.NORTH))
+        assertFalse(EnergyFaces.connects(EnergyFaces.DOWN, EnergyFaces.DOWN, EnergyFaces.DOWN))
+        assertFalse(EnergyFaces.connects(EnergyFaces.UP, EnergyFaces.DOWN, EnergyFaces.DOWN))
+    }
+
+    @Test
+    fun `converter output ids avoid real block positions and each other`() {
+        val positions =
+            listOf(
+                BlockPos(10_020, 155, 10_009),
+                BlockPos(-8_000, 70, 200),
+                BlockPos(0, 0, 0),
+            ).map(BlockPos::pack)
+        val outputIds = positions.map(EnergyMemberIds::converterOutput)
+
+        assertEquals(outputIds.size, outputIds.toSet().size)
+        assertTrue(positions.none { it in outputIds })
+        positions.zip(outputIds).forEach { (position, output) -> assertNotEquals(position, output) }
+    }
+
+    @Test
+    fun `converter input and output remain separate energy networks`() {
+        val adapter = EnergyRuntimeAdapter()
+        val fizzProducer = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 0, 1)
+        val fizzInput = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 0, 1)
+        val dimOutput = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 1, 1)
+        val dimConsumer = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 1, 1)
+        adapter.add(1, fizzProducer, longArrayOf())
+        adapter.add(4, dimConsumer, longArrayOf())
+        adapter.add(2, fizzInput, longArrayOf(1))
+        adapter.add(3, dimOutput, longArrayOf(4))
+        assertNotEquals(adapter.graph.networkOf(2), adapter.graph.networkOf(3))
+
+        adapter.setProduction(1, 10, 0)
+        adapter.setDemand(2, 5)
+        adapter.setProduction(3, 4, 1)
+        adapter.setDemand(4, 4)
+        adapter.tick(EnergyEventSink.NONE)
+
+        assertEquals(5L, adapter.graph.delivered(2))
+        assertEquals(4L, adapter.graph.delivered(4))
+        assertNotEquals(adapter.graph.networkOf(1), adapter.graph.networkOf(4))
     }
 }

@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponen
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
+import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -58,6 +59,7 @@ class WellAccess internal constructor() {
         strength: WellStrength,
         state: WellState = WellState.WILD,
         taste: String = defaultTaste(temperament),
+        claimCrewId: UUID? = null,
     ): Ref<ChunkStore>? {
         world.debugAssertInTickingThread()
         val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(pos.x, pos.y, pos.z) ?: return null
@@ -94,7 +96,7 @@ class WellAccess internal constructor() {
                 blockType,
                 0,
             ) ?: return null
-        val well = Glimmerwell(temperament, strength, state, taste, world.tick)
+        val well = Glimmerwell(temperament, strength, state, taste, world.tick, claimCrewId)
         store.putComponent(ref, Glimmerwell.type, well)
         val event = WellEvent(world, pos, ref, well)
         bornListeners.forEach { listener ->
