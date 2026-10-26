@@ -10,7 +10,7 @@ import java.nio.file.Path
 class CraftoryCreativeCategoryTest {
     @Test
     fun `all Craftory items use localized categories from the creative tab`() {
-        val categoryAsset = parse(techResource("Server/Item/Category/CreativeLibrary/Craftory.json"))
+        val categoryAsset = parse(coreResource("Server/Item/Category/CreativeLibrary/Craftory.json"))
         val children = categoryAsset.getAsJsonArray("Children").map { it.asJsonObject }
         val childIds = children.map { it.get("Id").asString }.toSet()
         assertTrue(childIds.size == children.size, "Craftory category child IDs must be unique")
@@ -52,7 +52,7 @@ class CraftoryCreativeCategoryTest {
 
         val languageKeys =
             Files
-                .readAllLines(techResource("Server/Languages/en-US/server.lang"))
+                .readAllLines(coreResource("Server/Languages/en-US/server.lang"))
                 .map { it.substringBefore('=').trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") }
                 .toSet()
@@ -111,12 +111,12 @@ class CraftoryCreativeCategoryTest {
             Path.of("craftory-core/src/main/resources/Server/Item/Items/Craftory"),
         ).filter(Files::isDirectory).distinct()
 
-    private fun techResource(relativePath: String): Path =
+    private fun coreResource(relativePath: String): Path =
         listOf(
-            Path.of("src/main/resources").resolve(relativePath),
-            Path.of("craftory-tech/src/main/resources").resolve(relativePath),
+            Path.of("../craftory-core/src/main/resources").resolve(relativePath),
+            Path.of("craftory-core/src/main/resources").resolve(relativePath),
         ).firstOrNull(Files::isRegularFile)
-            ?: error("Tech resource $relativePath was not found")
+            ?: error("Core resource $relativePath was not found")
 
     private fun jsonFiles(directory: Path): List<Path> =
         Files.list(directory).use { paths ->
