@@ -235,6 +235,7 @@ internal object WellPersistenceSelfTest {
                 ) ?: error("reloaded test section is missing")
             val store = world.chunkStore.store
             store.getComponent(sectionRef, ChunkSection.getComponentType())?.resetActiveTimer()
+            store.removeComponentIfExists(sectionRef, ChunkStore.REGISTRY.getNonTickingComponentType())
             val blockId =
                 store
                     .getComponent(sectionRef, BlockSection.getComponentType())
