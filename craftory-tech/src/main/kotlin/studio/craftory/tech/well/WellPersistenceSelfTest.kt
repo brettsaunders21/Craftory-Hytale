@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
@@ -233,6 +234,7 @@ internal object WellPersistenceSelfTest {
                     fixture.wellPosition.z,
                 ) ?: error("reloaded test section is missing")
             val store = world.chunkStore.store
+            store.getComponent(sectionRef, ChunkSection.getComponentType())?.resetActiveTimer()
             val blockId =
                 store
                     .getComponent(sectionRef, BlockSection.getComponentType())
