@@ -1,0 +1,5 @@
+{
+  "Parent": "Spawn_Void",
+  "Model": "NPC/Void/Spawn_Void/Models/Model.blockymodel",
+  "Texture": "NPC/Craftory/Riftmoth/Texture.png"
+}

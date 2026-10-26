@@ -21,16 +21,24 @@ import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.multiblock.MultiblockState
 import studio.craftory.core.api.transport.FluidHandler
 import studio.craftory.core.api.transport.FluidTank
 import studio.craftory.core.api.transport.FluidTransport
+import studio.craftory.tech.CraftoryIds
 
 private val LAVA_IDS = setOf("Lava_Source", "Lava")
 private const val TICKS_PER_SECOND = 20L
 
 internal class GutterBoilerSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(BoilerState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            BoilerState.type,
+            MultiblockController.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
@@ -57,8 +65,20 @@ internal class GutterBoilerSystem : EntityTickingSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val state = chunk.getComponent(index, BoilerState.type) ?: return
+        val controller = chunk.getComponent(index, MultiblockController.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            clearBoilerProduction(member)
+            return
+        }
+        if (controller.state != MultiblockState.FORMED) {
+            clearBoilerProduction(member)
+            if (setBlockState(store.externalData.world, blockState, commandBuffer, "Off")) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+            return
+        }
         advanceBoiler(state, member, blockState, store, commandBuffer)
     }
 
@@ -132,10 +152,18 @@ private fun updateBoilerState(
         state.lastWhistleTick = world.tick
         GutterBoilerEffects.whistle(world, x, y, z)
     }
+    var runningSoundPlayed = false
+    if (boilerVisualState(state, lavaBelow) == "On" &&
+        BoilerRunningSoundCadence.isDue(world.tick, state.lastRunningSoundTick)
+    ) {
+        state.lastRunningSoundTick = world.tick
+        runningSoundPlayed = true
+        GutterBoilerEffects.running(world, x, y, z)
+    }
     val stateChanged =
         hasBoilerStateChanged(beforePressure, beforeWater, beforeFuelTicks, beforeOnline, beforeLastWhistleTick, state)
     val visualChanged = setBlockState(world, blockState, commandBuffer, boilerVisualState(state, lavaBelow))
-    if (stateChanged || visualChanged) blockState.markNeedsSaving(commandBuffer)
+    if (stateChanged || visualChanged || runningSoundPlayed) blockState.markNeedsSaving(commandBuffer)
     if (update.popped) GutterBoilerEffects.pop(world, x, y, z)
 }
 
@@ -230,20 +258,60 @@ internal class SloshtankStateSystem : EntityTickingSystem<ChunkStore>() {
         val fluid = FluidTransport.of(world)
         val capacity = fluid.capacity(position.x, position.y, position.z)
         val amount = fluid.amount(position.x, position.y, position.z)
-        val fill = if (capacity <= 0L) 0 else ((amount * 4 + capacity / 2) / capacity).toInt().coerceIn(0, 4)
-        val state =
-            when (fill) {
-                1 -> "Quarter"
-                2 -> "Half"
-                3 -> "ThreeQuarter"
-                4 -> "Full"
-                else -> "Empty"
-            }
+        val state = FillBand.stateName(FillBand.of(amount, capacity))
         if (setBlockState(world, blockState, commandBuffer, state)) blockState.markNeedsSaving(commandBuffer)
     }
 }
 
-private fun setBlockState(
+internal class CanisterStateSystem : EntityTickingSystem<ChunkStore>() {
+    private val position = Vector3i()
+
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+
+    override fun getDependencies(): Set<Dependency<ChunkStore>> =
+        setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState) || !blockState.fillWorldPos(commandBuffer, position)) return
+        val world = store.externalData.world
+        if ((world.tick + position.x + position.z) % STATE_UPDATE_INTERVAL_TICKS != 0L) return
+
+        val section = commandBuffer.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return
+        val blockType = BlockType.getAssetMap().getAsset(section.get(position.x, position.y, position.z)) ?: return
+        if (baseBlockId(blockType) != CraftoryIds.CANISTER) return
+
+        val positionId = BlockPos.pack(position.x, position.y, position.z)
+        val energy = CraftoryCore.energyAccess(world)
+        val state = FillBand.stateName(FillBand.of(energy.stored(positionId), energy.capacity(positionId)))
+        if (setBlockState(world, blockState, commandBuffer, state)) blockState.markNeedsSaving(commandBuffer)
+    }
+}
+
+private const val STATE_UPDATE_INTERVAL_TICKS = 10L
+
+internal fun setBlockState(
     world: com.hypixel.hytale.server.core.universe.world.World,
     blockState: BlockModule.BlockStateInfo,
     commandBuffer: CommandBuffer<ChunkStore>,
@@ -271,7 +339,12 @@ private fun setBlockState(
 
 internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(GasbagState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            GasbagState.type,
+            MultiblockController.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
@@ -290,6 +363,7 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
         super.tick(dt, chunk, store, commandBuffer)
     }
 
+    @Suppress("CyclomaticComplexMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -298,14 +372,31 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val state = chunk.getComponent(index, GasbagState.type) ?: return
+        val controller = chunk.getComponent(index, MultiblockController.type) ?: return
+        val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState) ||
-            !CraftoryCore.isEnergyTick(store) ||
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
+        if (controller.state != MultiblockState.FORMED) {
+            member.production = 0
+            if (setBlockState(store.externalData.world, blockState, commandBuffer, "Off")) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+            return
+        }
+        if (!CraftoryCore.isEnergyTick(store) ||
             store.externalData.world.tick % TICKS_PER_SECOND != 0L
         ) {
             return
         }
         val position = blockState.worldPosition(commandBuffer) ?: return
+        if (store.externalData.world.tick % STATE_UPDATE_INTERVAL_TICKS == 0L) {
+            val positionId = BlockPos.pack(position.x, position.y, position.z)
+            val energy = CraftoryCore.energyAccess(store.externalData.world)
+            val visualState = FillBand.stateName(FillBand.of(energy.stored(positionId), energy.capacity(positionId)))
+            if (setBlockState(store.externalData.world, blockState, commandBuffer, visualState)) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+        }
         if (!state.leaking && fireAdjacent(store, position.x, position.y, position.z)) {
             state.leaking = true
             blockState.markNeedsSaving(commandBuffer)
@@ -347,6 +438,7 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
 
     companion object {
         const val CAPACITY = 400_000L
+        private const val STATE_UPDATE_INTERVAL_TICKS = 10L
         private val FACES =
             arrayOf(
                 intArrayOf(1, 0, 0),

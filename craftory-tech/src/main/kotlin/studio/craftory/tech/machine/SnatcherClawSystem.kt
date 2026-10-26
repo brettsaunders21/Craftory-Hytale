@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
@@ -71,6 +72,12 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
         val state = chunk.getComponent(index, SnatcherClawState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val animation = chunk.getComponent(index, TimedBlockAnimation.type)
+        if (animation != null &&
+            setBlockState(world = store.externalData.world, blockState, commandBuffer, animation.stateAt(tick))
+        ) {
+            blockState.markNeedsSaving(commandBuffer)
+        }
         val hasPosition = blockState.fillWorldPos(commandBuffer, position)
         val areaActive = CraftoryCore.isAreaActive(store, blockState)
         val energyTick = areaActive && CraftoryCore.isEnergyTick(store)
@@ -169,6 +176,7 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
                     state.fizzBuffer -= SnatcherClawState.FIZZ_PER_ITEM
                     state.lastExtractTick = tick
                     changed = true
+                    startGrabAnimation(world, blockState, commandBuffer, animation, tick)
                     val blockTypeId = BlockType.getAssetMap().getIndex(CraftoryIds.SNATCHER_CLAW)
                     BlockOperations.spawnBlockParticles(
                         world.chunkStore,
@@ -195,6 +203,20 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
             break
         }
         if (changed) blockState.markNeedsSaving(commandBuffer)
+    }
+
+    private fun startGrabAnimation(
+        world: World,
+        blockState: BlockModule.BlockStateInfo,
+        commandBuffer: CommandBuffer<ChunkStore>,
+        animation: TimedBlockAnimation?,
+        tick: Long,
+    ) {
+        if (animation == null) return
+        animation.start(tick)
+        if (setBlockState(world, blockState, commandBuffer, animation.animatedState)) {
+            blockState.markNeedsSaving(commandBuffer)
+        }
     }
 
     private fun findTargetPipe(

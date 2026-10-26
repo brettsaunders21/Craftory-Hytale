@@ -40,6 +40,9 @@ import com.hypixel.hytale.server.core.util.FillerBlockUtil
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.multiblock.MultiblockState
+import studio.craftory.core.api.multiblock.MultiblockTemplate
 import studio.craftory.core.api.transport.FluidTransport
 import studio.craftory.tech.CraftoryIds
 import java.util.function.BiConsumer
@@ -50,6 +53,7 @@ internal class FluidSelfTestRun : Resource<ChunkStore> {
         val world: World,
         val startTick: Long,
     ) {
+        var onComplete: (() -> Unit)? = null
         val blocks = FluidSelfTestCases.testPositions()
         var stage = 0
         var stageStartTick = startTick
@@ -106,6 +110,7 @@ internal class FluidSelfTestRun : Resource<ChunkStore> {
 }
 
 internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
+    @Suppress("TooGenericExceptionCaught")
     override fun tick(
         dt: Float,
         systemIndex: Int,
@@ -122,7 +127,12 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
                 run.testTicking = false
                 if (!run.setupFailureReported) {
                     run.setupFailureReported = true
-                    FluidSelfTestState.fail(run, "setup", run.setupFailure ?: "unknown setup failure")
+                    run.failed++
+                    runCatching {
+                        run.context.sendMessage(
+                            Message.raw("selftest: fluid setup FAIL (${run.setupFailure ?: "unknown setup failure"})"),
+                        )
+                    }
                 }
                 FluidSelfTestCleanup.cleanup(run, store)
                 return
@@ -175,17 +185,16 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
                 }
                 FluidSelfTestState.next(run)
             }
-        } catch (failure: IllegalStateException) {
-            handleFailure(run, store, failure)
-        } catch (failure: IllegalArgumentException) {
+        } catch (failure: Exception) {
             handleFailure(run, store, failure)
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun handleFailure(
         run: FluidSelfTestRun.Run,
         store: Store<ChunkStore>,
-        failure: RuntimeException,
+        failure: Exception,
     ) {
         run.testTicking = false
         val machineDetails =
@@ -199,11 +208,23 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
             "F${run.stage}",
             (failure.message ?: failure.javaClass.simpleName) + machineDetails,
         )
-        FluidSelfTestCleanup.cleanup(run, store)
+        try {
+            FluidSelfTestCleanup.cleanup(run, store)
+        } catch (cleanupFailure: Exception) {
+            FluidSelfTestState.fail(
+                run,
+                "F9",
+                "cleanup failed after ${failure.message ?: failure.javaClass.simpleName}: " +
+                    (cleanupFailure.message ?: cleanupFailure.javaClass.simpleName),
+            )
+            FluidSelfTestCleanup.finish(run, store)
+        }
     }
 }
 
+@Suppress("TooManyFunctions")
 internal object FluidSelfTestCases {
+    @Suppress("TooGenericExceptionCaught")
     fun loadAndPlace(run: FluidSelfTestRun.Run) {
         run.loading = true
         val anchor = run.blocks.first()
@@ -308,6 +329,14 @@ internal object FluidSelfTestCases {
                             sectionRef,
                             section,
                             CraftoryIds.PIPE,
+                            BOILER_ROUTE_PIPE,
+                        )
+                        FluidSelfTestSetup.placeBlock(
+                            run,
+                            store,
+                            sectionRef,
+                            section,
+                            CraftoryIds.PIPE,
                             PRESSURISED_GNASHER_PIPE,
                         )
                         FluidSelfTestSetup.placeBlock(run, store, sectionRef, section, CraftoryIds.PIPE, BURNER_PIPE)
@@ -328,6 +357,10 @@ internal object FluidSelfTestCases {
                             PLAIN_GNASHER_PIPE,
                         )
                         FluidSelfTestSetup.placeBlock(run, store, sectionRef, section, CraftoryIds.PIPE, GASBAG_PIPE)
+                        check(
+                            assembleAndKick(run, store, BOILER, GutterBoilerTemplate.template) &&
+                                assembleAndKick(run, store, GASBAG, GasbagTemplate.template),
+                        ) { "fluid test boiler/gasbag multiblock formation failed" }
                         FluidSelfTestDiagnostics.verifyFixtureBlocks(run, store, sectionRef)
                         val chunkIndex = ChunkUtil.indexChunk(anchor.x shr 5, anchor.z shr 5)
                         FluidSelfTestSetup.retainTestChunk(run, store, chunkIndex)
@@ -343,15 +376,32 @@ internal object FluidSelfTestCases {
                         )
                         run.initialized = true
                         run.stageStartTick = run.world.tick
-                    } catch (failure: IllegalStateException) {
-                        run.setupFailure = "fluid test setup failed (${failure.message})"
-                    } catch (failure: IllegalArgumentException) {
+                    } catch (failure: Exception) {
                         run.setupFailure = "fluid test setup failed (${failure.message})"
                     } finally {
                         run.loading = false
                     }
                 }
             }
+    }
+
+    private fun assembleAndKick(
+        run: FluidSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        position: Position,
+        template: MultiblockTemplate,
+    ): Boolean {
+        val controllerRef = FluidSelfTestSetup.blockEntity(run.world, position) ?: return false
+        repeat(template.parts.size) {
+            JunkHeartActions.hammer(run.world, store, controllerRef, take = { true }, refund = {})
+        }
+        val controller = store.getComponent(controllerRef, MultiblockController.type) ?: return false
+        if (controller.state != MultiblockState.READY_TO_START) return false
+        val kickTick = controller.readySinceTick + (run.world.tps.toDouble() * 1.5).toLong()
+        val kicked =
+            JunkHeartActions.kick(run.world, store, controllerRef, kickTick, mayOperate = true) is KickResult.Formed
+        return kicked &&
+            store.getComponent(controllerRef, MultiblockController.type)?.state == MultiblockState.FORMED
     }
 
     fun tickF1(run: FluidSelfTestRun.Run) {
@@ -578,6 +628,26 @@ internal object FluidSelfTestCases {
     }
 
     fun testPositions(): List<Position> {
+        val positions = fixturePositions()
+        val gnasherType = BlockType.fromString(CraftoryIds.GNASHER_PIT) ?: error("missing fluid test Gnasher")
+        val gnasherFootprints =
+            listOf(PRESSURISED_GNASHER, PLAIN_GNASHER)
+                .associateWith { position -> FluidSelfTestFootprint.fixture(position, gnasherType) }
+        val otherFixtures =
+            CraftorySelfTest.staticTestPositions().map { Position(it.x, it.y, it.z) }
+        FluidSelfTestFootprint.assertSafe(positions, gnasherFootprints, otherFixtures)
+        return positions
+    }
+
+    fun fixturePositions(): List<Position> {
+        val boilerParts =
+            GutterBoilerTemplate.template.parts.map {
+                Position(BOILER.x + it.offset.x, BOILER.y + it.offset.y, BOILER.z + it.offset.z)
+            }
+        val gasbagParts =
+            GasbagTemplate.template.parts.map {
+                Position(GASBAG.x + it.offset.x, GASBAG.y + it.offset.y, GASBAG.z + it.offset.z)
+            }
         val positions =
             listOf(
                 SOURCE,
@@ -589,6 +659,7 @@ internal object FluidSelfTestCases {
                 BOILER,
                 BOILER_PIPE,
                 BOILER_LINK_PIPE,
+                BOILER_ROUTE_PIPE,
                 PRESSURISED_GNASHER_PIPE,
                 F3_LINK_GAP_A,
                 F3_LINK_GAP_B,
@@ -602,12 +673,7 @@ internal object FluidSelfTestCases {
                 GASBAG_PIPE,
                 GASBAG,
                 GASBAG_FIRE,
-            )
-        val gnasherType = BlockType.fromString(CraftoryIds.GNASHER_PIT) ?: error("missing fluid test Gnasher")
-        val gnasherFootprints =
-            listOf(PRESSURISED_GNASHER, PLAIN_GNASHER)
-                .associateWith { position -> FluidSelfTestFootprint.fixture(position, gnasherType) }
-        FluidSelfTestFootprint.assertSafe(positions, gnasherFootprints)
+            ) + boilerParts + gasbagParts
         return positions
     }
 
@@ -627,9 +693,10 @@ internal object FluidSelfTestCases {
     val F2_BOTTOM = Position(BASE.x + 4, BASE.y, BASE.z)
     val F2_TOP = Position(BASE.x + 4, BASE.y + 1, BASE.z)
     val F2_SIDE = Position(BASE.x + 5, BASE.y, BASE.z)
-    val BOILER = Position(BASE.x + 7, BASE.y, BASE.z)
-    val BOILER_PIPE = Position(BASE.x + 7, BASE.y - 1, BASE.z)
-    val BOILER_LINK_PIPE = Position(BASE.x + 8, BASE.y - 1, BASE.z)
+    val BOILER = Position(BASE.x + 6, BASE.y, BASE.z)
+    val BOILER_PIPE = Position(BASE.x + 6, BASE.y - 1, BASE.z)
+    val BOILER_LINK_PIPE = Position(BASE.x + 7, BASE.y - 1, BASE.z)
+    val BOILER_ROUTE_PIPE = Position(BASE.x + 8, BASE.y - 1, BASE.z)
     val PRESSURISED_GNASHER_PIPE = Position(BASE.x + 9, BASE.y - 1, BASE.z)
     val F3_LINK_GAP_A = Position(BASE.x + 10, BASE.y - 1, BASE.z)
     val F3_LINK_GAP_B = Position(BASE.x + 11, BASE.y - 1, BASE.z)
@@ -642,7 +709,7 @@ internal object FluidSelfTestCases {
     val GASBAG_BURNER = Position(BASE.x + 17, BASE.y, BASE.z)
     val GASBAG_PIPE = Position(BASE.x + 18, BASE.y, BASE.z)
     val GASBAG = Position(BASE.x + 19, BASE.y, BASE.z)
-    val GASBAG_FIRE = Position(BASE.x + 19, BASE.y + 1, BASE.z)
+    val GASBAG_FIRE = Position(BASE.x + 19, BASE.y - 1, BASE.z)
 
     fun timeoutDetail(
         run: FluidSelfTestRun.Run,
@@ -829,6 +896,7 @@ internal object FluidSelfTestDiagnostics {
             FluidSelfTestCases.GASBAG to CraftoryIds.GASBAG,
             FluidSelfTestCases.BOILER_PIPE to CraftoryIds.PIPE,
             FluidSelfTestCases.BOILER_LINK_PIPE to CraftoryIds.PIPE,
+            FluidSelfTestCases.BOILER_ROUTE_PIPE to CraftoryIds.PIPE,
             FluidSelfTestCases.PRESSURISED_GNASHER_PIPE to CraftoryIds.PIPE,
             FluidSelfTestCases.BURNER_PIPE to CraftoryIds.PIPE,
             FluidSelfTestCases.BURNER_LINK_PIPE to CraftoryIds.PIPE,
@@ -1175,7 +1243,7 @@ internal object FluidSelfTestF6 {
     }
 }
 
-private object FluidSelfTestFootprint {
+internal object FluidSelfTestFootprint {
     fun fixture(
         position: Position,
         type: BlockType,
@@ -1205,12 +1273,15 @@ private object FluidSelfTestFootprint {
     fun assertSafe(
         fixturePositions: List<Position>,
         gnasherFootprints: Map<Position, Set<Position>>,
+        otherFixtures: Collection<Position> = emptyList(),
     ) {
         assertGnasherFillersDoNotOverlap(fixturePositions, gnasherFootprints)
         val footprint =
             fixturePositions.toMutableSet().apply {
                 gnasherFootprints.values.forEach { addAll(it) }
             }
+        val overlappingFixture = footprint.firstOrNull { it in otherFixtures }
+        check(overlappingFixture == null) { "fluid test fixture overlaps another selftest at $overlappingFixture" }
         val overlap = footprint.firstOrNull { it.x in 10_200..10_260 }
         check(overlap == null) { "fluid test fixture overlaps transport range at $overlap" }
         assertInsideRetainedChunk(footprint)
@@ -1518,19 +1589,28 @@ internal object FluidSelfTestCleanup {
         val resourcesReleased = run.keepLoadedCount == 0 && drops == 0
         if (graphsCleared && resourcesReleased) {
             FluidSelfTestState.pass(run, "F9 graph, energy, keep-loaded, and drop cleanup")
-            run.context.sendMessage(Message.raw("selftest: fluids ${run.passed} passed, ${run.failed} failed"))
-            run.cleanupComplete = true
-            store.getResource(FluidSelfTestRun.type).active = null
+            finish(run, store)
         } else if (run.world.tick - run.cleanupStartedTick > FluidSelfTestCases.CLEANUP_TIMEOUT_TICKS) {
             FluidSelfTestState.fail(
                 run,
                 "F9",
                 timeoutDetail(run),
             )
-            run.context.sendMessage(Message.raw("selftest: fluids ${run.passed} passed, ${run.failed} failed"))
-            run.cleanupComplete = true
-            store.getResource(FluidSelfTestRun.type).active = null
+            finish(run, store)
         }
+    }
+
+    fun finish(
+        run: FluidSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        if (run.cleanupComplete) return
+        run.cleanupComplete = true
+        runCatching {
+            run.context.sendMessage(Message.raw("selftest: fluids ${run.passed} passed, ${run.failed} failed"))
+        }
+        store.getResource(FluidSelfTestRun.type).active = null
+        runCatching { run.onComplete?.invoke() }
     }
 
     fun timeoutDetail(run: FluidSelfTestRun.Run): String {
@@ -1777,7 +1857,7 @@ internal object FluidSelfTestState {
         label: String,
     ) {
         run.passed++
-        run.context.sendMessage(Message.raw("selftest: PASS $label"))
+        runCatching { run.context.sendMessage(Message.raw("selftest: PASS $label")) }
     }
 
     fun fail(
@@ -1786,7 +1866,7 @@ internal object FluidSelfTestState {
         detail: String,
     ) {
         run.failed++
-        run.context.sendMessage(Message.raw("selftest: FAIL $label ($detail)"))
+        runCatching { run.context.sendMessage(Message.raw("selftest: FAIL $label ($detail)")) }
     }
 
     fun next(run: FluidSelfTestRun.Run) {
@@ -1798,18 +1878,53 @@ internal object FluidSelfTestState {
 }
 
 internal object FluidSelfTest {
+    @Suppress("TooGenericExceptionCaught")
     fun start(
         context: com.hypixel.hytale.server.core.command.system.CommandContext,
         world: World,
+        onComplete: (() -> Unit)? = null,
     ) {
-        world.execute {
-            val resource = world.chunkStore.store.getResource(FluidSelfTestRun.type)
-            if (resource.active != null) return@execute
-            val run = FluidSelfTestRun.Run(context, world, world.tick)
-            resource.active = run
-            FluidSelfTestAssetChecks.check(run)
-            context.sendMessage(Message.raw("selftest: starting fluid cases F1-F9"))
+        try {
+            world.execute {
+                try {
+                    val resource = world.chunkStore.store.getResource(FluidSelfTestRun.type)
+                    if (resource.active != null) return@execute
+                    SelfTestStartup.execute(
+                        create = { FluidSelfTestRun.Run(context, world, world.tick) },
+                        start = { run ->
+                            run.onComplete = onComplete
+                            resource.active = run
+                            FluidSelfTestAssetChecks.check(run)
+                            context.sendMessage(Message.raw("selftest: starting fluid cases F1-F9"))
+                        },
+                        onFailure = { run, failure ->
+                            if (run == null) {
+                                reportStartFailure(context, failure, onComplete)
+                            } else {
+                                run.onComplete = onComplete
+                                run.setupFailure = failure.message ?: failure.javaClass.simpleName
+                                resource.active = run
+                            }
+                        },
+                    )
+                } catch (failure: Exception) {
+                    reportStartFailure(context, failure, onComplete)
+                }
+            }
+        } catch (failure: Exception) {
+            reportStartFailure(context, failure, onComplete)
         }
+    }
+
+    private fun reportStartFailure(
+        context: com.hypixel.hytale.server.core.command.system.CommandContext,
+        failure: Exception,
+        onComplete: (() -> Unit)?,
+    ) {
+        val detail = failure.message ?: failure.javaClass.simpleName
+        runCatching { context.sendMessage(Message.raw("selftest: fluid setup FAIL ($detail)")) }
+        runCatching { context.sendMessage(Message.raw("selftest: fluids 0 passed, 1 failed")) }
+        runCatching { onComplete?.invoke() }
     }
 }
 
@@ -1831,6 +1946,9 @@ private object FluidSelfTestAssetChecks {
         }
         check(run, GutterBoilerEffects.HIGH_PRESSURE_SOUND_ID) {
             SoundEvent.getAssetMap().getIndex(GutterBoilerEffects.HIGH_PRESSURE_SOUND_ID) >= 0
+        }
+        check(run, GutterBoilerEffects.RUNNING_SOUND_ID) {
+            SoundEvent.getAssetMap().getIndex(GutterBoilerEffects.RUNNING_SOUND_ID) >= 0
         }
         check(run, GutterBoilerEffects.STEAM_PARTICLE_ID) {
             ParticleSystem.getAssetMap().getAsset(GutterBoilerEffects.STEAM_PARTICLE_ID) != null

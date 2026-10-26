@@ -23,6 +23,24 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 internal object BuildableMachines {
+    val requiredTierByItem =
+        mapOf(
+            CraftoryIds.GUTTER_BOILER to 2,
+            CraftoryIds.GASBAG to 2,
+            CraftoryIds.BOILER_TANK to 2,
+            CraftoryIds.BOILER_WHISTLE_STACK to 2,
+            CraftoryIds.GASBAG_FRAME to 2,
+            CraftoryIds.GASBAG_ENVELOPE to 2,
+            CraftoryIds.SNATCHER_CLAW to 2,
+            CraftoryIds.HURL_TUBE to 2,
+            CraftoryIds.HURL_STATION to 2,
+            CraftoryIds.HURL_CANNON to 2,
+            CraftoryIds.TETHER_STAKE to 3,
+            CraftoryIds.CRACKLE_COIL to 3,
+            CraftoryIds.RESONATOR to 3,
+            CraftoryIds.WELL_CRADLE to 3,
+        )
+
     private val machineTypeByItem =
         mapOf(
             CraftoryIds.CRANK to CraftoryIds.CRANK_TYPE,
@@ -36,6 +54,11 @@ internal object BuildableMachines {
     val itemIds: Set<String> get() = machineTypeByItem.keys
 
     fun pageFor(itemId: String): NotebookPage? = machineTypeByItem[itemId]?.let(NotebookPages::forMachineType)
+
+    fun missingTier(
+        itemId: String,
+        crewTier: Int,
+    ): Int? = requiredTierByItem[itemId]?.takeIf { crewTier < it }
 
     /** The page a player's crew still needs before crafting [itemId], or null when crafting is allowed. */
     fun missingPage(
@@ -62,14 +85,31 @@ internal class BuildableMachineCraftGate :
         if (event.isCancelled) return
         val itemId = event.craftedRecipe.primaryOutput?.itemId ?: return
         val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
-        val page = BuildableMachines.missingPage(itemId, player.uuid, CraftoryCore.crewService()) ?: return
+        val crews = CraftoryCore.crewService()
+        val missingTier =
+            if (itemId in BuildableMachines.requiredTierByItem) {
+                BuildableMachines.missingTier(itemId, crews.tierOf(player.uuid))
+            } else {
+                null
+            }
+        val page = BuildableMachines.missingPage(itemId, player.uuid, crews)
+        if (missingTier == null && page == null) return
         event.isCancelled = true
-        player.sendMessage(
-            Message
-                .translation("server.craftory.craft.needs-page")
-                .param("machine", Message.translation("server.items.$itemId.name"))
-                .param("page", Message.translation(page.nameKey)),
-        )
+        if (missingTier != null) {
+            player.sendMessage(
+                Message
+                    .translation("server.craftory.craft.needs-tier")
+                    .param("item", Message.translation("server.items.$itemId.name"))
+                    .param("tier", missingTier),
+            )
+        } else {
+            player.sendMessage(
+                Message
+                    .translation("server.craftory.craft.needs-page")
+                    .param("machine", Message.translation("server.items.$itemId.name"))
+                    .param("page", Message.translation(checkNotNull(page).nameKey)),
+            )
+        }
     }
 }
 

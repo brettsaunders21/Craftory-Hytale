@@ -206,15 +206,15 @@ internal object WellSelfTest {
 
     private fun testRuntimeAssets(report: WellSelfTestReport) {
         val missingParticles =
-            listOf("Lightning", "Magic_Sparks_GS", "Dungeon_Goblin_Toxic_Water")
+            listOf("Lightning", WellPulseAppearance.PARTICLE_ID, "Dungeon_Goblin_Toxic_Water")
                 .filter { ParticleSystem.getAssetMap().getAsset(it) == null }
         val missingSounds =
             listOf("SFX_Global_Weather_Thunder", "SFX_Crystal_Hit")
                 .filter { SoundEvent.getAssetMap().getIndex(it) < 0 }
-        val chainBeam = Beam.getAssetMap().getIndex("Chain")
+        val tetherBeam = Beam.getAssetMap().getIndex(CraftoryIds.TETHER_CYAN_BEAM)
         report(
             "selftest: asset check " +
-                "(missingParticles=$missingParticles missingSounds=$missingSounds chainBeam=$chainBeam)",
+                "(missingParticles=$missingParticles missingSounds=$missingSounds tetherBeam=$tetherBeam)",
         )
     }
 

@@ -138,6 +138,18 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
 
     fun isPipe(position: Long): Boolean = graph.containsNode(position)
 
+    fun hasReceiverAt(
+        currentStore: Store<ChunkStore>,
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Boolean {
+        val ref = blockEntityAt(currentStore, x, y, z) ?: return false
+        if (currentStore.getComponent(ref, ItemContainerBlock.getComponentType()) != null) return true
+        if (currentStore.getComponent(ref, PROCESSING_BENCH_COMPONENT) != null) return true
+        return hasInputAdapter(currentStore, ref)
+    }
+
     fun itemsInTransit(): Int = graph.itemCount
 
     fun itemsOwnedBy(position: Long): Int = graph.itemsOwnedByCount(position)
@@ -403,6 +415,18 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
                 .getChunkSectionReferenceAtBlock(x, y, z) ?: return null
         return BlockModule.getBlockEntity(currentStore, sectionRef, x, y, z)
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun hasInputAdapter(
+        currentStore: Store<ChunkStore>,
+        ref: Ref<ChunkStore>,
+    ): Boolean =
+        ItemTransport.inputAdapters().keys.any { componentType ->
+            currentStore.getComponent(
+                ref,
+                componentType as ComponentType<ChunkStore, Component<ChunkStore>>,
+            ) != null
+        }
 
     private fun insertIntoContainer(
         container: com.hypixel.hytale.server.core.inventory.container.ItemContainer,

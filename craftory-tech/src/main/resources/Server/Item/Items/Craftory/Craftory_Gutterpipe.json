@@ -30,13 +30,592 @@
     "Material": "Solid",
     "DrawType": "Model",
     "Opacity": "Transparent",
-    "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe.blockymodel",
+    "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C00.blockymodel",
     "CustomModelTexture": [
       {
-        "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png",
-        "Weight": 1
+        "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
       }
     ],
+    "State": {
+      "Definitions": {
+        "C00": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C00.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C01": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C01.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C02": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C02.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C03": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C03.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C04": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C04.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C05": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C05.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C06": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C06.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C07": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C07.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C08": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C08.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C09": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C09.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C10": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C10.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C11": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C11.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C12": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C12.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C13": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C13.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C14": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C14.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C15": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C15.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C16": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C16.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C17": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C17.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C18": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C18.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C19": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C19.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C20": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C20.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C21": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C21.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C22": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C22.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C23": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C23.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C24": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C24.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C25": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C25.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C26": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C26.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C27": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C27.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C28": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C28.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C29": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C29.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C30": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C30.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C31": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C31.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C32": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C32.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C33": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C33.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C34": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C34.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C35": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C35.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C36": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C36.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C37": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C37.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C38": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C38.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C39": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C39.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C40": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C40.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C41": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C41.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C42": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C42.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C43": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C43.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C44": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C44.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C45": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C45.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C46": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C46.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C47": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C47.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C48": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C48.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C49": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C49.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C50": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C50.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C51": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C51.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C52": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C52.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C53": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C53.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C54": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C54.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C55": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C55.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C56": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C56.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C57": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C57.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C58": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C58.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C59": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C59.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C60": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C60.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C61": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C61.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C62": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C62.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        },
+        "C63": {
+          "DrawType": "Model",
+          "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C63.blockymodel",
+          "CustomModelTexture": [
+            {
+              "Texture": "Blocks/Craftory/Gutterpipe/Gutterpipe_Texture.png"
+            }
+          ]
+        }
+      }
+    },
     "Group": "Dev",
     "HitboxType": "Branch",
     "Flags": {},
@@ -45,7 +624,6 @@
         "GatherType": "Rocks"
       }
     },
-    "VariantRotation": "Pipe",
     "BlockParticleSetId": "Dust",
     "Supporting": {
       "Down": [

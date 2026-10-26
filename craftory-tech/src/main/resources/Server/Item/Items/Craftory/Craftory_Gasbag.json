@@ -16,16 +16,55 @@
     "Opacity": "Transparent",
     "Group": "GoblinLab",
     "HitboxType": "Full",
-    "CustomModel": "Blocks/Craftory/Gasbag/Gasbag.blockymodel",
+    "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
     "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
-    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Texture.png"}],
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}],
     "Interactions": {
       "Use": {
         "Interactions": [{"Type": "Craftory_BlockUse"}]
       }
     },
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}]
+        },
+        "Empty": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}]
+        },
+        "Quarter": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Quarter.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Quarter_Texture.png"}]
+        },
+        "Half": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Half.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Half_Texture.png"}]
+        },
+        "ThreeQuarter": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_ThreeQuarter.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_ThreeQuarter_Texture.png"}]
+        },
+        "Full": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Full.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Full_Texture.png"}]
+        }
+      }
+    },
     "BlockEntity": {
       "Components": {
+        "Craftory_MultiblockController": {
+          "TemplateId": "craftory:gasbag",
+          "Rotation": -1,
+          "State": "ASSEMBLING",
+          "Quality": "NONE"
+        },
         "CraftoryGasbagState": {},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:gasbag",
@@ -35,5 +74,18 @@
         "CraftoryMachineOwner": {}
       }
     }
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 16},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 2},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Gasbag"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
   }
 }

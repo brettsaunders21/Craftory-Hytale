@@ -162,21 +162,13 @@ class JunkPowerMachinesTest {
         assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
         assertFalse(
             GnasherMachine
-                .autoCrank(
-                    gnasher,
-                    39,
-                    GnasherMachine.FIZZ_PER_SOLVE_TICK,
-                    deliveredRank = 0,
-                ).accepted,
+                .autoCrank(gnasher, 39, GnasherMachine.FIZZ_PER_SOLVE_TICK, deliveredRank = 0)
+                .accepted,
         )
         assertTrue(
             GnasherMachine
-                .autoCrank(
-                    gnasher,
-                    40,
-                    GnasherMachine.FIZZ_PER_SOLVE_TICK,
-                    deliveredRank = 0,
-                ).accepted,
+                .autoCrank(gnasher, 40, GnasherMachine.FIZZ_PER_SOLVE_TICK, deliveredRank = 0)
+                .accepted,
         )
     }
 

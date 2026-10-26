@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Scrap_Plating_Bodge.name",
     "Description": "server.items.Craftory_Scrap_Plating_Bodge.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scrap_Plating_Bodge.png",
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

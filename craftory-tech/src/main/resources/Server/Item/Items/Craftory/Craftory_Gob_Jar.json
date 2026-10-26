@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Gob_Jar.name",
     "Description": "server.items.Craftory_Gob_Jar.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gob_Jar.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
   "Quality": "Developer",

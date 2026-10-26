@@ -97,12 +97,7 @@ internal object HurlRides {
     ): HurlStartResult {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
-        if (rider != null && carriesFilledJar(store, rider)) {
-            return HurlStartResult(failure = HurlStartFailure.JAR_CARRIER)
-        }
-        if (rider != null && HurlMounts.occupied(rider, store)) {
-            return HurlStartResult(failure = HurlStartFailure.ALREADY_RIDING)
-        }
+        hurlArcPreflightFailure(store, rider)?.let { return HurlStartResult(failure = it) }
         val trajectory = HurlArc.create(launch, landing) ?: return HurlStartResult(failure = HurlStartFailure.NO_ROUTE)
         val ride =
             HurlRide().also {
@@ -123,7 +118,7 @@ internal object HurlRides {
         })
     }
 
-    private fun carriesFilledJar(
+    internal fun carriesFilledJar(
         store: com.hypixel.hytale.component.Store<EntityStore>,
         rider: Ref<EntityStore>,
     ): Boolean {
@@ -287,4 +282,14 @@ internal object HurlRides {
         ride.exitPosition = HurlPoint(exit.x, exit.y, exit.z)
         HurlMotion.teleport(ride, commands, exit)
     }
+}
+
+internal fun hurlArcPreflightFailure(
+    store: Store<EntityStore>,
+    rider: Ref<EntityStore>?,
+): HurlStartFailure? {
+    if (rider == null) return null
+    if (HurlRides.carriesFilledJar(store, rider)) return HurlStartFailure.JAR_CARRIER
+    if (HurlMounts.occupied(rider, store)) return HurlStartFailure.ALREADY_RIDING
+    return null
 }

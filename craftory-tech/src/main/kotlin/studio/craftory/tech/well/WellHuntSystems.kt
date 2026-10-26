@@ -506,7 +506,7 @@ internal fun spawnTetherBeam(
     well: BlockPos,
     stake: BlockPos,
 ): Ref<EntityStore>? {
-    val beamIndex = Beam.getAssetMap().getIndex("Chain")
+    val beamIndex = Beam.getAssetMap().getIndex(CraftoryIds.TETHER_CYAN_BEAM)
     if (beamIndex < 0) return null
     val origin = Vector3d(well.x + 0.5, well.y + 0.5, well.z + 0.5)
     return BeamComponent.spawn(

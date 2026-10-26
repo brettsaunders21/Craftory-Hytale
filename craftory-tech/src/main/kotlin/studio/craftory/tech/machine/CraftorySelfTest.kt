@@ -1056,6 +1056,7 @@ object CraftorySelfTest {
         }
     }
 
+    @Suppress("LongMethod")
     private fun checkAssetReferences(run: SelfTestRun.Run) {
         val craftoryItems =
             Item
@@ -1092,10 +1093,11 @@ object CraftorySelfTest {
             }
         }
 
-        val missingPaths = referencedPaths.filterNot { CommonAssetRegistry.hasCommonAsset(it) }
         val wiringFailures = requiredCraftoryWiringFailures(itemsById, modelPathsByItemId)
         val grizzlecogResolves = ModelAsset.getAssetMap().getAsset("Craftory_Grizzlecog") != null
         val vessaResolves = ModelAsset.getAssetMap().getAsset("Craftory_Vessa") != null
+        val missingMobModels = addRetintedMobAssetReferences(referencedPaths)
+        val missingPaths = referencedPaths.filterNot { CommonAssetRegistry.hasCommonAsset(it) }
         val problems =
             buildList {
                 if (missingPaths.isNotEmpty()) add("missing paths=${missingPaths.joinToString()}")
@@ -1104,6 +1106,11 @@ object CraftorySelfTest {
                 addAll(wiringFailures)
                 if (!grizzlecogResolves) add("model asset Craftory_Grizzlecog did not resolve")
                 if (!vessaResolves) add("model asset Craftory_Vessa did not resolve")
+                if (missingMobModels.isNotEmpty()) {
+                    add(
+                        "model assets did not resolve=${missingMobModels.joinToString()}",
+                    )
+                }
             }
         val detail =
             buildString {
@@ -1116,6 +1123,19 @@ object CraftorySelfTest {
             "assets",
             detail,
         )
+    }
+
+    private fun addRetintedMobAssetReferences(referencedPaths: MutableSet<String>): List<String> {
+        val models =
+            listOf(
+                "Craftory_Glimmer_Wisp" to "NPC/Craftory/Glimmer_Wisp/Texture.png",
+                "Craftory_Sparkjaw" to "NPC/Craftory/Sparkjaw/Texture.png",
+                "Craftory_Riftmoth" to "NPC/Craftory/Riftmoth/Texture.png",
+                "Craftory_Goblin_Poacher" to "NPC/Craftory/Goblin_Poacher/Texture.png",
+                "Craftory_Vessa" to "NPC/Craftory/Vessa/Texture.png",
+            )
+        models.forEach { (_, texture) -> referencedPaths.add(texture) }
+        return models.map { it.first }.filter { ModelAsset.getAssetMap().getAsset(it) == null }
     }
 
     private fun requiredCraftoryWiringFailures(
@@ -3366,7 +3386,7 @@ object CraftorySelfTest {
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
-    internal fun testPositions(world: World): List<TestPosition> =
+    internal fun staticTestPositions(): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
                 listOf(
@@ -3386,7 +3406,13 @@ object CraftorySelfTest {
                     SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
-                WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) } +
+                PolishSelfTest.fixturePositions() +
                 heartPositions()
+        ).distinct()
+
+    internal fun testPositions(world: World): List<TestPosition> =
+        (
+            staticTestPositions() +
+                WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) }
         ).distinct()
 }

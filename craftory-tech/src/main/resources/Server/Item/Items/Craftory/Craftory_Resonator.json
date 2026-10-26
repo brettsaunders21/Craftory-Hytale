@@ -7,16 +7,14 @@
   "PlayerAnimationsId": "Block",
   "Categories": ["Furniture.Lighting"],
   "Set": "Furniture_Goblin",
-  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Resonator.png",
   "BlockType": {
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
     "HitboxType": "Brazier_Goblin",
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
-    "CustomModelTexture": [
-      {"Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png", "Weight": 1}
-    ],
+    "CustomModel": "Blocks/Craftory/Resonator/Resonator.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Resonator/Resonator_Texture.png"}],
     "Interactions": {
       "Use": {"Interactions": [{"Type": "Craftory_ResonatorUse"}]}
     },

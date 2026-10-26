@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import zipfile
 from pathlib import Path
@@ -110,10 +111,48 @@ def grizzlecog_row(assets_zip: Path | None):
 def icon_rows():
     out = []
     for ip in sorted((COMMON / "Icons" / "ItemsGenerated" / "Craftory").glob("*.png")) + sorted(
-            (COMMON / "Particles" / "Craftory").glob("*.png")):
+            (COMMON / "Particles" / "Craftory").glob("*.png")) + sorted((COMMON / "Beams").glob("*.png")):
         im = Image.open(ip).convert("RGBA")
         out.append((ip.name, im))
+    for temperament, color in (
+            ("SPARK", "#5ff3ff"),
+            ("EMBER", "#ff8a2b"),
+            ("TIDE", "#3f8cff"),
+            ("GROWTH", "#5fd35a"),
+            ("STONE", "#a58c6a"),
+            ("GALE", "#d6f2ff"),
+            ("CLANK", "#8bff3a"),
+            ("HOLLOW", "#6a2a9a"),
+    ):
+        swatch = Image.new("RGBA", (64, 64), color)
+        out.append((f"Well tint {temperament} {color}", swatch))
     return out
+
+
+def mob_preview(out: Path, vanilla_root: Path) -> None:
+    mapping = (
+        ("Glimmer Wisp", "Flying_Critter/Bat", "Glimmer_Wisp"),
+        ("Sparkjaw", "Swimming_Beast/Crocodile", "Sparkjaw"),
+        ("Riftmoth", "Void/Spawn_Void", "Riftmoth"),
+        ("Goblin Poacher", "Intelligent/Goblin/Goblin_Lobber", "Goblin_Poacher"),
+        ("Vessa", "Intelligent/Klops/Klops_Merchant", "Vessa"),
+    )
+    row_height = CELL + 34
+    sheet = Image.new("RGBA", (CELL * 6, row_height * len(mapping)), BG)
+    draw = ImageDraw.Draw(sheet)
+    for row, (label, model_id, craftory_name) in enumerate(mapping):
+        spec = json.loads((vanilla_root / "Server/Models" / f"{model_id}.json").read_text())
+        model = json.loads((vanilla_root / "Common" / spec["Model"]).read_text())
+        vanilla = Image.open(vanilla_root / "Common" / spec["Texture"]).convert("RGBA")
+        craftory = Image.open(COMMON / "NPC/Craftory" / craftory_name / "Texture.png").convert("RGBA")
+        views = [render(model, vanilla, yaw, pitch, CELL) for _, yaw, pitch in ANGLES]
+        views.extend(render(model, craftory, yaw, pitch, CELL) for _, yaw, pitch in ANGLES)
+        y = row * row_height
+        draw.text((5, y + 3), f"{label} / vanilla", fill=INK)
+        draw.text((CELL * 3 + 5, y + 3), f"{label} / Craftory", fill=INK)
+        for col, view in enumerate(views):
+            sheet.alpha_composite(view, (col * CELL, y + 22))
+    sheet.save(out / "mobs.png")
 
 
 def main():
@@ -140,7 +179,7 @@ def main():
     width = max(cols * (label_w + CELL * 3), icon_cols * icon_cell[0])
     sheet = Image.new("RGBA", (width, 60 + model_h + 40 + icon_h), BG)
     d = ImageDraw.Draw(sheet)
-    d.text((10, 10), "Craftory art pass 1: Goblin era (Tier 1-2). Offline numpy renders, not the Hytale client.",
+    d.text((10, 10), "Craftory art pass 2: Goblin workshop and Spark-era assets. Offline numpy renders.",
            fill=INK)
     d.text((10, 30), "Models: front 3/4, back 3/4, top. Anim rows: 3 frames. Icons: 4x and 1:1 (64px).", fill=INK)
     for i, (label, views, _) in enumerate(rows):
@@ -157,7 +196,11 @@ def main():
         sheet.alpha_composite(big, (x + 8, y + 20))
         sheet.alpha_composite(im, (x + 16 + big.width, y + 20))
         d.text((x + 8, y + 4), name, fill=INK)
-        big.save(out / "renders" / f"icon4x_{name}")
+        big.save(out / "renders" / f"icon4x_{name}.png", format="PNG")
+        im.save(out / "renders" / f"icon1x_{name}.png", format="PNG")
+    vanilla_ref = os.environ.get("CRAFTORY_VANILLA_REF")
+    if vanilla_ref:
+        mob_preview(out, Path(vanilla_ref).expanduser())
     sheet.save(out / "art_preview.png", optimize=True)
     print(f"{len(rows)} model rows, {len(icons)} icons -> {out / 'art_preview.png'} {sheet.size}")
 

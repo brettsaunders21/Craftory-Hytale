@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Muffler.name",
     "Description": "server.items.Craftory_Muffler.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Muffler.png",
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

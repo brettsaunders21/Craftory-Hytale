@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Hurl_Station.name",
     "Description": "server.items.Craftory_Hurl_Station.description"
   },
-  "Icon": "Icons/ItemsGenerated/Build_Grey_Pipe.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Hurl_Station.png",
   "Categories": ["Tool.TechnicalBlocks"],
   "PlayerAnimationsId": "Block",
   "Quality": "Technical",
@@ -12,8 +12,8 @@
     "Material": "Solid",
     "DrawType": "Model",
     "Opacity": "Transparent",
-    "CustomModel": "Blocks/Structures/Tubes/Dev_Long.blockymodel",
-    "CustomModelTexture": [{"Texture": "Blocks/Structures/Tubes/Dev_Textures/Dev_Grey.png", "Weight": 1}],
+    "CustomModel": "Blocks/Craftory/Hurl_Station/Hurl_Station.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Station/Hurl_Station_Texture.png"}],
     "HitboxType": "Branch",
     "Gathering": {"Breaking": {"GatherType": "Rocks"}},
     "BlockSoundSetId": "Soft",
@@ -28,5 +28,18 @@
       "CraftoryMachineOwner": {},
       "CraftoryHurlStation": {"Name": ""}
     }}
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 12},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Hurl_Station"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
   }
 }

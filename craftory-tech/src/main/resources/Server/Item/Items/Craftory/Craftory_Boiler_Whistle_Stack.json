@@ -1,0 +1,33 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Boiler_Whistle_Stack.name",
+    "Description": "items.Craftory_Boiler_Whistle_Stack.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Quality": "Technical",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boiler_Whistle_Stack.png",
+  "MaxStack": 16,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "HitboxType": "Full",
+    "CustomModel": "Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack_Texture.png"}]
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 4},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 1},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Boiler_Whistle_Stack"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

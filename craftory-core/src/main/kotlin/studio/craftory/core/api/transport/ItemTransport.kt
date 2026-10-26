@@ -36,6 +36,13 @@ object ItemTransport {
 class ItemTransportAccess internal constructor(
     private val runtime: ItemTransportWorld,
 ) {
+    fun hasReceiverAt(
+        store: Store<ChunkStore>,
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Boolean = runtime.hasReceiverAt(store, x, y, z)
+
     fun insert(
         pipeX: Int,
         pipeY: Int,

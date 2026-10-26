@@ -31,6 +31,7 @@ import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CanisterPageRefreshSystem
+import studio.craftory.tech.machine.CanisterStateSystem
 import studio.craftory.tech.machine.ClawUseInteraction
 import studio.craftory.tech.machine.CrackleCoilSystem
 import studio.craftory.tech.machine.CradleState
@@ -49,10 +50,15 @@ import studio.craftory.tech.machine.FluidSelfTestRun
 import studio.craftory.tech.machine.FluidSelfTestSystem
 import studio.craftory.tech.machine.GasbagState
 import studio.craftory.tech.machine.GasbagSystem
+import studio.craftory.tech.machine.GasbagTemplate
 import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
+import studio.craftory.tech.machine.GrizzlecogVisitLedger
+import studio.craftory.tech.machine.GrizzlecogVisitSystem
 import studio.craftory.tech.machine.GutterBoilerSystem
+import studio.craftory.tech.machine.GutterBoilerTemplate
+import studio.craftory.tech.machine.GutterpipeStateSystem
 import studio.craftory.tech.machine.JankSystem
 import studio.craftory.tech.machine.JunkHeartKnowledge
 import studio.craftory.tech.machine.JunkHeartLifecycle
@@ -66,6 +72,8 @@ import studio.craftory.tech.machine.MachineOwner
 import studio.craftory.tech.machine.MachineOwnerPlacementSystem
 import studio.craftory.tech.machine.MultiblockAssemblySystem
 import studio.craftory.tech.machine.OvenPower
+import studio.craftory.tech.machine.PolishSelfTestRun
+import studio.craftory.tech.machine.PolishSelfTestSystem
 import studio.craftory.tech.machine.RattlewheelState
 import studio.craftory.tech.machine.RattlewheelSystem
 import studio.craftory.tech.machine.ReceiptUseInteraction
@@ -83,6 +91,8 @@ import studio.craftory.tech.machine.ShroomBedSystem
 import studio.craftory.tech.machine.SloshtankStateSystem
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
+import studio.craftory.tech.machine.TimedBlockAnimation
+import studio.craftory.tech.machine.TimedBlockAnimationSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
 import studio.craftory.tech.machine.TransportSelfTestSystem
 import studio.craftory.tech.machine.jank.BodgeSlots
@@ -91,6 +101,8 @@ import studio.craftory.tech.mob.RiftmothDrainSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
+import studio.craftory.tech.transport.HurlCannonChargeState
+import studio.craftory.tech.transport.HurlCannonChargeSystem
 import studio.craftory.tech.transport.HurlConfig
 import studio.craftory.tech.transport.HurlCounters
 import studio.craftory.tech.transport.HurlFallDamageSystem
@@ -197,6 +209,8 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
         )
         CraftoryCore.multiblocks().register(JunkHeartTemplate.template)
+        CraftoryCore.multiblocks().register(GutterBoilerTemplate.template)
+        CraftoryCore.multiblocks().register(GasbagTemplate.template)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CANISTER_TYPE,
             MemberSpec(MemberSpec.STORAGE, 100_000, 400, 400, 0, 1),
@@ -295,6 +309,18 @@ class CraftoryTechPlugin(
                 SnatcherClawState::class.java,
                 CraftoryIds.SNATCHER_CLAW_COMPONENT,
                 SnatcherClawState.CODEC,
+            )
+        TimedBlockAnimation.type =
+            chunkRegistry.registerComponent(
+                TimedBlockAnimation::class.java,
+                CraftoryIds.TIMED_BLOCK_ANIMATION_COMPONENT,
+                TimedBlockAnimation.CODEC,
+            )
+        HurlCannonChargeState.type =
+            chunkRegistry.registerComponent(
+                HurlCannonChargeState::class.java,
+                CraftoryIds.HURL_CANNON_CHARGE_COMPONENT,
+                HurlCannonChargeState.CODEC,
             )
         AnchorState.type =
             chunkRegistry.registerComponent(
@@ -413,6 +439,14 @@ class CraftoryTechPlugin(
             chunkRegistry.registerResource(TransportSelfTestRun::class.java, ::TransportSelfTestRun)
         FluidSelfTestRun.type =
             chunkRegistry.registerResource(FluidSelfTestRun::class.java, ::FluidSelfTestRun)
+        PolishSelfTestRun.type =
+            chunkRegistry.registerResource(PolishSelfTestRun::class.java, ::PolishSelfTestRun)
+        GrizzlecogVisitLedger.type =
+            chunkRegistry.registerResource(
+                GrizzlecogVisitLedger::class.java,
+                "CraftoryGrizzlecogVisitLedger",
+                GrizzlecogVisitLedger.CODEC,
+            )
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -424,10 +458,15 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(ScorchOvenSystem())
         chunkRegistry.registerSystem(JankSystem())
         chunkRegistry.registerSystem(ScrapRushSystem(config.get().scrapRush))
+        chunkRegistry.registerSystem(GrizzlecogVisitSystem(config.get().grizzlecogVisits))
         chunkRegistry.registerSystem(GutterBoilerSystem())
+        chunkRegistry.registerSystem(GutterpipeStateSystem())
         chunkRegistry.registerSystem(SloshtankStateSystem())
+        chunkRegistry.registerSystem(CanisterStateSystem())
         chunkRegistry.registerSystem(GasbagSystem())
         chunkRegistry.registerSystem(SnatcherClawSystem())
+        chunkRegistry.registerSystem(TimedBlockAnimationSystem())
+        chunkRegistry.registerSystem(HurlCannonChargeSystem())
         chunkRegistry.registerSystem(AnchorSystem())
         AssemblyViewIndex.type = chunkRegistry.registerResource(AssemblyViewIndex::class.java, ::AssemblyViewIndex)
         chunkRegistry.registerSystem(JunkHeartLifecycle())
@@ -447,6 +486,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(SelfTestSystem())
         chunkRegistry.registerSystem(TransportSelfTestSystem())
         chunkRegistry.registerSystem(FluidSelfTestSystem())
+        chunkRegistry.registerSystem(PolishSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
         WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)

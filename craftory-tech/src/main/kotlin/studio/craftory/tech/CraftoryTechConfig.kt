@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec
 
 class CraftoryTechConfig(
     var scrapRush: ScrapRushSettings = ScrapRushSettings(),
+    var grizzlecogVisits: GrizzlecogVisitsSettings = GrizzlecogVisitsSettings(),
     var resonatorCrystalUses: Long = 200,
 ) {
     companion object {
@@ -18,9 +19,56 @@ class CraftoryTechConfig(
                     { it.scrapRush },
                 ).add()
                 .append(
+                    KeyedCodec("GrizzlecogVisits", GrizzlecogVisitsSettings.CODEC),
+                    { config, value -> config.grizzlecogVisits = value },
+                    { it.grizzlecogVisits },
+                ).add()
+                .append(
                     KeyedCodec("ResonatorCrystalUses", Codec.LONG),
                     { config, value -> config.resonatorCrystalUses = value.coerceAtLeast(1) },
                     { it.resonatorCrystalUses },
+                ).add()
+                .build()
+    }
+}
+
+class GrizzlecogVisitsSettings(
+    var enabled: Boolean = true,
+    var averageIntervalInGameDays: Double = 2.0,
+    var nearbyRadius: Int = 64,
+    var spawnDistanceMin: Int = 8,
+    var spawnDistanceMax: Int = 12,
+) {
+    companion object {
+        val CODEC: BuilderCodec<GrizzlecogVisitsSettings> =
+            BuilderCodec
+                .builder(GrizzlecogVisitsSettings::class.java, ::GrizzlecogVisitsSettings)
+                .append(
+                    KeyedCodec("Enabled", Codec.BOOLEAN),
+                    { config, value -> config.enabled = value },
+                    { it.enabled },
+                ).add()
+                .append(
+                    KeyedCodec("AverageIntervalInGameDays", Codec.DOUBLE),
+                    { config, value -> config.averageIntervalInGameDays = value.coerceAtLeast(0.001) },
+                    { it.averageIntervalInGameDays },
+                ).add()
+                .append(
+                    KeyedCodec("NearbyRadius", Codec.INTEGER),
+                    { config, value -> config.nearbyRadius = value.coerceAtLeast(0) },
+                    { it.nearbyRadius },
+                ).add()
+                .append(
+                    KeyedCodec("SpawnDistanceMin", Codec.INTEGER),
+                    { config, value -> config.spawnDistanceMin = value.coerceAtLeast(1) },
+                    { it.spawnDistanceMin },
+                ).add()
+                .append(
+                    KeyedCodec("SpawnDistanceMax", Codec.INTEGER),
+                    { config, value ->
+                        config.spawnDistanceMax = value.coerceAtLeast(config.spawnDistanceMin)
+                    },
+                    { it.spawnDistanceMax },
                 ).add()
                 .build()
     }

@@ -420,6 +420,70 @@
         ],
         "Stock": 1
       }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Snatcher_Claw",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 28
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Hurl_Tube",
+          "Quantity": 4
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 10
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Catch_Net",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 14
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Fizz_Charge",
+          "Quantity": 4
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 8
+          }
+        ],
+        "Stock": 1
+      }
     }
   ]
 }

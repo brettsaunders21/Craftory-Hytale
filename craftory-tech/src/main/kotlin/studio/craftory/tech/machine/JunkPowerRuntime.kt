@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package studio.craftory.tech.machine
 
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
@@ -270,11 +272,13 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         val tick = world.tick
         if (!CraftoryCore.isAreaActive(store, blockState)) {
             MachineClock.pause(power, tick)
+            setBlockState(world, blockState, commandBuffer, "Off")
             return
         }
         if (jank.isStalled) {
             MachineClock.pause(power, tick)
             if (bench.isActive()) bench.setActive(false, benchBlock, blockState)
+            setBlockState(world, blockState, commandBuffer, "Off")
             val position = blockState.worldPosition(commandBuffer) ?: return
             val id = BlockPos.pack(position.x, position.y, position.z)
             if (member.demand != 0L) CraftoryCore.energyAccess(world).setDemand(id, 0)
@@ -286,6 +290,7 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         if (bench.isActive() && powerLoss.shouldStop) {
             bench.setActive(false, benchBlock, blockState)
         }
+        setBlockState(world, blockState, commandBuffer, if (bench.isActive()) "On" else "Off")
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val id = BlockPos.pack(position.x, position.y, position.z)

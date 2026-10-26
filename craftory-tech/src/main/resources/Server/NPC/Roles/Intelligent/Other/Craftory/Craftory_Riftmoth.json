@@ -2,7 +2,7 @@
   "Type": "Variant",
   "Reference": "Template_Void_Spawn_Entombed",
   "Modify": {
-    "Appearance": "Spawn_Void",
+    "Appearance": "Craftory_Riftmoth",
     "DropList": "Drop_Craftory_Riftmoth",
     "AttitudeGroup": "Void",
     "DefaultPlayerAttitude": "Neutral",

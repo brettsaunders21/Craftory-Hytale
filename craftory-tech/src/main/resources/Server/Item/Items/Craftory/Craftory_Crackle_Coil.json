@@ -7,16 +7,28 @@
   "PlayerAnimationsId": "Block",
   "Categories": ["Furniture.Lighting"],
   "Set": "Furniture_Goblin",
-  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Crackle_Coil.png",
   "BlockType": {
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
     "HitboxType": "Brazier_Goblin",
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
-    "CustomModelTexture": [
-      {"Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png", "Weight": 1}
-    ],
+    "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off_Texture.png"}]
+        },
+        "Active": {
+          "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Active.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Arc.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Active_Texture.png"}],
+          "Looping": true
+        }
+      }
+    },
     "Interactions": {
       "Use": {"Interactions": [{"Type": "Craftory_BlockUse"}]}
     },

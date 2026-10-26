@@ -2,6 +2,7 @@ package studio.craftory.tech.machine
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.multiblock.MultiblockGeometry
@@ -73,6 +74,91 @@ class JunkHeartTest {
         assertEquals(8, template.parts.count { it.itemId == CraftoryIds.SCRAP_PLATING })
         assertEquals(3 to 3, MultiblockGeometry.footprint(template))
         assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 0, 1, 2), template.hammerOrder.map { it.offset.y })
+    }
+
+    @Test
+    fun `boiler template is complete without overlapping offsets across rotations`() {
+        val template = GutterBoilerTemplate.template
+        assertEquals(7, template.parts.size)
+        assertEquals(3, template.parts.count { it.itemId == CraftoryIds.SCRAP_PLATING })
+        assertEquals(3, template.parts.count { it.itemId == CraftoryIds.BOILER_TANK })
+        assertEquals(1, template.parts.count { it.itemId == CraftoryIds.BOILER_WHISTLE_STACK })
+        assertEquals(setOf(0, 1), template.parts.map { it.offset.y }.toSet())
+        assertEquals(2 to 2, MultiblockGeometry.footprint(template))
+        assertEquals(
+            template.parts.size,
+            template.parts
+                .map { it.offset }
+                .toSet()
+                .size,
+        )
+        for (rotation in 0..3) {
+            val origin =
+                studio.craftory.core.api
+                    .BlockPos(10, 64, 10)
+            val parts = MultiblockGeometry.worldParts(template, origin, rotation)
+            assertEquals(template.parts.size, parts.map { it.position }.toSet().size)
+            assertEquals(
+                template.parts.map { MultiblockGeometry.worldPosition(origin, it.offset, rotation) }.toSet(),
+                parts.map { it.position }.toSet(),
+            )
+        }
+        assertNotEquals(
+            MultiblockGeometry.worldPosition(
+                studio.craftory.core.api
+                    .BlockPos(10, 64, 10),
+                template.parts.first().offset,
+                0,
+            ),
+            MultiblockGeometry.worldPosition(
+                studio.craftory.core.api
+                    .BlockPos(10, 64, 10),
+                template.parts.first().offset,
+                1,
+            ),
+        )
+    }
+
+    @Test
+    fun `gasbag template is complete without overlapping offsets across rotations`() {
+        val template = GasbagTemplate.template
+        assertEquals(11, template.parts.size)
+        assertEquals(3, template.parts.count { it.itemId == CraftoryIds.GASBAG_FRAME })
+        assertEquals(8, template.parts.count { it.itemId == CraftoryIds.GASBAG_ENVELOPE })
+        assertEquals(setOf(0, 1, 2), template.parts.map { it.offset.y }.toSet())
+        assertEquals(2 to 2, MultiblockGeometry.footprint(template))
+        assertEquals(
+            template.parts.size,
+            template.parts
+                .map { it.offset }
+                .toSet()
+                .size,
+        )
+        for (rotation in 0..3) {
+            val origin =
+                studio.craftory.core.api
+                    .BlockPos(10, 64, 10)
+            val parts = MultiblockGeometry.worldParts(template, origin, rotation)
+            assertEquals(template.parts.size, parts.map { it.position }.toSet().size)
+            assertEquals(
+                template.parts.map { MultiblockGeometry.worldPosition(origin, it.offset, rotation) }.toSet(),
+                parts.map { it.position }.toSet(),
+            )
+        }
+        assertNotEquals(
+            MultiblockGeometry.worldPosition(
+                studio.craftory.core.api
+                    .BlockPos(10, 64, 10),
+                template.parts.first().offset,
+                0,
+            ),
+            MultiblockGeometry.worldPosition(
+                studio.craftory.core.api
+                    .BlockPos(10, 64, 10),
+                template.parts.first().offset,
+                1,
+            ),
+        )
     }
 
     @Test

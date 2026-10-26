@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Tinkers_Hammer.name",
     "Description": "server.items.Craftory_Tinkers_Hammer.description"
   },
-  "Icon": "Icons/ItemsGenerated/Tool_Hammer_Crude.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Hammer.png",
   "Model": "Items/Tools/Hammer/Crude.blockymodel",
   "Texture": "Items/Tools/Hammer/Crude_Texture.png",
   "MaxStack": 1,

@@ -1,6 +1,6 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Copper.name" },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Copper.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Copper.png",
   "Categories": ["Items.Ingredients"],
   "MaxStack": 100,
   "Recipe": {

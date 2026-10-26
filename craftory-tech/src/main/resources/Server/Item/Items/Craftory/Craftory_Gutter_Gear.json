@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Gutter_Gear.name",
     "Description": "server.items.Craftory_Gutter_Gear.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Tinkering_Bench.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gutter_Gear.png",
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

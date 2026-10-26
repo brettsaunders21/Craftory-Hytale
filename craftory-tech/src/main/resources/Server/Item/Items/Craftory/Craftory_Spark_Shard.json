@@ -1,6 +1,6 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Spark_Shard.name" },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Copper.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Spark_Shard.png",
   "Categories": ["Items.Ingredients"],
   "MaxStack": 100
 }

@@ -31,7 +31,14 @@
         },
         "On": {
           "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On.blockymodel",
-          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On_Texture.png"}]
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On_Texture.png"}],
+          "Particles": [
+            {
+              "SystemId": "Goblin_Decorative_Steam",
+              "TargetNodeName": "Steam-Emitter",
+              "Scale": 1
+            }
+          ]
         },
         "Offline": {
           "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Offline.blockymodel",
@@ -41,6 +48,12 @@
     },
     "BlockEntity": {
       "Components": {
+        "Craftory_MultiblockController": {
+          "TemplateId": "craftory:gutter_boiler",
+          "Rotation": -1,
+          "State": "ASSEMBLING",
+          "Quality": "NONE"
+        },
         "CraftoryBoilerState": {},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:gutter_boiler",
@@ -50,5 +63,18 @@
         "CraftoryMachineOwner": {}
       }
     }
+  },
+  "Recipe": {
+    "TimeSeconds": 4,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 20},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 4},
+      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 2}
+    ],
+    "Output": [{"ItemId": "Craftory_Gutter_Boiler"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
   }
 }

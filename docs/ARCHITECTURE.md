@@ -175,6 +175,12 @@ Core owns the framework in `studio.craftory.core.api.multiblock`; content only r
 - **Ghost frame.** Content shows an assembling frame's missing parts in one of two ways, chosen by the Core config key `GhostMode` (`preview`, `particles` or `both`; read with `CraftoryCore.ghostMode()`, default `both`). Preview mode spawns one non-persisted `EntityStore` entity per assembling controller carrying the documented `PrefabPreview` component (each missing part's placed block, relative to the controller). The entity tracker sends it to every nearby client. It exists only while a player within 16 blocks has that frame as their nearest. It is refreshed after every hammer hit and despawned on `READY_TO_START`, `FORMED`, controller removal, unload or an inactive area. The controller-to-entity map is a derived cache like `MultiblockIndex`. Preview visuals are not yet verified in a real client.
 - **Hooks.** `missingParts`, `isFormed`, `recheck`, `completeKickStart`, `onFormed` and `onDamaged` let content add assembly verbs (Tech's Tinker's Hammer and kick-start) and react to formation (the Junk Heart knowledge grant).
 
+The Gutter Boiler and Gasbag use the same controller lifecycle. Their existing single-block
+placements now begin as unformed controllers; build the listed frame parts with the Tinker's Hammer
+and kick-start the completed frame. Boiler pressure/fuel processing and Gasbag charging/leak
+processing pause while the controller is unformed or damaged, preserving the controller's saved
+machine state. Removing a part damages the frame; restoring it reforms the structure.
+
 ## 7. Gameplay direction
 
 The gameplay and art direction lives in [DESIGN.md](DESIGN.md): a goblin junk-tech start, then
