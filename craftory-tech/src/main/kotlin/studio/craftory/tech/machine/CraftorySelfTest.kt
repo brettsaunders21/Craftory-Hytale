@@ -184,7 +184,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
         CraftorySelfTest.keepTestSectionsTicking(run, store)
-        if (tick >= run.startTick + 3_600L) {
+        if (!run.hurlFinished && tick >= run.startTick + 3_600L) {
             abort(run, "timed out")
             return
         }
