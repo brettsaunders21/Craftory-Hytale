@@ -41,6 +41,7 @@ internal class PolishSelfTestRun : Resource<ChunkStore> {
         val context: com.hypixel.hytale.server.core.command.system.CommandContext,
         val world: World,
         val startTick: Long,
+        val completion: SelfTestCompletion,
     ) {
         var sectionRef: Ref<ChunkStore>? = null
         var loading = false
@@ -849,7 +850,11 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
             run.context.sendMessage(Message.raw("selftest: polish ${run.passed} passed, ${run.failed} failed"))
         }
         run.completed = true
-        store.getResource(PolishSelfTestRun.type).active = null
+        try {
+            store.getResource(PolishSelfTestRun.type).active = null
+        } finally {
+            run.completion.complete()
+        }
     }
 
     private fun finishFailedSetup(
@@ -974,18 +979,23 @@ internal object PolishSelfTest {
     fun start(
         context: com.hypixel.hytale.server.core.command.system.CommandContext,
         world: World,
+        onComplete: () -> Unit = {},
     ) {
+        val completion = SelfTestCompletion(onComplete)
         try {
             world.execute {
                 try {
                     val resource = world.chunkStore.store.getResource(PolishSelfTestRun.type)
-                    if (resource.active != null) return@execute
+                    if (resource.active != null) {
+                        completion.complete()
+                        return@execute
+                    }
                     SelfTestStartup.execute(
-                        create = { PolishSelfTestRun.Run(context, world, world.tick) },
+                        create = { PolishSelfTestRun.Run(context, world, world.tick, completion) },
                         start = { run -> resource.active = run },
                         onFailure = { run, failure ->
                             if (run == null) {
-                                reportStartFailure(context, failure)
+                                reportStartFailure(context, failure, completion)
                             } else {
                                 run.setupFailure = failure.message ?: failure.javaClass.simpleName
                                 resource.active = run
@@ -993,21 +1003,23 @@ internal object PolishSelfTest {
                         },
                     )
                 } catch (failure: Exception) {
-                    reportStartFailure(context, failure)
+                    reportStartFailure(context, failure, completion)
                 }
             }
         } catch (failure: Exception) {
-            reportStartFailure(context, failure)
+            reportStartFailure(context, failure, completion)
         }
     }
 
     private fun reportStartFailure(
         context: com.hypixel.hytale.server.core.command.system.CommandContext,
         failure: Exception,
+        completion: SelfTestCompletion,
     ) {
         val detail = failure.message ?: failure.javaClass.simpleName
         runCatching { context.sendMessage(Message.raw("selftest: polish setup FAIL ($detail)")) }
         runCatching { context.sendMessage(Message.raw("selftest: polish 0 passed, 1 failed")) }
+        completion.complete()
     }
 
     fun fixturePositions(): List<CraftorySelfTest.TestPosition> {

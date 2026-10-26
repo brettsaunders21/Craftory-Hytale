@@ -1753,8 +1753,9 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                 report = { run.context.sendMessage(Message.raw(it)) },
                 onComplete = {
                     FluidSelfTest.start(run.context, run.world) {
-                        PolishSelfTest.start(run.context, run.world)
-                        MachineOwnerSelfTest.start(run.context, run.world)
+                        PolishSelfTest.start(run.context, run.world) {
+                            MachineOwnerSelfTest.start(run.context, run.world)
+                        }
                     }
                 },
             )

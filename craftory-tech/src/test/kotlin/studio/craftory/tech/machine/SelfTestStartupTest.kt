@@ -29,4 +29,34 @@ class SelfTestStartupTest {
         )
         assertEquals("start failed", startFailure?.message)
     }
+
+    @Test
+    fun `completion callback fires once after successful startup`() {
+        var completions = 0
+        val completion = SelfTestCompletion { completions++ }
+
+        SelfTestStartup.execute(
+            create = { "run" },
+            start = { completion.complete() },
+            onFailure = { _, _ -> completion.complete() },
+        )
+        completion.complete()
+
+        assertEquals(1, completions)
+    }
+
+    @Test
+    fun `completion callback fires once after setup failure`() {
+        var completions = 0
+        val completion = SelfTestCompletion { completions++ }
+
+        SelfTestStartup.execute(
+            create = { error("layout failed") },
+            start = { completion.complete() },
+            onFailure = { _, _ -> completion.complete() },
+        )
+        completion.complete()
+
+        assertEquals(1, completions)
+    }
 }
