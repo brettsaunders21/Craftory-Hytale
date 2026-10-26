@@ -95,6 +95,7 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
         if (wellPosition != null && (linkedWell == null || !state.matchesWell(linkedWell))) {
             energy.setDemand(id, 0)
             energy.setConverterOutput(id, 0, WellOutput.GRADE_RANK)
+            updatePumping(world, position, state, blockState, commandBuffer, false)
             return
         }
         val well = linkedWell?.takeIf { it.state == WellState.TAPPED }
