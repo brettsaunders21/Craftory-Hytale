@@ -147,15 +147,14 @@ object WellBirths {
         position: BlockPos,
         radius: Int,
     ): Int {
-        val vaneIndex = BlockType.getAssetMap().getIndex(CraftoryIds.STORM_VANE)
-        if (vaneIndex <= 0) return 0
+        val vaneType = BlockType.fromString(CraftoryIds.STORM_VANE) ?: return 0
         var count = 0
         val radiusSquared = radius * radius
         for (x in position.x - radius..position.x + radius) {
             for (z in position.z - radius..position.z + radius) {
                 val dx = x - position.x
                 val dz = z - position.z
-                if (dx * dx + dz * dz <= radiusSquared && hasVaneAtSurface(world, x, z, vaneIndex)) {
+                if (dx * dx + dz * dz <= radiusSquared && hasVaneAtSurface(world, x, z, vaneType)) {
                     count++
                 }
             }
@@ -417,7 +416,7 @@ private fun hasVaneAtSurface(
     world: World,
     x: Int,
     z: Int,
-    vaneIndex: Int,
+    vaneType: BlockType,
 ): Boolean {
     val heightmap =
         world.chunkStore.getChunkComponent(
@@ -427,9 +426,17 @@ private fun hasVaneAtSurface(
     val y = heightmap.getCollisionHeight(x and 31, z and 31)
     return y != HeightmapColumn.NO_HEIGHT &&
         (
-            WellBirths.blockIndexAt(world, x, y, z) == vaneIndex ||
-                WellBirths.blockIndexAt(world, x, y + 1, z) == vaneIndex
+            isVaneBlock(WellBirths.blockIndexAt(world, x, y, z), vaneType) ||
+                isVaneBlock(WellBirths.blockIndexAt(world, x, y + 1, z), vaneType)
         )
+}
+
+private fun isVaneBlock(
+    blockIndex: Int?,
+    vaneType: BlockType,
+): Boolean {
+    val block = blockIndex?.let(BlockType.getAssetMap()::getAsset) ?: return false
+    return block.id == vaneType.id || vaneType.getStateForBlock(block.id) != null
 }
 
 private fun pulseEffects(

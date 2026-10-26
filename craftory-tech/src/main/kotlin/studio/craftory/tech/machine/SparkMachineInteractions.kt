@@ -31,6 +31,13 @@ class CradleUseInteraction : SimpleBlockInteraction() {
         val jar = heldItem ?: return
         if (jar.itemId != CraftoryIds.GOB_JAR_FILLED) return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
+        val store = world.chunkStore.store
+        val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+        if (!mayUseMachine(owner, player.uuid, player, CraftoryCore.crewService())) {
+            player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+            return
+        }
         val container = context.heldItemContainer ?: return
         val slot = context.heldItemSlot.toShort()
         val original = container.getItemStack(slot) ?: return
@@ -91,6 +98,14 @@ class ResonatorUseInteraction : SimpleBlockInteraction() {
         val blockState =
             world.chunkStore.store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
+        val owner =
+            world.chunkStore.store
+                .getComponent(ref, MachineOwner.type)
+                ?.placerUuid
+        if (!mayUseMachine(owner, player.uuid, player, CraftoryCore.crewService())) {
+            player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+            return
+        }
         if (heldItem == null) {
             state.tuning =
                 when (state.tuning) {

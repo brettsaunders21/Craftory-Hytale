@@ -83,6 +83,8 @@ object CraftoryIds {
     const val JUNK_HEART_TEMPLATE = "craftory:junk_heart"
     const val JUNK_HEART_KNOWLEDGE = "craftory:heart/junk"
     const val JUNK_HEART_COMPONENT = "CraftoryJunkHeart"
+    const val RESONATOR_COMPONENT = "CraftoryResonator"
+    const val CRADLE_COMPONENT = "CraftoryCradle"
     const val HAMMER_USE_INTERACTION = "Craftory_HammerUse"
     const val GHOST_PARTICLE = "Dust_Sparkles_Fine"
     const val CHIMNEY_SMOKE_PARTICLE = "Dungeon_Goblin_Smoke_Pipe_Small"

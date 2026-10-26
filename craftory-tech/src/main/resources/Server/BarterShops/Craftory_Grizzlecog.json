@@ -201,6 +201,166 @@
       "Type": "Fixed",
       "Trade": {
         "Output": {
+          "ItemId": "Craftory_Tinkers_Wrench",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 15
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Tinkers_Hammer",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 10
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Junk_Heart_Firebox",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 20
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Boom_Valve",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 12
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Gutter_Gear",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 10
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Scrap_Plating_Bodge",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 8
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Squawk_Box",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 6
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Muffler",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 6
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Storm_Vane",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 12
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Fizz_Damper",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 12
+          }
+        ],
+        "Stock": 1
+      }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
           "ItemId": "Craftory_Sloshtank",
           "Quantity": 1
         },
@@ -258,110 +418,6 @@
             "Quantity": 8
           }
         ],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": {
-          "ItemId": "Craftory_Tinkers_Wrench",
-          "Quantity": 1
-        },
-        "Input": [
-          {
-            "ItemId": "Ingredient_Scraps",
-            "Quantity": 15
-          }
-        ],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": {
-          "ItemId": "Craftory_Tinkers_Hammer",
-          "Quantity": 1
-        },
-        "Input": [
-          {
-            "ItemId": "Ingredient_Scraps",
-            "Quantity": 10
-          }
-        ],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": {
-          "ItemId": "Craftory_Junk_Heart_Firebox",
-          "Quantity": 1
-        },
-        "Input": [
-          {
-            "ItemId": "Ingredient_Scraps",
-            "Quantity": 20
-          }
-        ],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Boom_Valve", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 12 }],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Gutter_Gear", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 10 }],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Scrap_Plating_Bodge", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 8 }],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Squawk_Box", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 6 }],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Muffler", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 6 }],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Storm_Vane", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 12 }],
-        "Stock": 1
-      }
-    },
-    {
-      "Type": "Fixed",
-      "Trade": {
-        "Output": { "ItemId": "Craftory_Fizz_Damper", "Quantity": 1 },
-        "Input": [{ "ItemId": "Ingredient_Scraps", "Quantity": 12 }],
         "Stock": 1
       }
     },

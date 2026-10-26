@@ -454,7 +454,7 @@ internal class JarCarrierDamageSystem : DamageEventSystem() {
             if (item?.itemId != CraftoryIds.GOB_JAR_FILLED) continue
             val stability = (item.getFromMetadataOrNull(GobJarMetadata.STABILITY) ?: 100.0).coerceIn(0.0, 100.0)
             val reduced = (stability - 10.0).coerceAtLeast(0.0)
-            if (reduced.toInt() != stability.toInt()) {
+            if (reduced != stability) {
                 inventory.setItemStackForSlot(slot.toShort(), item.withMetadata(GobJarMetadata.STABILITY, reduced))
             }
         }

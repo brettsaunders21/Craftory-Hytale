@@ -242,7 +242,8 @@ internal class SparkSelfTest(
                 well,
                 Temperament.SPARK,
                 WellStrength.FLICKER,
-                WellState.WILD,
+                state = WellState.TETHERED,
+                claimCrewId = cradleCrew.id,
             ) ?: error("Flicker well spawn failed")
         val caught = JarActions.checkCatch(spawnedWell, player, crews, store)
         check(caught is JarCatchResult.Caught, "Flicker can be caught into a filled jar")

@@ -275,8 +275,10 @@ internal object GnasherMachine {
             return GnasherPulseResult(false)
         }
         val previous = state.lastAutoCrankTick
-        val rankInterval = AUTO_PULSE_INTERVAL_TICKS * 100 / TinkeredSpeed.percent(deliveredRank)
-        val pulseInterval = (rankInterval / speed).toLong().coerceAtLeast(1L)
+        val pulseInterval =
+            ((AUTO_PULSE_INTERVAL_TICKS * 100 / TinkeredSpeed.percent(deliveredRank)) / speed)
+                .toLong()
+                .coerceAtLeast(1L)
         if (
             previous != Long.MIN_VALUE &&
             (currentTick < previous || currentTick - previous < pulseInterval)

@@ -244,8 +244,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
     ): Long {
         if (amount <= 0) return 0
         val currentStore = store ?: return 0
-        val node = nodes[id]?.takeIf { !it.converterOutput } ?: return 0
-        val ref = node.ref
+        val ref = nodes[id]?.ref ?: return 0
         val member = currentStore.getComponent(ref, EnergyMember.type) ?: return 0
         val spec = CraftoryCore.energyType(member.typeId)?.spec ?: return 0
         if ((spec.role and MemberSpec.STORAGE) == 0) return 0

@@ -70,6 +70,16 @@ class WellLogicTest {
     }
 
     @Test
+    fun `tether claim preserves a foreign crew unless overridden`() {
+        val claimant = UUID.randomUUID()
+        val foreign = UUID.randomUUID()
+        assertTrue(canTetherWellClaim(null, claimant, hasOverride = false))
+        assertTrue(canTetherWellClaim(claimant, claimant, hasOverride = false))
+        assertFalse(canTetherWellClaim(foreign, claimant, hasOverride = false))
+        assertTrue(canTetherWellClaim(foreign, claimant, hasOverride = true))
+    }
+
+    @Test
     fun `strong wild well budget is scoped to 512 block regions`() {
         assertEquals(0 to 0, StormHuntRules.regionOf(511, 511))
         assertEquals(1 to 1, StormHuntRules.regionOf(512, 512))
@@ -191,6 +201,16 @@ class WellLogicTest {
     fun `stability drains for time damage and disliked weather and stops at zero`() {
         assertEquals(87.0, JarCarrierRules.stabilityAfter(100.0, 10.0, 1, 10.0))
         assertEquals(0.0, JarCarrierRules.stabilityAfter(5.0, 60.0, 2, 30.0))
+    }
+
+    @Test
+    fun `damage from fractional stability reaches zero and bursts on the next pass`() {
+        val afterDamage = JarCarrierRules.stabilityAfter(0.5, 0.0, 1, 0.0)
+        val nextPassStability = JarCarrierRules.drainForSecond(afterDamage, Temperament.SPARK, WeatherKind.CLEAR)
+
+        assertEquals(0.0, afterDamage)
+        assertTrue(JarCarrierRules.shouldBurst(nextPassStability))
+        assertEquals(JarCarrierRules.BurstResult.CONSUME, JarCarrierRules.burstResult(nextPassStability, true))
     }
 
     @Test

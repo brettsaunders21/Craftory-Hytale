@@ -50,6 +50,7 @@ internal class FluidSelfTestRun : Resource<ChunkStore> {
         val world: World,
         val startTick: Long,
     ) {
+        var onComplete: (() -> Unit)? = null
         val blocks = FluidSelfTestCases.testPositions()
         var stage = 0
         var stageStartTick = startTick
@@ -1521,6 +1522,7 @@ internal object FluidSelfTestCleanup {
             run.context.sendMessage(Message.raw("selftest: fluids ${run.passed} passed, ${run.failed} failed"))
             run.cleanupComplete = true
             store.getResource(FluidSelfTestRun.type).active = null
+            run.onComplete?.invoke()
         } else if (run.world.tick - run.cleanupStartedTick > FluidSelfTestCases.CLEANUP_TIMEOUT_TICKS) {
             FluidSelfTestState.fail(
                 run,
@@ -1530,6 +1532,7 @@ internal object FluidSelfTestCleanup {
             run.context.sendMessage(Message.raw("selftest: fluids ${run.passed} passed, ${run.failed} failed"))
             run.cleanupComplete = true
             store.getResource(FluidSelfTestRun.type).active = null
+            run.onComplete?.invoke()
         }
     }
 
@@ -1801,11 +1804,13 @@ internal object FluidSelfTest {
     fun start(
         context: com.hypixel.hytale.server.core.command.system.CommandContext,
         world: World,
+        onComplete: (() -> Unit)? = null,
     ) {
         world.execute {
             val resource = world.chunkStore.store.getResource(FluidSelfTestRun.type)
             if (resource.active != null) return@execute
             val run = FluidSelfTestRun.Run(context, world, world.tick)
+            run.onComplete = onComplete
             resource.active = run
             FluidSelfTestAssetChecks.check(run)
             context.sendMessage(Message.raw("selftest: starting fluid cases F1-F9"))

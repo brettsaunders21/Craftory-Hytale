@@ -99,6 +99,14 @@ class CraftoryCorePlugin(
         chunkRegistry.registerSystem(WellLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
         ItemTransportRegistration.register(this, config)
+        registerMobSystems()
+        FluidTransportRegistration.register(this)
+        val command = CraftoryCommand(pluginVersion, config, crews)
+        getCommandRegistry().registerCommand(command)
+        LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
+    }
+
+    private fun registerMobSystems() {
         val entityRegistry = getEntityStoreRegistry()
         MobHome.type =
             entityRegistry.registerComponent(
@@ -108,10 +116,6 @@ class CraftoryCorePlugin(
             )
         entityRegistry.registerSystem(CraftoryMobDeathSystem())
         entityRegistry.registerSystem(MobLeashSystem())
-        FluidTransportRegistration.register(this)
-        val command = CraftoryCommand(pluginVersion, config, crews)
-        getCommandRegistry().registerCommand(command)
-        LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
     }
 
     override fun start() {

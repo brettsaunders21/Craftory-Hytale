@@ -197,7 +197,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
         CraftorySelfTest.keepTestSectionsTicking(run, store)
-        if (!run.hurlFinished && tick >= run.startTick + 3_600L) {
+        if (!run.hurlFinished && tick >= run.startTick + 6_000L) {
             abort(run, "timed out")
             return
         }
@@ -232,7 +232,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         }
         if (run.phase == 6) {
             run.sparkTest?.tick()
-            if (run.hurlFinished && run.sparkFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+            if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
                 CraftorySelfTest.finishAfterHurlTest(run, store)
             }
             return
@@ -976,11 +976,11 @@ object CraftorySelfTest {
             }
         run.world.execute {
             HurlSelfTest(run).start {
-                run.hurlFinished = true
                 run.sparkTest = SparkSelfTest(run)
                 run.sparkTest?.start {
                     run.sparkFinished = true
                     run.sparkTest = null
+                    run.hurlFinished = true
                     run.cleanupTick = run.world.tick + 20
                 }
             }

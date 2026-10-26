@@ -1748,12 +1748,16 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             .getResource(TransportSelfTestRun.type)
             .active = null
         run.world.execute {
-            CarrierAcceptanceSelfTest.start(run.world) {
-                run.context.sendMessage(Message.raw(it))
-            }
+            CarrierAcceptanceSelfTest.start(
+                run.world,
+                report = { run.context.sendMessage(Message.raw(it)) },
+                onComplete = {
+                    FluidSelfTest.start(run.context, run.world) {
+                        PolishSelfTest.start(run.context, run.world)
+                    }
+                },
+            )
         }
-        FluidSelfTest.start(run.context, run.world)
-        PolishSelfTest.start(run.context, run.world)
     }
 
     private fun clearDrops(world: World) {
