@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
+import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
@@ -43,7 +44,7 @@ import java.util.UUID
 import java.util.function.BiConsumer
 import kotlin.math.abs
 
-@Suppress("LongMethod", "MaxLineLength", "TooManyFunctions")
+@Suppress("LongMethod", "MaxLineLength", "TooManyFunctions", "LargeClass")
 internal class SparkSelfTest(
     private val run: SelfTestRun.Run,
 ) {
@@ -90,6 +91,7 @@ internal class SparkSelfTest(
     private var firstSparkCrystalAvailable = false
     private var vessaRef: Ref<EntityStore>? = null
     private var vessaTriggerTick: Long? = null
+    private var preexistingVessaIds: Set<UUID>? = null
     private var completion: (() -> Unit)? = null
 
     @Suppress("TooGenericExceptionCaught")
@@ -352,6 +354,11 @@ internal class SparkSelfTest(
         crews.setTier(sparkCrew.id, 2)
         val machineRef = entityAt(sparkBurner) ?: error("First Spark Burner missing")
         if (firstSparkCrystalAvailable) {
+            preexistingVessaIds =
+                vessaNpcsWithin(VESSA_CLEANUP_RADIUS)
+                    .mapNotNull(::vessaUuid)
+                    .toSet()
+            vessaTriggerTick = world.tick
             val triggered =
                 FirstSpark.tryTrigger(
                     world,
@@ -361,7 +368,6 @@ internal class SparkSelfTest(
                     crews,
                     shouldContinue = { !cleaned },
                 ) { vessaRef = it }
-            if (triggered) vessaTriggerTick = world.tick
             val triggeredAgain =
                 FirstSpark.tryTrigger(
                     world,
@@ -572,10 +578,16 @@ internal class SparkSelfTest(
         cleaned = true
         if (fixturesStarted) CraftoryCore.wells().remove(world, well)
         val entityStore = world.entityStore.store
-        vessaNpcsWithin(VESSA_CLEANUP_RADIUS).forEach { ref ->
-            if (ref.isValid) runCatching { entityStore.removeEntity(ref, RemoveReason.REMOVE) }
+        val snapshot = preexistingVessaIds
+        val trackedVessa = vessaRef?.takeIf { it.isValid }
+        trackedVessa?.let { ref -> runCatching { entityStore.removeEntity(ref, RemoveReason.REMOVE) } }
+        if (snapshot != null) {
+            vessaNpcsWithin(VESSA_CLEANUP_RADIUS)
+                .filter { ref -> vessaUuid(ref)?.let { it !in snapshot } == true }
+                .forEach { ref ->
+                    if (ref.isValid) runCatching { entityStore.removeEntity(ref, RemoveReason.REMOVE) }
+                }
         }
-        vessaRef = null
         if (fixturesStarted) runCatching { CraftorySelfTest.clear(world, run.sectionRef, positions) }
         ResonatorRuntimeConfig.crystalUses = originalCrystalUses
         runCatching { crews.close() }
@@ -586,7 +598,15 @@ internal class SparkSelfTest(
                 .getBlockEntity(world, well.x, well.y, well.z)
                 ?.takeIf { store.getComponent(it, studio.craftory.core.api.well.Glimmerwell.type) != null }
                 ?.let { 1 } ?: 0
-        val remainingVessa = vessaNpcsWithin(VESSA_CLEANUP_RADIUS).count { it.isValid }
+        val remainingVessa =
+            if (snapshot == null) {
+                if (trackedVessa?.isValid == true) 1 else 0
+            } else {
+                vessaNpcsWithin(VESSA_CLEANUP_RADIUS).count { ref ->
+                    vessaUuid(ref)?.let { it !in snapshot } == true
+                }
+            }
+        vessaRef = null
         val blockSection = store.getComponent(run.sectionRef, BlockSection.getComponentType())
         val remainingBlocks =
             positions.count { position ->
@@ -601,8 +621,16 @@ internal class SparkSelfTest(
         if (vessaRef?.isValid == true) return
         val triggeredAt = vessaTriggerTick ?: return
         if (world.tick - triggeredAt > VESSA_SPAWN_TIMEOUT_TICKS) return
-        vessaRef = vessaNpcsWithin(VESSA_POLL_RADIUS).firstOrNull()
+        val snapshot = preexistingVessaIds ?: return
+        vessaRef =
+            vessaNpcsWithin(VESSA_POLL_RADIUS)
+                .firstOrNull { ref -> vessaUuid(ref)?.let { it !in snapshot } == true }
     }
+
+    private fun vessaUuid(ref: Ref<EntityStore>): UUID? =
+        world.entityStore.store
+            .getComponent(ref, UUIDComponent.getComponentType())
+            ?.uuid
 
     private fun vessaNpcsWithin(radius: Int): List<Ref<EntityStore>> {
         val npcType = NPCEntity.getComponentType() ?: return emptyList()
