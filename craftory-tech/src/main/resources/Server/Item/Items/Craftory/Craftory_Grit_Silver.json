@@ -2,6 +2,7 @@
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Silver.name" },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Silver.png",
   "Categories": ["Craftory.Materials"],
+  "Quality": "Common",
   "MaxStack": 100,
   "Recipe": {
     "Input": [{ "ItemId": "Craftory_Grit_Silver", "Quantity": 1 }],

@@ -8,7 +8,7 @@
   "Categories": ["Craftory.Power"],
   "SubCategory": "BlockSets",
   "Set": "Furniture_Goblin",
-  "Quality": "Technical",
+  "Quality": "Common",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Sloshtank.png",
   "MaxStack": 1,
   "BlockType": {

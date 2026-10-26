@@ -9,7 +9,7 @@
   "Texture": "Items/Tools/Hammer/Crude_Texture.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Interactions": {
     "Secondary": {
       "Interactions": [

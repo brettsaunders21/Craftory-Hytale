@@ -8,7 +8,7 @@
   "Categories": ["Craftory.Power"],
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Shroom_Bed.png",
-  "Quality": "Developer",
+  "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
     "BlockParticleSetId": "Wood",

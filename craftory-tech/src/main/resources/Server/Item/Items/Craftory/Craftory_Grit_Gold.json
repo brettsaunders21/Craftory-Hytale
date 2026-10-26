@@ -2,6 +2,7 @@
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Gold.name" },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Gold.png",
   "Categories": ["Craftory.Materials"],
+  "Quality": "Common",
   "MaxStack": 100,
   "Recipe": {
     "Input": [{ "ItemId": "Craftory_Grit_Gold", "Quantity": 1 }],

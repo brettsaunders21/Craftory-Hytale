@@ -6,7 +6,7 @@
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Crank_A_Fizz.png",
   "Categories": ["Craftory.Power"],
   "PlayerAnimationsId": "Block",
-  "Quality": "Developer",
+  "Quality": "Common",
   "IconProperties": {
     "Scale": 0.58823,
     "Rotation": [

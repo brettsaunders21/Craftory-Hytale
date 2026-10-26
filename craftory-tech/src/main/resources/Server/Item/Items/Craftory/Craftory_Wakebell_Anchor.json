@@ -5,6 +5,7 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Wakebell_Anchor.png",
   "Categories": ["Craftory.Machines"],
+  "Quality": "Common",
   "Recipe": {
     "Input": [
       {

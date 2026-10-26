@@ -2,5 +2,6 @@
   "TranslationProperties": { "Name": "server.items.Craftory_Glimmer_Dust.name" },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Glimmer_Dust.png",
   "Categories": ["Craftory.Materials"],
+  "Quality": "Common",
   "MaxStack": 100
 }

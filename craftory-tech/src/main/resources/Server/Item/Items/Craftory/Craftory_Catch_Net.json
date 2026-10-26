@@ -5,6 +5,7 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Catch_Net.png",
   "Categories": ["Craftory.Logistics"],
+  "Quality": "Common",
   "PlayerAnimationsId": "Block",
   "ItemLevel": 2,
   "MaxStack": 100,

@@ -8,7 +8,7 @@
   "Categories": ["Craftory.Wells"],
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Damper.png",
-  "Quality": "Developer",
+  "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
     "BlockParticleSetId": "Wood",

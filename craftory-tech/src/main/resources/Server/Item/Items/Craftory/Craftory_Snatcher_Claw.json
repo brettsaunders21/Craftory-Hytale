@@ -8,7 +8,7 @@
   "MaxStack": 1,
   "ItemLevel": 1,
   "PlayerAnimationsId": "Block",
-  "Quality": "Technical",
+  "Quality": "Uncommon",
   "ItemSoundSetId": "ISS_Blocks_Stone",
   "BlockType": {
     "Material": "Solid",

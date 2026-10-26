@@ -6,6 +6,7 @@
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
   "Categories": ["Craftory.Power"],
+  "Quality": "Common",
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Junk_Heart_Firebox.png",
   "BlockType": {

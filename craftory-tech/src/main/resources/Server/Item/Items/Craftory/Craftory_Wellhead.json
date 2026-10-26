@@ -6,6 +6,7 @@
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
   "Categories": ["Craftory.Machines"],
+  "Quality": "Common",
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Wellhead.png",
   "BlockType": {

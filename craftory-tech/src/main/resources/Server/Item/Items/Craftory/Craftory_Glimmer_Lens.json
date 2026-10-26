@@ -7,7 +7,7 @@
   "Categories": ["Craftory.Tools"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Interactions": {
     "Secondary": {
       "Interactions": [

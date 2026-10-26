@@ -7,7 +7,7 @@
   "PlayerAnimationsId": "Block",
   "Categories": ["Craftory.Power"],
   "Set": "Furniture_Goblin",
-  "Quality": "Technical",
+  "Quality": "Uncommon",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boiler_Whistle_Stack.png",
   "MaxStack": 16,
   "BlockType": {

@@ -2,6 +2,7 @@
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Cobalt.name" },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Cobalt.png",
   "Categories": ["Craftory.Materials"],
+  "Quality": "Common",
   "MaxStack": 100,
   "Recipe": {
     "Input": [{ "ItemId": "Craftory_Grit_Cobalt", "Quantity": 1 }],

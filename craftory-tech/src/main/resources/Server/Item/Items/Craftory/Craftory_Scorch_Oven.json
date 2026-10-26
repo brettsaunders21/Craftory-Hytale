@@ -5,6 +5,7 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scorch_Oven.png",
   "Categories": ["Craftory.Machines"],
+  "Quality": "Common",
   "Recipe": {
     "TimeSeconds": 2,
     "KnowledgeRequired": false,

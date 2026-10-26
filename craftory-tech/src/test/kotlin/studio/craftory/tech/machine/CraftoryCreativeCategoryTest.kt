@@ -66,6 +66,43 @@ class CraftoryCreativeCategoryTest {
         )
     }
 
+    @Test
+    fun `all Craftory items use valid survival qualities`() {
+        val itemFiles = itemDirectories().flatMap(::jsonFiles)
+        val allowedQualities = setOf("Common", "Uncommon", "Rare", "Technical")
+        val invalidQualities =
+            itemFiles.flatMap { path ->
+                val itemId = path.fileName.toString().removeSuffix(".json")
+                val item = parse(path)
+                when {
+                    !item.has("Quality") || item.get("Quality").isJsonNull -> {
+                        listOf("$itemId has no Quality")
+                    }
+
+                    item.get("Quality").asString !in allowedQualities -> {
+                        listOf(
+                            "$itemId has invalid Quality ${item.get("Quality").asString}",
+                        )
+                    }
+
+                    else -> {
+                        emptyList()
+                    }
+                }
+            }
+        assertTrue(invalidQualities.isEmpty(), invalidQualities.joinToString("\n"))
+
+        val technicalItems =
+            itemFiles
+                .filter { parse(it).get("Quality").asString == "Technical" }
+                .map { it.fileName.toString().removeSuffix(".json") }
+                .toSet()
+        assertTrue(
+            technicalItems == setOf("Craftory_Glimmerwell_Anchor"),
+            "Technical quality is reserved for unholdable internal blocks: ${technicalItems.joinToString()}",
+        )
+    }
+
     private fun itemDirectories(): List<Path> =
         listOf(
             Path.of("src/main/resources/Server/Item/Items/Craftory"),
