@@ -26,7 +26,7 @@ class NotebookPageUi(
         val crew = crews.crewOf(playerRef.uuid)
         val members = crew.members.size
         commandBuilder
-            .set("#Title.Text", Message.translation("server.craftory.notebook.title"))
+            .set("#TitleLabel.Text", Message.translation("server.craftory.notebook.title"))
             .set("#Crew.Text", Message.translation("server.craftory.notebook.crew").param("name", crew.name))
             .set("#Members.Text", Message.translation("server.craftory.notebook.members").param("count", members))
             .set(
