@@ -50,19 +50,23 @@ def tinkers_hammer():
 
 
 def squint_goggles(worn: bool):
-    """Worn on the Head attachment. Vanilla heads are 16x16x16 units at 64/block (head centre at origin)."""
-    strap = Box("Strap", (18, 4, 18), pos=(0, 2 if worn else 0, 0), paint=leather(LEATHER),
-                faces=("front", "back", "left", "right") if worn else ("front", "back", "left", "right", "top", "bottom"))
-    lens_l = Box("LensL", (6, 6, 3), pos=(-4, 0, 9.5), rot=(0, 0, 4), paint=metal(BRASS, rust=0.2, rivets=False))
-    lens_l.add(Box("GlassL", (4, 4, 1), pos=(0, 0, 1.6), paint=glow(FIZZ), shading="fullbright"))
-    lens_r = Box("LensR", (7, 7, 4), pos=(4.5, 0.5, 10), rot=(0, 0, -6), paint=metal(TIN_DARK, rust=0.4, rivets=False))
+    """Worn on the player's Head bone: a `Head` piece with the rig's head offset, so children sit in head-centre
+    coordinates of the vanilla 30x28x28 head (front face z=14, eyes at x=+-7.5, y=-1.8)."""
+    strap = Box("Strap", (32, 5, 30), pos=(0, -1.5, 0), paint=leather(LEATHER),
+                faces=("back", "left", "right") if worn else ("front", "back", "left", "right", "top", "bottom"))
+    lens_l = Box("LensL", (10, 10, 4), pos=(7.5, -1.8, 16), rot=(0, 0, 4), paint=metal(BRASS, rust=0.2, rivets=False))
+    lens_l.add(Box("GlassL", (7, 7, 1), pos=(0, 0, 2.1), paint=glow(FIZZ), shading="fullbright"))
+    lens_r = Box("LensR", (11, 11, 5), pos=(-7.5, -1.3, 16.5), rot=(0, 0, -6),
+                 paint=metal(TIN_DARK, rust=0.4, rivets=False))
     lens_r.add(
-        Box("GlassR", (5, 5, 1), pos=(0, 0, 2.1), paint=glow(GLIMMER, (0.1, 0.45, 0.6)), shading="fullbright"),
-        Box("Loupe", (3, 3, 4), pos=(0, 0, 4), paint=brass(rivets=False)),
+        Box("GlassR", (8, 8, 1), pos=(0, 0, 2.6), paint=glow(GLIMMER, (0.1, 0.45, 0.6)), shading="fullbright"),
+        Box("Loupe", (5, 5, 6), pos=(0, 0, 5.5), paint=brass(rivets=False)),
     )
-    strap.add(lens_l, lens_r, Box("Bridge", (3, 2, 2), pos=(0, 0.5, 9.5), paint=BRASS_P),
-              Box("Buckle", (4, 4, 1), pos=(0, 0, -9.3), paint=BRASS_P))
-    return Model([Box("Head", pos=(0, 0, 0)).add(strap)] if worn else [strap], fmt="character")
+    parts = [strap, lens_l, lens_r, Box("Bridge", (5, 3, 3), pos=(0, -1, 16), paint=BRASS_P),
+             Box("Buckle", (6, 6, 2), pos=(0, -1.5, -15.5), paint=BRASS_P)]
+    if worn:
+        return Model([Box("Head", pos=(0, 8, -1), offset=(0, 20, 2), piece=True).add(*parts)], fmt="character")
+    return Model([Box("Goggles").add(*parts)], fmt="character")
 
 
 def notebook():

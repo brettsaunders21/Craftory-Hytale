@@ -10,6 +10,7 @@
   "MaxStack": 1,
   "Armor": {
     "ArmorSlot": "Head",
+    "CosmeticsToHide": ["HeadAccessory"],
     "BaseDamageResistance": 0,
     "DamageResistance": {},
     "StatModifiers": {}

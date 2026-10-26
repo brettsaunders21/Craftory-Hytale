@@ -19,6 +19,7 @@ from hyart import Model, model_json, pack, paint, write_json, write_model  # noq
 import goblin_blocks as gb  # noqa: E402
 import goblin_items as gi  # noqa: E402
 import grizzlecog  # noqa: E402
+import hud_icons  # noqa: E402
 import hand_items  # noqa: E402
 import particles  # noqa: E402
 from render import render  # noqa: E402
@@ -132,6 +133,8 @@ def main() -> None:
     export_beams(manifest)
     export_trails(manifest)
     grizzlecog.export(manifest, COMMON, build)
+    hud_dir = COMMON / "UI" / "Custom" / "Craftory" / "Hud" / "Energy"
+    manifest.extend(p.relative_to(COMMON.parent).as_posix() for p in hud_icons.export(hud_dir))
     vanilla_ref = os.environ.get("CRAFTORY_VANILLA_REF")
     if vanilla_ref:
         import retint
