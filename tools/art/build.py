@@ -56,7 +56,7 @@ def written(manifest: list[str], p: Path) -> Path:
 def export_blocks(manifest: list[str]) -> None:
     for name, (fn, variants) in gb.BLOCKS.items():
         d = COMMON / "Blocks" / "Craftory" / name
-        if name == "Fizz_Canister":
+        if name in ("Fizz_Canister", "Sloshtank"):
             variants = {f"_{k}": {"fill": v} for k, v in CANISTER_FILLS.items()}
         built = {suffix: (build(m, name), anims) for suffix, kw in variants.items() for m, anims in [fn(**kw)]}
         shared = len({strip(model_json(m)) for m, _ in built.values()}) == 1

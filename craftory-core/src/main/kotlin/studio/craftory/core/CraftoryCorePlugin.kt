@@ -23,6 +23,7 @@ import studio.craftory.core.api.mob.MobHome
 import studio.craftory.core.api.mob.MobLeashSystem
 import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.transport.FluidTransportRegistration
 import studio.craftory.core.api.transport.ItemTransportRegistration
 import studio.craftory.core.api.transport.TubeNode
 import studio.craftory.core.api.well.Glimmerwell
@@ -106,6 +107,7 @@ class CraftoryCorePlugin(
             )
         entityRegistry.registerSystem(CraftoryMobDeathSystem())
         entityRegistry.registerSystem(MobLeashSystem())
+        FluidTransportRegistration.register(this)
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)

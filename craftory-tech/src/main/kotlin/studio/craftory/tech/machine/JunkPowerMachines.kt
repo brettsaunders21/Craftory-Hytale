@@ -269,12 +269,14 @@ internal object GnasherMachine {
         deliveredFizz: Long,
         speed: Double = 1.0,
         requiredDelivery: Long = FIZZ_PER_SOLVE_TICK,
+        deliveredRank: Int = TinkeredSpeed.PRESSURISED_RANK,
     ): GnasherPulseResult {
         if (state.jammed || GritTable.queuedOreCount(state.oreQueue) == 0 || deliveredFizz < requiredDelivery) {
             return GnasherPulseResult(false)
         }
         val previous = state.lastAutoCrankTick
-        val pulseInterval = (AUTO_PULSE_INTERVAL_TICKS / speed).toLong().coerceAtLeast(1L)
+        val rankInterval = AUTO_PULSE_INTERVAL_TICKS * 100 / TinkeredSpeed.percent(deliveredRank)
+        val pulseInterval = (rankInterval / speed).toLong().coerceAtLeast(1L)
         if (
             previous != Long.MIN_VALUE &&
             (currentTick < previous || currentTick - previous < pulseInterval)

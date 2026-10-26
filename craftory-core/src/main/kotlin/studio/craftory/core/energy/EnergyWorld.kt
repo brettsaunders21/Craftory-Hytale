@@ -261,6 +261,24 @@ internal class EnergyWorld : Resource<ChunkStore> {
         return removed
     }
 
+    fun drainStored(
+        id: Long,
+        amount: Long,
+    ): Long {
+        if (amount <= 0) return 0
+        val member = member(id) ?: return 0
+        val stored = runtime.graph.stored(id)
+        val drained = minOf(stored, amount)
+        if (drained == 0L) return 0
+        val remaining = stored - drained
+        val rank = if (remaining == 0L) -1 else runtime.graph.storedRank(id)
+        runtime.graph.restoreStored(id, remaining, rank)
+        member.stored = remaining
+        member.storeRank = rank
+        member.unsaved = true
+        return drained
+    }
+
     fun delivered(id: Long): Long = member(id)?.delivered ?: 0
 
     fun deliveredRank(id: Long): Int = member(id)?.deliveredRank ?: -1
