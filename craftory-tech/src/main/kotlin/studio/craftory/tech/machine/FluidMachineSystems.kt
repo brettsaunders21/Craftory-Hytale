@@ -24,6 +24,7 @@ import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.transport.FluidHandler
 import studio.craftory.core.api.transport.FluidTank
 import studio.craftory.core.api.transport.FluidTransport
+import studio.craftory.tech.CraftoryIds
 
 private val LAVA_IDS = setOf("Lava_Source", "Lava")
 private const val TICKS_PER_SECOND = 20L
@@ -230,20 +231,60 @@ internal class SloshtankStateSystem : EntityTickingSystem<ChunkStore>() {
         val fluid = FluidTransport.of(world)
         val capacity = fluid.capacity(position.x, position.y, position.z)
         val amount = fluid.amount(position.x, position.y, position.z)
-        val fill = if (capacity <= 0L) 0 else ((amount * 4 + capacity / 2) / capacity).toInt().coerceIn(0, 4)
-        val state =
-            when (fill) {
-                1 -> "Quarter"
-                2 -> "Half"
-                3 -> "ThreeQuarter"
-                4 -> "Full"
-                else -> "Empty"
-            }
+        val state = FillBand.stateName(FillBand.of(amount, capacity))
         if (setBlockState(world, blockState, commandBuffer, state)) blockState.markNeedsSaving(commandBuffer)
     }
 }
 
-private fun setBlockState(
+internal class CanisterStateSystem : EntityTickingSystem<ChunkStore>() {
+    private val position = Vector3i()
+
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+
+    override fun getDependencies(): Set<Dependency<ChunkStore>> =
+        setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState) || !blockState.fillWorldPos(commandBuffer, position)) return
+        val world = store.externalData.world
+        if ((world.tick + position.x + position.z) % STATE_UPDATE_INTERVAL_TICKS != 0L) return
+
+        val section = commandBuffer.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return
+        val blockType = BlockType.getAssetMap().getAsset(section.get(position.x, position.y, position.z)) ?: return
+        if (baseBlockId(blockType) != CraftoryIds.CANISTER) return
+
+        val positionId = BlockPos.pack(position.x, position.y, position.z)
+        val energy = CraftoryCore.energyAccess(world)
+        val state = FillBand.stateName(FillBand.of(energy.stored(positionId), energy.capacity(positionId)))
+        if (setBlockState(world, blockState, commandBuffer, state)) blockState.markNeedsSaving(commandBuffer)
+    }
+}
+
+private const val STATE_UPDATE_INTERVAL_TICKS = 10L
+
+internal fun setBlockState(
     world: com.hypixel.hytale.server.core.universe.world.World,
     blockState: BlockModule.BlockStateInfo,
     commandBuffer: CommandBuffer<ChunkStore>,

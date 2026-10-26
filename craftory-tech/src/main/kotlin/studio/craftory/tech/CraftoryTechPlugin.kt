@@ -31,6 +31,7 @@ import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CanisterPageRefreshSystem
+import studio.craftory.tech.machine.CanisterStateSystem
 import studio.craftory.tech.machine.ClawUseInteraction
 import studio.craftory.tech.machine.CrackleCoilSystem
 import studio.craftory.tech.machine.CradleState
@@ -53,6 +54,7 @@ import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
 import studio.craftory.tech.machine.GutterBoilerSystem
+import studio.craftory.tech.machine.GutterpipeStateSystem
 import studio.craftory.tech.machine.JankSystem
 import studio.craftory.tech.machine.JunkHeartKnowledge
 import studio.craftory.tech.machine.JunkHeartLifecycle
@@ -425,7 +427,9 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(JankSystem())
         chunkRegistry.registerSystem(ScrapRushSystem(config.get().scrapRush))
         chunkRegistry.registerSystem(GutterBoilerSystem())
+        chunkRegistry.registerSystem(GutterpipeStateSystem())
         chunkRegistry.registerSystem(SloshtankStateSystem())
+        chunkRegistry.registerSystem(CanisterStateSystem())
         chunkRegistry.registerSystem(GasbagSystem())
         chunkRegistry.registerSystem(SnatcherClawSystem())
         chunkRegistry.registerSystem(AnchorSystem())

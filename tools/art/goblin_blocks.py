@@ -270,19 +270,78 @@ def gasbag():
 # ------------------------------------------------------------------ Gutterpipe
 
 
-def gutterpipe(end_north=True, end_south=True):
-    pipe = Box("Pipe", (10, 10, 32), pos=(0, 16, 0), paint=metal(TIN_DARK, rust=0.45, corrugated=True))
+def _gutterpipe_axis_box(name, size, pos, axis, paint):
+    if axis == 0:
+        size, pos = (size[2], size[1], size[0]), (pos[2], pos[1], pos[0])
+    elif axis == 1:
+        size, pos = (size[0], size[2], size[1]), (pos[0], pos[2], pos[1])
+    return Box(name, size, pos=pos, paint=paint)
+
+
+def _gutterpipe_straight(axis):
+    pipe = Box("Pipe", pos=(0, 16, 0))
     pipe.add(
-        Box("Seam", (11, 2, 32), pos=(0, 4.6, 0), rot=(0, 0, 1.5), paint=RUSTY),
-        lashing("Lashing", (11, 11, 3), pos=(0, 0, 4), rot=(0, 0, 6)),
-        Box("Patch", (1, 6, 7), pos=(5.2, -1, -6), rot=(4, 0, 0), paint=metal(RUST, rust=0.2)),
-        bolt("BoltA", (2, 3, -8), paint=BRASS_P),
+        _gutterpipe_axis_box("PipeBody", (10, 10, 32), (0, 0, 0), axis,
+                             metal(TIN_DARK, rust=0.45, corrugated=True)),
+        _gutterpipe_axis_box("Seam", (11, 2, 32), (0, 4.6, 0), axis, RUSTY),
+        _gutterpipe_axis_box("Lashing", (11, 11, 3), (0, 0, 4), axis, ROPE_P),
+        _gutterpipe_axis_box("Patch", (1, 6, 7), (5.2, -1, -6), axis, metal(RUST, rust=0.2)),
+        _gutterpipe_axis_box("PatchRivet", (2, 2, 1), (2, 3, -8), axis, BRASS_P),
+        _gutterpipe_axis_box("FlangeN", (14, 14, 3), (0, 0, -14.5), axis, metal(RUST, rust=0.3)),
+        _gutterpipe_axis_box("FlangeS", (14, 14, 3), (0, 0, 14.5), axis, metal(BRASS, rust=0.3)),
     )
-    if end_north:
-        pipe.add(Box("FlangeN", (14, 14, 3), pos=(0, 0, -14.5), rot=(0, 0, 4), paint=metal(RUST, rust=0.3)))
-    if end_south:
-        pipe.add(Box("FlangeS", (14, 14, 3), pos=(0, 0, 14.5), rot=(0, 0, -3), paint=metal(BRASS, rust=0.3)))
     return Model([pipe]), {}
+
+
+def gutterpipe(mask: int):
+    """Build a Gutterpipe for the world mask bits +X,-X,+Y,-Y,+Z,-Z."""
+    if not 0 <= mask < 64:
+        raise ValueError("Gutterpipe mask must be six bits")
+    arms = [bit for bit in range(6) if mask & (1 << bit)]
+    if len(arms) <= 1:
+        return _gutterpipe_straight(arms[0] // 2 if arms else 0)
+    if len(arms) == 2 and arms[0] // 2 == arms[1] // 2:
+        return _gutterpipe_straight(arms[0] // 2)
+
+    junction = Box("Junction", pos=(0, 16, 0))
+    junction.add(
+        Box("JunctionHub", (14, 14, 14), paint=metal(TIN_DARK, rust=0.4, corrugated=True)),
+        Box("HubCollar", (16, 3, 16), paint=BRASS_RIV),
+        Box("HubSeam", (16, 2, 16), pos=(0, -4, 0), paint=RUSTY),
+    )
+    for bit in arms:
+        axis = bit // 2
+        sign = 1 if bit % 2 == 0 else -1
+        direction = [0, 0, 0]
+        direction[axis] = sign
+        direction = tuple(direction)
+        arm_size = [8, 8, 8]
+        arm_size[axis] = 10
+        collar_size = [13, 13, 13]
+        collar_size[axis] = 3
+        collar_pos = tuple(value * 14.5 for value in direction)
+        junction.add(
+            Box(
+                f"Arm{bit}",
+                tuple(arm_size),
+                pos=tuple(value * 11 for value in direction),
+                paint=metal(TIN_DARK, rust=0.45, corrugated=True),
+            ),
+            Box(
+                f"ArmCollar{bit}",
+                tuple(collar_size),
+                pos=collar_pos,
+                paint=metal(RUST if sign < 0 else BRASS, rust=0.3, rivets=True),
+            ),
+        )
+        for rivet_index, side in enumerate((-1, 1)):
+            offset = list(collar_pos)
+            transverse_axes = [value for value in range(3) if value != axis]
+            offset[transverse_axes[rivet_index]] += side * 4.5
+            junction.add(
+                bolt(f"ArmRivet{bit}{rivet_index}", tuple(offset), s=2, paint=BRASS_P),
+            )
+    return Model([junction]), {}
 
 
 # ------------------------------------------------------------------ Gnasher Pit
@@ -543,7 +602,7 @@ BLOCKS = {
     "Sloshtank": (sloshtank, {}),
     "Gutter_Boiler": (gutter_boiler, {"_On": {"lit": True}, "_Off": {"lit": False}, "_Offline": {"lit": False, "offline": True}}),
     "Gasbag": (gasbag, {"": {}}),
-    "Gutterpipe": (gutterpipe, {"": {}}),
+    "Gutterpipe": (gutterpipe, {f"_C{mask:02d}": {"mask": mask} for mask in range(64)}),
     "Gnasher_Pit": (gnasher_pit, {"": {}}),
     "Scorch_Oven": (scorch_oven, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Wakebell_Anchor": (wakebell_anchor, {"_Off": {"lit": False}, "_On": {"lit": True}}),
