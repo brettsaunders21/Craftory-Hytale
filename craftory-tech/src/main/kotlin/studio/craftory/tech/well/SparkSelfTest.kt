@@ -113,15 +113,22 @@ internal class SparkSelfTest(
         }
         val energy = CraftoryCore.energyAccess(world)
         val resonatorOutputId = BlockPos.pack(resonator.x, resonator.y, resonator.z) xor CONVERTER_Y_MASK
-        if (energy.networkSupply(resonatorOutputId) > 0L) resonatorSawOutput = true
-        if (!harmonyRechecked || ++energyTicks < 4) return
         val dimRank = requireNotNull(CraftoryCore.gradeRank("dim_glimmer"))
+        if (energy.converterOutputNetwork(BlockPos.pack(resonator.x, resonator.y, resonator.z)) >= 0 &&
+            energy.networkSupply(resonatorOutputId) > 0L &&
+            energy.networkGrade(resonatorOutputId) == dimRank
+        ) {
+            resonatorSawOutput = true
+        }
+        if (!harmonyRechecked || ++energyTicks < 4) return
         val fizzRank = requireNotNull(CraftoryCore.gradeRank("fizz"))
-        val consumerMember = consumerMember()
+        val cradleId = BlockPos.pack(cradle.x, cradle.y, cradle.z)
         check(
-            consumerMember?.deliveredRank == dimRank,
-            "Cradle delivers dim_glimmer to adjacent consumer",
-            "rank=${consumerMember?.deliveredRank}",
+            energy.networkOf(cradleId) >= 0 &&
+                energy.networkGrade(cradleId) == dimRank &&
+                energy.networkSupply(cradleId) > 0L,
+            "Cradle network produces dim_glimmer",
+            "grade=${energy.networkGrade(cradleId)}, supply=${energy.networkSupply(cradleId)}",
         )
         val coilRef = entityAt(coil)
         val coilOutput = coilRef?.let { store.getComponent(it, EnergyMember.type) }
@@ -134,6 +141,8 @@ internal class SparkSelfTest(
             coilStorageMember?.stored?.let { it > 0L } == true &&
                 coilStorageMember.storeRank == dimRank &&
                 energy.networkGrade(coilOutputId) == dimRank &&
+                energy.converterOutputNetwork(BlockPos.pack(coil.x, coil.y, coil.z)) >= 0 &&
+                energy.networkSupply(coilOutputId) > 0L &&
                 burnerRef?.let {
                     store.getComponent(it, EnergyMember.type)?.let { member ->
                         member.productionRank == fizzRank && energy.networkGrade(burnerId) == fizzRank
@@ -367,8 +376,6 @@ internal class SparkSelfTest(
 
     private fun entityAt(position: CraftorySelfTest.TestPosition): Ref<ChunkStore>? =
         BlockModule.getBlockEntity(world, position.x, position.y, position.z)
-
-    private fun consumerMember(): EnergyMember? = entityAt(consumer)?.let { store.getComponent(it, EnergyMember.type) }
 
     private fun cleanup() {
         if (cleaned) return

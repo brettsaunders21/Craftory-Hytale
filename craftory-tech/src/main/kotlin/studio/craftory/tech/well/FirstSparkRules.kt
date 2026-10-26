@@ -1,6 +1,23 @@
 package studio.craftory.tech.well
 
 internal object FirstSparkRules {
+    enum class Action {
+        NONE,
+        GRANT_AND_SPAWN,
+        RETRY_VESSA,
+    }
+
+    fun action(
+        alreadyKnown: Boolean,
+        vessaMet: Boolean,
+        conditionMet: Boolean,
+    ): Action =
+        when {
+            !conditionMet || (alreadyKnown && vessaMet) -> Action.NONE
+            alreadyKnown -> Action.RETRY_VESSA
+            else -> Action.GRANT_AND_SPAWN
+        }
+
     fun conditionMet(
         machineRunning: Boolean,
         ownerCrewTier: Int,

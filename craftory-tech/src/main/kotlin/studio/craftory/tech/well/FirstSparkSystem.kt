@@ -78,6 +78,9 @@ internal object FirstSpark {
     private const val MAX_DISTANCE_SQUARED = 64L
     private const val SPARK_PARTICLE = "Impact_Spark"
     private const val SPARK_SOUND = "SFX_Interact"
+    private val pendingVessaSpawns =
+        java.util.concurrent.ConcurrentHashMap
+            .newKeySet<java.util.UUID>()
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     fun tryTrigger(
@@ -111,45 +114,58 @@ internal object FirstSpark {
             }
         if (!machineRunning) return false
         val crew = crews.crewOf(owner)
-        if (crew.tier < 2 || CraftoryIds.FIRST_SPARK_KNOWLEDGE in crew.knowledge) return false
+        val alreadyKnown = CraftoryIds.FIRST_SPARK_KNOWLEDGE in crew.knowledge
+        val vessaMet = CraftoryIds.VESSA_MET_KNOWLEDGE in crew.knowledge
+        if (crew.tier < 2 || (alreadyKnown && vessaMet)) return false
         val nearest = nearestCrystal(store, machineX, machineY, machineZ, position) ?: return false
         if (!FirstSparkRules.conditionMet(machineRunning, crew.tier, false, nearest.second)) return false
-        crews.grantKnowledge(owner, CraftoryIds.FIRST_SPARK_KNOWLEDGE)
+        val action = FirstSparkRules.action(alreadyKnown, vessaMet, conditionMet = true)
+        if (action == FirstSparkRules.Action.NONE) return false
+        if (!pendingVessaSpawns.add(owner)) return false
+        if (action == FirstSparkRules.Action.GRANT_AND_SPAWN) {
+            crews.grantKnowledge(owner, CraftoryIds.FIRST_SPARK_KNOWLEDGE)
+        }
         val arcPosition = Vector3d()
         world.execute {
-            if (!shouldContinue()) return@execute
-            repeat(6) { index ->
-                val amount = (index + 1) / 7.0
-                arcPosition.set(
-                    nearest.first.x + 0.5 + (machineX - nearest.first.x) * amount,
-                    nearest.first.y + 0.5 + (machineY - nearest.first.y) * amount,
-                    nearest.first.z + 0.5 + (machineZ - nearest.first.z) * amount,
-                )
-                ParticleUtil.spawnParticleEffect(SPARK_PARTICLE, arcPosition, world.entityStore.store)
-            }
-            val soundIndex = SoundEvent.getAssetMap().getIndex(SPARK_SOUND)
-            if (soundIndex > 0) {
-                SoundUtil.playSoundEvent3d(
-                    soundIndex,
-                    SoundCategory.SFX,
-                    machineX + 0.5,
-                    machineY + 0.5,
-                    machineZ + 0.5,
-                    world.entityStore.store,
-                )
-            }
-            if (CraftoryIds.VESSA_MET_KNOWLEDGE !in crews.crewOf(owner).knowledge) {
-                val airY = (machineY + 1..machineY + 3).firstOrNull { isAir(store, machineX, it, machineZ) }
-                if (airY != null) {
-                    val spawned = VessaSpawner.spawn(world.entityStore.store, machineX, airY, machineZ)
-                    if (spawned != null) {
-                        (spawned as? Ref<EntityStore>)?.let(onVessaSpawned)
-                        crews.grantKnowledge(owner, CraftoryIds.VESSA_MET_KNOWLEDGE)
+            try {
+                if (!shouldContinue()) return@execute
+                if (action == FirstSparkRules.Action.GRANT_AND_SPAWN) {
+                    repeat(6) { index ->
+                        val amount = (index + 1) / 7.0
+                        arcPosition.set(
+                            nearest.first.x + 0.5 + (machineX - nearest.first.x) * amount,
+                            nearest.first.y + 0.5 + (machineY - nearest.first.y) * amount,
+                            nearest.first.z + 0.5 + (machineZ - nearest.first.z) * amount,
+                        )
+                        ParticleUtil.spawnParticleEffect(SPARK_PARTICLE, arcPosition, world.entityStore.store)
+                    }
+                    val soundIndex = SoundEvent.getAssetMap().getIndex(SPARK_SOUND)
+                    if (soundIndex > 0) {
+                        SoundUtil.playSoundEvent3d(
+                            soundIndex,
+                            SoundCategory.SFX,
+                            machineX + 0.5,
+                            machineY + 0.5,
+                            machineZ + 0.5,
+                            world.entityStore.store,
+                        )
                     }
                 }
+                if (!vessaMet) {
+                    val airY = (machineY + 1..machineY + 3).firstOrNull { isAir(store, machineX, it, machineZ) }
+                    if (airY != null) {
+                        val spawned = VessaSpawner.spawn(world.entityStore.store, machineX, airY, machineZ)
+                        if (spawned != null) {
+                            (spawned as? Ref<EntityStore>)?.let(onVessaSpawned)
+                            crews.grantKnowledge(owner, CraftoryIds.VESSA_MET_KNOWLEDGE)
+                        }
+                    }
+                }
+            } finally {
+                pendingVessaSpawns.remove(owner)
             }
         }
-        return true
+        return action == FirstSparkRules.Action.GRANT_AND_SPAWN
     }
 
     @Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
