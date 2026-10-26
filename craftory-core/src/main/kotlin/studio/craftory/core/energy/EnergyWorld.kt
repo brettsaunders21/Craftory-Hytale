@@ -164,7 +164,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
                 )
             }
         }
-        events.drain()
+        events.drain(currentStore.externalData.world.worldConfig.uuid)
         lastSolveTick = tick
     }
 

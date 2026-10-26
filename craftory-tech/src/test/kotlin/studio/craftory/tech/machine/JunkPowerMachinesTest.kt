@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.tech.machine.jank.BodgePart
+import studio.craftory.tech.machine.jank.bodgeModifiers
 
 class JunkPowerMachinesTest {
     @Test
@@ -222,6 +224,16 @@ class JunkPowerMachinesTest {
         assertFalse(GnasherMachine.autoCrank(gnasher, 39, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
         assertTrue(GnasherMachine.autoCrank(gnasher, 40, GnasherMachine.FIZZ_PER_SOLVE_TICK).accepted)
         assertEquals(2, gnasher.progressPulses)
+    }
+
+    @Test
+    fun `gutter gear gnasher grinds at reduced delivered demand`() {
+        val requiredDelivery =
+            (GnasherMachine.FIZZ_PER_SOLVE_TICK * bodgeModifiers(listOf(BodgePart.GUTTER_GEAR)).energyUse).toLong()
+        val gnasher = GnasherState()
+        assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
+
+        assertTrue(GnasherMachine.autoCrank(gnasher, 0, requiredDelivery, requiredDelivery = requiredDelivery).accepted)
     }
 
     @Test

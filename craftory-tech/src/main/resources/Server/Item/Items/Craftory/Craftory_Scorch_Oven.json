@@ -133,6 +133,11 @@
         "CraftoryMachineOwner": {},
         "CraftoryOvenPower": {
           "AccumulatedFizz": 0
+        },
+        "CraftoryJank": {},
+        "CraftoryBodgeSlots": {
+          "Slot0": "",
+          "Slot1": ""
         }
       }
     },
@@ -145,7 +150,13 @@
       ]
     },
     "Interactions": {
-      "Use": "Open_Processing_Bench"
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_OvenUse"
+          }
+        ]
+      }
     }
   }
 }

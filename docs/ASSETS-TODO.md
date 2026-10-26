@@ -15,3 +15,8 @@ Replace these vanilla placeholders with Craftory Blockbench models and textures:
 - Ghost frame: a documented `PrefabPreview` entity lists each missing part's placed block (preview mode), plus `Dust_Sparkles_Fine` particles at each missing part (particles mode). The Core config key `GhostMode` (`preview`, `particles` or `both`) picks one; the default is `both`. **Preview visuals are not yet verified in a real client** (translucency, tint and whether the offsets line up), so keep `both` until they are.
 - Junk Heart smoke: `Dungeon_Goblin_Smoke_Pipe_Small` particles at the chimney top.
 - Hammer clank: `SFX_Metal_Hit`. A goblin anvil clank would be better.
+- Boom Valve, Gutter Gear, Scrap Plating Bodge, Squawk Box and Muffler icons: `GoblinLab_Tinkering_Bench.png`.
+- Jank fizzle puff: `Cosmetic/Goblin/Cosmetic_Stink`.
+- Jank rattle steam: `Decorative/Goblin/Goblin_Decorative_Steam`.
+- High-Jank grey smoke: `Deployables/Healing_Totem/Totem_Heal_Smoke`.
+- Jank rattle/fizzle sound: `SFX_GoblinLab_Broken_Device`.

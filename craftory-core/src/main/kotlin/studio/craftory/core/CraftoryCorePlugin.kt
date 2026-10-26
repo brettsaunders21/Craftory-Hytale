@@ -105,6 +105,7 @@ class CraftoryCorePlugin(
             addSubCommand(InspectCommand())
             addSubCommand(SelfTestCommand())
             addSubCommand(SummonCommand())
+            addSubCommand(ScrapRushCommand())
             addSubCommand(ConfigCommand(config))
             addSubCommand(CraftoryCrewCommand(crews))
             addSubCommand(CraftoryGrantCommand(crews))
@@ -163,6 +164,16 @@ class CraftoryCorePlugin(
 
         override fun execute(context: CommandContext): CompletableFuture<Void> =
             CraftoryCore.dispatchCommandHandler("summon", context)
+    }
+
+    private class ScrapRushCommand : AbstractCommand("scraprush", "Start a Scrap Rush raid") {
+        init {
+            setAllowsExtraArguments(true)
+            requirePermission(HytalePermissions.fromCommand("craftory.scraprush"))
+        }
+
+        override fun execute(context: CommandContext): CompletableFuture<Void> =
+            CraftoryCore.dispatchCommandHandler("scraprush", context)
     }
 
     private class NetCommand : AbstractCommand("net", "Show the energy network for a targeted block or coordinates") {
