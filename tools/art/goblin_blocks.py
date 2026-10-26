@@ -716,7 +716,7 @@ def glimmerwell_anchor(corrupted: bool):
     base = Box("AnchorBase", (26, 4, 26), pos=(0, 2, 0), paint=base_paint)
     base.add(
         Box("RuneRing", (13, 2, 13), pos=(0, 5, 0), paint=BRASS_P),
-        Box("WellCrystal", (5, 12, 5), pos=(0, 11, 0), rot=(8, 18, -8), paint=glow_paint,
+        Box("WellCrystal", (5, 20, 5), pos=(0, 15, 0), rot=(8, 18, -8), paint=glow_paint,
             shading="fullbright"),
         Box("ShardA", (3, 7, 3), pos=(-6, 7, 2), rot=(8, 20, 18), paint=glow_paint,
             shading="fullbright"),

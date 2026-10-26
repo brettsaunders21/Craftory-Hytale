@@ -456,6 +456,29 @@ internal class BlockModelLintTest {
     }
 
     @Test
+    fun coreGlimmerwellAnchorHitboxFitsItsModel() {
+        val coreResources =
+            listOf(
+                Path.of("craftory-core/src/main/resources"),
+                Path.of("../craftory-core/src/main/resources"),
+            ).firstOrNull(Files::isDirectory)
+        assertNotNull(coreResources, "Core resource directory was not found")
+        val itemPath = coreResources.resolve("Server/Item/Items/Craftory/Craftory_Glimmerwell_Anchor.json")
+        val item = parse(itemPath)
+        val blockType = item.getAsJsonObject("BlockType")
+        val modelPath = blockType.get("CustomModel").asString
+        val hitboxType = blockType.get("HitboxType").asString
+        val hitboxPath = coreResources.resolve("Server/Item/Block/Hitboxes/Craftory/$hitboxType.json")
+        val modelBounds = blockBounds(listOf(BlockModelGeometry.bounds(parse(common.resolve(modelPath)))))
+
+        assertHitboxFits(
+            itemPath.fileName.toString(),
+            modelBounds,
+            parse(hitboxPath).getAsJsonArray("Boxes"),
+        )
+    }
+
+    @Test
     fun machineVentTableMatchesEveryModelNode() {
         MachineVents.entries.forEach { (blockId, vent) ->
             val itemPath = items.resolve("$blockId.json")

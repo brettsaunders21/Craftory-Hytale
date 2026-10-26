@@ -16,7 +16,7 @@
       },
       "UseDefaultDropWhenPlaced": false
     },
-    "HitboxType": "Plant_Small",
+    "HitboxType": "Craftory_Glimmerwell_Anchor",
     "Material": "Empty",
     "Opacity": "Transparent",
     "CustomModel": "Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor.blockymodel",
