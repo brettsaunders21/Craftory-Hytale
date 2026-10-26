@@ -28,6 +28,30 @@ class ItemTransitGraphTest {
     }
 
     @Test
+    fun `chunk-scoped dirty drain preserves nodes in other chunks`() {
+        val graph = ItemTransitGraph()
+        val chunkZeroStart = pos(0)
+        val chunkZeroNext = pos(1)
+        val chunkOneStart = pos(32)
+        val chunkOneNext = pos(33)
+        graph.addNode(chunkZeroStart)
+        graph.addNode(chunkZeroNext)
+        graph.addNode(chunkOneStart)
+        graph.addNode(chunkOneNext)
+        val sink = RecordingSink(pos(99))
+        graph.insert(chunkZeroStart, 1, 1, 0, Long.MIN_VALUE, sink)
+        graph.insert(chunkOneStart, 1, 1, 0, Long.MIN_VALUE, sink)
+
+        val chunkZeroVisits = ArrayList<Long>()
+        graph.drainDirtyInChunk(tick = 100, chunkX = 0, chunkZ = 0) { chunkZeroVisits += it }
+        val laterVisits = ArrayList<Long>()
+        graph.drainDirty(tick = 120) { laterVisits += it }
+
+        assertEquals(listOf(chunkZeroStart), chunkZeroVisits)
+        assertEquals(listOf(chunkOneStart), laterVisits)
+    }
+
+    @Test
     fun `items follow a line and arrive at its only destination`() {
         val graph = ItemTransitGraph()
         val start = pos(0)
