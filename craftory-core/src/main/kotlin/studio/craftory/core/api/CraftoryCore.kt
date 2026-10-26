@@ -11,6 +11,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyAccess
+import studio.craftory.core.api.energy.EnergyConverterType
+import studio.craftory.core.api.energy.EnergyFaces
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.EnergyMemberType
 import studio.craftory.core.api.energy.GradeTable
@@ -32,6 +34,8 @@ object CraftoryCore {
     private val wellAccess = WellAccess()
     private val modules = ConcurrentSkipListMap<String, String>()
     private val energyTypes = ConcurrentHashMap<String, EnergyMemberType>()
+    private val converterTypes = ConcurrentHashMap<String, EnergyConverterType>()
+    private val energyTypeLock = Any()
     private val commandHandlers = ConcurrentHashMap<String, (CommandContext) -> CompletableFuture<Void>>()
     private val inspectableComponents =
         ConcurrentHashMap<String, (ComponentAccessor<ChunkStore>, Ref<ChunkStore>) -> Inspectable?>()
@@ -58,14 +62,42 @@ object CraftoryCore {
     fun registerEnergyType(
         id: String,
         spec: MemberSpec,
+        linkFaces: Int = EnergyFaces.ALL,
     ): EnergyMemberType {
         require(ENERGY_ID.matches(id)) { "Energy type id must be namespaced: $id" }
-        val type = EnergyMemberType(id, spec)
-        check(energyTypes.putIfAbsent(id, type) == null) { "Energy type already registered: $id" }
-        return type
+        synchronized(energyTypeLock) {
+            check(!converterTypes.containsKey(id) && !energyTypes.containsKey(id)) {
+                "Energy type already registered: $id"
+            }
+            val type = EnergyMemberType(id, spec, linkFaces)
+            energyTypes[id] = type
+            return type
+        }
+    }
+
+    fun registerConverterType(
+        id: String,
+        input: MemberSpec,
+        output: MemberSpec,
+        inputFaces: Int,
+        outputFaces: Int,
+    ): EnergyConverterType {
+        require(ENERGY_ID.matches(id)) { "Energy type id must be namespaced: $id" }
+        synchronized(energyTypeLock) {
+            check(!energyTypes.containsKey(id) && !converterTypes.containsKey(id)) {
+                "Energy converter type already registered: $id"
+            }
+            val converter = EnergyConverterType(id, input, output, inputFaces, outputFaces)
+            val memberType = EnergyMemberType(id, input, inputFaces)
+            converterTypes[id] = converter
+            energyTypes[id] = memberType
+            return converter
+        }
     }
 
     fun energyType(id: String): EnergyMemberType? = energyTypes[id]
+
+    fun converterType(id: String): EnergyConverterType? = converterTypes[id]
 
     fun registeredEnergyTypes(): List<EnergyMemberType> = energyTypes.values.sortedBy(EnergyMemberType::id)
 

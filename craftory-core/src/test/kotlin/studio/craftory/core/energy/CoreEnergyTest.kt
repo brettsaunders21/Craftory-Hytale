@@ -2,13 +2,16 @@ package studio.craftory.core.energy
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyFaces
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.energy.EnergyMemberIds
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.engine.energy.EnergyEventSink
 
@@ -51,11 +54,99 @@ class CoreEnergyTest {
     }
 
     @Test
+    fun `converter output ids flip the packed y sign bit and round trip`() {
+        val xs = listOf(-(1 shl 25), (1 shl 25) - 1)
+        val zs = listOf(-(1 shl 25), (1 shl 25) - 1)
+        for (y in listOf(-2048, -1, 0, 319, 2047)) {
+            for (x in xs) {
+                for (z in zs) {
+                    val input = BlockPos.pack(x, y, z)
+                    val output = EnergyMemberIds.converterOutput(input)
+                    assertEquals(input, EnergyMemberIds.converterOutput(output))
+                    assertNotEquals(input, output)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `converter id collisions refuse both physical and output nodes`() {
+        val converterInput = BlockPos.pack(19, -2048, -7)
+        val physicalMember = BlockPos.pack(19, 0, -7)
+        val outputId = EnergyMemberIds.converterOutput(converterInput)
+        assertEquals(physicalMember, outputId)
+        assertFalse(EnergyMemberIds.allowConverterOutput(outputIdTaken = true))
+        assertFalse(EnergyMemberIds.allowPhysicalNode(existingConverterOutput = true))
+        assertTrue(EnergyMemberIds.allowPhysicalNode(existingConverterOutput = false))
+        assertTrue(EnergyMemberIds.allowConverterOutput(outputIdTaken = false))
+    }
+
+    @Test
+    fun `converter removal ownership cannot remove another converter output`() {
+        val converterA = BlockPos.pack(19, 0, -7)
+        val converterB = BlockPos.pack(19, -2048, -7)
+        val outputA = EnergyMemberIds.converterOutput(converterA)
+        assertEquals(converterB, outputA)
+        assertFalse(EnergyMemberIds.ownsConverterOutput(false, converterA, converterB))
+        assertFalse(EnergyMemberIds.ownsConverterOutput(true, converterA, converterB))
+        assertTrue(EnergyMemberIds.ownsConverterOutput(true, converterA, converterA))
+    }
+
+    @Test
+    fun `converter output network rejects a physical member at its flipped id`() {
+        val converterInput = BlockPos.pack(19, -2048, -7)
+        val physicalId = BlockPos.pack(19, 0, -7)
+        assertEquals(physicalId, EnergyMemberIds.converterOutput(converterInput))
+        assertEquals(
+            -1,
+            EnergyMemberIds.converterOutputNetwork(
+                nodePresent = true,
+                nodeConverterOutput = false,
+                nodeOwnerInputId = physicalId,
+                inputId = converterInput,
+                networkId = 42,
+            ),
+        )
+        assertEquals(
+            42,
+            EnergyMemberIds.converterOutputNetwork(
+                nodePresent = true,
+                nodeConverterOutput = true,
+                nodeOwnerInputId = converterInput,
+                inputId = converterInput,
+                networkId = 42,
+            ),
+        )
+    }
+
+    @Test
     fun `energy type registry rejects duplicates`() {
         val spec = MemberSpec(MemberSpec.PRODUCER, 0, 0, 10, 0, 5)
         val id = "test:core_energy_duplicate"
         assertEquals(id, CraftoryCore.registerEnergyType(id, spec).id)
         assertThrows(IllegalStateException::class.java) { CraftoryCore.registerEnergyType(id, spec) }
+    }
+
+    @Test
+    fun `energy registry rejects cross type collisions without partial writes`() {
+        val producer = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 0, 5)
+        val consumer = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 0, 5)
+        val energyId = "test:core_energy_cross_collision"
+        val energyType = CraftoryCore.registerEnergyType(energyId, producer)
+        assertThrows(IllegalStateException::class.java) {
+            CraftoryCore.registerConverterType(energyId, consumer, producer, EnergyFaces.ALL, EnergyFaces.ALL)
+        }
+        assertEquals(energyType, CraftoryCore.energyType(energyId))
+        assertEquals(null, CraftoryCore.converterType(energyId))
+
+        val converterId = "test:core_converter_cross_collision"
+        val converter =
+            CraftoryCore.registerConverterType(converterId, consumer, producer, EnergyFaces.ALL, EnergyFaces.ALL)
+        assertThrows(IllegalStateException::class.java) {
+            CraftoryCore.registerEnergyType(converterId, producer)
+        }
+        assertEquals(converter, CraftoryCore.converterType(converterId))
+        assertEquals(converterId, CraftoryCore.energyType(converterId)?.id)
     }
 
     @Test
@@ -219,5 +310,52 @@ class CoreEnergyTest {
         )
         EnergyRequestValidation.production(1, producer, 1, 0)
         EnergyRequestValidation.demand(2, consumer, 1)
+    }
+
+    @Test
+    fun `face links require both members to expose the shared world axis`() {
+        assertTrue(EnergyFaces.connects(EnergyFaces.DOWN, EnergyFaces.UP, EnergyFaces.DOWN))
+        assertTrue(EnergyFaces.connects(EnergyFaces.NORTH, EnergyFaces.SOUTH, EnergyFaces.NORTH))
+        assertFalse(EnergyFaces.connects(EnergyFaces.DOWN, EnergyFaces.DOWN, EnergyFaces.DOWN))
+        assertFalse(EnergyFaces.connects(EnergyFaces.UP, EnergyFaces.DOWN, EnergyFaces.DOWN))
+    }
+
+    @Test
+    fun `converter output ids avoid real block positions and each other`() {
+        val positions =
+            listOf(
+                BlockPos(10_020, 155, 10_009),
+                BlockPos(-8_000, 70, 200),
+                BlockPos(0, 0, 0),
+            ).map(BlockPos::pack)
+        val outputIds = positions.map(EnergyMemberIds::converterOutput)
+
+        assertEquals(outputIds.size, outputIds.toSet().size)
+        assertTrue(positions.none { it in outputIds })
+        positions.zip(outputIds).forEach { (position, output) -> assertNotEquals(position, output) }
+    }
+
+    @Test
+    fun `converter input and output remain separate energy networks`() {
+        val adapter = EnergyRuntimeAdapter()
+        val fizzProducer = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 0, 1)
+        val fizzInput = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 0, 1)
+        val dimOutput = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 1, 1)
+        val dimConsumer = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 1, 1)
+        adapter.add(1, fizzProducer, longArrayOf())
+        adapter.add(4, dimConsumer, longArrayOf())
+        adapter.add(2, fizzInput, longArrayOf(1))
+        adapter.add(3, dimOutput, longArrayOf(4))
+        assertNotEquals(adapter.graph.networkOf(2), adapter.graph.networkOf(3))
+
+        adapter.setProduction(1, 10, 0)
+        adapter.setDemand(2, 5)
+        adapter.setProduction(3, 4, 1)
+        adapter.setDemand(4, 4)
+        adapter.tick(EnergyEventSink.NONE)
+
+        assertEquals(5L, adapter.graph.delivered(2))
+        assertEquals(4L, adapter.graph.delivered(4))
+        assertNotEquals(adapter.graph.networkOf(1), adapter.graph.networkOf(4))
     }
 }

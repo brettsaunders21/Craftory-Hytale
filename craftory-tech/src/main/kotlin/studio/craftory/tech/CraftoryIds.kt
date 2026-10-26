@@ -55,6 +55,10 @@ object CraftoryIds {
     const val FIZZ_DAMPER_COMPONENT = "CraftoryFizzDamper"
     const val TETHER_STAKE_COMPONENT = "CraftoryTetherStake"
     const val FIZZ_DAMPER_TYPE = "craftory:fizz_damper"
+    const val CRACKLE_COIL = "Craftory_Crackle_Coil"
+    const val RESONATOR = "Craftory_Resonator"
+    const val WELL_CRADLE = "Craftory_Well_Cradle"
+
     const val CRANK_TYPE = "craftory:crank_a_fizz"
     const val BURNER_TYPE = "craftory:boomshroom_burner"
     const val RATTLEWHEEL_TYPE = "craftory:rattlewheel"
@@ -67,13 +71,18 @@ object CraftoryIds {
     const val OVEN_TYPE = "craftory:scorch_oven"
     const val GNASHER_TYPE = "craftory:gnasher_pit"
     const val JUNK_HEART_TYPE = "craftory:junk_heart"
+    const val CRACKLE_COIL_TYPE = "craftory:crackle_coil"
+    const val RESONATOR_TYPE = "craftory:resonator"
+    const val WELL_CRADLE_TYPE = "craftory:well_cradle"
     const val JUNK_HEART_TEMPLATE = "craftory:junk_heart"
     const val JUNK_HEART_KNOWLEDGE = "craftory:heart/junk"
     const val JUNK_HEART_COMPONENT = "CraftoryJunkHeart"
     const val HAMMER_USE_INTERACTION = "Craftory_HammerUse"
     const val GHOST_PARTICLE = "Dust_Sparkles_Fine"
     const val CHIMNEY_SMOKE_PARTICLE = "Dungeon_Goblin_Smoke_Pipe_Small"
+    const val SPARK_PARTICLE = "Goblin_Decorative_Sparks_Burst"
     const val HAMMER_SOUND = "SFX_Metal_Hit"
+    const val SPARK_SOUND = "SFX_Crystal_Hit"
     const val FIZZ_RESOURCE_TYPE = "Craftory_Fizz"
     const val CRANK_COMPONENT = "CraftoryCrank"
     const val BURNER_COMPONENT = "CraftoryBurner"
@@ -102,4 +111,23 @@ object CraftoryIds {
     const val LENS_HUD = "Craftory_LensHud"
     const val INSIGHT_HUD = "Craftory_InsightHud"
     const val CODEX_USE_INTERACTION = "Craftory_CodexUse"
+    const val RESONATOR_USE_INTERACTION = "Craftory_ResonatorUse"
+    const val CRADLE_USE_INTERACTION = "Craftory_CradleUse"
+    const val VESSA_ROLE = "Craftory_Vessa"
+    const val FIRST_SPARK_KNOWLEDGE = "craftory:experiment/first_spark"
+    const val VESSA_MET_KNOWLEDGE = "craftory:npc/vessa_met"
+    const val CRYSTAL_CYAN_BLOCK = "Rock_Crystal_Cyan_Block"
+    val CRYSTAL_TRIGGER_BLOCKS =
+        listOf(
+            CRYSTAL_CYAN_BLOCK,
+            "Rock_Crystal_Cyan_Small",
+            "Rock_Crystal_Cyan_Medium",
+            "Rock_Crystal_Cyan_Large",
+            "Rock_Crystal_Void_Block",
+            "Rock_Crystal_Void_Small",
+            "Rock_Crystal_Void_Medium",
+            "Rock_Crystal_Void_Large",
+        )
+    const val CYAN_CRYSTAL_SHARD = "Ingredient_Crystal_Cyan"
+    const val VOID_CRYSTAL_SHARD = "Ingredient_Crystal_Void"
 }
