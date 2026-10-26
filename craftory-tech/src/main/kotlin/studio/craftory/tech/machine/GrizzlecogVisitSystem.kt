@@ -104,6 +104,18 @@ internal class GrizzlecogVisitLedger(
 }
 
 internal object GrizzlecogVisitLogic {
+    fun needsNpcLookup(
+        nowNanos: Long,
+        record: GrizzlecogVisitRecord,
+    ): Boolean = (nowNanos - record.spawnedAtNanos).coerceAtLeast(0L) >= WorldTimeResource.NANOS_PER_DAY
+
+    fun shouldCheckExpiry(
+        nowNanos: Long,
+        lastCheckNanos: Long,
+    ): Boolean =
+        lastCheckNanos == Long.MIN_VALUE ||
+            nowNanos - lastCheckNanos >= NANOS_PER_SECOND
+
     fun expiryDecision(
         nowNanos: Long,
         record: GrizzlecogVisitRecord,
@@ -140,6 +152,8 @@ internal object GrizzlecogVisitLogic {
                 }
         }
     }
+
+    private const val NANOS_PER_SECOND = 1_000_000_000L
 }
 
 internal class GrizzlecogVisitSystem(
@@ -148,6 +162,7 @@ internal class GrizzlecogVisitSystem(
     private data class ScheduleState(
         var lastEvaluationTick: Long = Long.MIN_VALUE,
         var lastGameTimeNanos: Long = Long.MIN_VALUE,
+        var lastExpiryCheckNanos: Long = Long.MIN_VALUE,
     )
 
     private val schedules = mutableMapOf<UUID, ScheduleState>()
@@ -164,9 +179,11 @@ internal class GrizzlecogVisitSystem(
                 .getResource(WorldTimeResource.getResourceType())
                 .gameTime ?: return
         val now = gameTime.epochSecond * 1_000_000_000L + gameTime.nano
-        despawnExpiredVisits(world, store, now)
-
         val schedule = schedules.getOrPut(worldId, ::ScheduleState)
+        if (GrizzlecogVisitLogic.shouldCheckExpiry(now, schedule.lastExpiryCheckNanos)) {
+            schedule.lastExpiryCheckNanos = now
+            despawnExpiredVisits(world, store, now)
+        }
         if (schedule.lastEvaluationTick == world.tick) return
         schedule.lastEvaluationTick = world.tick
         val elapsed =
@@ -269,7 +286,9 @@ internal class GrizzlecogVisitSystem(
         val records = ledger.records()
         val remaining =
             records.filter { record ->
-                val loaded = isGrizzlecogPresent(world, record.uuid)
+                val loaded =
+                    GrizzlecogVisitLogic.needsNpcLookup(now, record) &&
+                        isGrizzlecogPresent(world, record.uuid)
                 when (GrizzlecogVisitLogic.expiryDecision(now, record, loaded)) {
                     GrizzlecogVisitExpiry.KEEP -> {
                         true

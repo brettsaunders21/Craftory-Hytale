@@ -2,7 +2,9 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -41,5 +43,23 @@ class GrizzlecogVisitLogicTest {
         assertEquals(GrizzlecogVisitExpiry.DESPAWN_AND_DROP, GrizzlecogVisitLogic.expiryDecision(day * 2, record, true))
         assertEquals(GrizzlecogVisitExpiry.KEEP, GrizzlecogVisitLogic.expiryDecision(day * 2, record, false))
         assertEquals(GrizzlecogVisitExpiry.DROP, GrizzlecogVisitLogic.expiryDecision(day * 8, record, false))
+    }
+
+    @Test
+    fun `young visits do not require an NPC lookup`() {
+        val day = WorldTimeResource.NANOS_PER_DAY
+        val record = GrizzlecogVisitRecord("npc", 0L)
+
+        assertFalse(GrizzlecogVisitLogic.needsNpcLookup(day - 1, record))
+        assertTrue(GrizzlecogVisitLogic.needsNpcLookup(day, record))
+    }
+
+    @Test
+    fun `expiry scan is throttled to one game-time second`() {
+        val second = 1_000_000_000L
+
+        assertTrue(GrizzlecogVisitLogic.shouldCheckExpiry(0, Long.MIN_VALUE))
+        assertFalse(GrizzlecogVisitLogic.shouldCheckExpiry(second - 1, 0))
+        assertTrue(GrizzlecogVisitLogic.shouldCheckExpiry(second, 0))
     }
 }

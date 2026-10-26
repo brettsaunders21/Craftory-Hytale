@@ -924,15 +924,44 @@ internal object PolishSelfTest {
             ),
         )
 
+    @Suppress("TooGenericExceptionCaught")
     fun start(
         context: com.hypixel.hytale.server.core.command.system.CommandContext,
         world: World,
     ) {
-        world.execute {
-            val resource = world.chunkStore.store.getResource(PolishSelfTestRun.type)
-            if (resource.active != null) return@execute
-            resource.active = PolishSelfTestRun.Run(context, world, world.tick)
+        try {
+            world.execute {
+                try {
+                    val resource = world.chunkStore.store.getResource(PolishSelfTestRun.type)
+                    if (resource.active != null) return@execute
+                    SelfTestStartup.execute(
+                        create = { PolishSelfTestRun.Run(context, world, world.tick) },
+                        start = { run -> resource.active = run },
+                        onFailure = { run, failure ->
+                            if (run == null) {
+                                reportStartFailure(context, failure)
+                            } else {
+                                run.setupFailure = failure.message ?: failure.javaClass.simpleName
+                                resource.active = run
+                            }
+                        },
+                    )
+                } catch (failure: Exception) {
+                    reportStartFailure(context, failure)
+                }
+            }
+        } catch (failure: Exception) {
+            reportStartFailure(context, failure)
         }
+    }
+
+    private fun reportStartFailure(
+        context: com.hypixel.hytale.server.core.command.system.CommandContext,
+        failure: Exception,
+    ) {
+        val detail = failure.message ?: failure.javaClass.simpleName
+        runCatching { context.sendMessage(Message.raw("selftest: polish setup FAIL ($detail)")) }
+        runCatching { context.sendMessage(Message.raw("selftest: polish 0 passed, 1 failed")) }
     }
 
     fun fixturePositions(): List<CraftorySelfTest.TestPosition> {

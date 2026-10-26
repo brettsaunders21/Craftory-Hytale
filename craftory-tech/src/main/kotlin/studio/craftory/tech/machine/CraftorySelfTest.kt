@@ -3366,7 +3366,7 @@ object CraftorySelfTest {
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
-    internal fun testPositions(world: World): List<TestPosition> =
+    internal fun staticTestPositions(): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
                 listOf(
@@ -3387,7 +3387,12 @@ object CraftorySelfTest {
                     CHAIN_SHROOM_BED,
                 ) +
                 PolishSelfTest.fixturePositions() +
-                WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) } +
                 heartPositions()
+        ).distinct()
+
+    internal fun testPositions(world: World): List<TestPosition> =
+        (
+            staticTestPositions() +
+                WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) }
         ).distinct()
 }
