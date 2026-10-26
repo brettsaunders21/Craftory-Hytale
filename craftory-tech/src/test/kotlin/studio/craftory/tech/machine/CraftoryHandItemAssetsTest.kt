@@ -15,8 +15,9 @@ class CraftoryHandItemAssetsTest {
         assertTrue(roots.any { it.toString().contains("craftory-core") }, "Core item resources were not found")
         assertTrue(roots.any { it.toString().contains("craftory-tech") }, "Tech item resources were not found")
         val zipPath = Path.of(System.getProperty("user.home"), ".gradle/caches/hytale-assets/release-0.7.4-Assets.zip")
+        val vanillaZipPresent = Files.isRegularFile(zipPath)
         val vanillaEntries =
-            if (Files.isRegularFile(zipPath)) {
+            if (vanillaZipPresent) {
                 ZipFile(zipPath.toFile()).use { zip ->
                     zip
                         .entries()
@@ -27,7 +28,7 @@ class CraftoryHandItemAssetsTest {
             } else {
                 emptySet()
             }
-        val errors = roots.flatMap { itemErrors(it, vanillaEntries) }
+        val errors = roots.flatMap { itemErrors(it, vanillaEntries, allowBookModelFallback = !vanillaZipPresent) }
         assertFalse(errors.isNotEmpty(), errors.joinToString("\n"))
     }
 
@@ -54,6 +55,7 @@ class CraftoryHandItemAssetsTest {
     private fun itemErrors(
         resources: Path,
         vanillaEntries: Set<String>,
+        allowBookModelFallback: Boolean,
     ): List<String> {
         val itemDirectory = resources.resolve("Server/Item/Items/Craftory")
         return Files.list(itemDirectory).use { paths ->
@@ -62,7 +64,7 @@ class CraftoryHandItemAssetsTest {
                     it.fileName.toString().startsWith("Craftory_") &&
                         it.fileName.toString().endsWith(".json")
                 }.toList()
-                .flatMap { itemErrors(it, resources, vanillaEntries) }
+                .flatMap { itemErrors(it, resources, vanillaEntries, allowBookModelFallback) }
         }
     }
 
@@ -70,6 +72,7 @@ class CraftoryHandItemAssetsTest {
         path: Path,
         resources: Path,
         vanillaEntries: Set<String>,
+        allowBookModelFallback: Boolean,
     ): List<String> {
         val item = Files.newBufferedReader(path).use { JsonParser.parseReader(it).asJsonObject }
         if (item.has("BlockType") && !item.get("BlockType").isJsonNull) return emptyList()
@@ -81,7 +84,7 @@ class CraftoryHandItemAssetsTest {
         if (model.isNullOrBlank()) {
             errors += "$id is missing Model"
         } else if (!assetExists(resources, model, vanillaEntries) &&
-            model != "Items/Weapons/Spellbook/Book.blockymodel"
+            !(allowBookModelFallback && model == "Items/Weapons/Spellbook/Book.blockymodel")
         ) {
             errors += "$id model does not exist: $model"
         }

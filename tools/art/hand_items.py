@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import zipfile
 from pathlib import Path
 
@@ -147,12 +148,21 @@ def export(common: Path, resources: Path, manifest: list[str], build, written) -
         model.image.save(written(manifest, directory / texture_name), optimize=True)
         item_assets[name] = ("Items/Craftory/Gob_Jar/Gob_Jar.blockymodel", f"Items/Craftory/Gob_Jar/{texture_name}")
 
-    cache = Path.home() / ".gradle/caches/hytale-assets/release-0.7.4-Assets.zip"
+    cache = Path(
+        os.environ.get(
+            "HYTALE_ASSETS_ZIP",
+            str(Path.home() / ".gradle/caches/hytale-assets/release-0.7.4-Assets.zip"),
+        ),
+    ).expanduser()
     for short, kind in (("Tinkers_Notebook", "notebook"), ("Codex", "codex")):
         folder = short
         texture_path = common / "Items" / "Craftory" / folder / f"{short}_Texture.png"
         texture_path.parent.mkdir(parents=True, exist_ok=True)
-        _book_texture(kind, cache).save(written(manifest, texture_path), optimize=True)
+        if cache.is_file():
+            _book_texture(kind, cache).save(written(manifest, texture_path), optimize=True)
+        else:
+            print(f"Warning: Hytale assets ZIP not found at {cache}; keeping {texture_path}")
+            written(manifest, texture_path)
         item_assets[short] = (BOOK_MODEL, f"Items/Craftory/{folder}/{texture_path.name}")
 
     for short, (model_path, texture_path) in item_assets.items():
