@@ -18,6 +18,7 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
             Query.and(BurnerState.type),
             Query.and(GnasherState.type),
             Query.and(OvenPower.type),
+            Query.and(SnatcherClawState.type),
         )
 
     override fun onEntityAdded(
@@ -41,6 +42,14 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
             ovenPower.lastFizzSolveTick = energy.lastSolveTick()
             MachineClock.initialize(ovenPower, tick)
         }
+        val claw = commandBuffer.getComponent(ref, SnatcherClawState.type)
+        if (claw != null) {
+            claw.lastFizzSolveTick =
+                studio.craftory.core.api.CraftoryCore
+                    .energyAccess(store.externalData.world)
+                    .lastSolveTick()
+            claw.lastExtractTick = tick
+        }
     }
 
     override fun onEntityRemove(
@@ -48,7 +57,7 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
         reason: RemoveReason,
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
-    ) = Unit
+    ): Unit = Unit
 }
 
 internal object MachineClock {

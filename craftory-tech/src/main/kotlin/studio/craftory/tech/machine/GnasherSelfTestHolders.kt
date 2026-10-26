@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import java.util.function.BiConsumer
 
+@Suppress("TooManyFunctions")
 internal object GnasherSelfTestHolders {
     internal data class Snapshot(
         val nonTicking: Boolean,
@@ -32,11 +33,19 @@ internal object GnasherSelfTestHolders {
         sectionRef: Ref<ChunkStore>,
         position: CraftorySelfTest.TestPosition,
     ): SelfTestCleanupResult {
-        val liveDrops = clearLiveDrops(world.entityStore.store, position)
-        if (!sectionRef.isValid) return SelfTestCleanupResult(liveDrops, 0, 0)
-        val sectionHolders = clearSectionHolders(world.chunkStore.store, sectionRef, position)
-        val chunkHolders = clearChunkHolders(world.chunkStore.store, sectionRef, position)
-        return SelfTestCleanupResult(liveDrops, sectionHolders, chunkHolders)
+        val entityStore = world.entityStore.store
+        clearLiveDrops(entityStore, position)
+        if (!sectionRef.isValid) {
+            return SelfTestCleanupResult(countLiveDrops(entityStore, position), 0, 0)
+        }
+        val chunkStore = world.chunkStore.store
+        clearSectionHolders(chunkStore, sectionRef, position)
+        clearChunkHolders(chunkStore, sectionRef, position)
+        return SelfTestCleanupResult(
+            countLiveDrops(entityStore, position),
+            countSectionGritHolders(chunkStore, sectionRef, position),
+            countChunkGritHolders(chunkStore, sectionRef, position),
+        )
     }
 
     fun snapshot(
@@ -110,6 +119,54 @@ internal object GnasherSelfTestHolders {
             },
         )
         return removed
+    }
+
+    private fun countLiveDrops(
+        entityStore: Store<EntityStore>,
+        position: CraftorySelfTest.TestPosition,
+    ): Int {
+        var count = 0
+        entityStore.forEachChunk(
+            Query.and(ItemComponent.getComponentType(), TransformComponent.getComponentType()),
+            BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, _ ->
+                for (index in 0 until chunk.size()) {
+                    val item = chunk.getComponent(index, ItemComponent.getComponentType())
+                    val transform = chunk.getComponent(index, TransformComponent.getComponentType())
+                    if (item != null && transform != null) {
+                        if (
+                            GritTable.containsGrit(item.itemStack?.itemId ?: "") &&
+                            isNearGnasher(transform.position.x, transform.position.z, position)
+                        ) {
+                            count++
+                        }
+                    }
+                }
+            },
+        )
+        return count
+    }
+
+    private fun countSectionGritHolders(
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+        position: CraftorySelfTest.TestPosition,
+    ): Int =
+        store
+            .getComponent(sectionRef, EntitySection.getComponentType())
+            ?.getEntityHolders()
+            ?.count { isSelfTestGritHolder(it, position) }
+            ?: 0
+
+    private fun countChunkGritHolders(
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+        position: CraftorySelfTest.TestPosition,
+    ): Int {
+        val chunkSection = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return 0
+        val columnRef = chunkSection.chunkColumnReference?.takeIf { it.isValid } ?: return 0
+        val entityChunk = store.getComponent(columnRef, EntityChunk.getComponentType()) ?: return 0
+        val holders = (entityChunk.clone() as EntityChunk).takeEntityHolders().orEmpty()
+        return holders.count { isSelfTestGritHolder(it, position) }
     }
 
     private fun clearSectionHolders(

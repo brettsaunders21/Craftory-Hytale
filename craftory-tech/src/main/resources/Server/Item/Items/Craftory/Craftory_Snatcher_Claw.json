@@ -1,0 +1,57 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Snatcher_Claw.name",
+    "Description": "server.items.Craftory_Snatcher_Claw.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Bench_Furnace.png",
+  "Categories": [
+    "Furniture.Benches"
+  ],
+  "MaxStack": 1,
+  "ItemLevel": 1,
+  "PlayerAnimationsId": "Block",
+  "Quality": "Technical",
+  "ItemSoundSetId": "ISS_Blocks_Stone",
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Benches/Furnace.blockymodel",
+    "CustomModelTexture": [
+      {
+        "Texture": "Blocks/Benches/Furnace_Texture_Off.png",
+        "Weight": 1
+      }
+    ],
+    "VariantRotation": "NESW",
+    "RotationYawPlacementOffset": "TwoSeventy",
+    "HitboxType": "Bench_Furnace",
+    "Support": {
+      "Down": [
+        {
+          "FaceType": "Full"
+        }
+      ]
+    },
+    "Interactions": {
+      "Use": {
+        "Interactions": [
+          {
+            "Type": "Craftory_ClawUse"
+          }
+        ]
+      }
+    },
+    "BlockEntity": {
+      "Components": {
+        "CraftorySnatcherClaw": {},
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:snatcher_claw",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {}
+      }
+    }
+  }
+}

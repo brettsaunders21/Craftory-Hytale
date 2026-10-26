@@ -6,6 +6,8 @@
 - `Craftory_Boomshroom_Burner`: Goblin brazier model, off/on textures, fire animation, particles, and light.
 - `Craftory_Fizz_Canister`: Goblin boomshroom generator model and texture.
 - `Craftory_Gutterpipe`: grey developer tube model and texture. It is a straight-pipe placeholder; connected-block visuals are not configured.
+- `Craftory_Snatcher_Claw`: replace the furnace bench placeholder with a directional claw machine model and add an extraction arm animation.
+- `Craftory_Paint_Daub_*`: replace the shared vanilla editor paint icon with four distinct daub icons.
 - `Craftory_Grizzlecog`: Klops merchant appearance and shopkeeper animation.
 
 The generated Goblin-era art pass includes Craftory block models and textures for the Boomshroom Burner, Crank-A-Fizz, Fizz Canister, Gnasher Pit, Gutterpipe, Junk Heart Chimney and Firebox, Scorch Oven, Scrap Plating, and Wakebell Anchor; item models and textures for the Squint Goggles, Tinkers Hammer, and Tinkers Wrench; generated Craftory item icons; Grizzlecog model attachments; and Craftory particle sprite textures.

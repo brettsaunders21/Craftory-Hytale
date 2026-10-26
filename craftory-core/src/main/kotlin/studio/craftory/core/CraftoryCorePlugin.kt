@@ -21,6 +21,7 @@ import studio.craftory.core.api.multiblock.MultiblockController
 import studio.craftory.core.api.transport.TubeNode
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellIndex
+import studio.craftory.core.api.transport.ItemTransportRegistration
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
@@ -90,6 +91,7 @@ class CraftoryCorePlugin(
         getEntityStoreRegistry().registerSystem(MultiblockBreakSystem())
         chunkRegistry.registerSystem(WellLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
+        ItemTransportRegistration.register(this, config)
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
         LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
@@ -103,6 +105,7 @@ class CraftoryCorePlugin(
 
     @Suppress("TooGenericExceptionCaught")
     override fun shutdown() {
+        ItemTransportRegistration.shutdown()
         crewService?.let { crews ->
             try {
                 crews.close()

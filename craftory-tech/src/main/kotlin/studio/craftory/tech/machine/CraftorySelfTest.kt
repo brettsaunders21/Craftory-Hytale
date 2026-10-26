@@ -731,6 +731,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                     CraftorySelfTest.releaseTestKeepLoaded(run)
                     store.getResource(SelfTestRun.type).active = null
                 }
+                TransportSelfTest.start(run.context, run.world)
             }
             return
         }
