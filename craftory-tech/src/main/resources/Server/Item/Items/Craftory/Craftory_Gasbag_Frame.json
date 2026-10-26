@@ -13,7 +13,7 @@
   "BlockType": {
     "Material": "Solid",
     "DrawType": "Model",
-    "HitboxType": "Full",
+    "HitboxType": "Craftory_Gasbag_Frame",
     "CustomModel": "Blocks/Craftory/Gasbag_Frame/Gasbag_Frame.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag_Frame/Gasbag_Frame_Texture.png"}]
   },

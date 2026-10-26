@@ -9,6 +9,9 @@ import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
 import com.hypixel.hytale.server.core.universe.world.World
 import org.joml.Vector3d
+import studio.craftory.core.api.BlockPos
+import studio.craftory.core.api.multiblock.MultiblockGeometry
+import studio.craftory.tech.CraftoryIds
 
 internal object GutterBoilerEffects {
     fun vent(
@@ -16,8 +19,9 @@ internal object GutterBoilerEffects {
         x: Int,
         y: Int,
         z: Int,
+        rotation: Int,
     ) {
-        world.execute { spawnSteam(world, x, y, z) }
+        world.execute { spawnSteam(world, x, y, z, rotation) }
     }
 
     fun pop(
@@ -25,9 +29,10 @@ internal object GutterBoilerEffects {
         x: Int,
         y: Int,
         z: Int,
+        rotation: Int,
     ) {
         world.execute {
-            spawnSteam(world, x, y, z)
+            spawnSteam(world, x, y, z, rotation)
             applyPopKnockback(world, x, y, z)
         }
     }
@@ -67,9 +72,17 @@ internal object GutterBoilerEffects {
         x: Int,
         y: Int,
         z: Int,
+        rotation: Int,
     ) {
         val store = world.entityStore.store
-        val position = Vector3d(x + 0.5, y + 1.0, z + 0.5)
+        val stackOrigin =
+            MultiblockGeometry.worldPosition(
+                BlockPos(x, y, z),
+                GutterBoilerTemplate.WHISTLE_STACK,
+                rotation,
+            )
+        val position =
+            MachineVents.position(CraftoryIds.GUTTER_BOILER, stackOrigin.x, stackOrigin.y, stackOrigin.z)
         ParticleUtil.spawnParticleEffect(STEAM_PARTICLE_ID, position, store)
         playSound(store, VENT_POP_SOUND_ID, position)
     }

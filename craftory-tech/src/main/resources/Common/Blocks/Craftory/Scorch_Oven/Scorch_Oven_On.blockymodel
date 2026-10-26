@@ -10,9 +10,9 @@
       },
       "orientation": {
         "x": 0.0,
-        "y": -0.01745,
+        "y": 0.0,
         "z": 0.0,
-        "w": 0.99985
+        "w": 1.0
       },
       "shape": {
         "type": "box",
@@ -328,7 +328,7 @@
               "id": "4",
               "name": "DoorLatch",
               "position": {
-                "x": 5.0,
+                "x": 5.2,
                 "y": -1.0,
                 "z": 1.2
               },
@@ -439,7 +439,7 @@
           "name": "Ashpan",
           "position": {
             "x": -2.0,
-            "y": -9.0,
+            "y": -8.8,
             "z": 11.0
           },
           "orientation": {
@@ -1086,15 +1086,15 @@
           "id": "11",
           "name": "Chimney",
           "position": {
-            "x": 7.0,
+            "x": 0.0,
             "y": 18.0,
-            "z": -6.0
+            "z": 0.0
           },
           "orientation": {
             "x": 0.0,
             "y": 0.0,
-            "z": -0.06105,
-            "w": 0.99813
+            "z": 0.0,
+            "w": 1.0
           },
           "shape": {
             "type": "box",
@@ -1302,10 +1302,46 @@
         },
         {
           "id": "13",
+          "name": "Smoke-Emitter",
+          "position": {
+            "x": 0.0,
+            "y": 27.0,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "none",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "isPiece": false
+            },
+            "textureLayout": {},
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "14",
           "name": "Foot0",
           "position": {
             "x": -9.0,
-            "y": -11.5,
+            "y": -9.5,
             "z": -8.0
           },
           "orientation": {
@@ -1409,11 +1445,11 @@
           }
         },
         {
-          "id": "14",
+          "id": "15",
           "name": "Foot1",
           "position": {
             "x": 9.0,
-            "y": -11.0,
+            "y": -8.5,
             "z": -8.0
           },
           "orientation": {
@@ -1517,11 +1553,11 @@
           }
         },
         {
-          "id": "15",
+          "id": "16",
           "name": "Foot2",
           "position": {
             "x": -9.0,
-            "y": -11.5,
+            "y": -9.5,
             "z": 8.0
           },
           "orientation": {
@@ -1625,11 +1661,11 @@
           }
         },
         {
-          "id": "16",
+          "id": "17",
           "name": "Foot3",
           "position": {
             "x": 9.0,
-            "y": -11.5,
+            "y": -9.5,
             "z": 8.0
           },
           "orientation": {

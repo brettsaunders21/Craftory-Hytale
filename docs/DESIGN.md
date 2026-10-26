@@ -256,7 +256,7 @@ Fizz is fermented Boomshroom gas squeezed through scrap dynamos. It matches vani
 | Generator | Tier | How you work it | Look |
 |---|---|---|---|
 | **Crank-a-Fizz** | 1 | Hold interact to crank. Makes very little and can't be automated. Kick-starts cold machines and charges your first Canister | Hand crank with a squeaky spring and bouncing gauge |
-| **Boomshroom Burner** | 1 | Burns shrooms, Mash, Boom Powder or charcoal. It coughs and stalls every few minutes; kick it to restart. A well-timed kick gives +10% for a minute | Tin drum on chicken legs; green smoke ring on each fuel pop |
+| **Boomshroom Burner** | 1 | Burns shrooms, Mash, Boom Powder or charcoal. It coughs and stalls every few minutes; kick it to restart. A well-timed kick gives +10% for a minute | Tin drum on a squat scrap plinth; green smoke ring on each fuel pop |
 | **Rattlewheel** | 1 | 2×2 wheel in flowing water, or sails on high ground. Output from height, flow and wind/storm weather | Mismatched wood-and-tin wheel; planks fly off in gales (cosmetic) |
 | **Sealed Grizzlecog Generator** | 1 (traded) | Works out of the box but builds Jank; patch it with Scrap. Take it apart for the Burner page | Padlocks and "NO TOUCHY" signs |
 | **Gutter Boiler** | 2 | 2×2×2 multi-block. Build the tank and whistle stack around the firebox, then kick-start it. Fuel the firebox, top up water, and watch the gauge. Above the red line, pull the vent chain (whistle and steam). Ignore it and it pops (knockback, water dumps, offline until re-riveted). Running near the red line gives bonus output. A firebox on lava needs no fuel | Firebox, riveted tank, brass whistle stack, cyan gauge |

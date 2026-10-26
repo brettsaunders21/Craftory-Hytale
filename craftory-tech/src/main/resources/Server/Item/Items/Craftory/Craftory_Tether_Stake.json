@@ -11,6 +11,7 @@
   "Quality": "Rare",
   "MaxStack": 1,
   "BlockType": {
+    "HitboxType": "Craftory_Tether_Stake",
     "BlockParticleSetId": "Wood",
     "DrawType": "Model",
     "Flags": {},

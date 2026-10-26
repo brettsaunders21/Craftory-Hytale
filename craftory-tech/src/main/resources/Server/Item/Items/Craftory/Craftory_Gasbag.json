@@ -15,7 +15,7 @@
     "DrawType": "Model",
     "Opacity": "Transparent",
     "Group": "GoblinLab",
-    "HitboxType": "Full",
+    "HitboxType": "Craftory_Gasbag",
     "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
     "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}],

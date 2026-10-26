@@ -13,7 +13,7 @@
   "BlockType": {
     "Material": "Solid",
     "DrawType": "Model",
-    "HitboxType": "Full",
+    "HitboxType": "Craftory_Boiler_Whistle_Stack",
     "CustomModel": "Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack_Texture.png"}]
   },

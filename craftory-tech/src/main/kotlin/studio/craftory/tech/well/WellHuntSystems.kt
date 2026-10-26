@@ -39,6 +39,7 @@ import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.MachineVents
 import java.util.UUID
 import kotlin.math.atan2
 
@@ -173,9 +174,10 @@ internal class FizzDamperSystem : EntityTickingSystem<ChunkStore>() {
     ) {
         if (!powered || (state.lastFoamTick != Long.MIN_VALUE && tick - state.lastFoamTick < 20L)) return
         state.lastFoamTick = tick
+        val vent = MachineVents.position(CraftoryIds.FIZZ_DAMPER, pos.x, pos.y, pos.z)
         ParticleUtil.spawnParticleEffect(
             "Dungeon_Goblin_Toxic_Water",
-            Vector3d(pos.x + 0.5, pos.y + 0.8, pos.z + 0.5),
+            vent,
             world.entityStore.store,
         )
     }

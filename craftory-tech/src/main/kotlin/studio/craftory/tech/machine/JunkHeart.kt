@@ -65,6 +65,8 @@ class JunkHeartState(
 }
 
 internal object JunkHeartTemplate {
+    val CHIMNEY_TOP = BlockPos(0, 3, 0)
+
     val template: MultiblockTemplate =
         MultiblockTemplate(
             CraftoryIds.JUNK_HEART_TEMPLATE,
@@ -85,6 +87,8 @@ internal object JunkHeartTemplate {
 }
 
 internal object GutterBoilerTemplate {
+    val WHISTLE_STACK = BlockPos(1, 1, 1)
+
     val template: MultiblockTemplate =
         MultiblockTemplate(
             CraftoryIds.GUTTER_BOILER_TEMPLATE,
@@ -95,7 +99,7 @@ internal object GutterBoilerTemplate {
                 listOf(BlockPos(0, 1, 0), BlockPos(1, 1, 0), BlockPos(0, 1, 1)).forEach {
                     add(part(it, CraftoryIds.BOILER_TANK))
                 }
-                add(part(BlockPos(1, 1, 1), CraftoryIds.BOILER_WHISTLE_STACK))
+                add(part(WHISTLE_STACK, CraftoryIds.BOILER_WHISTLE_STACK))
             },
         )
 

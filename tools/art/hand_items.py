@@ -168,7 +168,13 @@ def export(common: Path, resources: Path, manifest: list[str], build, written) -
     for short, (model_path, texture_path) in item_assets.items():
         item_path = resources / "Server/Item/Items/Craftory" / f"Craftory_{short}.json"
         item = json.loads(item_path.read_text())
-        item.setdefault("PlayerAnimationsId", "Item")
-        item["Model"] = model_path
-        item["Texture"] = texture_path
-        item_path.write_text(json.dumps(item, indent=2) + "\n")
+        changed = False
+        if "PlayerAnimationsId" not in item:
+            item["PlayerAnimationsId"] = "Item"
+            changed = True
+        for key, value in (("Model", model_path), ("Texture", texture_path)):
+            if item.get(key) != value:
+                item[key] = value
+                changed = True
+        if changed:
+            item_path.write_text(json.dumps(item, indent=2) + "\n")

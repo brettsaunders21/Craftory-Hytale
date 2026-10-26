@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3d
 import org.joml.Vector3i
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.jank.BodgeSlots
 import studio.craftory.tech.machine.jank.Jank
 import java.util.concurrent.ConcurrentHashMap
@@ -227,9 +228,10 @@ internal class ShroomBedSystem(
     ) {
         state.stored = 0
         state.twitch = 0
+        val vent = MachineVents.position(CraftoryIds.SHROOM_BED, position.x, position.y, position.z)
         ParticleUtil.spawnParticleEffect(
             "Impact_Spark",
-            Vector3d(position.x + 0.5, position.y + 0.8, position.z + 0.5),
+            vent,
             world.entityStore.store,
         )
         applyKnockback(world, position)

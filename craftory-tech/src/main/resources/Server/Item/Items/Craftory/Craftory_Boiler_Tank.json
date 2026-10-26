@@ -13,7 +13,7 @@
   "BlockType": {
     "Material": "Solid",
     "DrawType": "Model",
-    "HitboxType": "Full",
+    "HitboxType": "Craftory_Boiler_Tank",
     "CustomModel": "Blocks/Craftory/Boiler_Tank/Boiler_Tank.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Boiler_Tank/Boiler_Tank_Texture.png"}]
   },

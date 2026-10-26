@@ -79,7 +79,7 @@ internal class GutterBoilerSystem : EntityTickingSystem<ChunkStore>() {
             }
             return
         }
-        advanceBoiler(state, member, blockState, store, commandBuffer)
+        advanceBoiler(state, member, blockState, store, commandBuffer, controller.rotation)
     }
 
     companion object {
@@ -93,6 +93,7 @@ private fun advanceBoiler(
     blockState: BlockModule.BlockStateInfo,
     store: Store<ChunkStore>,
     commandBuffer: CommandBuffer<ChunkStore>,
+    rotation: Int,
 ) {
     val world = store.externalData.world
     if (!CraftoryCore.isAreaActive(store, blockState)) {
@@ -116,6 +117,7 @@ private fun advanceBoiler(
             position.y,
             position.z,
             lavaBelow,
+            rotation,
         )
     }
     member.production =
@@ -138,6 +140,7 @@ private fun updateBoilerState(
     y: Int,
     z: Int,
     lavaBelow: Boolean,
+    rotation: Int,
 ) {
     val beforePressure = state.pressure
     val beforeWater = state.water
@@ -164,7 +167,7 @@ private fun updateBoilerState(
         hasBoilerStateChanged(beforePressure, beforeWater, beforeFuelTicks, beforeOnline, beforeLastWhistleTick, state)
     val visualChanged = setBlockState(world, blockState, commandBuffer, boilerVisualState(state, lavaBelow))
     if (stateChanged || visualChanged || runningSoundPlayed) blockState.markNeedsSaving(commandBuffer)
-    if (update.popped) GutterBoilerEffects.pop(world, x, y, z)
+    if (update.popped) GutterBoilerEffects.pop(world, x, y, z, rotation)
 }
 
 private fun hasBoilerStateChanged(

@@ -20,7 +20,7 @@
       },
       "UseDefaultDropWhenPlaced": true
     },
-    "HitboxType": "Brazier_Goblin",
+    "HitboxType": "Craftory_Boomshroom_Burner",
     "Material": "Solid",
     "Opacity": "Transparent",
     "ParticleColor": "#716d65",

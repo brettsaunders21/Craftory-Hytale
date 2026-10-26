@@ -151,17 +151,7 @@ internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
         }
         if (state.burning && controller.isFormed && ++state.smokeTicks >= SMOKE_INTERVAL_TICKS) {
             state.smokeTicks = 0
-            val position = Vector3i()
-            if (blockState.fillWorldPos(commandBuffer, position)) {
-                val top = MultiblockGeometry.worldPosition(BlockPos(position.x, position.y, position.z), CHIMNEY_TOP, 0)
-                world.execute {
-                    ParticleUtil.spawnParticleEffect(
-                        CraftoryIds.CHIMNEY_SMOKE_PARTICLE,
-                        Vector3d(top.x + HALF, top.y.toDouble(), top.z + HALF),
-                        world.entityStore.store,
-                    )
-                }
-            }
+            emitChimneySmoke(blockState, commandBuffer, controller, world)
         }
         if (!CraftoryCore.isEnergyTick(store)) return
         if (JunkHeartMachine.advanceTo(state, tick, controller.state)) member.unsaved = true
@@ -170,11 +160,34 @@ internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
         member.persist(blockState, commandBuffer, tick, HEART_SAVE_INTERVAL_TICKS, immediate = false)
     }
 
+    private fun emitChimneySmoke(
+        blockState: BlockModule.BlockStateInfo,
+        commandBuffer: CommandBuffer<ChunkStore>,
+        controller: MultiblockController,
+        world: World,
+    ) {
+        val position = Vector3i()
+        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        val chimneyTop =
+            MultiblockGeometry.worldPosition(
+                BlockPos(position.x, position.y, position.z),
+                JunkHeartTemplate.CHIMNEY_TOP,
+                controller.rotation,
+            )
+        val top = MachineVents.position(CraftoryIds.JUNK_HEART, chimneyTop.x, chimneyTop.y, chimneyTop.z)
+        world.execute {
+            ParticleUtil.spawnParticleEffect(
+                CraftoryIds.CHIMNEY_SMOKE_PARTICLE,
+                top,
+                world.entityStore.store,
+            )
+        }
+    }
+
     private companion object {
         const val HEART_SAVE_INTERVAL_TICKS = 20L
         const val SMOKE_INTERVAL_TICKS = 20
         const val HALF = 0.5
-        val CHIMNEY_TOP = BlockPos(0, 3, 0)
     }
 }
 

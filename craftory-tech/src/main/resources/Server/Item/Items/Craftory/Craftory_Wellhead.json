@@ -13,7 +13,7 @@
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
-    "HitboxType": "Full",
+    "HitboxType": "Craftory_Wellhead",
     "CustomModel": "Blocks/Craftory/Wellhead/Wellhead_Off.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Wellhead/Wellhead_Off_Texture.png"}],
     "State": {

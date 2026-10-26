@@ -14,6 +14,7 @@ dependencies {
     add("vineCompileOnly", project(":craftory-core"))
     testImplementation(project(":craftory-core"))
     testImplementation("com.hypixel.hytale:Server:0.7.4")
+    testImplementation(kotlin("test"))
 }
 
 tasks.withType<Test>().configureEach {
