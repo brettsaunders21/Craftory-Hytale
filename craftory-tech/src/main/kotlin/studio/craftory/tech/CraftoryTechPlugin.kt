@@ -68,6 +68,8 @@ import studio.craftory.tech.machine.MachineOwner
 import studio.craftory.tech.machine.MachineOwnerPlacementSystem
 import studio.craftory.tech.machine.MultiblockAssemblySystem
 import studio.craftory.tech.machine.OvenPower
+import studio.craftory.tech.machine.PolishSelfTestRun
+import studio.craftory.tech.machine.PolishSelfTestSystem
 import studio.craftory.tech.machine.RattlewheelState
 import studio.craftory.tech.machine.RattlewheelSystem
 import studio.craftory.tech.machine.ReceiptUseInteraction
@@ -415,6 +417,8 @@ class CraftoryTechPlugin(
             chunkRegistry.registerResource(TransportSelfTestRun::class.java, ::TransportSelfTestRun)
         FluidSelfTestRun.type =
             chunkRegistry.registerResource(FluidSelfTestRun::class.java, ::FluidSelfTestRun)
+        PolishSelfTestRun.type =
+            chunkRegistry.registerResource(PolishSelfTestRun::class.java, ::PolishSelfTestRun)
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -451,6 +455,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(SelfTestSystem())
         chunkRegistry.registerSystem(TransportSelfTestSystem())
         chunkRegistry.registerSystem(FluidSelfTestSystem())
+        chunkRegistry.registerSystem(PolishSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
         WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)

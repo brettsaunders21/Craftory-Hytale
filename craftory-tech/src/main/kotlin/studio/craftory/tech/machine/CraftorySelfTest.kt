@@ -3386,6 +3386,7 @@ object CraftorySelfTest {
                     SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
+                PolishSelfTest.fixturePositions() +
                 WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) } +
                 heartPositions()
         ).distinct()

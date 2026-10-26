@@ -1753,6 +1753,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             }
         }
         FluidSelfTest.start(run.context, run.world)
+        PolishSelfTest.start(run.context, run.world)
     }
 
     private fun clearDrops(world: World) {

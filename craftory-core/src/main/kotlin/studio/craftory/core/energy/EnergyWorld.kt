@@ -280,6 +280,26 @@ internal class EnergyWorld : Resource<ChunkStore> {
         return drained
     }
 
+    fun setStored(
+        id: Long,
+        amount: Long,
+        rank: Int,
+    ): Long {
+        val currentStore = store ?: return 0
+        val node = nodes[id]?.takeIf { !it.converterOutput } ?: return 0
+        if ((node.spec.role and MemberSpec.STORAGE) == 0) return 0
+        val member = currentStore.getComponent(node.ref, EnergyMember.type) ?: return 0
+        val blockState =
+            currentStore.getComponent(node.ref, BlockModule.BlockStateInfo.getComponentType()) ?: return 0
+        if (!CraftoryCore.isAreaActive(currentStore, blockState)) return 0
+        val stored = amount.coerceIn(0, node.spec.capacity)
+        val storeRank = if (stored == 0L) -1 else rank.coerceAtLeast(0)
+        runtime.graph.restoreStored(id, stored, storeRank)
+        member.updateStored(stored, storeRank)
+        member.persist(blockState, currentStore, currentStore.externalData.world.tick, 0, immediate = true)
+        return stored
+    }
+
     fun delivered(id: Long): Long = member(id)?.delivered ?: 0
 
     fun deliveredRank(id: Long): Int = member(id)?.deliveredRank ?: -1

@@ -77,6 +77,15 @@ class EnergyAccess internal constructor(
         return energy.drainStored(pos, amount)
     }
 
+    fun setStored(
+        pos: Long,
+        amount: Long,
+        rank: Int = 0,
+    ): Long {
+        assertWorldThread()
+        return energy.setStored(pos, amount, rank)
+    }
+
     fun delivered(pos: Long): Long {
         assertWorldThread()
         return energy.delivered(pos)
