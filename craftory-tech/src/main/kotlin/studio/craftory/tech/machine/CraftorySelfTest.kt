@@ -216,7 +216,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             }
             return
         }
-        if (run.phase == 6) return
+        if (run.phase == 6) {
+            if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+                CraftorySelfTest.finishAfterHurlTest(run, store)
+            }
+            return
+        }
         try {
             tickSelfTestPhase(run, store, tick)
         } catch (failure: Exception) {
@@ -728,19 +733,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         tick: Long,
     ) {
         val disableTick = run.anchorDisableTick ?: return
-        if (run.anchorDisabledReported) {
-            if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
-                CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
-                try {
-                    reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
-                } finally {
-                    CraftorySelfTest.releaseTestKeepLoaded(run)
-                    store.getResource(SelfTestRun.type).active = null
-                }
-                TransportSelfTest.start(run.context, run.world)
-            }
-            return
-        }
+        if (run.anchorDisabledReported) return
         if (tick < disableTick) return
         if (!run.anchorDisablePrepared) {
             prepareAnchorDisable(run, store, tick)
@@ -973,6 +966,20 @@ object CraftorySelfTest {
                 run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
             }
         }
+    }
+
+    internal fun finishAfterHurlTest(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+        try {
+            reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
+        } finally {
+            CraftorySelfTest.releaseTestKeepLoaded(run)
+            store.getResource(SelfTestRun.type).active = null
+        }
+        TransportSelfTest.start(run.context, run.world)
     }
 
     internal fun retainTestKeepLoaded(
