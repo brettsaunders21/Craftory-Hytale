@@ -10,6 +10,8 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime
+import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage
@@ -18,6 +20,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.util.TargetUtil
@@ -32,19 +35,59 @@ import studio.craftory.tech.machine.jank.Jank
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
+enum class MachineStatus {
+    RUNNING,
+    IDLE,
+    NO_POWER,
+    STALLED,
+    STOLEN,
+}
+
+data class RattlewheelHud(
+    val waterFlow: Int,
+    val wind: Boolean,
+    val fizzPerSecond: Long,
+)
+
+data class ShroomBedHud(
+    val growthPercent: Int,
+    val twitch: Int,
+    val darkness: String,
+)
+
 data class EnergyHudSnapshot(
-    val name: String,
+    val itemId: String?,
     val stored: Long,
     val capacity: Long,
-    val grade: String,
+    val gradeRank: Int,
     val members: Int,
-    val flow: Long,
     val supply: Long,
     val demand: Long,
+    val inNetwork: Boolean,
     val jank: Int? = null,
-    val status: String? = null,
+    val status: MachineStatus? = null,
+    val rattlewheel: RattlewheelHud? = null,
+    val shroomBed: ShroomBedHud? = null,
     val carrierStability: Int? = null,
 )
+
+internal fun machineStatus(
+    jank: Jank?,
+    rattlewheel: RattlewheelHud?,
+    inNetwork: Boolean,
+    demand: Long,
+    supply: Long,
+    stored: Long,
+): MachineStatus =
+    when {
+        jank?.stolen == true -> MachineStatus.STOLEN
+        (jank?.stallTicks ?: 0) > 0 -> MachineStatus.STALLED
+        rattlewheel != null && rattlewheel.fizzPerSecond > 0 -> MachineStatus.RUNNING
+        !inNetwork -> MachineStatus.IDLE
+        demand > 0 && supply == 0L && stored == 0L -> MachineStatus.NO_POWER
+        supply > 0 || demand > 0 -> MachineStatus.RUNNING
+        else -> MachineStatus.IDLE
+    }
 
 class EnergyHudState : Component<EntityStore> {
     var lastSnapshot: EnergyHudSnapshot? = null
@@ -106,26 +149,284 @@ private class CraftoryEnergyHud(
 
     override fun build(commandBuilder: UICommandBuilder) {
         commandBuilder.append("Craftory/Hud/EnergyHud.ui")
-        commandBuilder.append("#EnergyBar", "Craftory/Widgets/EnergyBar.ui")
     }
 
     fun render(snapshot: EnergyHudSnapshot) {
         if (lastSnapshot == snapshot) return
+        val commands = UICommandBuilder()
+        energyHudCommands(lastSnapshot, snapshot, commands)
         lastSnapshot = snapshot
-        update(
-            false,
-            UICommandBuilder()
-                .set("#Title.Text", snapshot.name)
-                .set("#Energy.Value", progress(snapshot.stored, snapshot.capacity))
-                .set("#EnergyLabel.Text", "${snapshot.stored} / ${snapshot.capacity} Fizz")
-                .set("#Grade.Text", "Grade: ${snapshot.grade}")
-                .set("#Members.Text", "Members: ${snapshot.members}")
-                .set("#Flow.Text", "Net flow: ${snapshot.flow} Fizz/t")
-                .set("#Jank.Text", snapshot.jank?.let { "Jank: $it%" }.orEmpty())
-                .set("#Status.Text", snapshot.status.orEmpty())
-                .set("#JarStability.Text", snapshot.carrierStability?.let { "Gob-Jar stability: $it%" }.orEmpty()),
+        update(false, commands)
+    }
+}
+
+private data class StoredHudValues(
+    val stored: Long,
+    val capacity: Long,
+)
+
+private data class EnergyHudValues(
+    val itemId: String?,
+    val iconVisible: Boolean,
+    val nameKey: String,
+    val inNetwork: Boolean,
+    val gradeRank: Int,
+    val gradeKey: String,
+    val gradeColor: String,
+    val members: Int,
+    val status: MachineStatus?,
+    val storedVisible: Boolean,
+    val storedText: StoredHudValues,
+    val storedProgress: Double,
+    val flowVisible: Boolean,
+    val supply: Long,
+    val demand: Long,
+    val jank: Int?,
+    val rattlewheel: RattlewheelHud?,
+    val shroomBed: ShroomBedHud?,
+    val carrierStability: Int?,
+    val dividerVisible: Boolean,
+)
+
+private fun energyHudValues(snapshot: EnergyHudSnapshot): EnergyHudValues {
+    val gradeColor =
+        when {
+            snapshot.gradeRank == 1 -> "#f2b33d"
+            snapshot.gradeRank >= 2 -> "#aa82ff"
+            else -> "#80e256"
+        }
+    val storedVisible = snapshot.capacity > 0
+    val flowVisible = snapshot.inNetwork
+    val jankVisible = snapshot.jank != null
+    val detailVisible = snapshot.rattlewheel != null || snapshot.shroomBed != null
+    val jarVisible = snapshot.carrierStability != null
+    return EnergyHudValues(
+        itemId = snapshot.itemId,
+        iconVisible = snapshot.itemId != null,
+        nameKey =
+            when {
+                snapshot.status == null -> "server.craftory.hud.energy.carrier"
+                snapshot.itemId == null -> "server.craftory.hud.energy.unknown"
+                else -> "server.items.${snapshot.itemId}.name"
+            },
+        inNetwork = snapshot.inNetwork,
+        gradeRank = snapshot.gradeRank,
+        gradeKey = GradeTable.DEFAULT.byRank(snapshot.gradeRank)?.id ?: "fizz",
+        gradeColor = gradeColor,
+        members = snapshot.members,
+        status = snapshot.status,
+        storedVisible = storedVisible,
+        storedText = StoredHudValues(snapshot.stored, snapshot.capacity),
+        storedProgress = progress(snapshot.stored, snapshot.capacity),
+        flowVisible = flowVisible,
+        supply = snapshot.supply,
+        demand = snapshot.demand,
+        jank = snapshot.jank,
+        rattlewheel = snapshot.rattlewheel,
+        shroomBed = snapshot.shroomBed,
+        carrierStability = snapshot.carrierStability,
+        dividerVisible = storedVisible || flowVisible || jankVisible || detailVisible || jarVisible,
+    )
+}
+
+@Suppress("CyclomaticComplexMethod", "LongMethod")
+internal fun energyHudCommands(
+    previous: EnergyHudSnapshot?,
+    next: EnergyHudSnapshot,
+    commands: UICommandBuilder,
+) {
+    val before = previous?.let(::energyHudValues)
+    val current = energyHudValues(next)
+
+    fun <T> emitIfChanged(
+        previousValue: T?,
+        nextValue: T,
+        emit: (T) -> Unit,
+    ) {
+        if (previous == null || previousValue != nextValue) emit(nextValue)
+    }
+
+    emitIfChanged(before?.itemId, current.itemId) { itemId ->
+        if (itemId == null) commands.setNull("#Icon.ItemId") else commands.set("#Icon.ItemId", itemId)
+    }
+    emitIfChanged(before?.iconVisible, current.iconVisible) { commands.set("#IconSlot.Visible", it) }
+    emitIfChanged(before?.nameKey, current.nameKey) {
+        commands.set("#Name.Text", Message.translation(it))
+    }
+    emitIfChanged(before?.inNetwork, current.inNetwork) { commands.set("#GradeRow.Visible", it) }
+    emitIfChanged(before?.gradeRank, current.gradeRank) {
+        commands.set("#GradeFizz.Visible", it == 0)
+        commands.set("#GradePressurised.Visible", it == 1)
+        commands.set("#GradeGlimmer.Visible", it >= 2)
+    }
+    emitIfChanged(before?.gradeKey, current.gradeKey) {
+        commands.set("#Grade.Text", Message.translation("server.craftory.hud.energy.grade.$it"))
+    }
+    emitIfChanged(before?.gradeColor, current.gradeColor) {
+        commands.set("#Grade.Style.TextColor", it)
+    }
+    emitIfChanged(before?.members, current.members) {
+        commands.set(
+            "#Members.Text",
+            Message.translation("server.craftory.hud.energy.members").param("count", it),
         )
     }
+
+    emitIfChanged(before?.status != null, current.status != null) {
+        commands.set("#StatusRow.Visible", it)
+    }
+    emitIfChanged(before?.status == MachineStatus.RUNNING, current.status == MachineStatus.RUNNING) {
+        commands.set("#ChipRunning.Visible", it)
+    }
+    emitIfChanged(before?.status == MachineStatus.IDLE, current.status == MachineStatus.IDLE) {
+        commands.set("#ChipIdle.Visible", it)
+    }
+    emitIfChanged(before?.status == MachineStatus.NO_POWER, current.status == MachineStatus.NO_POWER) {
+        commands.set("#ChipNoPower.Visible", it)
+    }
+    emitIfChanged(before?.status == MachineStatus.STALLED, current.status == MachineStatus.STALLED) {
+        commands.set("#ChipStalled.Visible", it)
+    }
+    emitIfChanged(before?.status == MachineStatus.STOLEN, current.status == MachineStatus.STOLEN) {
+        commands.set("#ChipStolen.Visible", it)
+    }
+
+    emitIfChanged(before?.storedVisible, current.storedVisible) { commands.set("#StoredRow.Visible", it) }
+    val storedTextChanged =
+        previous == null ||
+            before!!.storedText != current.storedText ||
+            before.storedVisible != current.storedVisible
+    if (current.storedVisible && storedTextChanged) {
+        commands.set(
+            "#StoredValue.Text",
+            Message
+                .translation("server.craftory.hud.energy.stored-value")
+                .param("stored", current.storedText.stored)
+                .param("capacity", current.storedText.capacity),
+        )
+    }
+    val storedProgressChanged =
+        previous == null ||
+            before!!.storedProgress != current.storedProgress ||
+            before.storedVisible != current.storedVisible
+    if (current.storedVisible && storedProgressChanged) {
+        commands.set("#Energy.Value", current.storedProgress)
+    }
+
+    emitIfChanged(before?.flowVisible, current.flowVisible) { commands.set("#FlowRow.Visible", it) }
+    val supplyChanged =
+        previous == null || before!!.supply != current.supply || before.flowVisible != current.flowVisible
+    if (current.flowVisible && supplyChanged) {
+        commands.set(
+            "#In.Text",
+            Message.translation("server.craftory.hud.energy.in").param("amount", current.supply),
+        )
+    }
+    val demandChanged =
+        previous == null || before!!.demand != current.demand || before.flowVisible != current.flowVisible
+    if (current.flowVisible && demandChanged) {
+        commands.set(
+            "#Out.Text",
+            Message.translation("server.craftory.hud.energy.out").param("amount", current.demand),
+        )
+    }
+
+    emitIfChanged(before?.jank != null, current.jank != null) { commands.set("#JankRow.Visible", it) }
+    if (current.jank != null && (previous == null || before!!.jank != current.jank)) {
+        commands.set(
+            "#JankValue.Text",
+            Message.translation("server.craftory.hud.energy.percent").param("value", current.jank),
+        )
+        commands.set("#JankBar.Value", current.jank / 100f)
+    }
+
+    emitIfChanged(before?.rattlewheel != null, current.rattlewheel != null) {
+        commands.set("#WaterRow.Visible", it)
+        commands.set("#WindRow.Visible", it)
+        commands.set("#OutputRow.Visible", it)
+    }
+    val rattlewheel = current.rattlewheel
+    if (rattlewheel != null) {
+        val beforeRattlewheel = before?.rattlewheel
+        if (previous == null || beforeRattlewheel!!.waterFlow != rattlewheel.waterFlow) {
+            commands.set(
+                "#WaterValue.Text",
+                Message
+                    .translation("server.craftory.hud.energy.detail.water")
+                    .param("flow", rattlewheel.waterFlow),
+            )
+        }
+        if (previous == null || beforeRattlewheel.wind != rattlewheel.wind) {
+            commands.set(
+                "#WindValue.Text",
+                Message.translation(
+                    if (rattlewheel.wind) {
+                        "server.craftory.hud.energy.detail.wind-on"
+                    } else {
+                        "server.craftory.hud.energy.detail.wind-off"
+                    },
+                ),
+            )
+        }
+        if (previous == null || beforeRattlewheel.fizzPerSecond != rattlewheel.fizzPerSecond) {
+            commands.set(
+                "#OutputValue.Text",
+                Message
+                    .translation("server.craftory.hud.energy.detail.output")
+                    .param("rate", rattlewheel.fizzPerSecond),
+            )
+        }
+    }
+
+    emitIfChanged(before?.shroomBed != null, current.shroomBed != null) {
+        commands.set("#GrowthRow.Visible", it)
+        commands.set("#TwitchRow.Visible", it)
+        commands.set("#DarkRow.Visible", it)
+    }
+    val shroomBed = current.shroomBed
+    if (shroomBed != null) {
+        val beforeShroomBed = before?.shroomBed
+        if (previous == null || beforeShroomBed!!.growthPercent != shroomBed.growthPercent) {
+            commands.set(
+                "#GrowthValue.Text",
+                Message
+                    .translation("server.craftory.hud.energy.detail.growth")
+                    .param("growth", shroomBed.growthPercent),
+            )
+        }
+        if (previous == null || beforeShroomBed.twitch != shroomBed.twitch) {
+            commands.set(
+                "#TwitchValue.Text",
+                Message
+                    .translation("server.craftory.hud.energy.detail.twitch")
+                    .param("twitch", shroomBed.twitch),
+            )
+        }
+        if (previous == null || beforeShroomBed.darkness != shroomBed.darkness) {
+            commands.set(
+                "#DarkValue.Text",
+                Message
+                    .translation("server.craftory.hud.energy.detail.darkness")
+                    .param("source", shroomBed.darkness),
+            )
+        }
+    }
+
+    emitIfChanged(before?.carrierStability != null, current.carrierStability != null) {
+        commands.set("#JarRow.Visible", it)
+    }
+    if (current.carrierStability != null &&
+        (previous == null || before!!.carrierStability != current.carrierStability)
+    ) {
+        commands.set(
+            "#JarValue.Text",
+            Message
+                .translation("server.craftory.hud.energy.percent")
+                .param("value", current.carrierStability),
+        )
+        commands.set("#JarBar.Value", current.carrierStability / 100f)
+    }
+    emitIfChanged(before?.dividerVisible, current.dividerVisible) { commands.set("#Divider.Visible", it) }
 }
 
 internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
@@ -185,14 +486,14 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
 
     private fun carrierSnapshot(stability: Int) =
         EnergyHudSnapshot(
-            "Jar carrier",
-            0,
-            0,
-            "—",
-            0,
-            0,
-            0,
-            0,
+            itemId = CraftoryIds.GOB_JAR,
+            stored = 0,
+            capacity = 0,
+            gradeRank = 0,
+            members = 0,
+            supply = 0,
+            demand = 0,
+            inNetwork = false,
             carrierStability = stability,
         )
 
@@ -208,49 +509,46 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
         val jank = memberRef?.let { blockStore.getComponent(it, Jank.type) }
         val rattlewheel = memberRef?.let { blockStore.getComponent(it, RattlewheelState.type) }
         val shroomBed = memberRef?.let { blockStore.getComponent(it, ShroomBedState.type) }
-        if (energy.networkOf(id) < 0 && jank == null) return null
+        val inNetwork = energy.networkOf(id) >= 0
+        if (!inNetwork && jank == null) return null
+        val stored = energy.stored(id)
+        val capacity = energy.capacity(id)
+        val gradeRank = energy.networkGrade(id)
+        val members = energy.networkMembers(id)
+        val supply = energy.networkSupply(id)
+        val demand = energy.networkDemand(id)
         return EnergyHudSnapshot(
-            if (shroomBed != null) "Shroom Bed" else machineName(member?.typeId),
-            energy.stored(id),
-            energy.capacity(id),
-            gradeName(energy.networkGrade(id)),
-            energy.networkMembers(id),
-            energy.networkFlow(id),
-            energy.networkSupply(id),
-            energy.networkDemand(id),
-            jank?.value?.roundToInt(),
-            listOfNotNull(machineCondition(jank), machineStatus(rattlewheel, shroomBed))
-                .joinToString("\n")
-                .ifEmpty { null },
+            itemId = machineItemId(member?.typeId, shroomBed != null, blockItemId(world, position)),
+            stored = stored,
+            capacity = capacity,
+            gradeRank = gradeRank,
+            members = members,
+            supply = supply,
+            demand = demand,
+            inNetwork = inNetwork,
+            jank = jank?.value?.roundToInt(),
+            status =
+                machineStatus(
+                    jank = jank,
+                    rattlewheel =
+                        rattlewheel?.let {
+                            RattlewheelHud(it.waterFlow, it.windMode, it.fizzPerSecond)
+                        },
+                    inNetwork = inNetwork,
+                    demand = demand,
+                    supply = supply,
+                    stored = stored,
+                ),
+            rattlewheel =
+                rattlewheel?.let {
+                    RattlewheelHud(it.waterFlow, it.windMode, it.fizzPerSecond)
+                },
+            shroomBed =
+                shroomBed?.let {
+                    ShroomBedHud((it.growth / 10).toInt(), it.twitch, it.darknessSource)
+                },
         )
     }
-
-    private fun machineStatus(
-        rattlewheel: RattlewheelState?,
-        shroomBed: ShroomBedState?,
-    ): String? =
-        when {
-            rattlewheel != null -> {
-                "Water flow: ${rattlewheel.waterFlow}  Wind: ${rattlewheel.windMode}\n" +
-                    "Output: ${rattlewheel.fizzPerSecond} Fizz/s"
-            }
-
-            shroomBed != null -> {
-                "Growth: ${shroomBed.growth.toInt()}/1000  Stored: ${shroomBed.stored}\n" +
-                    "Twitch: ${shroomBed.twitch}/100  Darkness: ${shroomBed.darknessSource}"
-            }
-
-            else -> {
-                null
-            }
-        }
-
-    private fun machineCondition(jank: Jank?): String? =
-        when {
-            jank?.stolen == true -> "Stolen"
-            (jank?.stallTicks ?: 0) > 0 -> "Stalled"
-            else -> null
-        }
 }
 
 class CanisterPage private constructor(
@@ -299,14 +597,14 @@ class CanisterPage private constructor(
         val energy = CraftoryCore.energyAccess(store.externalData.world)
         val id = BlockPos.pack(position.x, position.y, position.z)
         return EnergyHudSnapshot(
-            "Fizz Canister",
-            energy.stored(id),
-            energy.capacity(id),
-            gradeName(energy.networkGrade(id)),
-            energy.networkMembers(id),
-            energy.networkFlow(id),
-            energy.networkSupply(id),
-            energy.networkDemand(id),
+            itemId = CraftoryIds.CANISTER,
+            stored = energy.stored(id),
+            capacity = energy.capacity(id),
+            gradeRank = energy.networkGrade(id),
+            members = energy.networkMembers(id),
+            supply = energy.networkSupply(id),
+            demand = energy.networkDemand(id),
+            inNetwork = energy.networkOf(id) >= 0,
         )
     }
 
@@ -316,13 +614,13 @@ class CanisterPage private constructor(
     ) {
         if (snapshot == lastSnapshot) return
         lastSnapshot = snapshot
-        commands.set("#TitleLabel.Text", snapshot.name)
+        commands.set("#TitleLabel.Text", Message.translation("server.items.Craftory_Fizz_Canister.name"))
         commands.set("#Energy.Value", progress(snapshot.stored, snapshot.capacity))
         commands.set("#EnergyLabel.Text", "${snapshot.stored} / ${snapshot.capacity} Fizz")
         commands.set("#In.Text", "In: ${snapshot.supply} Fizz/t")
         commands.set("#Out.Text", "Out: ${snapshot.demand} Fizz/t")
         commands.set("#Members.Text", "Network members: ${snapshot.members}")
-        commands.set("#Grade.Text", "Grade: ${snapshot.grade}")
+        commands.set("#Grade.Text", "Grade: ${gradeName(snapshot.gradeRank)}")
     }
 
     override fun onDismiss(
@@ -372,6 +670,40 @@ internal class CanisterPageRefreshSystem : DelayedEntitySystem<EntityStore>(0.5f
         CanisterPage.tickAll(store.externalData.world, store.externalData.world.tick)
     }
 }
+
+private fun blockItemId(
+    world: World,
+    position: Vector3i,
+): String? {
+    val section =
+        world.chunkStore
+            .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+            ?.takeIf { it.isValid }
+            ?: return null
+    val blocks = world.chunkStore.store.getComponent(section, BlockSection.getComponentType()) ?: return null
+    return BlockType
+        .getAssetMap()
+        .getAsset(blocks.get(position.x and 31, position.y and 31, position.z and 31))
+        ?.getItem()
+        ?.id
+}
+
+private fun machineItemId(
+    typeId: String?,
+    hasShroomBed: Boolean,
+    fallback: String?,
+): String? =
+    when {
+        hasShroomBed -> CraftoryIds.SHROOM_BED
+        typeId == CraftoryIds.BURNER_TYPE -> CraftoryIds.BURNER
+        typeId == CraftoryIds.CANISTER_TYPE -> CraftoryIds.CANISTER
+        typeId == CraftoryIds.CRANK_TYPE -> CraftoryIds.CRANK
+        typeId == CraftoryIds.GNASHER_TYPE -> CraftoryIds.GNASHER_PIT
+        typeId == CraftoryIds.OVEN_TYPE -> CraftoryIds.SCORCH_OVEN
+        typeId == CraftoryIds.PIPE_TYPE -> CraftoryIds.PIPE
+        typeId == CraftoryIds.RATTLEWHEEL_TYPE -> CraftoryIds.RATTLEWHEEL
+        else -> fallback
+    }
 
 private fun progress(
     stored: Long,

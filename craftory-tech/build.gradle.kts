@@ -15,3 +15,7 @@ dependencies {
     testImplementation(project(":craftory-core"))
     testImplementation("com.hypixel.hytale:Server:0.7.4")
 }
+
+tasks.withType<Test>().configureEach {
+    systemProperty("java.util.logging.manager", "com.hypixel.hytale.logger.backend.HytaleLogManager")
+}
