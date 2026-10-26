@@ -40,4 +40,6 @@ internal object WellSelfTestExclusions {
     }
 
     fun isWell(position: BlockPos): Boolean = position.pack() in wells
+
+    fun cleanupCounts(): Triple<Int, Int, Int> = Triple(blocks.size, entities.size, wells.size)
 }

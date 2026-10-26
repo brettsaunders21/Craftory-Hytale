@@ -1,9 +1,13 @@
 package studio.craftory.tech.well
 
+import com.hypixel.hytale.component.AddReason
+import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.CrewService
@@ -11,6 +15,8 @@ import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
+import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.CraftorySelfTest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
@@ -31,6 +37,7 @@ internal object WellSelfTest {
             testJarAndScan(world, tempDir, report)
             testEmptyBlockRemoval(world, report)
             testStormcall(world, report)
+            testChunkReload(world, report)
             val remaining = CraftoryCore.wells().wellsNear(world.chunkStore.store, CAUGHT_POS, 64).size
             check(remaining == 0) { "well cleanup left $remaining indexed wells within radius 64" }
             report("selftest: cleanup (wells=$remaining)")
@@ -41,6 +48,15 @@ internal object WellSelfTest {
             Files.deleteIfExists(tempDir.resolve("crews.json"))
             Files.deleteIfExists(tempDir)
             listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS).forEach(WellSelfTestExclusions::releaseWell)
+            val exclusions = WellSelfTestExclusions.cleanupCounts()
+            val guardians =
+                world.entityStore.store
+                    .getResource(WellGuardianIndex.type)
+                    .refsByWellId.size
+            report(
+                "selftest: cleanup (wellBlocks=${exclusions.first}, wellEntities=${exclusions.second}, " +
+                    "wellPositions=${exclusions.third}, guardians=$guardians)",
+            )
         }
     }
 
@@ -132,6 +148,50 @@ internal object WellSelfTest {
         ) { "forced Stormcall did not start 30-second crackle tracking" }
         report("selftest: PASS forced Stormcall birth, fake strike, and crackle")
         CraftoryCore.wells().remove(world, FORCED_POS)
+    }
+
+    private fun testChunkReload(
+        world: World,
+        report: (String) -> Unit,
+    ) {
+        val position = CraftorySelfTest.TestPosition(10_020, 148, 10_015)
+        val store = world.chunkStore.store
+        val sectionRef =
+            world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?: error("Vane persistence section is not loaded")
+        val section =
+            store.getComponent(sectionRef, BlockComponentSection.getComponentType())
+                ?: error("Vane persistence section is missing")
+        CraftorySelfTest.place(
+            world,
+            store,
+            sectionRef,
+            section,
+            CraftoryIds.STORM_VANE,
+            position,
+            StormVaneState.type,
+        )
+        var ref =
+            BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+                ?: error("Vane persistence block entity is missing")
+        WellSelfTestExclusions.registerBlock(ref)
+        try {
+            val state = store.getComponent(ref, StormVaneState.type) ?: error("Vane state is missing")
+            state.visualOn = true
+            state.lastUpdateTick = world.tick
+            store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+            val unloaded = store.removeEntity(ref, RemoveReason.UNLOAD)
+            ref = store.addEntity(unloaded, AddReason.LOAD) ?: error("Vane reload failed")
+            WellSelfTestExclusions.registerBlock(ref)
+            val restored = store.getComponent(ref, StormVaneState.type)
+            check(
+                restored?.visualOn == true && restored.lastUpdateTick == world.tick,
+            ) { "Storm Vane chunk unload/reload lost component state" }
+            report("selftest: PASS Storm Vane chunk unload/reload persists state")
+        } finally {
+            WellSelfTestExclusions.releaseBlock(ref)
+            CraftorySelfTest.clear(world, sectionRef, listOf(position))
+        }
     }
 
     private fun clearBlock(

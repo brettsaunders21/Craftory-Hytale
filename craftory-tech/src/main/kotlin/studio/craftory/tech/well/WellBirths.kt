@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.Damage
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
 import com.hypixel.hytale.server.core.universe.world.World
@@ -59,6 +60,22 @@ private fun spawnStormStrikeEffects(
             store,
         )
     }
+}
+
+private fun randomLoadedPlayer(
+    world: World,
+    fallback: PlayerRef,
+): PlayerRef {
+    val worldId = world.worldConfig.uuid
+    var selected: PlayerRef? = null
+    var seen = 0
+    Universe.get().getPlayers().forEach { candidate ->
+        if (candidate.worldUuid == worldId) {
+            seen++
+            if (Random.nextInt(seen) == 0) selected = candidate
+        }
+    }
+    return selected ?: fallback
 }
 
 object WellBirths {
@@ -202,7 +219,7 @@ internal class WellBirthSystem(
                 ?.lowercase()
                 .orEmpty()
         if (weatherId.contains("thunder") || weatherId.contains("storm")) {
-            tryStormcall(world, settings, birthState, player, position, playerPos, store)
+            tryStormcall(world, settings, birthState, player, position, store)
         } else {
             tryRainFlicker(world, settings, birthState, player, position, playerPos, weatherId, store)
         }
@@ -214,27 +231,34 @@ internal class WellBirthSystem(
         state: WellBirthState,
         player: PlayerRef,
         position: Vector3d,
-        playerPos: BlockPos,
         store: ComponentAccessor<EntityStore>,
     ) {
         val now = world.tick
         val interval = settings.stormcallIntervalSeconds.coerceAtLeast(1) * 20L
         if (!WellBirthRules.cooldownElapsed(state.lastStormcallByPlayer[player.uuid], now, interval)) return
-        val region = regionId(playerPos.x shr 9, playerPos.z shr 9)
-        if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
         val chancePassed = rules.stormcall(settings.stormcallChance)
         state.lastStormcallByPlayer[player.uuid] = now
         if (!chancePassed) return
-        val strength = StormHuntRules.rollStormStrength(stormVanesWithin(world, playerPos, 64), Random)
+        val strikeTarget = randomLoadedPlayer(world, player)
+        val strikeTargetPosition = strikeTarget.transform.position
+        val strikeOrigin =
+            BlockPos(
+                floor(strikeTargetPosition.x).toInt(),
+                floor(strikeTargetPosition.y).toInt(),
+                floor(strikeTargetPosition.z).toInt(),
+            )
+        val region = regionId(strikeOrigin.x shr 9, strikeOrigin.z shr 9)
+        if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
+        val strength = StormHuntRules.rollStormStrength(stormVanesWithin(world, strikeOrigin, 64), Random)
         if (strength != WellStrength.FLICKER &&
             !StormHuntRules.canSpawnStrongWell(
-                strongWildWellsInRegion(world, playerPos),
+                strongWildWellsInRegion(world, strikeOrigin),
                 settings.strongWildWellRegionBudget,
             )
         ) {
             return
         }
-        val strikePosition = randomStrikePosition(world, playerPos, Random) ?: return
+        val strikePosition = randomStrikePosition(world, strikeOrigin, Random) ?: return
         if (WellBirths.spawnStormcall(world, strikePosition, strength) != null) {
             state.lastStormcallByRegion[region] = now
             state.stormCrackles[strikePosition.pack()] = now + 30L * 20L
