@@ -20,11 +20,11 @@ internal data class MachineVent(
 internal object MachineVents {
     val entries =
         mapOf(
-            CraftoryIds.BURNER to MachineVent("Smoke-Emitter", 18.0 / 32, 35.0 / 32, 17.0 / 32),
-            CraftoryIds.CRANK to MachineVent("Steam-Emitter", 0.5, 23.0 / 32, 0.5),
-            CraftoryIds.CANISTER to MachineVent("Smoke-Emitter", 0.5, 28.0 / 32, 0.5),
-            CraftoryIds.FIZZ_DAMPER to MachineVent("Steam-Emitter", 0.5, 29.0 / 32, 0.5),
-            CraftoryIds.GNASHER_PIT to MachineVent("Spark-Emitter", 0.5, 23.0 / 32, 0.5),
+            CraftoryIds.BURNER to MachineVent("Smoke-Emitter", 18.0 / 32, 59.81 / 32, 17.0 / 32),
+            CraftoryIds.CRANK to MachineVent("Steam-Emitter", 14.78 / 32, 27.57 / 32, 0.5),
+            CraftoryIds.CANISTER to MachineVent("Smoke-Emitter", 16.66 / 32, 28.29 / 32, 15.80 / 32),
+            CraftoryIds.FIZZ_DAMPER to MachineVent("Steam-Emitter", 0.5, 28.53 / 32, 0.5),
+            CraftoryIds.GNASHER_PIT to MachineVent("Spark-Emitter", 1.0, 27.69 / 32, 14.36 / 32),
             CraftoryIds.GUTTER_BOILER to
                 MachineVent(
                     "Steam-Emitter",
@@ -41,10 +41,10 @@ internal object MachineVents {
                     0.5,
                     "Blocks/Craftory/Junk_Heart_Chimney/Junk_Heart_Chimney_Cap.blockymodel",
                 ),
-            CraftoryIds.RATTLEWHEEL to MachineVent("Spark-Emitter", 0.5, 29.0 / 32, 0.5),
-            CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 0.5, 38.0 / 32, 0.5),
-            CraftoryIds.SHROOM_BED to MachineVent("Spore-Emitter", 0.5, 30.0 / 32, 0.5),
-            CraftoryIds.STORM_VANE to MachineVent("Spark-Emitter", 0.5, 31.5 / 32, 0.5),
+            CraftoryIds.RATTLEWHEEL to MachineVent("Spark-Emitter", 0.5, 59.48 / 32, 0.5),
+            CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 1.0, 58.52 / 32, 14.67 / 32),
+            CraftoryIds.SHROOM_BED to MachineVent("Spore-Emitter", 31.90 / 32, 27.52 / 32, 15.79 / 32),
+            CraftoryIds.STORM_VANE to MachineVent("Spark-Emitter", 0.5, 59.56 / 32, 0.5),
         )
 
     fun position(

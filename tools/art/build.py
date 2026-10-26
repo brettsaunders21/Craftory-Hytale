@@ -39,6 +39,33 @@ ICON_DIR = COMMON / "Icons" / "ItemsGenerated" / "Craftory"
 ICON_SIZE = 64
 
 CANISTER_FILLS = {"Empty": 0.0, "Quarter": 0.25, "Half": 0.5, "ThreeQuarter": 0.75, "Full": 1.0}
+MACHINE_FOOTPRINTS = {
+    "Crank_A_Fizz": (1, 1, 1),
+    "Fizz_Canister": (1, 1, 1),
+    "Snatcher_Claw": (1, 1, 1),
+    "Crackle_Coil": (1, 2, 1),
+    "Resonator": (1, 1, 1),
+    "Gnasher_Pit": (2, 1, 1),
+    "Scorch_Oven": (2, 2, 1),
+    "Rattlewheel": (1, 2, 1),
+    "Shroom_Bed": (2, 1, 1),
+    "Boomshroom_Burner": (1, 2, 1),
+    "Sloshtank": (1, 2, 1),
+    "Wakebell_Anchor": (1, 1, 1),
+    "Wellhead": (1, 1, 1),
+    "Glimmerwell_Anchor": (1, 1, 1),
+    "Junk_Heart_Firebox": (1, 1, 1),
+    "Storm_Vane": (1, 2, 1),
+    "Fizz_Damper": (1, 1, 1),
+}
+PRESERVE_MULTIBLOCK_SHELLS = {
+    "Gutter_Boiler",
+    "Gasbag",
+    "Boiler_Tank",
+    "Boiler_Whistle_Stack",
+    "Gasbag_Frame",
+    "Gasbag_Envelope",
+}
 
 
 def seed(name: str) -> int:
@@ -90,6 +117,56 @@ def model_bounds(model: Model) -> tuple[np.ndarray, np.ndarray]:
     return vertices.min(axis=0), vertices.max(axis=0)
 
 
+def size_machine_model(name: str, model: Model) -> None:
+    width, height, depth = MACHINE_FOOTPRINTS[name]
+    lower, upper = model_bounds(model)
+    scale = np.asarray((32 * width - 4, 32 * height - 4, 32 * depth - 4)) / (upper - lower)
+
+    def scale_node(node) -> None:
+        node.pos = tuple(np.asarray(node.pos) * scale)
+        node.offset = tuple(np.asarray(node.offset) * scale)
+        for child in node.children:
+            scale_node(child)
+
+    for root in model.roots:
+        scale_node(root)
+    lower, upper = model_bounds(model)
+    center = np.asarray((16 * (width - 1), 0, 16 * (depth - 1)))
+    translation = center - (lower + upper) / 2
+    translation[1] = -lower[1]
+    for root in model.roots:
+        root.pos = tuple(np.asarray(root.pos) + translation)
+
+
+def add_pipe_ports(name: str, model: Model) -> None:
+    width, height, depth = MACHINE_FOOTPRINTS[name]
+
+    def port(face: str, x: float, y: float, z: float, boundary: float, sign: int) -> None:
+        if face == "x":
+            model.roots.append(Box(f"PipeFlange{face}{x}{y}{z}", (2, 12, 12), pos=(boundary - sign, y, z), paint=gb.BRASS_RIV))
+        elif face == "z":
+            model.roots.append(Box(f"PipeFlange{face}{x}{y}{z}", (12, 12, 2), pos=(x, y, boundary - sign), paint=gb.BRASS_RIV))
+        else:
+            model.roots.append(Box(f"PipeFlange{face}{x}{y}{z}", (12, 2, 12), pos=(x, boundary - sign, z), paint=gb.BRASS_RIV))
+
+    for y_cell in range(height):
+        y = y_cell * 32 + 16
+        for z_cell in range(depth):
+            z = z_cell * 32
+            for boundary, sign in ((-16, -1), (width * 32 - 16, 1)):
+                port("x", boundary, y, z, boundary, sign)
+        for x_cell in range(width):
+            x = x_cell * 32
+            for boundary, sign in ((-16, -1), (depth * 32 - 16, 1)):
+                port("z", x, y, boundary, boundary, sign)
+
+    for x_cell in range(width):
+        for z_cell in range(depth):
+            x = x_cell * 32
+            z = z_cell * 32
+            port("y", x, height * 32, z, height * 32, 1)
+
+
 def validate_block_models(name: str, models: dict[str, tuple[Model, dict]]) -> None:
     for suffix, (model, _) in models.items():
         lo, hi = model_bounds(model)
@@ -98,8 +175,11 @@ def validate_block_models(name: str, models: dict[str, tuple[Model, dict]]) -> N
             raise ValueError(f"{label} geometry extends below y=0: {lo[1]:.3f}")
         if name != "Gutterpipe" and lo[1] > 0.01:
             raise ValueError(f"{label} has no ground-level base at y=0: {lo[1]:.3f}")
-        if lo[0] < -17 or hi[0] > 17 or lo[2] < -17 or hi[2] > 17:
+        width, height, depth = MACHINE_FOOTPRINTS.get(name, (1, 1, 1))
+        if lo[0] < -17 or hi[0] > width * 32 - 15 or lo[2] < -17 or hi[2] > depth * 32 - 15:
             raise ValueError(f"{label} geometry exceeds the block footprint: {lo.tolist()}..{hi.tolist()}")
+        if name in MACHINE_FOOTPRINTS and hi[1] > height * 32 + 0.01:
+            raise ValueError(f"{label} geometry exceeds its vertical footprint: {hi[1]:.3f}")
         for root in model.roots:
             if any(abs(angle) > 0.01 for angle in root.rot):
                 raise ValueError(f"{label} root {root.name} has a non-axis-aligned base rotation: {root.rot}")
@@ -135,7 +215,15 @@ def validate_block_models(name: str, models: dict[str, tuple[Model, dict]]) -> N
             validate_grounded_nodes(root, np.eye(3), np.zeros(3), np.zeros(3))
 
 
-def hitbox_for_models(models: list[Model]) -> dict:
+def hitbox_for_models(name: str, models: list[Model]) -> dict:
+    if name in MACHINE_FOOTPRINTS:
+        width, height, depth = MACHINE_FOOTPRINTS[name]
+        return {
+            "Boxes": [{
+                "Min": {"X": 0.0625, "Y": 0.0625, "Z": 0.0625},
+                "Max": {"X": width - 0.0625, "Y": height - 0.0625, "Z": depth - 0.0625},
+            }],
+        }
     bounds = [model_bounds(model) for model in models]
     lo = np.min([item[0] for item in bounds], axis=0)
     hi = np.max([item[1] for item in bounds], axis=0)
@@ -262,7 +350,7 @@ def export_hitboxes(name: str, models: dict[str, tuple[Model, dict]], manifest: 
                 state_hitboxes[state] = hitbox_type
                 path = hitbox_dir / "Gutterpipe" / f"Craftory_Gutterpipe_{state}.json"
                 output_path = written(manifest, path) if tracked else path
-                write_json(hitbox_for_models([model]), output_path)
+                write_json(hitbox_for_models(name, [model]), output_path)
             base_hitbox = state_hitboxes["C00"]
             set_item_hitbox(item_path, name, base_hitbox, state_hitboxes)
             continue
@@ -270,7 +358,7 @@ def export_hitboxes(name: str, models: dict[str, tuple[Model, dict]], manifest: 
         hitbox_type = f"Craftory_{name}"
         path = hitbox_dir / f"Craftory_{name}.json"
         output_path = written(manifest, path) if tracked else path
-        write_json(hitbox_for_models([model for model, _ in models.values()]), output_path)
+        write_json(hitbox_for_models(name, [model for model, _ in models.values()]), output_path)
         set_item_hitbox(item_path, name, hitbox_type)
 
 
@@ -295,6 +383,10 @@ def export_blocks(manifest: list[str]) -> None:
         if name in ("Fizz_Canister", "Sloshtank"):
             variants = {f"_{k}": {"fill": v} for k, v in CANISTER_FILLS.items()}
         raw = {suffix: fn(**kw) for suffix, kw in variants.items()}
+        if name in MACHINE_FOOTPRINTS:
+            for model, _ in raw.values():
+                size_machine_model(name, model)
+                add_pipe_ports(name, model)
         validate_block_models(name, raw)
         if name == "Gutterpipe":
             master = build(gb.gutterpipe_master(), name)
@@ -328,7 +420,8 @@ def export_blocks(manifest: list[str]) -> None:
         if name == "Gasbag":
             for stale in (d / "Gasbag.blockymodel", d / "Gasbag_Texture.png"):
                 stale.unlink(missing_ok=True)
-        export_hitboxes(name, built, manifest)
+        if name not in PRESERVE_MULTIBLOCK_SHELLS:
+            export_hitboxes(name, built, manifest)
         icon_variant = {"Boomshroom_Burner": "_On", "Scorch_Oven": "_On", "Wakebell_Anchor": "_On",
                         "Junk_Heart_Firebox": "_On", "Fizz_Canister": "_Full", "Junk_Heart_Chimney": "_Cap"}
         m, _ = built[icon_variant.get(name, next(iter(built)))]

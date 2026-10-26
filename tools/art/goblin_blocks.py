@@ -672,7 +672,7 @@ def wellhead(pumping: bool):
         Box("GaugeHub", (2, 2, 1), pos=(0, 1, 12.5), paint=BRASS_P),
         Box("FeedPipe", (4, 12, 4), pos=(6.8, 12, -5), paint=DARK_TIN),
         Box("FeedElbow", (3.8, 4, 7.8), pos=(7, 18, -7), paint=BRASS_P),
-        Box("OutputPipe", (4, 9, 4), pos=(-6.8, 12, 4), paint=DARK_TIN),
+        Box("OutputPipe", (4, 8, 4), pos=(-6.8, 12, 4), paint=DARK_TIN),
         Box("OutputCap", (6, 2, 6), pos=(-7, 17, 4), paint=BRASS_RIV),
         Box(
             "OutputPortGlow",

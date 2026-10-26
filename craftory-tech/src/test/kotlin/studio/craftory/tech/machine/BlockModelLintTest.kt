@@ -40,6 +40,33 @@ internal data class ModelBounds(
     }
 }
 
+private data class BlockFootprint(
+    val width: Int,
+    val height: Int,
+    val depth: Int,
+)
+
+private val machineFootprints =
+    mapOf(
+        "Crank_A_Fizz" to BlockFootprint(1, 1, 1),
+        "Fizz_Canister" to BlockFootprint(1, 1, 1),
+        "Snatcher_Claw" to BlockFootprint(1, 1, 1),
+        "Crackle_Coil" to BlockFootprint(1, 2, 1),
+        "Resonator" to BlockFootprint(1, 1, 1),
+        "Gnasher_Pit" to BlockFootprint(2, 1, 1),
+        "Scorch_Oven" to BlockFootprint(2, 2, 1),
+        "Rattlewheel" to BlockFootprint(1, 2, 1),
+        "Shroom_Bed" to BlockFootprint(2, 1, 1),
+        "Boomshroom_Burner" to BlockFootprint(1, 2, 1),
+        "Sloshtank" to BlockFootprint(1, 2, 1),
+        "Wakebell_Anchor" to BlockFootprint(1, 1, 1),
+        "Wellhead" to BlockFootprint(1, 1, 1),
+        "Glimmerwell_Anchor" to BlockFootprint(1, 1, 1),
+        "Junk_Heart_Firebox" to BlockFootprint(1, 1, 1),
+        "Storm_Vane" to BlockFootprint(1, 2, 1),
+        "Fizz_Damper" to BlockFootprint(1, 1, 1),
+    )
+
 internal object BlockModelGeometry {
     private data class Face(
         val box: Int,
@@ -398,9 +425,18 @@ internal class BlockModelLintTest {
             val model = parsedModels.getValue(path)
             val bounds = BlockModelGeometry.bounds(model)
             val label = path.toString()
+            val footprint = machineFootprints[path.parent.fileName.toString()] ?: BlockFootprint(1, 1, 1)
+            val maxX = 17.0 + 32.0 * (footprint.width - 1)
+            val maxZ = 17.0 + 32.0 * (footprint.depth - 1)
             assertTrue(bounds.min[1] >= -0.01, "$label extends below y=0: ${bounds.min[1]}")
-            assertTrue(bounds.min[0] >= -17 && bounds.max[0] <= 17, "$label exceeds X block bounds")
-            assertTrue(bounds.min[2] >= -17 && bounds.max[2] <= 17, "$label exceeds Z block bounds")
+            assertTrue(bounds.min[0] >= -17 && bounds.max[0] <= maxX, "$label exceeds X block bounds")
+            assertTrue(bounds.min[2] >= -17 && bounds.max[2] <= maxZ, "$label exceeds Z block bounds")
+            if (path.parent.fileName.toString() in machineFootprints) {
+                assertTrue(
+                    bounds.max[1] <= footprint.height * 32.0 + 0.01,
+                    "$label exceeds Y block bounds: ${bounds.max[1]}",
+                )
+            }
         }
         val overlaps =
             blockModels.flatMap { path ->
@@ -417,15 +453,31 @@ internal class BlockModelLintTest {
             }
         assertTrue(files.isNotEmpty(), "no Craftory hitbox JSON files found")
         files.forEach { path ->
+            val name =
+                path.fileName
+                    .toString()
+                    .removePrefix("Craftory_")
+                    .removeSuffix(".json")
+            val footprint = machineFootprints[name]
             parse(path).getAsJsonArray("Boxes").forEachIndexed { boxIndex, boxElement ->
                 val box = boxElement.asJsonObject
                 listOf("Min", "Max").forEach { corner ->
                     val vector = box.getAsJsonObject(corner)
-                    listOf("X", "Y", "Z").forEach { axis ->
+                    listOf("X", "Y", "Z").forEachIndexed { axisIndex, axis ->
                         val coordinate = vector.get(axis).asDouble
+                        val extent =
+                            footprint?.let {
+                                when (axisIndex) {
+                                    0 -> it.width.toDouble()
+                                    1 -> it.height.toDouble()
+                                    else -> it.depth.toDouble()
+                                }
+                            } ?: 1.0
+                        val lowerBound = if (corner == "Min" && footprint != null) 1.0 / 16 else 0.0
+                        val upperBound = if (corner == "Max") extent - lowerBound else extent
                         assertTrue(
-                            coordinate >= 0.0 && coordinate <= 1.0,
-                            "$path box $boxIndex $corner.$axis is outside [0,1]: $coordinate",
+                            coordinate >= lowerBound && coordinate <= upperBound,
+                            "$path box $boxIndex $corner.$axis is outside [$lowerBound,$upperBound]: $coordinate",
                         )
                     }
                 }
