@@ -79,7 +79,7 @@ internal object FirstSpark {
     private const val SPARK_PARTICLE = "Impact_Spark"
     private const val SPARK_SOUND = "SFX_Interact"
 
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     fun tryTrigger(
         world: com.hypixel.hytale.server.core.universe.world.World,
         store: Store<ChunkStore>,
@@ -109,8 +109,9 @@ internal object FirstSpark {
                     false
                 }
             }
+        if (!machineRunning) return false
         val crew = crews.crewOf(owner)
-        if (CraftoryIds.FIRST_SPARK_KNOWLEDGE in crew.knowledge) return false
+        if (crew.tier < 2 || CraftoryIds.FIRST_SPARK_KNOWLEDGE in crew.knowledge) return false
         val nearest = nearestCrystal(store, machineX, machineY, machineZ, position) ?: return false
         if (!FirstSparkRules.conditionMet(machineRunning, crew.tier, false, nearest.second)) return false
         crews.grantKnowledge(owner, CraftoryIds.FIRST_SPARK_KNOWLEDGE)
