@@ -93,6 +93,33 @@ class CoreEnergyTest {
     }
 
     @Test
+    fun `converter output network rejects a physical member at its flipped id`() {
+        val converterInput = BlockPos.pack(19, -2048, -7)
+        val physicalId = BlockPos.pack(19, 0, -7)
+        assertEquals(physicalId, EnergyMemberIds.converterOutput(converterInput))
+        assertEquals(
+            -1,
+            EnergyMemberIds.converterOutputNetwork(
+                nodePresent = true,
+                nodeConverterOutput = false,
+                nodeOwnerInputId = physicalId,
+                inputId = converterInput,
+                networkId = 42,
+            ),
+        )
+        assertEquals(
+            42,
+            EnergyMemberIds.converterOutputNetwork(
+                nodePresent = true,
+                nodeConverterOutput = true,
+                nodeOwnerInputId = converterInput,
+                inputId = converterInput,
+                networkId = 42,
+            ),
+        )
+    }
+
+    @Test
     fun `energy type registry rejects duplicates`() {
         val spec = MemberSpec(MemberSpec.PRODUCER, 0, 0, 10, 0, 5)
         val id = "test:core_energy_duplicate"

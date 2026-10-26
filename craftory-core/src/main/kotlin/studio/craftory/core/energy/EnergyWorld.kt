@@ -101,7 +101,17 @@ internal class EnergyWorld : Resource<ChunkStore> {
 
     fun converterOutputId(inputId: Long): Long = EnergyMemberIds.converterOutput(inputId)
 
-    fun converterOutputNetwork(inputId: Long): Int = runtime.graph.networkOf(converterOutputId(inputId))
+    fun converterOutputNetwork(inputId: Long): Int {
+        val outputId = converterOutputId(inputId)
+        val node = nodes[outputId]
+        return EnergyMemberIds.converterOutputNetwork(
+            nodePresent = node != null,
+            nodeConverterOutput = node?.converterOutput == true,
+            nodeOwnerInputId = node?.ownerInputId ?: Long.MIN_VALUE,
+            inputId = inputId,
+            networkId = if (node == null) -1 else runtime.graph.networkOf(outputId),
+        )
+    }
 
     fun contains(id: Long): Boolean = id in nodes
 

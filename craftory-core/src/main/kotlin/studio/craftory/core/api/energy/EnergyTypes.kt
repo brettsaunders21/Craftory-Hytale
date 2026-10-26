@@ -81,4 +81,17 @@ internal object EnergyMemberIds {
         nodeOwnerInputId: Long,
         inputId: Long,
     ): Boolean = nodeConverterOutput && nodeOwnerInputId == inputId
+
+    fun converterOutputNetwork(
+        nodePresent: Boolean,
+        nodeConverterOutput: Boolean,
+        nodeOwnerInputId: Long,
+        inputId: Long,
+        networkId: Int,
+    ): Int =
+        if (nodePresent && ownsConverterOutput(nodeConverterOutput, nodeOwnerInputId, inputId)) {
+            networkId
+        } else {
+            -1
+        }
 }
