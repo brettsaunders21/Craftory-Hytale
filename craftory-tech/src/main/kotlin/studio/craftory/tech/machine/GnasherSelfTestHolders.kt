@@ -32,11 +32,20 @@ internal object GnasherSelfTestHolders {
         sectionRef: Ref<ChunkStore>,
         position: CraftorySelfTest.TestPosition,
     ): SelfTestCleanupResult {
-        val liveDrops = clearLiveDrops(world.entityStore.store, position)
-        if (!sectionRef.isValid) return SelfTestCleanupResult(liveDrops, 0, 0)
-        val sectionHolders = clearSectionHolders(world.chunkStore.store, sectionRef, position)
-        val chunkHolders = clearChunkHolders(world.chunkStore.store, sectionRef, position)
-        return SelfTestCleanupResult(liveDrops, sectionHolders, chunkHolders)
+        val entityStore = world.entityStore.store
+        val chunkStore = world.chunkStore.store
+        clearLiveDrops(entityStore, position)
+        if (!sectionRef.isValid) {
+            return SelfTestCleanupResult(countLiveGrit(entityStore, position), 0, 0)
+        }
+        clearSectionHolders(chunkStore, sectionRef, position)
+        clearChunkHolders(chunkStore, sectionRef, position)
+        val remaining = remainingGritHolderCounts(chunkStore, sectionRef, position)
+        return SelfTestCleanupResult(
+            countLiveGrit(entityStore, position),
+            remaining.first,
+            remaining.second,
+        )
     }
 
     fun snapshot(
@@ -91,8 +100,7 @@ internal object GnasherSelfTestHolders {
     private fun clearLiveDrops(
         entityStore: Store<EntityStore>,
         position: CraftorySelfTest.TestPosition,
-    ): Int {
-        var removed = 0
+    ) {
         entityStore.forEachChunk(
             Query.and(ItemComponent.getComponentType(), TransformComponent.getComponentType()),
             BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, commandBuffer ->
@@ -104,12 +112,56 @@ internal object GnasherSelfTestHolders {
                         isNearGnasher(transform.position.x, transform.position.z, position)
                     ) {
                         commandBuffer.removeEntity(chunk.getReferenceTo(index), RemoveReason.REMOVE)
-                        removed++
                     }
                 }
             },
         )
-        return removed
+    }
+
+    private fun countLiveGrit(
+        entityStore: Store<EntityStore>,
+        position: CraftorySelfTest.TestPosition,
+    ): Int {
+        var quantity = 0
+        entityStore.forEachChunk(
+            Query.and(ItemComponent.getComponentType(), TransformComponent.getComponentType()),
+            BiConsumer<ArchetypeChunk<EntityStore>, CommandBuffer<EntityStore>> { chunk, _ ->
+                for (index in 0 until chunk.size()) {
+                    val item = chunk.getComponent(index, ItemComponent.getComponentType())
+                    val transform = chunk.getComponent(index, TransformComponent.getComponentType())
+                    if (isLiveGritNear(item?.itemStack?.itemId, transform, position)) {
+                        quantity += item?.itemStack?.quantity ?: 0
+                    }
+                }
+            },
+        )
+        return quantity
+    }
+
+    private fun remainingGritHolderCounts(
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+        position: CraftorySelfTest.TestPosition,
+    ): Pair<Int, Int> {
+        val sectionHolders =
+            store
+                .getComponent(sectionRef, EntitySection.getComponentType())
+                ?.getEntityHolders()
+                .orEmpty()
+        val chunkSection = store.getComponent(sectionRef, ChunkSection.getComponentType())
+        val columnRef = chunkSection?.chunkColumnReference
+        val chunkHolders =
+            if (columnRef != null && columnRef.isValid) {
+                store
+                    .getComponent(columnRef, EntityChunk.getComponentType())
+                    ?.let { entityChunk ->
+                        (entityChunk.clone() as EntityChunk).takeEntityHolders()?.toList().orEmpty()
+                    }.orEmpty()
+            } else {
+                emptyList()
+            }
+        return sectionHolders.count { isSelfTestGritHolder(it, position) } to
+            chunkHolders.count { isSelfTestGritHolder(it, position) }
     }
 
     private fun clearSectionHolders(
@@ -179,12 +231,22 @@ internal object GnasherSelfTestHolders {
         return GritTable.containsGrit(item.itemStack?.itemId ?: "") &&
             isNearGnasher(transform.position.x, transform.position.z, position)
     }
-
-    private fun isNearGnasher(
-        x: Double,
-        z: Double,
-        position: CraftorySelfTest.TestPosition,
-    ): Boolean =
-        kotlin.math.abs(x - (position.x + 0.5)) < 2.0 &&
-            kotlin.math.abs(z - (position.z + 0.5)) < 2.0
 }
+
+private fun isLiveGritNear(
+    itemId: String?,
+    transform: TransformComponent?,
+    position: CraftorySelfTest.TestPosition,
+): Boolean {
+    if (itemId == null || transform == null) return false
+    return GritTable.containsGrit(itemId) &&
+        isNearGnasher(transform.position.x, transform.position.z, position)
+}
+
+private fun isNearGnasher(
+    x: Double,
+    z: Double,
+    position: CraftorySelfTest.TestPosition,
+): Boolean =
+    kotlin.math.abs(x - (position.x + 0.5)) < 2.0 &&
+        kotlin.math.abs(z - (position.z + 0.5)) < 2.0

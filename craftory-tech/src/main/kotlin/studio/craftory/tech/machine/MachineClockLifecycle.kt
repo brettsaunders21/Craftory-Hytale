@@ -16,6 +16,8 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
         Query.or(
             Query.and(CrankState.type),
             Query.and(BurnerState.type),
+            Query.and(RattlewheelState.type),
+            Query.and(ShroomBedState.type),
             Query.and(GnasherState.type),
             Query.and(OvenPower.type),
         )
@@ -32,6 +34,8 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
         val tick = store.externalData.world.tick
         commandBuffer.getComponent(ref, CrankState.type)?.let { MachineClock.initialize(it, tick) }
         commandBuffer.getComponent(ref, BurnerState.type)?.let { MachineClock.initialize(it, tick) }
+        commandBuffer.getComponent(ref, RattlewheelState.type)?.let { MachineClock.initialize(it, tick) }
+        commandBuffer.getComponent(ref, ShroomBedState.type)?.let { MachineClock.initialize(it, tick) }
         commandBuffer.getComponent(ref, GnasherState.type)?.let { MachineClock.initialize(it, tick) }
         val ovenPower = commandBuffer.getComponent(ref, OvenPower.type)
         if (ovenPower != null) {
@@ -64,6 +68,20 @@ internal object MachineClock {
         tick: Long,
     ) {
         state.lastAdvancedTick = tick
+    }
+
+    fun initialize(
+        state: RattlewheelState,
+        tick: Long,
+    ) {
+        if (state.lastSampleTick == Long.MIN_VALUE) state.lastSampleTick = tick - 100L
+    }
+
+    fun initialize(
+        state: ShroomBedState,
+        tick: Long,
+    ) {
+        if (state.lastUpdateTick == Long.MIN_VALUE) state.lastUpdateTick = tick
     }
 
     fun initialize(

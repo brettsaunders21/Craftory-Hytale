@@ -603,6 +603,19 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
             commandBuffer.getComponent(context.entity, PlayerRef.getComponentType())?.sendMessage(Message.raw(message))
             return
         }
+        val shroomBed = store.getComponent(ref, ShroomBedState.type)
+        if (shroomBed != null && heldItem == null) {
+            if (player == null) return
+            val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+            if (owner == null || owner !in CraftoryCore.crewService().crewOf(player.uuid).members) {
+                player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+                return
+            }
+            val harvested = ShroomBedActions.harvest(world, shroomBed, blockState, store)
+            val key = if (harvested > 0) "server.craftory.shroom_bed.harvested" else "server.craftory.shroom_bed.empty"
+            player.sendMessage(Message.translation(key).param("count", harvested))
+            return
+        }
         val member = store.getComponent(ref, EnergyMember.type) ?: return
         val heart = store.getComponent(ref, JunkHeartState.type)
         val heartController = store.getComponent(ref, studio.craftory.core.api.multiblock.MultiblockController.type)

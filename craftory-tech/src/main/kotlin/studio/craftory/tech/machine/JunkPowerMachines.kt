@@ -1,5 +1,7 @@
 package studio.craftory.tech.machine
 
+import studio.craftory.tech.CraftoryIds
+
 data class FuelDefinition(
     val itemId: String,
     val burnTicks: Long,
@@ -115,6 +117,7 @@ internal object JunkPowerFuels {
             FuelDefinition("Plant_Crop_Mushroom_Glowing_Purple", 200),
             FuelDefinition("Plant_Crop_Mushroom_Glowing_Red", 200),
             FuelDefinition("Plant_Crop_Mushroom_Glowing_Violet", 200),
+            FuelDefinition(CraftoryIds.BOOMSHROOM_FUEL, 200),
             FuelDefinition("Ingredient_Scraps", 40),
         )
 }

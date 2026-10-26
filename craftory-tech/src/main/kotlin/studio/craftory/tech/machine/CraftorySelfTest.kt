@@ -3,6 +3,7 @@ package studio.craftory.tech.machine
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
 import com.hypixel.hytale.builtin.crafting.interaction.OpenProcessingBenchInteraction
+import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
@@ -20,6 +21,7 @@ import com.hypixel.hytale.protocol.BlockMaterial
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.common.CommonAssetRegistry
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.fluid.Fluid
 import com.hypixel.hytale.server.core.asset.type.item.config.Item
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset
 import com.hypixel.hytale.server.core.command.system.CommandContext
@@ -38,6 +40,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
@@ -918,6 +921,8 @@ object CraftorySelfTest {
     private val craftoryWiredItemIds =
         setOf(
             "Craftory_Crank_A_Fizz",
+            CraftoryIds.RATTLEWHEEL,
+            CraftoryIds.SHROOM_BED,
             "Craftory_Boomshroom_Burner",
             "Craftory_Fizz_Canister",
             "Craftory_Gutterpipe",
@@ -1103,15 +1108,27 @@ object CraftorySelfTest {
                 BURNER.y shr 5,
                 BURNER.z shr 5,
                 GetChunkFlags.SET_TICKING,
-            ).whenComplete { sectionRef, error ->
+            ).thenCombine(
+                world.chunkStore.getChunkSectionReferenceAsync(
+                    RATTLEWHEEL_DRY.x shr 5,
+                    RATTLEWHEEL_DRY.y shr 5,
+                    RATTLEWHEEL_DRY.z shr 5,
+                    GetChunkFlags.SET_TICKING,
+                ),
+            ) { sectionRef, drySectionRef -> sectionRef to drySectionRef }
+            .whenComplete { sections, error ->
                 world.execute {
-                    if (error != null || sectionRef == null) {
+                    if (error != null || sections == null) {
                         context.sendMessage(
                             Message.raw("selftest: FAIL chunk load (${error?.cause?.message ?: "chunk load failed"})"),
                         )
                         return@execute
                     }
-                    setup(context, world, sectionRef)
+                    if (!sections.first.isValid || !sections.second.isValid) {
+                        context.sendMessage(Message.raw("selftest: FAIL chunk load (section reference is invalid)"))
+                        return@execute
+                    }
+                    setup(context, world, sections.first, sections.second)
                 }
             }
         return CompletableFuture.completedFuture(null)
@@ -1122,10 +1139,12 @@ object CraftorySelfTest {
         context: CommandContext,
         world: World,
         sectionRef: Ref<ChunkStore>,
+        drySectionRef: Ref<ChunkStore>,
     ) {
         val store = world.chunkStore.store
         val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
         run.testTickingSections.add(Triple(BURNER.x shr 5, BURNER.y shr 5, BURNER.z shr 5))
+        run.testTickingSections.add(Triple(RATTLEWHEEL_DRY.x shr 5, RATTLEWHEEL_DRY.y shr 5, RATTLEWHEEL_DRY.z shr 5))
         try {
             val testChunkIndex = ChunkUtil.indexChunk(BURNER.x shr 5, BURNER.z shr 5)
             val testChunkRef = world.chunkStore.getChunkReference(testChunkIndex) ?: error("test chunk is missing")
@@ -1138,6 +1157,7 @@ object CraftorySelfTest {
                     ?: error("block component section is missing")
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions())
+            clear(world, drySectionRef, listOf(RATTLEWHEEL_DRY))
             WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
@@ -1148,6 +1168,7 @@ object CraftorySelfTest {
             place(world, store, sectionRef, section, CraftoryIds.SCORCH_OVEN, OVEN, OvenPower.type)
             place(world, store, sectionRef, section, CraftoryIds.GNASHER_PIT, GNASHER, GnasherState.type)
             place(world, store, sectionRef, section, CraftoryIds.WAKEBELL_ANCHOR, ANCHOR, AnchorState.type)
+            runGeneratorSelfTests(run, world, store, sectionRef, section, drySectionRef)
             runPartCMachineProbes(world, store)
             runSlice2cRuleProbes(run, store)
 
@@ -1232,6 +1253,248 @@ object CraftorySelfTest {
                 "gnasher rejected copper ore"
             }
         }
+    }
+
+    private fun runGeneratorSelfTests(
+        run: SelfTestRun.Run,
+        world: World,
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+        section: BlockComponentSection,
+        drySectionRef: Ref<ChunkStore>,
+    ) {
+        place(world, store, sectionRef, section, CraftoryIds.RATTLEWHEEL, RATTLEWHEEL, RattlewheelState.type)
+        place(world, store, sectionRef, section, CraftoryIds.SHROOM_BED, SHROOM_BED, ShroomBedState.type)
+        place(world, store, sectionRef, section, CraftoryIds.SHROOM_BED, CHAIN_SHROOM_BED, ShroomBedState.type)
+        val drySection =
+            store.getComponent(drySectionRef, BlockComponentSection.getComponentType())
+                ?: error("dry Rattlewheel section missing")
+        place(world, store, drySectionRef, drySection, CraftoryIds.RATTLEWHEEL, RATTLEWHEEL_DRY, RattlewheelState.type)
+
+        check(setRattlewheelTestWater(world, sectionRef, true)) { "failed to place Rattlewheel water" }
+
+        val rattlewheelRef =
+            BlockModule.getBlockEntity(world, RATTLEWHEEL.x, RATTLEWHEEL.y, RATTLEWHEEL.z)
+                ?: error("Rattlewheel test entity missing")
+        checkRattlewheelWater(run, world, store, sectionRef, rattlewheelRef)
+        val dryRef =
+            BlockModule.getBlockEntity(world, RATTLEWHEEL_DRY.x, RATTLEWHEEL_DRY.y, RATTLEWHEEL_DRY.z)
+                ?: error("dry Rattlewheel test entity missing")
+        checkDryRattlewheel(run, world, store, drySectionRef, dryRef)
+        checkShroomBed(run, world, store)
+    }
+
+    private fun checkRattlewheelWater(
+        run: SelfTestRun.Run,
+        world: World,
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+        rattlewheelRef: Ref<ChunkStore>,
+    ) {
+        RattlewheelSystem.registerSelfTestBlock(rattlewheelRef)
+        RattlewheelSystem.forceWeatherMultiplierForSelfTest(rattlewheelRef, 1.0)
+        val rattlewheel =
+            store.getComponent(rattlewheelRef, RattlewheelState.type) ?: error("Rattlewheel component missing")
+        RattlewheelSystem(directSpawnForSelfTest = true).sample(
+            world,
+            rattlewheelRef,
+            Vector3i(RATTLEWHEEL.x, RATTLEWHEEL.y, RATTLEWHEEL.z),
+            rattlewheel,
+        )
+        rattlewheel.fizzPerSecond =
+            rattlewheelOutput(
+                rattlewheel.waterFlow,
+                rattlewheel.windMode,
+                rattlewheel.y,
+                rattlewheel.weatherMultiplier,
+                1.0,
+            )
+        rattlewheel.visualOn = rattlewheel.fizzPerSecond > 0
+        val rattlewheelMember =
+            store.getComponent(rattlewheelRef, EnergyMember.type) ?: error("Rattlewheel energy component missing")
+        rattlewheelMember.production = rattlewheelProductionPerSolveTick(rattlewheel.fizzPerSecond, 0)
+        BlockOperations.setBlockInteractionState(
+            world.chunkStore,
+            sectionRef,
+            RATTLEWHEEL.x,
+            RATTLEWHEEL.y,
+            RATTLEWHEEL.z,
+            BlockType.fromString(CraftoryIds.RATTLEWHEEL) ?: error("Rattlewheel type is missing"),
+            RattlewheelSystem.visualState(rattlewheel.fizzPerSecond),
+            true,
+        )
+        check(
+            run,
+            rattlewheel.waterFlow > 0 && rattlewheel.fizzPerSecond > 0 && rattlewheelMember.production > 0,
+            "Rattlewheel water neighbours produce Fizz",
+            "waterFlow=${rattlewheel.waterFlow}, output=${rattlewheel.fizzPerSecond}",
+        )
+        check(run, rattlewheel.visualOn == true, "Rattlewheel output turns state On")
+        val savedFlow = rattlewheel.waterFlow
+        val savedOutput = rattlewheel.fizzPerSecond
+        store.getComponent(rattlewheelRef, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        val unloaded = store.removeEntity(rattlewheelRef, RemoveReason.UNLOAD)
+        val loadedRef = store.addEntity(unloaded, AddReason.LOAD) ?: error("Rattlewheel reload failed")
+        RattlewheelSystem.registerSelfTestBlock(loadedRef)
+        val loadedState = store.getComponent(loadedRef, RattlewheelState.type)
+        check(
+            run,
+            loadedState != null &&
+                loadedState.waterFlow == savedFlow &&
+                loadedState.fizzPerSecond == savedOutput,
+            "Rattlewheel chunk unload/reload persists cached output",
+        )
+    }
+
+    private fun setRattlewheelTestWater(
+        world: World,
+        sectionRef: Ref<ChunkStore>,
+        present: Boolean,
+    ): Boolean {
+        val store = world.chunkStore.store
+        val section =
+            store.getComponent(sectionRef, FluidSection.getComponentType())
+                ?: if (present) store.addComponent(sectionRef, FluidSection.getComponentType()) else return true
+        val fluid =
+            if (present) {
+                Fluid.getAssetMap().getAsset("Water") ?: return false
+            } else {
+                Fluid.EMPTY
+            }
+        val level = if (present) 8.toByte() else 0.toByte()
+        return section.setFluid(
+            RATTLEWHEEL_WATER.x and 31,
+            RATTLEWHEEL_WATER.y and 31,
+            RATTLEWHEEL_WATER.z and 31,
+            fluid,
+            level,
+        )
+    }
+
+    private fun checkDryRattlewheel(
+        run: SelfTestRun.Run,
+        world: World,
+        store: Store<ChunkStore>,
+        sectionRef: Ref<ChunkStore>,
+        dryRef: Ref<ChunkStore>,
+    ) {
+        RattlewheelSystem.registerSelfTestBlock(dryRef)
+        RattlewheelSystem.forceWeatherMultiplierForSelfTest(dryRef, 1.0)
+        val state = store.getComponent(dryRef, RattlewheelState.type) ?: error("dry Rattlewheel component missing")
+        RattlewheelSystem(directSpawnForSelfTest = true).sample(
+            world,
+            dryRef,
+            Vector3i(RATTLEWHEEL_DRY.x, RATTLEWHEEL_DRY.y, RATTLEWHEEL_DRY.z),
+            state,
+        )
+        state.fizzPerSecond =
+            rattlewheelOutput(
+                state.waterFlow,
+                state.windMode,
+                state.y,
+                state.weatherMultiplier,
+                1.0,
+            )
+        val member = store.getComponent(dryRef, EnergyMember.type) ?: error("dry Rattlewheel energy component missing")
+        member.production = rattlewheelProductionPerSolveTick(state.fizzPerSecond, 0)
+        state.visualOn = state.fizzPerSecond > 0
+        BlockOperations.setBlockInteractionState(
+            world.chunkStore,
+            sectionRef,
+            RATTLEWHEEL_DRY.x,
+            RATTLEWHEEL_DRY.y,
+            RATTLEWHEEL_DRY.z,
+            BlockType.fromString(CraftoryIds.RATTLEWHEEL) ?: error("Rattlewheel type is missing"),
+            RattlewheelSystem.visualState(state.fizzPerSecond),
+            true,
+        )
+        check(
+            run,
+            state.waterFlow == 0 && RATTLEWHEEL_DRY.y < 110 && member.production == 0L &&
+                state.fizzPerSecond == 0L && state.visualOn == false,
+            "dry low Rattlewheel stays Off",
+        )
+    }
+
+    private fun checkShroomBed(
+        run: SelfTestRun.Run,
+        world: World,
+        store: Store<ChunkStore>,
+    ) {
+        val bedRef =
+            BlockModule.getBlockEntity(world, SHROOM_BED.x, SHROOM_BED.y, SHROOM_BED.z)
+                ?: error("Shroom Bed missing")
+        val neighbourRef =
+            BlockModule.getBlockEntity(world, CHAIN_SHROOM_BED.x, CHAIN_SHROOM_BED.y, CHAIN_SHROOM_BED.z)
+                ?: error("chain Shroom Bed missing")
+        ShroomBedSystem.registerSelfTestBlock(bedRef)
+        ShroomBedSystem.registerSelfTestBlock(neighbourRef)
+        ShroomBedSystem.forceDarknessForSelfTest(bedRef, true)
+        val bed = store.getComponent(bedRef, ShroomBedState.type) ?: error("Shroom Bed component missing")
+        val neighbour =
+            store.getComponent(neighbourRef, ShroomBedState.type) ?: error("chain Shroom Bed component missing")
+        bed.growth = 990.0
+        ShroomBedSystem.advanceForSelfTest(bedRef, bed, false, 0, false, false, 1.0)
+        check(run, bed.stored == 1 && bed.growth == 0.0, "forced-dark Shroom Bed grows a Boomshroom")
+
+        checkShroomHarvest(run, world, store, bedRef, bed)
+        checkShroomPopAndReload(run, store, bedRef, bed, neighbour)
+    }
+
+    private fun checkShroomHarvest(
+        run: SelfTestRun.Run,
+        world: World,
+        store: Store<ChunkStore>,
+        bedRef: Ref<ChunkStore>,
+        bed: ShroomBedState,
+    ) {
+        val bedBlockState =
+            store.getComponent(bedRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("Shroom Bed block state missing")
+        val harvested = ShroomBedActions.harvest(world, bed, bedBlockState, store)
+        check(
+            run,
+            harvested == 1 && bed.stored == 0 &&
+                itemQuantityNear(world, SHROOM_BED, CraftoryIds.BOOMSHROOM_FUEL) == 1,
+            "Shroom Bed harvest returns Boomshrooms",
+        )
+    }
+
+    private fun checkShroomPopAndReload(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        bedRef: Ref<ChunkStore>,
+        bed: ShroomBedState,
+        neighbour: ShroomBedState,
+    ) {
+        bed.stored = 2
+        bed.twitch = 100
+        ShroomBedSystem.forcePopForSelfTest(bedRef)
+        val popped = ShroomBedSystem.popForSelfTest(bedRef, bed, listOf(neighbour))
+        check(
+            run,
+            popped && bed.stored == 0 && bed.twitch == 0 && neighbour.twitch >= 80,
+            "Shroom Bed pop clears stored and chain-triggers neighbour",
+        )
+        bed.growth = 123.0
+        bed.stored = 3
+        bed.twitch = 42
+        val expectedGrowth = bed.growth
+        val expectedStored = bed.stored
+        val expectedTwitch = bed.twitch
+        store.getComponent(bedRef, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        val unloaded = store.removeEntity(bedRef, RemoveReason.UNLOAD)
+        val loadedRef = store.addEntity(unloaded, AddReason.LOAD) ?: error("Shroom Bed reload failed")
+        ShroomBedSystem.registerSelfTestBlock(loadedRef)
+        val loadedState = store.getComponent(loadedRef, ShroomBedState.type)
+        check(
+            run,
+            loadedState != null &&
+                loadedState.growth == expectedGrowth &&
+                loadedState.stored == expectedStored &&
+                loadedState.twitch == expectedTwitch,
+            "Shroom Bed chunk unload/reload persists growth state",
+        )
     }
 
     internal fun startGnasherSequence(
@@ -1938,7 +2201,7 @@ object CraftorySelfTest {
                     val point =
                         chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: continue
                     if (
-                        itemId in setOf("Ingredient_Scraps", CraftoryIds.BURNER) &&
+                        itemId in setOf("Ingredient_Scraps", CraftoryIds.BURNER, CraftoryIds.BOOMSHROOM_FUEL) &&
                         centers.any { (x, z) ->
                             kotlin.math.abs(point.x - x) < 2.0 && kotlin.math.abs(point.z - z) < 2.0
                         }
@@ -2716,6 +2979,24 @@ object CraftorySelfTest {
         sectionRef: Ref<ChunkStore>,
     ): SelfTestCleanupResult {
         GhostPreviews.hide(world, BlockPos(HEART.x, HEART.y, HEART.z))
+        RattlewheelSystem.releaseSelfTestBlocks()
+        ShroomBedSystem.releaseSelfTestBlocks()
+        world.chunkStore
+            .getChunkSectionReferenceAtBlock(
+                RATTLEWHEEL_WATER.x,
+                RATTLEWHEEL_WATER.y,
+                RATTLEWHEEL_WATER.z,
+            )?.let { waterSectionRef ->
+                setRattlewheelTestWater(world, waterSectionRef, false)
+            }
+        world.chunkStore
+            .getChunkSectionReferenceAtBlock(
+                RATTLEWHEEL_DRY.x,
+                RATTLEWHEEL_DRY.y,
+                RATTLEWHEEL_DRY.z,
+            )?.let { drySectionRef ->
+                clear(world, drySectionRef, listOf(RATTLEWHEEL_DRY))
+            }
         val store = world.chunkStore.store
         if (
             !sectionRef.isValid ||
@@ -2748,6 +3029,7 @@ object CraftorySelfTest {
                 SetBlockSettings.NO_DROP_ITEMS,
             )
         }
+        clearWrenchDrops(world, SHROOM_BED, CHAIN_SHROOM_BED)
         return GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
     }
 
@@ -2765,6 +3047,11 @@ object CraftorySelfTest {
     internal val OVEN_LINK_PIPE = TestPosition(10_034, 149, 10_000)
     internal val GNASHER = TestPosition(10_044, 150, 10_006)
     internal val ANCHOR = TestPosition(10_040, 150, 10_012)
+    private val RATTLEWHEEL = TestPosition(10_036, 148, 10_004)
+    private val RATTLEWHEEL_WATER = TestPosition(10_037, 148, 10_004)
+    private val RATTLEWHEEL_DRY = TestPosition(10_040, 100, 10_004)
+    private val SHROOM_BED = TestPosition(10_038, 148, 10_004)
+    private val CHAIN_SHROOM_BED = TestPosition(10_039, 148, 10_004)
     private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
     private val WRENCH_PACK = TestPosition(10_022, 148, 10_004)
     private val HEART = TestPosition(10_028, 148, 10_010)
@@ -2785,7 +3072,20 @@ object CraftorySelfTest {
     private fun testPositions(): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
-                listOf(CANISTER, CRANK, OVEN, GNASHER, ANCHOR, WRENCH_TAKE_APART, WRENCH_PACK, SCRAP_RUSH_TEST) +
+                listOf(
+                    CANISTER,
+                    CRANK,
+                    OVEN,
+                    GNASHER,
+                    ANCHOR,
+                    WRENCH_TAKE_APART,
+                    WRENCH_PACK,
+                    SCRAP_RUSH_TEST,
+                    RATTLEWHEEL,
+                    RATTLEWHEEL_WATER,
+                    SHROOM_BED,
+                    CHAIN_SHROOM_BED,
+                ) +
                 heartPositions()
         ).distinct()
 }

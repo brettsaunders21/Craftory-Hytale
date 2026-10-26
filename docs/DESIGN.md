@@ -737,5 +737,10 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 | 18 | Hollowmere | Sky-region fallback **OK** |
 | 19 | Boss gating items | **Add to vanilla loot tables** (simplest to maintain); add our own follow-up encounter only if a slice shows it adds depth |
 | 20 | Shared Codex | **Opt-in crews.** Hytale has no team concept we can rely on, so players form a Craftory crew (create, invite, leave). Crew members share Codex progress, tethered Wells and machine access. Co-op for two or more players is a primary focus |
+| 21 | Rattlewheel footprint | Slice 2d uses a single block; the 2×2 footprint is deferred |
+| 22 | Rattlewheel water sampling | Use `FluidSection` fluid ids and count the `Water` fluid asset in the four horizontal cells and the cell below |
+| 23 | Rattlewheel sky check | Skip the sky check because the available local height-map API is not exposed; wind mode uses altitude and lack of water |
+| 24 | Shroom Bed darkness | Use cached `BlockSection` light data; growth darkness requires both sky light and block-light intensity below 4 |
+| 25 | Shroom Bed pop | Apply a small additive player velocity impulse through the official `Velocity` component; no damage or block changes |
 
 Naming: a new mod name to replace "Craftory" is being chosen; see the README once decided.

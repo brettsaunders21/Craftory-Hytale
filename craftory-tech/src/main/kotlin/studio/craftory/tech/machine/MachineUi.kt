@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.util.TargetUtil
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyAccess
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.tech.CraftoryIds
@@ -156,40 +157,74 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                 hudState.lastSnapshot = null
                 continue
             }
-            val position = target
-            val id = BlockPos.pack(position.x, position.y, position.z)
-            val blockStore = world.chunkStore.store
-            val memberRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
-            val member = memberRef?.let { blockStore.getComponent(it, EnergyMember.type) }
-            val jank = memberRef?.let { blockStore.getComponent(it, Jank.type) }
-            if (energy.networkOf(id) < 0 && jank == null) {
+            val snapshot = snapshotForTarget(world, target, energy)
+            if (snapshot == null) {
                 hudPort.hide(playerRef, player)
                 hudState.lastSnapshot = null
                 continue
             }
-            val snapshot =
-                EnergyHudSnapshot(
-                    machineName(member?.typeId),
-                    energy.stored(id),
-                    energy.capacity(id),
-                    gradeName(energy.networkGrade(id)),
-                    energy.networkMembers(id),
-                    energy.networkFlow(id),
-                    energy.networkSupply(id),
-                    energy.networkDemand(id),
-                    jank?.value?.roundToInt(),
-                    when {
-                        jank?.stolen == true -> "Stolen"
-                        (jank?.stallTicks ?: 0) > 0 -> "Stalled"
-                        else -> null
-                    },
-                )
             if (hudState.lastSnapshot != snapshot) {
                 hudState.lastSnapshot = snapshot
                 hudPort.showOrUpdate(playerRef, player, snapshot)
             }
         }
     }
+
+    private fun snapshotForTarget(
+        world: World,
+        position: Vector3i,
+        energy: EnergyAccess,
+    ): EnergyHudSnapshot? {
+        val id = BlockPos.pack(position.x, position.y, position.z)
+        val blockStore = world.chunkStore.store
+        val memberRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+        val member = memberRef?.let { blockStore.getComponent(it, EnergyMember.type) }
+        val jank = memberRef?.let { blockStore.getComponent(it, Jank.type) }
+        val rattlewheel = memberRef?.let { blockStore.getComponent(it, RattlewheelState.type) }
+        val shroomBed = memberRef?.let { blockStore.getComponent(it, ShroomBedState.type) }
+        if (energy.networkOf(id) < 0 && jank == null) return null
+        return EnergyHudSnapshot(
+            if (shroomBed != null) "Shroom Bed" else machineName(member?.typeId),
+            energy.stored(id),
+            energy.capacity(id),
+            gradeName(energy.networkGrade(id)),
+            energy.networkMembers(id),
+            energy.networkFlow(id),
+            energy.networkSupply(id),
+            energy.networkDemand(id),
+            jank?.value?.roundToInt(),
+            listOfNotNull(machineCondition(jank), machineStatus(rattlewheel, shroomBed))
+                .joinToString("\n")
+                .ifEmpty { null },
+        )
+    }
+
+    private fun machineStatus(
+        rattlewheel: RattlewheelState?,
+        shroomBed: ShroomBedState?,
+    ): String? =
+        when {
+            rattlewheel != null -> {
+                "Water flow: ${rattlewheel.waterFlow}  Wind: ${rattlewheel.windMode}\n" +
+                    "Output: ${rattlewheel.fizzPerSecond} Fizz/s"
+            }
+
+            shroomBed != null -> {
+                "Growth: ${shroomBed.growth.toInt()}/1000  Stored: ${shroomBed.stored}\n" +
+                    "Twitch: ${shroomBed.twitch}/100"
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    private fun machineCondition(jank: Jank?): String? =
+        when {
+            jank?.stolen == true -> "Stolen"
+            (jank?.stallTicks ?: 0) > 0 -> "Stalled"
+            else -> null
+        }
 }
 
 class CanisterPage private constructor(
@@ -332,5 +367,6 @@ internal fun machineName(typeId: String?): String =
         CraftoryIds.GNASHER_TYPE -> "Gnasher Pit"
         CraftoryIds.OVEN_TYPE -> "Scorch Oven"
         CraftoryIds.PIPE_TYPE -> "Gutterpipe"
+        CraftoryIds.RATTLEWHEEL_TYPE -> "Rattlewheel"
         else -> "Craftory Energy Member"
     }

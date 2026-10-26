@@ -316,6 +316,52 @@ def junk_heart_firebox(lit: bool):
     return Model([fb]), {}
 
 
+def rattlewheel(on: bool):
+    base = Box("WheelBase", (22, 4, 22), pos=(0, 2, 0), rot=(0, 2, 0), paint=CORRUGATED_RUST)
+    base.add(
+        Box("BearingPost", (4, 14, 4), pos=(0, 10, 0), paint=DARK_TIN),
+        Box("BraceL", (3, 12, 3), pos=(-7, 8, 0), rot=(0, 0, -18), paint=plank()),
+        Box("BraceR", (3, 12, 3), pos=(7, 8, 0), rot=(0, 0, 18), paint=plank(WOOD, horizontal=False)),
+        bolt("BearingBoltL", (-3, 15, 2), s=2),
+        bolt("BearingBoltR", (3, 15, 2), s=2, paint=RUSTY),
+    )
+    wheel = Box("WheelPivot", pos=(0, 17, 0))
+    wheel.add(
+        Box("Axle", (4, 4, 12), paint=DARK_TIN),
+        Box("RimA", (28, 3, 3), pos=(0, 0, 0), rot=(0, 0, 45), paint=metal(TIN, rust=0.25)),
+        Box("RimB", (28, 3, 3), pos=(0, 0, 0), rot=(0, 0, -45), paint=CORRUGATED),
+        Box("PaddleA", (7, 2, 11), pos=(0, 10, 0), rot=(0, 0, 3), paint=plank()),
+        Box("PaddleB", (7, 2, 11), pos=(10, 0, 0), rot=(0, 0, 93), paint=CORRUGATED_RUST),
+        Box("PaddleC", (7, 2, 11), pos=(0, -10, 0), rot=(0, 0, 183), paint=plank(WOOD, horizontal=False)),
+        Box("PaddleD", (7, 2, 11), pos=(-10, 0, 0), rot=(0, 0, 273), paint=metal(RUST, rust=0.3)),
+        Box("Hub", (8, 8, 5), paint=FIZZ_GLOW if on else BRASS_P,
+            shading="fullbright" if on else "standard"),
+        bolt("HubCap", (0, 0, 3), s=4, paint=RUSTY if on else DARK_TIN),
+    )
+    return Model([base, wheel]), {}
+
+
+def shroom_bed():
+    mud = Box("MudPlot", (28, 4, 24), pos=(0, 2, 0), rot=(0, -2, 0), paint=metal(RUST, rust=0.4))
+    mud.add(
+        Box("Soil", (23, 2, 19), pos=(0, 3, 0), paint=SOOT_RUST),
+        Box("CanopyPostA", (2, 24, 2), pos=(-11, 14, -9), rot=(0, 0, 2), paint=plank()),
+        Box("CanopyPostB", (2, 24, 2), pos=(11, 14, -9), rot=(0, 0, -3), paint=plank(WOOD, horizontal=False)),
+        Box("CanopyPostC", (2, 24, 2), pos=(-11, 14, 9), paint=plank(WOOD, horizontal=False)),
+        Box("CanopyPostD", (2, 24, 2), pos=(11, 14, 9), rot=(0, 0, 2), paint=plank()),
+        Box("Canopy", (31, 3, 26), pos=(0, 26, 0), rot=(0, 0, 2), paint=CORRUGATED),
+        Box("CanopyPatch", (12, 1, 10), pos=(-5, 28, 2), rot=(0, 3, -2), paint=RUSTY),
+        lashing("FrontLash", (31, 1, 1), pos=(0, 24, 12), rot=(0, 0, -1)),
+        Box("StemA", (3, 7, 3), pos=(-6, 8, -3), paint=DARK_TIN),
+        Box("CapA", (9, 3, 8), pos=(-6, 13, -3), rot=(0, 0, 2), paint=EMBER_GLOW),
+        Box("StemB", (3, 5, 3), pos=(5, 7, 4), paint=DARK_TIN),
+        Box("CapB", (8, 3, 7), pos=(5, 11, 4), rot=(0, 0, -3), paint=FIZZ_GLOW),
+        Box("StemC", (2, 4, 2), pos=(0, 6, -8), paint=DARK_TIN),
+        Box("CapC", (6, 2, 6), pos=(0, 9, -8), paint=BRASS_P),
+    )
+    return Model([mud]), {}
+
+
 def scrap_plating():
     core = Box("Core", (30, 30, 30), pos=(0, 16, 0), paint=DARK_TIN)
     core.add(
@@ -352,6 +398,8 @@ def chimney(cap: bool):
 BLOCKS = {
     # name: (builder, kwargs-variants)
     "Crank_A_Fizz": (crank_a_fizz, {"": {}}),
+    "Rattlewheel": (rattlewheel, {"_Off": {"on": False}, "_On": {"on": True}}),
+    "Shroom_Bed": (shroom_bed, {"": {}}),
     "Boomshroom_Burner": (boomshroom_burner, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Fizz_Canister": (fizz_canister, {}),
     "Gutterpipe": (gutterpipe, {"": {}}),
