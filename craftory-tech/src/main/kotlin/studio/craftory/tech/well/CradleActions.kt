@@ -20,6 +20,7 @@ import studio.craftory.tech.machine.CradleSystem
 internal object CradleActions {
     const val SEATED_KNOWLEDGE = "craftory:well/seated"
     const val SEATED_FLICKER_KNOWLEDGE = "craftory:well/seated_flicker"
+    const val STEADY_SEATED_KNOWLEDGE = "craftory:well/steady_seated"
 
     fun seat(
         world: World,
@@ -29,6 +30,7 @@ internal object CradleActions {
         crews: CrewService,
     ): Ref<ChunkStore>? {
         if (filledJar.itemId != CraftoryIds.GOB_JAR_FILLED) return null
+        if (!canSeatStability(filledJar.getFromMetadataOrNull(GobJarMetadata.STABILITY))) return null
         val temperament =
             filledJar.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT)?.let(Temperament::fromId) ?: return null
         val strength =
@@ -67,6 +69,9 @@ internal object CradleActions {
         store.getComponent(cradleRef, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
         crews.grantKnowledge(playerUuid, SEATED_KNOWLEDGE)
         if (strength == WellStrength.FLICKER) crews.grantKnowledge(playerUuid, SEATED_FLICKER_KNOWLEDGE)
+        if (strength >= WellStrength.STEADY) crews.grantKnowledge(playerUuid, STEADY_SEATED_KNOWLEDGE)
         return wellRef
     }
+
+    internal fun canSeatStability(stability: Double?): Boolean = stability == null || stability > 0.0
 }

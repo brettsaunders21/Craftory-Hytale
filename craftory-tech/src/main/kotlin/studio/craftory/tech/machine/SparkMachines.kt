@@ -33,6 +33,7 @@ import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.well.HarmonyRules
 import studio.craftory.tech.well.TasteBlocks
+import studio.craftory.tech.well.WellSelfTestExclusions
 
 class ResonatorState(
     var crystalItemId: String = "",
@@ -253,15 +254,18 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         if (member.typeId != CraftoryIds.WELL_CRADLE_TYPE) return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
         if (!blockState.fillWorldPos(commandBuffer, cursor)) return
-        val base =
-            when (state.seatedStrength) {
-                "FLICKER" -> 4L
-                "STEADY" -> 10L
-                "ROARING" -> 25L
-                "PRIMAL" -> 40L
-                else -> 0L
-            }
-        val amount = if (base > 0L) base * state.harmony.coerceIn(0, 5) else 0L
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
+        val wellPosition = BlockPos(cursor.x, cursor.y + 1, cursor.z)
+        if (WellSelfTestExclusions.isWell(wellPosition)) return
+        val wellRef = findWell(store, wellPosition)
+        val well = wellRef?.let { store.getComponent(it, Glimmerwell.type) }
+        if (well != null && state.seatedStrength != well.strength.name) {
+            state.seatedStrength = well.strength.name
+            blockState.markNeedsSaving(commandBuffer)
+        }
+        val base = well?.takeIf { it.state == WellState.SEATED }?.let { WellOutput.base(it.strength) } ?: 0L
+        val uncorrupted = base * state.harmony.coerceIn(0, 5)
+        val amount = if (well?.corrupted == true) uncorrupted / 2 else uncorrupted
         if (member.production != amount) {
             CraftoryCore
                 .energyAccess(store.externalData.world)
@@ -316,12 +320,3 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
 internal object ResonatorRuntimeConfig {
     var crystalUses: Long = 200
 }
-
-private val WellStrength.productionBase: Long
-    get() =
-        when (this) {
-            WellStrength.FLICKER -> 4
-            WellStrength.STEADY -> 10
-            WellStrength.ROARING -> 25
-            WellStrength.PRIMAL -> 40
-        }

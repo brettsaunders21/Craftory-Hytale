@@ -11,6 +11,14 @@ import kotlin.random.Random
 
 class WellLogicTest {
     @Test
+    fun `seating rejects zero and negative jar stability but accepts absent stability`() {
+        assertTrue(CradleActions.canSeatStability(null))
+        assertTrue(CradleActions.canSeatStability(0.01))
+        assertFalse(CradleActions.canSeatStability(0.0))
+        assertFalse(CradleActions.canSeatStability(-0.01))
+    }
+
+    @Test
     fun `scan scoring distinguishes perfect and sloppy rings`() {
         val perfect = ScanScoring.score(100, listOf(100, 100, 100), 40, 8)
         val sloppy = ScanScoring.score(100, listOf(110, 125, 135), 40, 8)
