@@ -5,7 +5,7 @@
   },
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
-  "Categories": ["Furniture"],
+  "Categories": ["Craftory.Wells"],
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Storm_Vane.png",
   "Quality": "Developer",

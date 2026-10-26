@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Tinkers_Notebook.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Notebook.png",
+  "Categories": ["Craftory.Tools"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
   "Quality": "Developer",

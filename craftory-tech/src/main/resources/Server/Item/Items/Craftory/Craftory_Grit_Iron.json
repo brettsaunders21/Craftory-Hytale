@@ -1,7 +1,7 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Iron.name" },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Iron.png",
-  "Categories": ["Items.Ingredients"],
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 100,
   "Recipe": {
     "Input": [{ "ItemId": "Craftory_Grit_Iron", "Quantity": 1 }],

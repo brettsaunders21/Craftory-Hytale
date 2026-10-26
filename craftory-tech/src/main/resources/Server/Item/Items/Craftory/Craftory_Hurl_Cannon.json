@@ -4,7 +4,7 @@
     "Description": "server.items.Craftory_Hurl_Cannon.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Hurl_Cannon.png",
-  "Categories": ["Tool.TechnicalBlocks"],
+  "Categories": ["Craftory.Logistics"],
   "PlayerAnimationsId": "Block",
   "Quality": "Technical",
   "ItemLevel": 2,

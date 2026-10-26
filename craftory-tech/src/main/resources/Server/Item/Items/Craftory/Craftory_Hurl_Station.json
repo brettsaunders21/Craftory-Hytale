@@ -4,7 +4,7 @@
     "Description": "server.items.Craftory_Hurl_Station.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Hurl_Station.png",
-  "Categories": ["Tool.TechnicalBlocks"],
+  "Categories": ["Craftory.Logistics"],
   "PlayerAnimationsId": "Block",
   "Quality": "Technical",
   "MaxStack": 100,

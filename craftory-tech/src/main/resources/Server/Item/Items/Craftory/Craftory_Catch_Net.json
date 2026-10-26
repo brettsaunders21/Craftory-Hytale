@@ -4,7 +4,7 @@
     "Description": "server.items.Craftory_Catch_Net.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Catch_Net.png",
-  "Categories": ["Tool.TechnicalBlocks"],
+  "Categories": ["Craftory.Logistics"],
   "PlayerAnimationsId": "Block",
   "ItemLevel": 2,
   "MaxStack": 100,

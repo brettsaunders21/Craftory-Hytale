@@ -4,9 +4,7 @@
     "Description": "server.items.Craftory_Glimmerwell_Anchor.description"
   },
   "Icon": "Icons/ItemsGenerated/GoblinLab_Generator.png",
-  "Categories": [
-    "Furniture.Miscellaneous"
-  ],
+  "Categories": ["Craftory.Wells"],
   "PlayerAnimationsId": "Block",
   "BlockType": {
     "DrawType": "Model",

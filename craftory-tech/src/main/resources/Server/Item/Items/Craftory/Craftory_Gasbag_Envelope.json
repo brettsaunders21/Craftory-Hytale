@@ -5,7 +5,7 @@
   },
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
-  "Categories": ["Furniture"],
+  "Categories": ["Craftory.Power"],
   "Set": "Furniture_Goblin",
   "Quality": "Technical",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gasbag_Envelope.png",

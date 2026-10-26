@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Fizz_Canister.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Canister.png",
+  "Categories": ["Craftory.Power"],
   "PlayerAnimationsId": "Block",
   "Quality": "Developer",
   "IconProperties": {

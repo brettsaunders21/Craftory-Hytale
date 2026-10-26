@@ -1,7 +1,7 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Onyxium.name" },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Onyxium.png",
-  "Categories": ["Items.Ingredients"],
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 100,
   "Recipe": {
     "Input": [{ "ItemId": "Craftory_Grit_Onyxium", "Quantity": 1 }],

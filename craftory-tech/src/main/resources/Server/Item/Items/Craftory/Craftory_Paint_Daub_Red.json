@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Paint_Daub_Red.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Paint_Daub_Red.png",
+  "Categories": ["Craftory.Logistics"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
   "Interactions": {

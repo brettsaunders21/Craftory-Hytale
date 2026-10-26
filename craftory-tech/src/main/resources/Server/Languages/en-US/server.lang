@@ -1,3 +1,10 @@
+ui.itemcategory.craftory = Craftory
+ui.itemcategory.craftory.power = Power
+ui.itemcategory.craftory.machines = Machines
+ui.itemcategory.craftory.logistics = Logistics
+ui.itemcategory.craftory.tools = Tools
+ui.itemcategory.craftory.wells = Wells & Storm Hunt
+ui.itemcategory.craftory.materials = Materials
 items.Craftory_Crank_A_Fizz.name = Squeak-crank
 items.Craftory_Crank_A_Fizz.description = Turn it, goblin. Get fizz.
 items.Craftory_Boomshroom_Burner.name = Boomshroom burner
