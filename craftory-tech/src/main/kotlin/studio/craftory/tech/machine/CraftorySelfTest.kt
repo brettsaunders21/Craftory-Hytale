@@ -1242,6 +1242,7 @@ object CraftorySelfTest {
     ) {
         val store = world.chunkStore.store
         val run = SelfTestRun.Run(context, world, world.tick, sectionRef)
+        checkTierOneGrizzlecogShop(run)
         run.testTickingSections.add(Triple(BURNER.x shr 5, BURNER.y shr 5, BURNER.z shr 5))
         run.testTickingSections.add(Triple(RATTLEWHEEL_DRY.x shr 5, RATTLEWHEEL_DRY.y shr 5, RATTLEWHEEL_DRY.z shr 5))
         try {
@@ -1294,6 +1295,15 @@ object CraftorySelfTest {
         } catch (failure: Exception) {
             abort(run, "setup (${failure.message ?: failure.javaClass.simpleName})")
         }
+    }
+
+    private fun checkTierOneGrizzlecogShop(run: SelfTestRun.Run) {
+        val shopId = grizzlecogShopId(GRIZZLECOG_SHOP_PREFIX, 1)
+        val passed = shopId == "Craftory_Grizzlecog_T1"
+        if (passed) run.passed++ else run.failed++
+        run.context.sendMessage(
+            Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} Tier 1 Grizzlecog shop ($shopId)"),
+        )
     }
 
     internal fun fuelAndKickBurner(

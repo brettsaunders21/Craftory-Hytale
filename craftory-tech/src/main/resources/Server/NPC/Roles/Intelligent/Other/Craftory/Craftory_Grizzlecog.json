@@ -240,8 +240,8 @@
                 "Type": "LockOnInteractionTarget"
               },
               {
-                "Type": "OpenBarterShop",
-                "Shop": "Craftory_Grizzlecog"
+                "Type": "CraftoryOpenTieredBarterShop",
+                "ShopPrefix": "Craftory_Grizzlecog_T"
               },
               {
                 "Type": "State",
