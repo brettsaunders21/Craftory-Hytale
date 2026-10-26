@@ -1,0 +1,33 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Tether_Stake.name",
+    "Description": "items.Craftory_Tether_Stake.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Tether_Stake.png",
+  "Quality": "Developer",
+  "MaxStack": 1,
+  "BlockType": {
+    "BlockParticleSetId": "Wood",
+    "DrawType": "Model",
+    "Flags": {},
+    "Gathering": {
+      "Breaking": {"GatherType": "GoblinMetal", "DropList": "Empty"},
+      "UseDefaultDropWhenPlaced": true
+    },
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Craftory/Tether_Stake/Tether_Stake.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Tether_Stake/Tether_Stake_Texture.png", "Weight": 1}],
+    "Interactions": {
+      "Use": {
+        "Interactions": [{"Type": "Craftory_StakeHammerUse"}]
+      }
+    },
+    "Support": {"Down": [{"FaceType": "Full"}]},
+    "BlockEntity": {"Components": {"CraftoryTetherStake": {"Lean": false, "WellId": ""}}}
+  }
+}

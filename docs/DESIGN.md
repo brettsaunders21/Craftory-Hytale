@@ -744,5 +744,13 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 | 23 | Rattlewheel sky check | Skip the sky check because the available local height-map API is not exposed; wind mode uses altitude and lack of water |
 | 24 | Shroom Bed darkness | Use cached `BlockSection` light first and queue official section lighting when unavailable; if still unavailable, treat scaled night or a non-air, non-fluid block within 8 cells above as dark |
 | 25 | Shroom Bed pop | Apply a small additive player velocity impulse through the official `Velocity` component; no damage or block changes |
+| 26 | Jar weather stability | Drain 1 stability per 10 seconds only in disliked weather: Spark dislikes rain but not storms; Ember dislikes rain and storms; other temperaments have no weather penalty for now |
+| 27 | Slice 5a lightning | Use a fake lightning particle and thunder sound because native server lightning is unavailable; sample weather by polling |
+| 28 | Slice 5a capture visuals | Use queued block-state changes for Storm Vane and Damper visuals; tether beams refresh on a low-rate schedule |
+| 29 | Slice 5a Storm Vane | A passive, non-energy block; storm activation is sampled by the existing weather polling path |
+| 30 | Slice 5a Fizz Damper | Powered at 2 Fizz/s per unit; three or more active dampers within four blocks smother a Wild Well |
+| 31 | Slice 5a stake spacing | Stake angular gaps are measured against equal spacing; a deviation greater than 40 degrees marks a stake leaning |
+| 32 | Slice 5a storm budget | At most one Steady-or-stronger Wild Well per 512×512 region; budget is configurable |
+| 33 | Slice 5b deferral | Wellhead/catalysis, Slurp Walker, Riftmoth feeding/corruption, and Cradle/seat changes remain deferred |
 
 Naming: a new mod name to replace "Craftory" is being chosen; see the README once decided.

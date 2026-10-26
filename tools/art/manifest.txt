@@ -16,6 +16,10 @@ Common/Blocks/Craftory/Fizz_Canister/Fizz_Canister_Quarter.blockymodel
 Common/Blocks/Craftory/Fizz_Canister/Fizz_Canister_Quarter_Texture.png
 Common/Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter.blockymodel
 Common/Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter_Texture.png
+Common/Blocks/Craftory/Fizz_Damper/Fizz_Damper_Off.blockymodel
+Common/Blocks/Craftory/Fizz_Damper/Fizz_Damper_Off_Texture.png
+Common/Blocks/Craftory/Fizz_Damper/Fizz_Damper_On.blockymodel
+Common/Blocks/Craftory/Fizz_Damper/Fizz_Damper_On_Texture.png
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit.blockymodel
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Chomp.blockyanim
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Texture.png
@@ -41,6 +45,12 @@ Common/Blocks/Craftory/Scrap_Plating/Scrap_Plating.blockymodel
 Common/Blocks/Craftory/Scrap_Plating/Scrap_Plating_Texture.png
 Common/Blocks/Craftory/Shroom_Bed/Shroom_Bed.blockymodel
 Common/Blocks/Craftory/Shroom_Bed/Shroom_Bed_Texture.png
+Common/Blocks/Craftory/Storm_Vane/Storm_Vane_Off.blockymodel
+Common/Blocks/Craftory/Storm_Vane/Storm_Vane_Off_Texture.png
+Common/Blocks/Craftory/Storm_Vane/Storm_Vane_On.blockymodel
+Common/Blocks/Craftory/Storm_Vane/Storm_Vane_On_Texture.png
+Common/Blocks/Craftory/Tether_Stake/Tether_Stake.blockymodel
+Common/Blocks/Craftory/Tether_Stake/Tether_Stake_Texture.png
 Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off.blockymodel
 Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off_Texture.png
 Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_On.blockymodel
@@ -51,6 +61,7 @@ Common/Icons/ItemsGenerated/Craftory/Craftory_Boomshroom_Burner.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Crank_A_Fizz.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Canister.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Charge.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Damper.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gutter_Gear.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gutterpipe.png
@@ -64,6 +75,8 @@ Common/Icons/ItemsGenerated/Craftory/Craftory_Scrap_Plating_Bodge.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Shroom_Bed.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Squawk_Box.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Squint_Goggles.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Storm_Vane.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Tether_Stake.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Hammer.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Notebook.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Wrench.png

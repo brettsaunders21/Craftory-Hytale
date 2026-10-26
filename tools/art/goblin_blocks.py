@@ -395,6 +395,48 @@ def chimney(cap: bool):
     return Model([pipe]), {}
 
 
+def storm_vane(on: bool):
+    base = Box("Foot", (10, 3, 10), pos=(0, 1.5, 0), paint=DARK_TIN)
+    mast = Box("Mast", (3, 27, 3), pos=(0, 16, 0), paint=RUSTY)
+    mast.add(
+        Box("Crossbar", (22, 3, 3), pos=(0, 7, 0), rot=(0, 0, -5), paint=BRASS_P),
+        Box("Vane", (3, 12, 1), pos=(0, 7, 2.2), rot=(0, 0, -12), paint=FIZZ_GLOW if on else CORRUGATED),
+        Box("CopperWire", (1, 17, 1), pos=(2, -4, 2), rot=(0, 0, 8), paint=BRASS_P),
+        Box("Spark", (4, 4, 2), pos=(0, 11, 3), paint=CYAN_GLOW if on else DEAD_GLASS,
+            shading="fullbright" if on else "standard"),
+    )
+    base.add(mast)
+    return Model([base]), {}
+
+
+def fizz_damper(on: bool):
+    body = Box("Canister", (18, 17, 14), pos=(0, 9, 0), rot=(0, -4, 2), paint=CORRUGATED_RUST)
+    body.add(
+        Box("Rim", (20, 2, 16), pos=(0, 8, 0), paint=BRASS_RIV),
+        Box("Window", (8, 8, 1), pos=(0, 0, 7.5), paint=FIZZ_GLOW if on else DEAD_GLASS,
+            shading="fullbright" if on else "standard"),
+        Box("Nozzle", (6, 4, 6), pos=(0, 13, 0), paint=DARK_TIN),
+        Box("Foam", (10, 5, 10), pos=(0, 17, 0), paint=FIZZ_GLOW if on else DEAD_GLASS,
+            shading="fullbright" if on else "standard"),
+        lashing("Strap", (20, 2, 2), pos=(0, 2, 8)),
+        bolt("BoltA", (-7, 0, 8), 2),
+        bolt("BoltB", (7, 0, 8), 2),
+    )
+    return Model([body]), {}
+
+
+def tether_stake():
+    post = Box("Post", (5, 28, 5), pos=(0, 14, 0), rot=(0, 0, 5), paint=RUSTY)
+    post.add(
+        Box("Spike", (3, 8, 3), pos=(0, -18, 0), rot=(0, 0, -5), paint=DARK_TIN),
+        Box("Clamp", (9, 4, 9), pos=(0, 4, 0), paint=BRASS_RIV),
+        Box("Coil", (7, 3, 7), pos=(0, 10, 0), rot=(0, 0, 8), paint=CYAN_GLOW, shading="fullbright"),
+        Box("Wire", (2, 16, 2), pos=(4, -1, 0), rot=(0, 0, -8), paint=BRASS_P),
+        bolt("Bolt", (0, 4, 3), 2),
+    )
+    return Model([post]), {}
+
+
 BLOCKS = {
     # name: (builder, kwargs-variants)
     "Crank_A_Fizz": (crank_a_fizz, {"": {}}),
@@ -409,4 +451,7 @@ BLOCKS = {
     "Junk_Heart_Firebox": (junk_heart_firebox, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Scrap_Plating": (scrap_plating, {"": {}}),
     "Junk_Heart_Chimney": (chimney, {"": {"cap": False}, "_Cap": {"cap": True}}),
+    "Storm_Vane": (storm_vane, {"_Off": {"on": False}, "_On": {"on": True}}),
+    "Fizz_Damper": (fizz_damper, {"_Off": {"on": False}, "_On": {"on": True}}),
+    "Tether_Stake": (tether_stake, {"": {}}),
 }
