@@ -65,6 +65,7 @@ import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.well.CarrierAcceptanceSelfTest
 import studio.craftory.tech.well.WellPersistenceSelfTest
+import studio.craftory.tech.well.SparkSelfTest
 import studio.craftory.tech.well.WellSelfTest
 import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files
@@ -113,6 +114,9 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var hurlFinished: Boolean = false,
         var hurlCleanup: (() -> Unit)? = null,
         var mobSelfTest: MobSelfTest.State? = null,
+        var sparkFinished: Boolean = false,
+        var sparkCleanup: (() -> Unit)? = null,
+        var sparkTest: SparkSelfTest? = null,
     )
 
     var active: Run? = null
@@ -163,6 +167,7 @@ private fun abort(
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
     runCatching { run.hurlCleanup?.invoke() }
     runCatching { MobSelfTest.cleanup(run) }
+    runCatching { run.sparkCleanup?.invoke() }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -192,7 +197,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
         CraftorySelfTest.keepTestSectionsTicking(run, store)
-        if (!run.hurlFinished && tick >= run.startTick + 3_600L) {
+        if (!run.hurlFinished && tick >= run.startTick + 6_000L) {
             abort(run, "timed out")
             return
         }
@@ -218,6 +223,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         }
         if (run.phase == 5) {
             try {
+                run.sparkTest?.tick()
                 tickAnchorDisablePhase(run, store, tick)
             } catch (failure: Exception) {
                 abort(run, "exception (${failure.message})")
@@ -225,6 +231,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             return
         }
         if (run.phase == 6) {
+            run.sparkTest?.tick()
             if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
                 CraftorySelfTest.finishAfterHurlTest(run, store)
             }
@@ -969,8 +976,13 @@ object CraftorySelfTest {
             }
         run.world.execute {
             HurlSelfTest(run).start {
-                run.hurlFinished = true
-                run.cleanupTick = run.world.tick + 20
+                run.sparkTest = SparkSelfTest(run)
+                run.sparkTest?.start {
+                    run.sparkFinished = true
+                    run.sparkTest = null
+                    run.hurlFinished = true
+                    run.cleanupTick = run.world.tick + 20
+                }
             }
         }
     }
@@ -1083,6 +1095,7 @@ object CraftorySelfTest {
         val missingPaths = referencedPaths.filterNot { CommonAssetRegistry.hasCommonAsset(it) }
         val wiringFailures = requiredCraftoryWiringFailures(itemsById, modelPathsByItemId)
         val grizzlecogResolves = ModelAsset.getAssetMap().getAsset("Craftory_Grizzlecog") != null
+        val vessaResolves = ModelAsset.getAssetMap().getAsset("Craftory_Vessa") != null
         val problems =
             buildList {
                 if (missingPaths.isNotEmpty()) add("missing paths=${missingPaths.joinToString()}")
@@ -1090,6 +1103,7 @@ object CraftorySelfTest {
                 addAll(unresolvedBlockStates)
                 addAll(wiringFailures)
                 if (!grizzlecogResolves) add("model asset Craftory_Grizzlecog did not resolve")
+                if (!vessaResolves) add("model asset Craftory_Vessa did not resolve")
             }
         val detail =
             buildString {
@@ -3352,7 +3366,7 @@ object CraftorySelfTest {
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
-    private fun testPositions(world: World): List<TestPosition> =
+    internal fun testPositions(world: World): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
                 listOf(

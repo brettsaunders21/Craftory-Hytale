@@ -13,13 +13,14 @@ import java.util.concurrent.CompletableFuture
 
 object SummonCommand {
     fun execute(context: CommandContext): CompletableFuture<Void> {
-        if (context.inputString.substringAfter("summon").trim() != "grizzlecog") {
-            context.sendMessage(Message.raw("Usage: /craftory summon grizzlecog"))
+        val requested = context.inputString.substringAfter("summon").trim()
+        if (requested !in setOf("grizzlecog", "vessa")) {
+            context.sendMessage(Message.raw("Usage: /craftory summon <grizzlecog|vessa>"))
             return CompletableFuture.completedFuture(null)
         }
         val playerRef = context.senderAsPlayerRef()
         if (playerRef == null) {
-            context.sendMessage(Message.raw("Run /craftory summon grizzlecog as a player."))
+            context.sendMessage(Message.raw("Run /craftory summon <grizzlecog|vessa> as a player."))
             return CompletableFuture.completedFuture(null)
         }
         val entityStore = playerRef.store
@@ -32,14 +33,16 @@ object SummonCommand {
                     return@runAsync
                 }
                 val player = entityStore.getComponent(playerRef, PlayerRef.getComponentType())
+                val role = if (requested == "vessa") CraftoryIds.VESSA_ROLE else CraftoryIds.GRIZZLECOG
                 NPCPlugin.get().spawnNPC(
                     entityStore,
-                    CraftoryIds.GRIZZLECOG,
+                    role,
                     null,
                     Vector3d(target.x + 0.5, target.y + 1.0, target.z + 0.5),
                     player?.headRotation ?: Rotation3f(0f, 0f, 0f),
                 )
-                context.sendMessage(Message.raw("Grizzlecog summoned."))
+                val name = if (requested == "vessa") "Vessa Lanternwright" else "Grizzlecog"
+                context.sendMessage(Message.raw("$name summoned."))
             },
             world,
         )

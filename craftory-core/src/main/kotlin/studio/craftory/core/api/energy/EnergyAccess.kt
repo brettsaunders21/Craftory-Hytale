@@ -25,6 +25,20 @@ class EnergyAccess internal constructor(
         energy.setDemand(pos, amount)
     }
 
+    fun converterInputDelivered(pos: Long): Long {
+        assertWorldThread()
+        return energy.converterInputDelivered(pos)
+    }
+
+    fun setConverterOutput(
+        pos: Long,
+        amount: Long,
+        rank: Int,
+    ) {
+        assertWorldThread()
+        energy.setConverterOutput(pos, amount, rank)
+    }
+
     fun stored(pos: Long): Long {
         assertWorldThread()
         return energy.stored(pos)
@@ -68,6 +82,11 @@ class EnergyAccess internal constructor(
     fun networkOf(pos: Long): Int {
         assertWorldThread()
         return energy.networkOf(pos)
+    }
+
+    fun converterOutputNetwork(pos: Long): Int {
+        assertWorldThread()
+        return energy.converterOutputNetwork(pos)
     }
 
     fun networkMembers(pos: Long): Int {

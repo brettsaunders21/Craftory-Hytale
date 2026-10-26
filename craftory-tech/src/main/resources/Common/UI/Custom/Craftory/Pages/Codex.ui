@@ -1,5 +1,5 @@
 Group {
-  Anchor: (Center: 0, Width: 620, Height: 520);
+  Anchor: (Center: 0, Width: 620, Height: 560);
   Background: #171523(0.96);
   Padding: (Full: 18);
   LayoutMode: Top;
@@ -39,5 +39,20 @@ Group {
 
   Label #Flicker {
     Text: "First Flicker caught: no";
+    Anchor: (Bottom: 6);
+  }
+
+  Label #FirstSpark {
+    Text: "First Spark: not yet";
+    Anchor: (Bottom: 6);
+  }
+
+  Label #SeatedWell {
+    Text: "Seated Well: none";
+    Anchor: (Bottom: 6);
+  }
+
+  Label #TierProgress {
+    Text: "Sparkbound progression";
   }
 }

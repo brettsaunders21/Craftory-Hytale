@@ -16,6 +16,7 @@ import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
+import studio.craftory.tech.CraftoryIds
 import kotlin.math.floor
 import kotlin.math.sin
 

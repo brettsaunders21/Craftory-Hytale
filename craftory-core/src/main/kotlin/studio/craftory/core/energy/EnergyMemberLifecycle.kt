@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyFaces
 import studio.craftory.core.api.energy.EnergyMember
 
 internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
@@ -33,11 +34,14 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         val id = BlockPos.pack(position.x, position.y, position.z)
         val energy = store.getResource(EnergyWorld.type)
         energy.bind(store)
-        val neighbours =
-            findNeighbours(store, position)
-                .filter(energy::contains)
-                .toLongArray()
-        energy.addMember(id, type.spec, neighbours, member, ref)
+        val converter = CraftoryCore.converterType(member.typeId)
+        if (converter != null) {
+            val neighbours = findNeighbours(store, position, id, type.linkFaces, converter, energy)
+            energy.addConverter(id, converter, neighbours[0], neighbours[1], member, ref)
+        } else {
+            val neighbours = findNeighbours(store, position, id, type.linkFaces, null, energy)
+            energy.addMember(id, type.spec, neighbours[0], member, ref)
+        }
     }
 
     override fun onEntityRemove(
@@ -52,59 +56,96 @@ internal class EnergyMemberLifecycle : RefSystem<ChunkStore>() {
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val energy = store.getResource(EnergyWorld.type)
         val id = BlockPos.pack(position.x, position.y, position.z)
-        if (energy.contains(id)) energy.removeMember(id, member, blockState, reason, commandBuffer)
+        if (CraftoryCore.converterType(member.typeId) != null) {
+            energy.removeConverter(id, member, blockState, reason, commandBuffer)
+        } else if (energy.containsPhysical(id)) {
+            energy.removeMember(id, member, blockState, reason, commandBuffer)
+        }
     }
 
     private companion object {
-        val FACES =
+        val DIRECTIONS =
             arrayOf(
-                intArrayOf(1, 0, 0),
-                intArrayOf(-1, 0, 0),
-                intArrayOf(0, 1, 0),
-                intArrayOf(0, -1, 0),
-                intArrayOf(0, 0, 1),
-                intArrayOf(0, 0, -1),
+                Direction(1, 0, 0, EnergyFaces.EAST),
+                Direction(-1, 0, 0, EnergyFaces.WEST),
+                Direction(0, 1, 0, EnergyFaces.UP),
+                Direction(0, -1, 0, EnergyFaces.DOWN),
+                Direction(0, 0, 1, EnergyFaces.SOUTH),
+                Direction(0, 0, -1, EnergyFaces.NORTH),
             )
     }
+
+    private data class Direction(
+        val x: Int,
+        val y: Int,
+        val z: Int,
+        val face: Int,
+    )
+
+    private data class LinkNode(
+        val id: Long,
+        val faces: Int,
+        val converterOutput: Boolean = false,
+    )
 
     private fun findNeighbours(
         store: Store<ChunkStore>,
         position: Vector3i,
-    ): LongArray {
-        val neighbours = LongArray(FACES.size)
-        var count = 0
-        FACES.forEach { face ->
-            val id = findNeighbourId(store, position, face) ?: return@forEach
-            neighbours[count++] = id
+        positionId: Long,
+        linkFaces: Int,
+        converter: studio.craftory.core.api.energy.EnergyConverterType?,
+        energy: EnergyWorld,
+    ): Array<LongArray> {
+        val ownNodes =
+            if (converter == null) {
+                arrayOf(LinkNode(positionId, linkFaces))
+            } else {
+                arrayOf(
+                    LinkNode(positionId, converter.inputFaces),
+                    LinkNode(energy.converterOutputId(positionId), converter.outputFaces, converterOutput = true),
+                )
+            }
+        val neighbours = Array(ownNodes.size) { ArrayList<Long>(6) }
+        DIRECTIONS.forEach { direction ->
+            if (ownNodes.none { it.faces and direction.face != 0 }) return@forEach
+            val x = position.x + direction.x
+            val y = position.y + direction.y
+            val z = position.z + direction.z
+            val sectionRef =
+                store.externalData.world.chunkStore
+                    .getChunkSectionReferenceAtBlock(x, y, z) ?: return@forEach
+            val neighbourRef = BlockModule.getBlockEntity(store, sectionRef, x, y, z) ?: return@forEach
+            val neighbour = store.getComponent(neighbourRef, EnergyMember.type) ?: return@forEach
+            val neighbourType = CraftoryCore.energyType(neighbour.typeId) ?: return@forEach
+            val neighbourPositionId = BlockPos.pack(x, y, z)
+            val neighbourConverter = CraftoryCore.converterType(neighbour.typeId)
+            val otherNodes =
+                if (neighbourConverter == null) {
+                    arrayOf(LinkNode(neighbourPositionId, neighbourType.linkFaces))
+                } else {
+                    arrayOf(
+                        LinkNode(neighbourPositionId, neighbourConverter.inputFaces),
+                        LinkNode(
+                            energy.converterOutputId(neighbourPositionId),
+                            neighbourConverter.outputFaces,
+                            converterOutput = true,
+                        ),
+                    )
+                }
+            ownNodes.forEachIndexed { ownIndex, ownNode ->
+                otherNodes.forEach { otherNode ->
+                    if (EnergyFaces.connects(ownNode.faces, otherNode.faces, direction.face) &&
+                        if (otherNode.converterOutput) {
+                            energy.containsConverterOutput(otherNode.id)
+                        } else {
+                            energy.containsPhysical(otherNode.id)
+                        }
+                    ) {
+                        neighbours[ownIndex].add(otherNode.id)
+                    }
+                }
+            }
         }
-        return neighbours.copyOf(count)
-    }
-
-    private fun findNeighbourId(
-        store: Store<ChunkStore>,
-        position: Vector3i,
-        face: IntArray,
-    ): Long? {
-        val x = position.x + face[0]
-        val y = position.y + face[1]
-        val z = position.z + face[2]
-        val sectionRef =
-            store.externalData.world.chunkStore
-                .getChunkSectionReferenceAtBlock(x, y, z) ?: return null
-        val neighbourRef =
-            BlockModule.getBlockEntity(
-                store,
-                sectionRef,
-                x,
-                y,
-                z,
-            ) ?: return null
-        val neighbour = store.getComponent(neighbourRef, EnergyMember.type) ?: return null
-        if (CraftoryCore.energyType(neighbour.typeId) == null) return null
-        val neighbourState =
-            store.getComponent(neighbourRef, BlockModule.BlockStateInfo.getComponentType()) ?: return null
-        val neighbourPosition = Vector3i()
-        if (!neighbourState.fillWorldPos(store, neighbourPosition)) return null
-        return BlockPos.pack(neighbourPosition.x, neighbourPosition.y, neighbourPosition.z)
+        return Array(ownNodes.size) { index -> neighbours[index].toLongArray() }
     }
 }

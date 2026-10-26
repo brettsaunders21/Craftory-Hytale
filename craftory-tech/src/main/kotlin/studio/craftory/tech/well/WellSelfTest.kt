@@ -72,7 +72,7 @@ internal object WellSelfTest {
     internal val VANE_POS = BlockPos(10_020, 148, 10_015)
     internal val STAKED_POS = BlockPos(10_022, 148, 10_004)
     internal val SMOTHERED_POS = BlockPos(10_022, 148, 9_996)
-    internal val CALMED_POS = BlockPos(10_038, 148, 9_996)
+    internal val CALMED_POS = BlockPos(10_044, 148, 10_001)
 
     fun run(
         world: World,

@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponen
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
+import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,9 +23,15 @@ data class WellRef(
     val well: Glimmerwell,
 )
 
+data class WellRemovalEvent(
+    val world: World,
+    val pos: BlockPos,
+)
+
 @Suppress("TooGenericExceptionCaught")
 class WellAccess internal constructor() {
     private val bornListeners = CopyOnWriteArrayList<(WellEvent) -> Unit>()
+    private val removedListeners = CopyOnWriteArrayList<(WellRemovalEvent) -> Unit>()
     private val scannedListeners = CopyOnWriteArrayList<(WellScanEvent) -> Unit>()
 
     fun wellsNear(
@@ -58,6 +65,7 @@ class WellAccess internal constructor() {
         strength: WellStrength,
         state: WellState = WellState.WILD,
         taste: String = defaultTaste(temperament),
+        claimCrewId: UUID? = null,
     ): Ref<ChunkStore>? {
         world.debugAssertInTickingThread()
         val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(pos.x, pos.y, pos.z) ?: return null
@@ -94,7 +102,7 @@ class WellAccess internal constructor() {
                 blockType,
                 0,
             ) ?: return null
-        val well = Glimmerwell(temperament, strength, state, taste, world.tick)
+        val well = Glimmerwell(temperament, strength, state, taste, world.tick, claimCrewId)
         store.putComponent(ref, Glimmerwell.type, well)
         val event = WellEvent(world, pos, ref, well)
         bornListeners.forEach { listener ->
@@ -127,13 +135,34 @@ class WellAccess internal constructor() {
                 0,
                 SetBlockSettings.NO_DROP_ITEMS,
             )
-        if (removed) store.getResource(WellIndex.type).remove(pos.pack())
+        if (removed) {
+            store.getResource(WellIndex.type).remove(pos.pack())
+        }
         return removed
     }
 
     fun onWellBorn(listener: (WellEvent) -> Unit): AutoCloseable {
         bornListeners.add(listener)
         return AutoCloseable { bornListeners.remove(listener) }
+    }
+
+    fun onWellRemoved(listener: (WellRemovalEvent) -> Unit): AutoCloseable {
+        removedListeners.add(listener)
+        return AutoCloseable { removedListeners.remove(listener) }
+    }
+
+    internal fun fireWellRemoved(
+        world: World,
+        pos: BlockPos,
+    ) {
+        val event = WellRemovalEvent(world, pos)
+        removedListeners.forEach { listener ->
+            try {
+                listener(event)
+            } catch (exception: Exception) {
+                LOGGER.log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
+            }
+        }
     }
 
     fun onWellScanned(listener: (WellScanEvent) -> Unit): AutoCloseable {
