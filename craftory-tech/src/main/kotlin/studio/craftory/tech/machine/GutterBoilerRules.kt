@@ -43,7 +43,8 @@ object GutterBoilerRules {
         lastWhistleTick: Long,
     ): Boolean =
         lastWhistleTick == Long.MIN_VALUE ||
-            (tick >= lastWhistleTick && tick - lastWhistleTick >= WHISTLE_INTERVAL_TICKS)
+            tick < lastWhistleTick ||
+            tick - lastWhistleTick >= WHISTLE_INTERVAL_TICKS
 
     fun vent(state: BoilerState): Boolean {
         val pressure = vent(state.pressure) ?: return false

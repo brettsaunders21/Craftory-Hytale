@@ -42,6 +42,7 @@ class GutterBoilerRulesTest {
         assertTrue(!GutterBoilerRules.isWhistleDue(40, 0))
         assertTrue(GutterBoilerRules.isWhistleDue(60, 0))
         assertTrue(GutterBoilerRules.isWhistleDue(120, 60))
+        assertTrue(GutterBoilerRules.isWhistleDue(100, 100_000))
     }
 
     @Test
