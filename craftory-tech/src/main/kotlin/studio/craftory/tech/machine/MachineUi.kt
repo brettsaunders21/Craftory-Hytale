@@ -348,7 +348,7 @@ internal fun energyHudCommands(
     val rattlewheel = current.rattlewheel
     if (rattlewheel != null) {
         val beforeRattlewheel = before?.rattlewheel
-        if (previous == null || beforeRattlewheel!!.waterFlow != rattlewheel.waterFlow) {
+        if (previous == null || beforeRattlewheel?.waterFlow != rattlewheel.waterFlow) {
             commands.set(
                 "#WaterValue.Text",
                 Message
@@ -356,7 +356,7 @@ internal fun energyHudCommands(
                     .param("flow", rattlewheel.waterFlow),
             )
         }
-        if (previous == null || beforeRattlewheel.wind != rattlewheel.wind) {
+        if (previous == null || beforeRattlewheel?.wind != rattlewheel.wind) {
             commands.set(
                 "#WindValue.Text",
                 Message.translation(
@@ -368,7 +368,7 @@ internal fun energyHudCommands(
                 ),
             )
         }
-        if (previous == null || beforeRattlewheel.fizzPerSecond != rattlewheel.fizzPerSecond) {
+        if (previous == null || beforeRattlewheel?.fizzPerSecond != rattlewheel.fizzPerSecond) {
             commands.set(
                 "#OutputValue.Text",
                 Message
@@ -386,7 +386,7 @@ internal fun energyHudCommands(
     val shroomBed = current.shroomBed
     if (shroomBed != null) {
         val beforeShroomBed = before?.shroomBed
-        if (previous == null || beforeShroomBed!!.growthPercent != shroomBed.growthPercent) {
+        if (previous == null || beforeShroomBed?.growthPercent != shroomBed.growthPercent) {
             commands.set(
                 "#GrowthValue.Text",
                 Message
@@ -394,7 +394,7 @@ internal fun energyHudCommands(
                     .param("growth", shroomBed.growthPercent),
             )
         }
-        if (previous == null || beforeShroomBed.twitch != shroomBed.twitch) {
+        if (previous == null || beforeShroomBed?.twitch != shroomBed.twitch) {
             commands.set(
                 "#TwitchValue.Text",
                 Message
@@ -402,7 +402,7 @@ internal fun energyHudCommands(
                     .param("twitch", shroomBed.twitch),
             )
         }
-        if (previous == null || beforeShroomBed.darkness != shroomBed.darkness) {
+        if (previous == null || beforeShroomBed?.darkness != shroomBed.darkness) {
             commands.set(
                 "#DarkValue.Text",
                 Message
