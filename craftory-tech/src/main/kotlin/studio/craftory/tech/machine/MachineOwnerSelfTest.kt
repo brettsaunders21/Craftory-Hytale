@@ -206,7 +206,11 @@ private object MachineOwnerSelfTestSetup {
 
     private fun createPlayer(run: MachineOwnerSelfTestRun): PlayerRef {
         val position = machineOwnerFixtures.first().second
-        val player = WellSelfTestPlayer.createInWorld(run.world, BlockPos(position.x, position.y, position.z))
+        val player =
+            WellSelfTestPlayer.createInWorldWithoutInteractionManager(
+                run.world,
+                BlockPos(position.x, position.y, position.z),
+            )
         run.players += player
         val ref = player.reference ?: error("synthetic player entity is missing")
         run.playerRefs += ref

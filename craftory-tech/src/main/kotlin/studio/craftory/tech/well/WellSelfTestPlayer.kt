@@ -33,9 +33,18 @@ internal object WellSelfTestPlayer {
         world: World,
         position: BlockPos,
     ): PlayerRef {
-        val playerRef = createInWorld(world, position)
+        val playerRef = createInWorldWithoutInteractionManager(world, position)
         val entity = checkNotNull(playerRef.reference) { "Carrier selftest player reference is unavailable" }
         world.entityStore.store.putComponent(entity, HeadRotation.getComponentType(), HeadRotation())
+        return playerRef
+    }
+
+    fun createInWorldWithoutInteractionManager(
+        world: World,
+        position: BlockPos,
+    ): PlayerRef {
+        val playerRef = createInWorld(world, position)
+        val entity = checkNotNull(playerRef.reference) { "Selftest player reference is unavailable" }
         world.entityStore.store.removeComponent(
             entity,
             InteractionModule.get().getInteractionManagerComponent(),
