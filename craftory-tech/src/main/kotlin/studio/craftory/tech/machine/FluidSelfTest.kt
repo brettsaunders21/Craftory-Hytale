@@ -604,12 +604,10 @@ internal object FluidSelfTestCases {
                 GASBAG_FIRE,
             )
         val gnasherType = BlockType.fromString(CraftoryIds.GNASHER_PIT) ?: error("missing fluid test Gnasher")
-        val footprint =
-            positions.toMutableSet().apply {
-                addAll(FluidSelfTestFootprint.fixture(PRESSURISED_GNASHER, gnasherType))
-                addAll(FluidSelfTestFootprint.fixture(PLAIN_GNASHER, gnasherType))
-            }
-        FluidSelfTestFootprint.assertSafe(footprint)
+        val gnasherFootprints =
+            listOf(PRESSURISED_GNASHER, PLAIN_GNASHER)
+                .associateWith { position -> FluidSelfTestFootprint.fixture(position, gnasherType) }
+        FluidSelfTestFootprint.assertSafe(positions, gnasherFootprints)
         return positions
     }
 
@@ -1204,9 +1202,46 @@ private object FluidSelfTestFootprint {
         }
     }
 
-    fun assertSafe(positions: Set<Position>) {
-        val overlap = positions.firstOrNull { it.x in 10_200..10_260 }
+    fun assertSafe(
+        fixturePositions: List<Position>,
+        gnasherFootprints: Map<Position, Set<Position>>,
+    ) {
+        assertGnasherFillersDoNotOverlap(fixturePositions, gnasherFootprints)
+        val footprint =
+            fixturePositions.toMutableSet().apply {
+                gnasherFootprints.values.forEach { addAll(it) }
+            }
+        val overlap = footprint.firstOrNull { it.x in 10_200..10_260 }
         check(overlap == null) { "fluid test fixture overlaps transport range at $overlap" }
+        assertInsideRetainedChunk(footprint)
+    }
+
+    private fun assertGnasherFillersDoNotOverlap(
+        fixturePositions: List<Position>,
+        gnasherFootprints: Map<Position, Set<Position>>,
+    ) {
+        gnasherFootprints.forEach { (origin, footprint) ->
+            val fillers = footprint - origin
+            val overlappingFixture =
+                fillers.firstOrNull { filler ->
+                    fixturePositions.any { fixture -> fixture != origin && fixture == filler }
+                }
+            check(overlappingFixture == null) {
+                "fluid test fixture $overlappingFixture overlaps Gnasher filler at $origin"
+            }
+            val overlappingGnasher =
+                fillers.firstOrNull { filler ->
+                    gnasherFootprints.any { (otherOrigin, otherFootprint) ->
+                        otherOrigin != origin && filler in otherFootprint
+                    }
+                }
+            check(overlappingGnasher == null) {
+                "fluid test fixture $overlappingGnasher overlaps Gnasher filler at $origin"
+            }
+        }
+    }
+
+    private fun assertInsideRetainedChunk(positions: Set<Position>) {
         val fluidChunk =
             ChunkUtil.indexChunk(
                 FluidSelfTestCases.BASE.x shr 5,

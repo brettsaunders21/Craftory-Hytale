@@ -1468,8 +1468,6 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                 ),
             ) { placementFailureDetail(run, sectionRef, blockId, position, "failed to clear existing block") }
         }
-        if (!keepAcrossCases) run.currentBlocks.add(position)
-        run.allBlocks.add(position)
         check(
             BlockOperations.setBlock(
                 world.chunkStore,
@@ -1484,6 +1482,8 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                 SetBlockSettings.NO_UPDATE_STATE,
             ),
         ) { placementFailureDetail(run, sectionRef, blockId, position, "failed to place") }
+        if (!keepAcrossCases) run.currentBlocks.add(position)
+        run.allBlocks.add(position)
         BlockEntity.ensureBlockEntity(
             store,
             sectionRef,
