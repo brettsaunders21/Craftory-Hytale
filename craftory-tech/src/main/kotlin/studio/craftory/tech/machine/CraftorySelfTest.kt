@@ -106,6 +106,9 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var anchorStateForTest: AnchorState? = null,
         var hurlFinished: Boolean = false,
         var hurlCleanup: (() -> Unit)? = null,
+        var sparkFinished: Boolean = false,
+        var sparkCleanup: (() -> Unit)? = null,
+        var sparkTest: SparkSelfTest? = null,
     )
 
     var active: Run? = null
@@ -155,6 +158,7 @@ private fun abort(
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
     runCatching { run.hurlCleanup?.invoke() }
+    runCatching { run.sparkCleanup?.invoke() }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -206,6 +210,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         }
         if (run.phase == 5) {
             try {
+                run.sparkTest?.tick()
                 tickAnchorDisablePhase(run, store, tick)
             } catch (failure: Exception) {
                 abort(run, "exception (${failure.message})")
@@ -724,7 +729,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val disableTick = run.anchorDisableTick ?: return
         if (run.anchorDisabledReported) {
-            if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+            if (run.hurlFinished && run.sparkFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
                 CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
                 try {
                     reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
@@ -866,8 +871,13 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         run.world.execute {
             HurlSelfTest(run).start {
                 run.hurlFinished = true
-                run.cleanupTick = run.world.tick + 20
-                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+                run.sparkTest = SparkSelfTest(run)
+                run.sparkTest?.start {
+                    run.sparkFinished = true
+                    run.sparkTest = null
+                    run.cleanupTick = run.world.tick + 20
+                    run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+                }
             }
         }
     }
@@ -1140,7 +1150,6 @@ object CraftorySelfTest {
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions())
             WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
-            SparkSelfTest.run { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
                 place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)
@@ -1952,7 +1961,7 @@ object CraftorySelfTest {
         )
     }
 
-    private fun place(
+    internal fun place(
         world: World,
         store: Store<ChunkStore>,
         sectionRef: Ref<ChunkStore>,
@@ -1997,7 +2006,7 @@ object CraftorySelfTest {
         }
     }
 
-    private fun clear(
+    internal fun clear(
         world: World,
         sectionRef: Ref<ChunkStore>,
         positions: List<TestPosition>,
