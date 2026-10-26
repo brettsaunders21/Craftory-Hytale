@@ -874,7 +874,6 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             }.onFailure { failure ->
                 run.context.sendMessage(Message.raw("selftest: main fixture cleanup failed (${failure.message})"))
             }
-        CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
         run.phase = 6
         MobSelfTest.start(run)
@@ -967,7 +966,6 @@ object CraftorySelfTest {
             .onFailure { failure ->
                 run.context.sendMessage(Message.raw("selftest: cleanup failed (${failure.message})"))
             }
-        releaseTestKeepLoaded(run)
         run.world.execute {
             HurlSelfTest(run).start {
                 run.hurlFinished = true
