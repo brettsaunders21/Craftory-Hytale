@@ -1,0 +1,39 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Gasbag.name",
+    "Description": "items.Craftory_Gasbag.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Quality": "Technical",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gasbag.png",
+  "MaxStack": 1,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "Group": "GoblinLab",
+    "HitboxType": "Full",
+    "CustomModel": "Blocks/Craftory/Gasbag/Gasbag.blockymodel",
+    "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Texture.png"}],
+    "Interactions": {
+      "Use": {
+        "Interactions": [{"Type": "Craftory_BlockUse"}]
+      }
+    },
+    "BlockEntity": {
+      "Components": {
+        "CraftoryGasbagState": {},
+        "Craftory_EnergyMember": {
+          "TypeId": "craftory:gasbag",
+          "Stored": 0,
+          "StoreRank": -1
+        },
+        "CraftoryMachineOwner": {}
+      }
+    }
+  }
+}

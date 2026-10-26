@@ -244,7 +244,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
     ): Long {
         if (amount <= 0) return 0
         val currentStore = store ?: return 0
-        val ref = refsById[id] ?: return 0
+        val ref = nodes[id]?.ref ?: return 0
         val member = currentStore.getComponent(ref, EnergyMember.type) ?: return 0
         val spec = CraftoryCore.energyType(member.typeId)?.spec ?: return 0
         if ((spec.role and MemberSpec.STORAGE) == 0) return 0
@@ -259,6 +259,24 @@ internal class EnergyWorld : Resource<ChunkStore> {
             member.unsaved = true
         }
         return removed
+    }
+
+    fun drainStored(
+        id: Long,
+        amount: Long,
+    ): Long {
+        if (amount <= 0) return 0
+        val member = member(id) ?: return 0
+        val stored = runtime.graph.stored(id)
+        val drained = minOf(stored, amount)
+        if (drained == 0L) return 0
+        val remaining = stored - drained
+        val rank = if (remaining == 0L) -1 else runtime.graph.storedRank(id)
+        runtime.graph.restoreStored(id, remaining, rank)
+        member.stored = remaining
+        member.storeRank = rank
+        member.unsaved = true
+        return drained
     }
 
     fun delivered(id: Long): Long = member(id)?.delivered ?: 0

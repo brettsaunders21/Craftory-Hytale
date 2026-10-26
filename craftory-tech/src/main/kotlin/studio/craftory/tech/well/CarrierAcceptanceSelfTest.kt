@@ -143,6 +143,7 @@ internal object CarrierAcceptanceSelfTest {
         val fixtureArea: CarrierFixtureArea,
         val origin: BlockPos,
         val report: (String) -> Unit,
+        val onComplete: () -> Unit,
         var lastBurstStatus: String = "not polled",
         var lastBurstReportTick: Long = Long.MIN_VALUE,
         var phase: Phase = Phase.PICKUP,
@@ -159,22 +160,31 @@ internal object CarrierAcceptanceSelfTest {
     fun start(
         world: World,
         report: (String) -> Unit,
+        onComplete: () -> Unit = {},
     ) {
         if (active != null) {
             report("selftest: FAIL carrier live acceptance already has an active run")
+            onComplete()
             return
         }
         loadCarrierTestSection(world) { fixtureArea, error ->
             if (error != null) {
                 report("selftest: FAIL carrier live acceptance $error")
+                onComplete()
                 return@loadCarrierTestSection
             }
             val area =
                 fixtureArea ?: run {
                     report("selftest: FAIL carrier live acceptance fixture area is unavailable")
+                    onComplete()
                     return@loadCarrierTestSection
                 }
-            val setup = createRun(world, area, report) ?: return@loadCarrierTestSection
+            val setup =
+                createRun(world, area, report, onComplete)
+                    ?: run {
+                        onComplete()
+                        return@loadCarrierTestSection
+                    }
             world.chunkStore.store
                 .getComponent(area.chunkRef, WorldChunk.getComponentType())
                 ?.addKeepLoaded()
@@ -191,6 +201,7 @@ internal object CarrierAcceptanceSelfTest {
         world: World,
         fixtureArea: CarrierFixtureArea,
         report: (String) -> Unit,
+        onComplete: () -> Unit,
     ): Pair<Run, TransformComponent>? {
         val origin = fixtureArea.origin
         val player = WellSelfTestPlayer.createCarrierSelfTestPlayer(world, origin)
@@ -237,6 +248,7 @@ internal object CarrierAcceptanceSelfTest {
                 fixtureArea,
                 origin,
                 report,
+                onComplete,
             )
         WellSelfTestExclusions.registerEntity(entity)
         if (!insertFilledJar(storage, slot, report)) {
@@ -429,6 +441,7 @@ internal object CarrierAcceptanceSelfTest {
         )
         WellSelfTestExclusions.releaseEntity(run.entity)
         active = null
+        run.onComplete()
     }
 
     private fun restoreTestPlayer(
@@ -538,7 +551,7 @@ private fun testJar(stability: Double): ItemStack =
             ),
         ).withMetadata(GobJarMetadata.STABILITY, stability)
 
-private const val CARRIER_TEST_X = 10_010
+private const val CARRIER_TEST_X = 10_012
 private const val CARRIER_TEST_Z = 10_010
 private const val CARRIER_PROCESS_INTERVAL_TICKS = 20L
 private const val CARRIER_DRAIN_OBSERVATION_TICKS = 100L

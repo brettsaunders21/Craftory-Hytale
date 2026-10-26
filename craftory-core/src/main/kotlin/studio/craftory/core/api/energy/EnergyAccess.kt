@@ -69,6 +69,14 @@ class EnergyAccess internal constructor(
         return energy.requestDebit(pos, amount)
     }
 
+    fun drainStored(
+        pos: Long,
+        amount: Long,
+    ): Long {
+        assertWorldThread()
+        return energy.drainStored(pos, amount)
+    }
+
     fun delivered(pos: Long): Long {
         assertWorldThread()
         return energy.delivered(pos)

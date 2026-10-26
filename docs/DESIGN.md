@@ -748,11 +748,11 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 | 27 | Slice 5a lightning | Use a fake lightning particle and thunder sound because native server lightning is unavailable; sample weather by polling |
 | 28 | Slice 5a capture visuals | Use queued block-state changes for Storm Vane and Damper visuals; tether beams refresh on a low-rate schedule |
 | 29 | Capture pulse alignment | Press timing is interval-based; whether capture should align to Well pulses is a client playtest question |
-| 29 | Slice 5a Storm Vane | A passive, non-energy block; storm activation is sampled by the existing weather polling path |
-| 30 | Slice 5a Fizz Damper | Powered at 2 Fizz/s per unit; three or more active dampers within four blocks smother a Wild Well |
-| 31 | Slice 5a stake spacing | Stake angular gaps are measured against equal spacing; a deviation greater than 40 degrees marks a stake leaning |
-| 32 | Slice 5a storm budget | At most one Steady-or-stronger Wild Well per 512×512 region; budget is configurable |
-| 33 | Slice 5b deferral | Wellhead/catalysis, Slurp Walker, Riftmoth feeding/corruption, and Cradle/seat changes remain deferred |
-| 34 | Slice 5a carrier readout | The carrier gets a throttled notification; nearby crew read stability through Squint Goggles |
+| 30 | Slice 5a Storm Vane | A passive, non-energy block; storm activation is sampled by the existing weather polling path |
+| 31 | Slice 5a Fizz Damper | Powered at 2 Fizz/s per unit; three or more active dampers within four blocks smother a Wild Well |
+| 32 | Slice 5a stake spacing | Stake angular gaps are measured against equal spacing; a deviation greater than 40 degrees marks a stake leaning |
+| 33 | Slice 5a storm budget | At most one Steady-or-stronger Wild Well per 512×512 region; budget is configurable |
+| 34 | Slice 5b deferral | Wellhead/catalysis, Slurp Walker, Riftmoth feeding/corruption, and Cradle/seat changes remain deferred |
+| 35 | Slice 5a carrier readout | The carrier gets a throttled notification; nearby crew read stability through Squint Goggles |
 
 Naming: a new mod name to replace "Craftory" is being chosen; see the README once decided.

@@ -64,8 +64,8 @@ import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.well.CarrierAcceptanceSelfTest
-import studio.craftory.tech.well.WellPersistenceSelfTest
 import studio.craftory.tech.well.SparkSelfTest
+import studio.craftory.tech.well.WellPersistenceSelfTest
 import studio.craftory.tech.well.WellSelfTest
 import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files

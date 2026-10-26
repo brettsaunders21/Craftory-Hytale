@@ -56,6 +56,10 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.JUNK_HEART,
                 CraftoryIds.RATTLEWHEEL,
                 CraftoryIds.SHROOM_BED,
+                CraftoryIds.SLOSHTANK,
+                CraftoryIds.GUTTER_BOILER,
+                CraftoryIds.GASBAG,
+                CraftoryIds.WAKEBELL_ANCHOR,
             )
     }
 }

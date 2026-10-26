@@ -23,6 +23,7 @@ import studio.craftory.core.api.mob.MobHome
 import studio.craftory.core.api.mob.MobLeashSystem
 import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.transport.FluidTransportRegistration
 import studio.craftory.core.api.transport.ItemTransportRegistration
 import studio.craftory.core.api.transport.TubeNode
 import studio.craftory.core.api.well.Glimmerwell
@@ -97,6 +98,14 @@ class CraftoryCorePlugin(
         chunkRegistry.registerSystem(WellLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
         ItemTransportRegistration.register(this, config)
+        registerMobSystems()
+        FluidTransportRegistration.register(this)
+        val command = CraftoryCommand(pluginVersion, config, crews)
+        getCommandRegistry().registerCommand(command)
+        LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
+    }
+
+    private fun registerMobSystems() {
         val entityRegistry = getEntityStoreRegistry()
         MobHome.type =
             entityRegistry.registerComponent(
@@ -106,9 +115,6 @@ class CraftoryCorePlugin(
             )
         entityRegistry.registerSystem(CraftoryMobDeathSystem())
         entityRegistry.registerSystem(MobLeashSystem())
-        val command = CraftoryCommand(pluginVersion, config, crews)
-        getCommandRegistry().registerCommand(command)
-        LOGGER.atInfo().log("Craftory Core v%s loaded", pluginVersion)
     }
 
     override fun start() {

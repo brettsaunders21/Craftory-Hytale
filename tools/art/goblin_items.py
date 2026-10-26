@@ -155,6 +155,7 @@ ITEMS = {
     "Boom_Valve": boom_valve,
     "Gutter_Gear": gutter_gear,
     "Scrap_Plating_Bodge": scrap_plating_bodge,
+    "Scrap_Plating": scrap_plating_bodge,
     "Squawk_Box": squawk_box,
     "Muffler": muffler,
 }
