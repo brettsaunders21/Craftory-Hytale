@@ -7,10 +7,26 @@ import org.junit.jupiter.api.Test
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.ConverterMath
 import studio.craftory.core.api.energy.GradeTable
+import studio.craftory.core.api.well.Glimmerwell
+import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.well.matchesBlockOrState
 
 class WellheadLogicTest {
+    @Test
+    fun `wellhead identity matches birth tick and temperament`() {
+        val state =
+            WellheadState(
+                wellBirthTick = 42,
+                wellTemperament = Temperament.SPARK.name,
+            )
+
+        assertTrue(state.matchesWell(Glimmerwell(temperament = Temperament.SPARK, birthTick = 42)))
+        assertFalse(state.matchesWell(Glimmerwell(temperament = Temperament.SPARK, birthTick = 43)))
+        assertFalse(state.matchesWell(Glimmerwell(temperament = Temperament.TIDE, birthTick = 42)))
+        assertFalse(WellheadState().matchesWell(Glimmerwell(temperament = Temperament.SPARK, birthTick = 42)))
+    }
+
     @Test
     fun `wellhead matcher accepts base and state variants`() {
         val variants = setOf("Craftory_Wellhead_Pumping")

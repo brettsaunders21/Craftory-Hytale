@@ -82,6 +82,8 @@ internal class WellheadPlacementSystem :
         val store = world.chunkStore.store
         val state = store.getComponent(ref, WellheadState.type) ?: return
         state.wellPosition = wellPosition.pack()
+        state.wellBirthTick = liveWell.birthTick
+        state.wellTemperament = liveWell.temperament.name
         state.harmony = CradleSystem.harmonyAt(store, position, liveWell.taste)
         state.lastHarmonyTick = world.tick
         store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
