@@ -15,5 +15,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Glimmer_Lens/Glimmer_Lens.blockymodel",
+  "Texture": "Items/Craftory/Glimmer_Lens/Glimmer_Lens_Texture.png"
 }

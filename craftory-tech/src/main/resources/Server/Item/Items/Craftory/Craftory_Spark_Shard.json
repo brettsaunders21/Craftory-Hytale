@@ -1,6 +1,13 @@
 {
-  "TranslationProperties": { "Name": "server.items.Craftory_Spark_Shard.name" },
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Spark_Shard.name"
+  },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Spark_Shard.png",
-  "Categories": ["Items.Ingredients"],
-  "MaxStack": 100
+  "Categories": [
+    "Items.Ingredients"
+  ],
+  "MaxStack": 100,
+  "PlayerAnimationsId": "Item",
+  "Model": "Items/Craftory/Spark_Shard/Spark_Shard.blockymodel",
+  "Texture": "Items/Craftory/Spark_Shard/Spark_Shard_Texture.png"
 }

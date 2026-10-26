@@ -15,5 +15,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Muffler/Muffler.blockymodel",
+  "Texture": "Items/Craftory/Muffler/Muffler_Texture.png"
 }

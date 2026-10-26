@@ -15,5 +15,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Scrap_Plating_Bodge/Scrap_Plating_Bodge.blockymodel",
+  "Texture": "Items/Craftory/Scrap_Plating_Bodge/Scrap_Plating_Bodge_Texture.png"
 }

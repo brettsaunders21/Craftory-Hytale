@@ -17,6 +17,18 @@
           }
         }
       ]
+    },
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "OpenCustomUI",
+          "Page": {
+            "Id": "Craftory_Tinkers_Notebook"
+          }
+        }
+      ]
     }
-  }
+  },
+  "Model": "Items/Weapons/Spellbook/Book.blockymodel",
+  "Texture": "Items/Craftory/Tinkers_Notebook/Tinkers_Notebook_Texture.png"
 }

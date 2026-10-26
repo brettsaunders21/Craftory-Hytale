@@ -6,5 +6,7 @@
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gob_Jar_Filled.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer"
+  "Quality": "Developer",
+  "Model": "Items/Craftory/Gob_Jar/Gob_Jar.blockymodel",
+  "Texture": "Items/Craftory/Gob_Jar/Gob_Jar_Filled_Texture.png"
 }

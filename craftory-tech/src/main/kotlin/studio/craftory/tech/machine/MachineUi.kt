@@ -149,7 +149,9 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
             val playerEntity = chunk.getReferenceTo(index)
             val hudState =
                 commandBuffer.getComponent(playerEntity, EnergyHudState.type)
-                    ?: commandBuffer.addComponent(playerEntity, EnergyHudState.type)
+                    ?: EnergyHudState().also {
+                        commandBuffer.putComponent(playerEntity, EnergyHudState.type, it)
+                    }
             val goggles =
                 player.inventory
                     ?.armor

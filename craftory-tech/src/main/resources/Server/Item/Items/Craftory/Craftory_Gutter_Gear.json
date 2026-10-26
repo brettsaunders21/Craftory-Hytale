@@ -15,5 +15,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Gutter_Gear/Gutter_Gear.blockymodel",
+  "Texture": "Items/Craftory/Gutter_Gear/Gutter_Gear_Texture.png"
 }

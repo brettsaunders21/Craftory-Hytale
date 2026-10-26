@@ -19,12 +19,31 @@
     "TimeSeconds": 2,
     "KnowledgeRequired": false,
     "Input": [
-      {"ItemId": "Ingredient_Scraps", "Quantity": 2},
-      {"ItemId": "Ingredient_Bar_Copper", "Quantity": 1}
+      {
+        "ItemId": "Ingredient_Scraps",
+        "Quantity": 2
+      },
+      {
+        "ItemId": "Ingredient_Bar_Copper",
+        "Quantity": 1
+      }
     ],
-    "Output": [{"ItemId": "Craftory_Paint_Daub_Green", "Quantity": 4}],
+    "Output": [
+      {
+        "ItemId": "Craftory_Paint_Daub_Green",
+        "Quantity": 4
+      }
+    ],
     "BenchRequirement": [
-      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Tinkering"
+        ]
+      }
     ]
-  }
+  },
+  "Model": "Items/Craftory/Paint_Daub/Paint_Daub.blockymodel",
+  "Texture": "Items/Craftory/Paint_Daub/Paint_Daub_Green_Texture.png"
 }

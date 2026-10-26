@@ -1,12 +1,34 @@
 {
-  "TranslationProperties": { "Name": "server.items.Craftory_Grit_Cobalt.name" },
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Grit_Cobalt.name"
+  },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Cobalt.png",
-  "Categories": ["Items.Ingredients"],
+  "Categories": [
+    "Items.Ingredients"
+  ],
   "MaxStack": 100,
   "Recipe": {
-    "Input": [{ "ItemId": "Craftory_Grit_Cobalt", "Quantity": 1 }],
-    "BenchRequirement": [{ "Type": "Processing", "Id": "Furnace" }],
-    "Output": [{ "ItemId": "Ingredient_Bar_Cobalt", "Quantity": 1 }],
+    "Input": [
+      {
+        "ItemId": "Craftory_Grit_Cobalt",
+        "Quantity": 1
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Processing",
+        "Id": "Furnace"
+      }
+    ],
+    "Output": [
+      {
+        "ItemId": "Ingredient_Bar_Cobalt",
+        "Quantity": 1
+      }
+    ],
     "TimeSeconds": 6
-  }
+  },
+  "PlayerAnimationsId": "Item",
+  "Model": "Items/Craftory/Grit/Grit_Pile.blockymodel",
+  "Texture": "Items/Craftory/Grit/Grit_Cobalt_Texture.png"
 }
