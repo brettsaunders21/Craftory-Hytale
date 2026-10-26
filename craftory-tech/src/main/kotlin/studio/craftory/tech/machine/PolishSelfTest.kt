@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
+import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
@@ -46,6 +47,7 @@ internal class PolishSelfTestRun : Resource<ChunkStore> {
         var expectedAmount = 0L
         var expectedState = ""
         var cleanupStartTick = 0L
+        var visitStarted = false
         var completed = false
     }
 
@@ -522,12 +524,32 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         run: PolishSelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
+        if (run.visitStarted) return
         val counters = PolishSelfTest.cleanupCounters(run)
         if (counters.isClear || run.world.tick - run.cleanupStartTick >= CLEANUP_TIMEOUT_TICKS) {
             val passed = counters.isClear
             PolishSelfTest.report(run, "cleanup", passed, counters.toString())
-            run.completed = true
-            store.getResource(PolishSelfTestRun.type).active = null
+            run.visitStarted = true
+            GrizzlecogVisitSystem.startForSelfTest(
+                run.world,
+                Vector3i(PolishSelfTest.ANCHOR.x, PolishSelfTest.ANCHOR.y, PolishSelfTest.ANCHOR.z),
+            ) { present, uuid, detail ->
+                run.world.execute {
+                    PolishSelfTest.report(run, "e grizzlecog visit", present, detail)
+                    val despawned = uuid?.let { GrizzlecogVisitSystem.despawnForSelfTest(run.world, it) } == true
+                    val absent = uuid?.let { !GrizzlecogVisitSystem.isGrizzlecogPresent(run.world, it) } == true
+                    PolishSelfTest.report(
+                        run,
+                        "e grizzlecog cleanup",
+                        despawned && absent,
+                        "despawned=$despawned absent=$absent",
+                    )
+                    val finalCounters = PolishSelfTest.cleanupCounters(run)
+                    PolishSelfTest.report(run, "cleanup after visit", finalCounters.isClear, finalCounters.toString())
+                    run.completed = true
+                    store.getResource(PolishSelfTestRun.type).active = null
+                }
+            }
         }
     }
 
