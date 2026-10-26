@@ -61,15 +61,21 @@ def export_blocks(manifest: list[str]) -> None:
         built = {suffix: (build(m, name), anims) for suffix, kw in variants.items() for m, anims in [fn(**kw)]}
         shared = len({strip(model_json(m)) for m, _ in built.values()}) == 1
         first_model = None
+        texture_written = False
         for suffix, (m, anims) in built.items():
             model_name = name if shared else f"{name}{suffix}"
             if first_model is None or not shared:
                 write_model(m, written(manifest, d / f"{model_name}.blockymodel"))
                 first_model = m
-            tex_name = f"{name}{suffix}_Texture.png" if len(built) > 1 else f"{name}_Texture.png"
-            m.image.save(written(manifest, d / tex_name), optimize=True)
+            tex_name = f"{name}_Texture.png" if name == "Gutterpipe" or len(built) == 1 else f"{name}{suffix}_Texture.png"
+            if name != "Gutterpipe" or not texture_written:
+                m.image.save(written(manifest, d / tex_name), optimize=True)
+                texture_written = True
             for anim_name, anim in anims.items():
                 write_json(anim, written(manifest, d / f"{name}_{anim_name}.blockyanim"))
+        if name == "Gutterpipe":
+            for stale_texture in d.glob("Gutterpipe_C??_Texture.png"):
+                stale_texture.unlink()
         icon_variant = {"Boomshroom_Burner": "_On", "Scorch_Oven": "_On", "Wakebell_Anchor": "_On",
                         "Junk_Heart_Firebox": "_On", "Fizz_Canister": "_Full", "Junk_Heart_Chimney": "_Cap"}
         m, _ = built[icon_variant.get(name, next(iter(built)))]

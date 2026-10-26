@@ -298,18 +298,27 @@ def gutterpipe(mask: int):
     if not 0 <= mask < 64:
         raise ValueError("Gutterpipe mask must be six bits")
     arms = [bit for bit in range(6) if mask & (1 << bit)]
-    if len(arms) <= 1:
-        return _gutterpipe_straight(arms[0] // 2 if arms else 0)
-    if len(arms) == 2 and arms[0] // 2 == arms[1] // 2:
-        return _gutterpipe_straight(arms[0] // 2)
+    straight_axis = (
+        arms[0] // 2
+        if len(arms) == 1 or len(arms) == 2 and arms[0] // 2 == arms[1] // 2
+        else 0 if not arms else None
+    )
+    root = Box("Gutterpipe", pos=(0, 16, 0))
+    for axis in range(3):
+        straight, _ = _gutterpipe_straight(axis)
+        straight_root = straight.roots[0]
+        for node in straight_root.walk():
+            node.name = f"Straight{axis}_{node.name}"
+        straight_root.visible = axis == straight_axis
+        root.add(straight_root)
 
-    junction = Box("Junction", pos=(0, 16, 0))
+    junction = Box("Junction", visible=straight_axis is None)
     junction.add(
         Box("JunctionHub", (14, 14, 14), paint=metal(TIN_DARK, rust=0.4, corrugated=True)),
         Box("HubCollar", (16, 3, 16), paint=BRASS_RIV),
         Box("HubSeam", (16, 2, 16), pos=(0, -4, 0), paint=RUSTY),
     )
-    for bit in arms:
+    for bit in range(6):
         axis = bit // 2
         sign = 1 if bit % 2 == 0 else -1
         direction = [0, 0, 0]
@@ -320,9 +329,10 @@ def gutterpipe(mask: int):
         collar_size = [13, 13, 13]
         collar_size[axis] = 3
         collar_pos = tuple(value * 14.5 for value in direction)
-        junction.add(
+        arm = Box(f"Arm{bit}", visible=straight_axis is None and bit in arms)
+        arm.add(
             Box(
-                f"Arm{bit}",
+                f"ArmBody{bit}",
                 tuple(arm_size),
                 pos=tuple(value * 11 for value in direction),
                 paint=metal(TIN_DARK, rust=0.45, corrugated=True),
@@ -338,10 +348,50 @@ def gutterpipe(mask: int):
             offset = list(collar_pos)
             transverse_axes = [value for value in range(3) if value != axis]
             offset[transverse_axes[rivet_index]] += side * 4.5
-            junction.add(
-                bolt(f"ArmRivet{bit}{rivet_index}", tuple(offset), s=2, paint=BRASS_P),
-            )
-    return Model([junction]), {}
+            arm.add(bolt(f"ArmRivet{bit}{rivet_index}", tuple(offset), s=2, paint=BRASS_P))
+        junction.add(arm)
+    root.add(junction)
+    return Model([root]), {}
+
+
+def snatcher_claw():
+    housing = Box("Housing", (22, 18, 18), pos=(0, 9, -2), paint=metal(BRASS, rust=0.25, rivets=True))
+    housing.add(
+        Box("TopPlate", (18, 2, 15), pos=(0, 10, 0), paint=BRASS_RIV),
+        Box("SideRailL", (2, 14, 16), pos=(-12, 0, -1), paint=RUSTY),
+        Box("SideRailR", (2, 14, 16), pos=(12, 0, -1), paint=BRASS_P),
+        Box("GlimmerEye", (5, 5, 2), pos=(0, 1, 10), paint=CYAN_GLOW, shading="fullbright"),
+        bolt("HousingRivetL", (-8, 5, 7), s=2, paint=BRASS_P),
+        bolt("HousingRivetR", (8, 5, 7), s=2, paint=BRASS_P),
+    )
+    palm = Box("Palm", pos=(0, 8, 10))
+    palm.add(
+        Box("PalmPlate", (12, 8, 4), pos=(0, 0, 0), paint=metal(TIN_DARK, rust=0.3, rivets=True)),
+        Box("Knuckle", (14, 4, 5), pos=(0, 5, 1), paint=BRASS_RIV),
+    )
+    jaw_l = Box("GrabLeft", pos=(-5, 10, 11))
+    jaw_l.add(
+        Box("LeftFinger", (4, 11, 4), pos=(-1, -4, 3), rot=(-10, 0, -10), paint=metal(TIN_DARK, rust=0.4)),
+        Box("LeftHook", (4, 5, 4), pos=(1, -10, 5), rot=(0, 0, 35), paint=RUSTY),
+    )
+    jaw_r = Box("GrabRight", pos=(5, 10, 11))
+    jaw_r.add(
+        Box("RightFinger", (4, 11, 4), pos=(1, -4, 3), rot=(-10, 0, 10), paint=metal(TIN_DARK, rust=0.4)),
+        Box("RightHook", (4, 5, 4), pos=(-1, -10, 5), rot=(0, 0, -35), paint=BRASS_RIV),
+    )
+    housing.add(palm, jaw_l, jaw_r)
+    animation = anim_json(
+        16,
+        {
+            "GrabLeft": {
+                "orientation": [(0, (0, 0, -14)), (6, (0, 0, 9)), (10, (0, 0, 9)), (16, (0, 0, -14))],
+            },
+            "GrabRight": {
+                "orientation": [(0, (0, 0, 14)), (6, (0, 0, -9)), (10, (0, 0, -9)), (16, (0, 0, 14))],
+            },
+        },
+    )
+    return Model([housing]), {"Grab": animation}
 
 
 # ------------------------------------------------------------------ Gnasher Pit
@@ -603,6 +653,7 @@ BLOCKS = {
     "Gutter_Boiler": (gutter_boiler, {"_On": {"lit": True}, "_Off": {"lit": False}, "_Offline": {"lit": False, "offline": True}}),
     "Gasbag": (gasbag, {"": {}}),
     "Gutterpipe": (gutterpipe, {f"_C{mask:02d}": {"mask": mask} for mask in range(64)}),
+    "Snatcher_Claw": (snatcher_claw, {"": {}}),
     "Gnasher_Pit": (gnasher_pit, {"": {}}),
     "Scorch_Oven": (scorch_oven, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Wakebell_Anchor": (wakebell_anchor, {"_Off": {"lit": False}, "_On": {"lit": True}}),
