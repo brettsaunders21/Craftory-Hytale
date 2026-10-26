@@ -183,7 +183,7 @@ internal class RattlewheelSystem(
         return section.getFluid(x and 31, y and 31, z and 31)?.id == WATER_ID
     }
 
-    private fun weatherMultiplier(
+    internal fun weatherMultiplier(
         world: World,
         position: Vector3i,
     ): Double {

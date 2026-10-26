@@ -103,19 +103,27 @@ internal class ShroomBedSystem(
         blockState.markNeedsSaving(commandBuffer)
     }
 
-    private fun isDark(
+    internal fun isDark(
         store: Store<ChunkStore>,
         blockState: BlockModule.BlockStateInfo,
     ): Boolean {
-        val section = store.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return false
+        val lightLevels = lightLevels(store, blockState) ?: return false
+        return lightLevels.first < DARK_LIGHT_THRESHOLD && lightLevels.second < DARK_LIGHT_THRESHOLD
+    }
+
+    internal fun lightLevels(
+        store: Store<ChunkStore>,
+        blockState: BlockModule.BlockStateInfo,
+    ): Pair<Int, Int>? {
+        val section = store.getComponent(blockState.sectionRef, BlockSection.getComponentType()) ?: return null
         val light =
             when {
                 section.hasLocalLight() -> section.localLight
                 section.hasGlobalLight() -> section.globalLight
-                else -> return false
+                else -> return null
             }
-        return light.getSkyLight(blockState.index).toInt() < DARK_LIGHT_THRESHOLD &&
-            light.getBlockLightIntensity(blockState.index).toInt() < DARK_LIGHT_THRESHOLD
+        return light.getSkyLight(blockState.index).toInt() to
+            light.getBlockLightIntensity(blockState.index).toInt()
     }
 
     private fun density(

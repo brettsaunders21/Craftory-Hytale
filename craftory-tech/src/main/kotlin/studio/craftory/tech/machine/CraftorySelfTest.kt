@@ -1292,6 +1292,7 @@ object CraftorySelfTest {
         rattlewheelRef: Ref<ChunkStore>,
     ) {
         RattlewheelSystem.registerSelfTestBlock(rattlewheelRef)
+        checkLiveRattlewheelWeather(run, world)
         RattlewheelSystem.forceWeatherMultiplierForSelfTest(rattlewheelRef, 1.0)
         val rattlewheel =
             store.getComponent(rattlewheelRef, RattlewheelState.type) ?: error("Rattlewheel component missing")
@@ -1343,6 +1344,28 @@ object CraftorySelfTest {
                 loadedState.waterFlow == savedFlow &&
                 loadedState.fizzPerSecond == savedOutput,
             "Rattlewheel chunk unload/reload persists cached output",
+        )
+    }
+
+    private fun checkLiveRattlewheelWeather(
+        run: SelfTestRun.Run,
+        world: World,
+    ) {
+        val liveWeather =
+            runCatching {
+                RattlewheelSystem().weatherMultiplier(
+                    world,
+                    Vector3i(RATTLEWHEEL.x, RATTLEWHEEL.y, RATTLEWHEEL.z),
+                )
+            }
+        check(
+            run,
+            liveWeather.getOrNull()?.let { it == 1.0 || it == 1.5 || it == 2.0 } == true,
+            "Rattlewheel samples live weather",
+            liveWeather.fold(
+                { "multiplier=$it" },
+                { "error=${it.message ?: it.javaClass.simpleName}" },
+            ),
         )
     }
 
@@ -1429,6 +1452,10 @@ object CraftorySelfTest {
                 ?: error("chain Shroom Bed missing")
         ShroomBedSystem.registerSelfTestBlock(bedRef)
         ShroomBedSystem.registerSelfTestBlock(neighbourRef)
+        val liveBlockState =
+            store.getComponent(bedRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("Shroom Bed block state missing")
+        checkLiveShroomBedLight(run, store, liveBlockState)
         ShroomBedSystem.forceDarknessForSelfTest(bedRef, true)
         val bed = store.getComponent(bedRef, ShroomBedState.type) ?: error("Shroom Bed component missing")
         val neighbour =
@@ -1439,6 +1466,23 @@ object CraftorySelfTest {
 
         checkShroomHarvest(run, world, store, bedRef, bed)
         checkShroomPopAndReload(run, store, bedRef, bed, neighbour)
+    }
+
+    private fun checkLiveShroomBedLight(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        blockState: BlockModule.BlockStateInfo,
+    ) {
+        val lightSampler = ShroomBedSystem()
+        val liveLightLevels = runCatching { lightSampler.lightLevels(store, blockState) }.getOrNull()
+        val liveDarkness = runCatching { lightSampler.isDark(store, blockState) }
+        check(
+            run,
+            liveDarkness.isSuccess,
+            "Shroom Bed samples live light",
+            "skyLight=${liveLightLevels?.first ?: "unavailable"}, " +
+                "blockLight=${liveLightLevels?.second ?: "unavailable"}",
+        )
     }
 
     private fun checkShroomHarvest(
@@ -1776,7 +1820,13 @@ object CraftorySelfTest {
         val playerUuid = UUID.randomUUID()
         val page = NotebookPages.forMachineType(CraftoryIds.BURNER_TYPE) ?: error("burner page is missing")
         try {
-            clearWrenchDrops(run.world, WRENCH_TAKE_APART, WRENCH_PACK)
+            clearWrenchDrops(
+                run.world,
+                WRENCH_TAKE_APART,
+                WRENCH_PACK,
+                WRENCH_SHROOM_BED,
+                WRENCH_RATTLEWHEEL,
+            )
             place(run.world, store, run.sectionRef, section, CraftoryIds.BURNER, WRENCH_TAKE_APART, BurnerState.type)
             var takeApartRef =
                 BlockModule.getBlockEntity(
@@ -1929,8 +1979,16 @@ object CraftorySelfTest {
                     blockEntityMissing(run.world, WRENCH_PACK),
                 "wrench packs known machine intact",
             )
+            checkShroomBedWrenchPacking(run, store, section, playerUuid, crews)
+            checkRattlewheelWrenchPacking(run, store, section, playerUuid, crews)
         } finally {
-            clearWrenchDrops(run.world, WRENCH_TAKE_APART, WRENCH_PACK)
+            clearWrenchDrops(
+                run.world,
+                WRENCH_TAKE_APART,
+                WRENCH_PACK,
+                WRENCH_SHROOM_BED,
+                WRENCH_RATTLEWHEEL,
+            )
             try {
                 crews.close()
             } finally {
@@ -1939,6 +1997,112 @@ object CraftorySelfTest {
             }
         }
         check(run, !Files.exists(testDirectory), "wrench test crew cleanup")
+    }
+
+    private fun checkShroomBedWrenchPacking(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        section: BlockComponentSection,
+        playerUuid: UUID,
+        crews: CrewService,
+    ) {
+        place(run.world, store, run.sectionRef, section, CraftoryIds.SHROOM_BED, WRENCH_TAKE_APART, ShroomBedState.type)
+        val bedRef =
+            BlockModule.getBlockEntity(run.world, WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z)
+                ?: error("wrench Shroom Bed was not placed")
+        ShroomBedSystem.registerSelfTestBlock(bedRef)
+        val bed = store.getComponent(bedRef, ShroomBedState.type) ?: error("wrench Shroom Bed state is missing")
+        val bodges = store.getComponent(bedRef, BodgeSlots.type) ?: error("wrench Shroom Bed bodge slots are missing")
+        val bodgeItem = BodgePart.SCRAP_PLATING.itemId
+        bed.stored = 1
+        bodges.slot0 = bodgeItem
+        val position = Vector3i(WRENCH_TAKE_APART.x, WRENCH_TAKE_APART.y, WRENCH_TAKE_APART.z)
+        val refused =
+            MachineActions.useWrench(
+                run.world,
+                bedRef,
+                position,
+                playerUuid,
+                null,
+                crews,
+                store,
+                bypassOwnership = true,
+            )
+        check(
+            run,
+            refused == WrenchActionResult.HasContents && bed.stored == 1 &&
+                !blockEntityMissing(run.world, WRENCH_TAKE_APART),
+            "wrench refuses Shroom Bed with stored Boomshrooms",
+        )
+        val blockState =
+            store.getComponent(bedRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: error("wrench Shroom Bed block state is missing")
+        val harvested = ShroomBedActions.harvest(run.world, bed, blockState, store)
+        check(
+            run,
+            harvested == 1 && bed.stored == 0 &&
+                itemQuantityNear(run.world, WRENCH_TAKE_APART, CraftoryIds.BOOMSHROOM_FUEL) == 1,
+            "wrench Shroom Bed harvest returns Boomshrooms",
+        )
+        val packed =
+            MachineActions.useWrench(
+                run.world,
+                bedRef,
+                position,
+                playerUuid,
+                null,
+                crews,
+                store,
+                bypassOwnership = true,
+            )
+        check(
+            run,
+            packed is WrenchActionResult.Packed && packed.itemDropped &&
+                blockEntityMissing(run.world, WRENCH_TAKE_APART) &&
+                itemQuantityNear(run.world, WRENCH_TAKE_APART, CraftoryIds.SHROOM_BED) >= 1 &&
+                itemQuantityNear(run.world, WRENCH_TAKE_APART, bodgeItem) >= 1,
+            "wrench packs harvested Shroom Bed and fitted Bodge",
+        )
+    }
+
+    private fun checkRattlewheelWrenchPacking(
+        run: SelfTestRun.Run,
+        store: Store<ChunkStore>,
+        section: BlockComponentSection,
+        playerUuid: UUID,
+        crews: CrewService,
+    ) {
+        place(
+            run.world,
+            store,
+            run.sectionRef,
+            section,
+            CraftoryIds.RATTLEWHEEL,
+            WRENCH_PACK,
+            RattlewheelState.type,
+        )
+        val wheelRef =
+            BlockModule.getBlockEntity(run.world, WRENCH_PACK.x, WRENCH_PACK.y, WRENCH_PACK.z)
+                ?: error("wrench Rattlewheel was not placed")
+        RattlewheelSystem.registerSelfTestBlock(wheelRef)
+        val packed =
+            MachineActions.useWrench(
+                run.world,
+                wheelRef,
+                Vector3i(WRENCH_PACK.x, WRENCH_PACK.y, WRENCH_PACK.z),
+                playerUuid,
+                null,
+                crews,
+                store,
+                bypassOwnership = true,
+            )
+        check(
+            run,
+            packed is WrenchActionResult.Packed && packed.itemDropped &&
+                blockEntityMissing(run.world, WRENCH_PACK) &&
+                itemQuantityNear(run.world, WRENCH_PACK, CraftoryIds.RATTLEWHEEL) >= 1,
+            "wrench packs Rattlewheel",
+        )
     }
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -2201,7 +2365,15 @@ object CraftorySelfTest {
                     val point =
                         chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: continue
                     if (
-                        itemId in setOf("Ingredient_Scraps", CraftoryIds.BURNER, CraftoryIds.BOOMSHROOM_FUEL) &&
+                        itemId in
+                        setOf(
+                            "Ingredient_Scraps",
+                            CraftoryIds.BURNER,
+                            CraftoryIds.BOOMSHROOM_FUEL,
+                            CraftoryIds.RATTLEWHEEL,
+                            CraftoryIds.SHROOM_BED,
+                            BodgePart.SCRAP_PLATING.itemId,
+                        ) &&
                         centers.any { (x, z) ->
                             kotlin.math.abs(point.x - x) < 2.0 && kotlin.math.abs(point.z - z) < 2.0
                         }
@@ -3029,7 +3201,7 @@ object CraftorySelfTest {
                 SetBlockSettings.NO_DROP_ITEMS,
             )
         }
-        clearWrenchDrops(world, SHROOM_BED, CHAIN_SHROOM_BED)
+        clearWrenchDrops(world, SHROOM_BED, CHAIN_SHROOM_BED, WRENCH_SHROOM_BED, WRENCH_RATTLEWHEEL)
         return GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
     }
 
@@ -3052,6 +3224,8 @@ object CraftorySelfTest {
     private val RATTLEWHEEL_DRY = TestPosition(10_040, 100, 10_004)
     private val SHROOM_BED = TestPosition(10_038, 148, 10_004)
     private val CHAIN_SHROOM_BED = TestPosition(10_039, 148, 10_004)
+    private val WRENCH_SHROOM_BED = TestPosition(10_010, 148, 10_016)
+    private val WRENCH_RATTLEWHEEL = TestPosition(10_014, 148, 10_016)
     private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
     private val WRENCH_PACK = TestPosition(10_022, 148, 10_004)
     private val HEART = TestPosition(10_028, 148, 10_010)
@@ -3080,6 +3254,8 @@ object CraftorySelfTest {
                     ANCHOR,
                     WRENCH_TAKE_APART,
                     WRENCH_PACK,
+                    WRENCH_SHROOM_BED,
+                    WRENCH_RATTLEWHEEL,
                     SCRAP_RUSH_TEST,
                     RATTLEWHEEL,
                     RATTLEWHEEL_WATER,
