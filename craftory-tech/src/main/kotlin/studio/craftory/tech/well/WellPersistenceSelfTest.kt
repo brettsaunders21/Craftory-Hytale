@@ -19,6 +19,7 @@ import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.CraftorySelfTest
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 internal object WellPersistenceSelfTest {
@@ -208,6 +209,7 @@ internal object WellPersistenceSelfTest {
     private fun verifyReloaded(
         fixture: Fixture,
         complete: (Boolean, String) -> Unit,
+        attempt: Int = 0,
     ) {
         try {
             val world = fixture.world
@@ -218,22 +220,27 @@ internal object WellPersistenceSelfTest {
                     fixture.wellPosition.z,
                 ) ?: error("reloaded test section is missing")
             val store = world.chunkStore.store
-            val well =
-                CraftoryCore
-                    .wells()
-                    .wellsNear(store, fixture.wellPosition, 0)
-                    .firstOrNull()
-                    ?.well ?: error("reloaded Well was not indexed")
-            check(well.state == WellState.TETHERED && well.claimCrewId == CLAIM_CREW_ID) {
-                "reloaded Well lost its TETHERED state or crew claim"
+            val wellRef =
+                BlockModule.getBlockEntity(
+                    world,
+                    fixture.wellPosition.x,
+                    fixture.wellPosition.y,
+                    fixture.wellPosition.z,
+                )
+            val indexedWell =
+                CraftoryCore.wells().wellsNear(store, fixture.wellPosition, 0).firstOrNull()
+            if (indexedWell == null && attempt < 100) {
+                scheduleReloadRetry(world) { verifyReloaded(fixture, complete, attempt + 1) }
+                return
             }
-            val restoredStakes =
-                fixture.stakePositions.map { position ->
-                    isRestoredStake(fixture, world, store, position)
-                }
-            check(restoredStakes.all { it }) {
-                "one or more tether stakes did not persist"
+            check(indexedWell != null) {
+                val hasBlockState =
+                    wellRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) != null }
+                "reloaded Well was not indexed " +
+                    "(attempts=$attempt, blockEntityValid=${wellRef?.isValid}, blockState=$hasBlockState, " +
+                    "indexCount=${CraftoryCore.wells().count(store)})"
             }
+            checkRestoredState(fixture, world, store, indexedWell.well)
             cleanupFixture(fixture, sectionRef)
             saveCleanChunk(fixture, complete)
         } catch (failure: IllegalStateException) {
@@ -250,6 +257,20 @@ internal object WellPersistenceSelfTest {
                 runCatching { cleanupFixture(fixture, sectionRef) }
                 saveCleanChunk(fixture) { _, cleanupDetail -> complete(false, "$detail; cleanup: $cleanupDetail") }
             }
+        }
+    }
+
+    private fun checkRestoredState(
+        fixture: Fixture,
+        world: World,
+        store: Store<ChunkStore>,
+        well: Glimmerwell,
+    ) {
+        check(well.state == WellState.TETHERED && well.claimCrewId == CLAIM_CREW_ID) {
+            "reloaded Well lost its TETHERED state or crew claim"
+        }
+        check(fixture.stakePositions.all { position -> isRestoredStake(fixture, world, store, position) }) {
+            "one or more tether stakes did not persist"
         }
     }
 
@@ -327,5 +348,14 @@ internal object WellPersistenceSelfTest {
         if (markNeedsSaving) worldChunk.markNeedsSaving()
         worldChunk.setSaving(false)
         worldChunk.removeKeepLoaded()
+    }
+}
+
+private fun scheduleReloadRetry(
+    world: World,
+    action: () -> Unit,
+) {
+    CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute {
+        world.execute(action)
     }
 }
