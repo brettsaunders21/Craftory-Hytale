@@ -388,6 +388,56 @@ def wakebell_anchor(lit: bool):
     return Model([base]), anims
 
 
+def wellhead(pumping: bool):
+    tank = Box("PressureTank", (18, 19, 18), pos=(0, 15, 0), rot=(0, 4, 0), paint=CORRUGATED_RUST)
+    tank.add(
+        Box("TankTop", (20, 2, 20), pos=(0, 10, 0), paint=BRASS_RIV),
+        Box("TankBase", (20, 2, 20), pos=(0, -9, 0), paint=DARK_TIN),
+        Box("Gauge", (7, 8, 2), pos=(0, 1, 10), paint=glass(FIZZ, 0.9 if pumping else 0.2)),
+        Box("GaugeFrame", (9, 10, 2), pos=(0, 1, 10.8), paint=BRASS_P),
+        Box("GaugeNeedle", (1, 5, 1), pos=(0, 1, 12), rot=(0, 0, -24 if pumping else -70),
+            paint=FIZZ_GLOW if pumping else DEAD_GLASS),
+        Box("GaugeHub", (2, 2, 1), pos=(0, 1, 12.5), paint=BRASS_P),
+        Box("FeedPipe", (4, 12, 4), pos=(7, 12, -5), paint=DARK_TIN),
+        Box("FeedElbow", (4, 4, 8), pos=(7, 18, -7), paint=BRASS_P),
+        Box("OutputPipe", (4, 9, 4), pos=(-7, 12, 4), paint=DARK_TIN),
+        Box("OutputCap", (6, 2, 6), pos=(-7, 17, 4), paint=BRASS_RIV),
+        Box("WellSocket", (12, 3, 12), pos=(0, -11, 0), paint=BRASS_P),
+        Box("SocketGlow", (8, 1, 8), pos=(0, -13, 0), paint=CYAN_GLOW if pumping else DEAD_GLASS,
+            shading="fullbright" if pumping else "standard"),
+        lashing("Strap", (2, 17, 20), pos=(9, 0, 0)),
+        bolt("BoltA", (-7, 8, 9), paint=BRASS_P),
+        bolt("BoltB", (7, -7, 9), paint=BRASS_P),
+    )
+    wheel = Box("PumpWheel", pos=(10, 4, -5))
+    wheel.add(
+        Box("WheelHub", (4, 4, 4), paint=BRASS_P),
+        Box("WheelSpokeA", (2, 14, 2), paint=RUSTY),
+        Box("WheelSpokeB", (14, 2, 2), paint=RUSTY),
+        Box("WheelRim", (14, 1, 14), paint=BRASS_RIV),
+    )
+    tank.add(wheel)
+    return Model([tank]), {}
+
+
+def glimmerwell_anchor(corrupted: bool):
+    glow_paint = solid((0.55, 0.18, 0.72)) if corrupted else CYAN_GLOW
+    base_paint = metal((0.30, 0.28, 0.31) if corrupted else TIN_DARK, rust=0.55)
+    base = Box("AnchorBase", (16, 4, 16), pos=(0, 2, 0), rot=(0, 3, 0), paint=base_paint)
+    base.add(
+        Box("RuneRing", (13, 2, 13), pos=(0, 5, 0), paint=BRASS_P),
+        Box("WellCrystal", (5, 12, 5), pos=(0, 11, 0), rot=(8, 18, -8), paint=glow_paint,
+            shading="fullbright"),
+        Box("ShardA", (3, 7, 3), pos=(-6, 7, 2), rot=(8, 20, 18), paint=glow_paint,
+            shading="fullbright"),
+        Box("ShardB", (3, 7, 3), pos=(6, 7, -2), rot=(-10, -18, -15), paint=glow_paint,
+            shading="fullbright"),
+        bolt("AnchorBoltA", (-6, 4, 6), paint=BRASS_P),
+        bolt("AnchorBoltB", (6, 4, -6), paint=BRASS_P),
+    )
+    return Model([base]), {}
+
+
 # ------------------------------------------------------------------ Junk Heart pieces (PR #9)
 
 
@@ -547,6 +597,8 @@ BLOCKS = {
     "Gnasher_Pit": (gnasher_pit, {"": {}}),
     "Scorch_Oven": (scorch_oven, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Wakebell_Anchor": (wakebell_anchor, {"_Off": {"lit": False}, "_On": {"lit": True}}),
+    "Wellhead": (wellhead, {"_Off": {"pumping": False}, "_Pumping": {"pumping": True}}),
+    "Glimmerwell_Anchor": (glimmerwell_anchor, {"_Normal": {"corrupted": False}, "_Corrupted": {"corrupted": True}}),
     "Junk_Heart_Firebox": (junk_heart_firebox, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Scrap_Plating": (scrap_plating, {"": {}}),
     "Junk_Heart_Chimney": (chimney, {"": {"cap": False}, "_Cap": {"cap": True}}),

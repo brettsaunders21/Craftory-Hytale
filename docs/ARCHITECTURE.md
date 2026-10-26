@@ -215,6 +215,12 @@ while Hytale stores the mob with the chunk, including its home, for loading when
 leash points periodically and relies on role leash behavior for movement. Tech's Riftmoth drain finds adjacent
 energy storage and debits it through the public `EnergyAccess.requestDebit` API.
 
+Tech's Well affliction system persists Riftmoth, Void-larva, and raid NPC UUIDs on the Well entity and
+uses a separate NPC follower component for pathing. NPC spawns are deferred to the world thread and
+reacquire the Well before recording IDs. Feed and siphon timers are in-memory counters; spawn, death,
+corruption, cleansing, siphon, and raid transitions are the persisted boundaries. Well mutations and
+strength changes go through Core's public Well API.
+
 ## 8. Milestones
 
 ### Slice 2c implementation notes

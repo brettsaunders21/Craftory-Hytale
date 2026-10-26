@@ -83,3 +83,22 @@ def textures() -> dict[str, Image.Image]:
         "Smoke_Black": smoke((0.12, 0.11, 0.11), 6),
         "Glimmer_Mote": mote(),
     }
+
+
+def trails() -> dict[str, Image.Image]:
+    def ribbon(color: tuple[float, float, float], seed: int) -> Image.Image:
+        rng = np.random.default_rng(seed)
+        yy, xx = np.mgrid[0:SIZE, 0:SIZE] + 0.5
+        center = SIZE / 2 + np.sin(yy / 4 + seed) * 2
+        width = np.maximum(0, 1 - np.abs(xx - center) / 8)
+        alpha = _quantise(np.clip(width, 0, 1) * 0.8, 4)
+        noise = rng.uniform(0.85, 1.0, (SIZE, SIZE, 1))
+        image = np.zeros((SIZE, SIZE, 4), np.float32)
+        image[..., :3] = np.array(color) * noise
+        image[..., 3] = alpha
+        return _img(image)
+
+    return {
+        "Craftory_Riftmoth_Feed": ribbon((0.58, 0.20, 0.78), 31),
+        "Craftory_Slurp_Siphon": ribbon((0.22, 0.82, 0.34), 47),
+    }

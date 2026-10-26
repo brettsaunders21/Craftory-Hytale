@@ -166,7 +166,7 @@ Strength also changes with the world: Spark Wells surge in storms, Hollow Wells 
 
 - **Wild**: pulses, sheds Flickers and harmless **Glimmer squalls** (knockback and light), and spawns guardians. Can't be tethered.
 - **Dormant**: calm and humming. Can be scanned fully and tethered.
-- **Corrupted**: Riftmoths have been feeding on it. Its colour drains, output halves, and it spawns Void mobs on a timer. Cleanse it by killing the feeders, with a Tide or Growth Well nearby, or with a **Cleansing Censer**.
+- **Corrupted**: Riftmoths have been feeding on it. Its anchor desaturates, output halves, and it spawns Void larvae on a timer. Cleanse it after every tracked Riftmoth is confirmed dead or with a seated/tapped Tide or Growth Well within 16 blocks. A Cleansing Censer remains deferred.
 - **Void-touched**: corrupted for too long. It becomes a small Void anomaly (Void Larvae, a shielded Hollowmaw). It's dangerous, and it's also the Ascendant target.
 - **Spent**: overdrawn. It shrinks back to a Flicker. It's a recoverable mistake, not a permanent loss.
 
@@ -194,7 +194,7 @@ The fun decision: players **farm events on purpose**. They plant Storm Vanes on 
 2. **Calm.** Either beat the guardian encounter (full value), or smother the Well the goblin way: ring it with 3+ **Fizz Dampers** (rattling canisters spraying green foam). Smothering is safe and fast but drops the Well one strength band.
 3. **Tether.** Place **Tether Stakes** (scrap posts and copper wire; from T5, floating **Tether Pylons**) around it: 3 for Flicker/Steady, 4 for Roaring, 6 for Primal. Beams link each stake to the Well. Uneven placement makes a stake rattle and lean, and you hammer it back. Once locked, the Well shrinks and spins faster. On servers, a Tethered Well is claimed by its tetherer.
 4. **Choose: tap or jar.**
-   - **Tap in place**: build a **Wellhead** over it (Tinkered: a goblin derrick with a pumping bellows; T4+: a crystal crown with a light column). Run a Sparkline or Spark Pylons home. A tapped Well also allows **catalysis** (§5.4). It's cheap and safe, but you're defending a remote outpost and long links lose output.
+   - **Tap in place**: place a claimed **Wellhead** directly above a Tethered Well. Its input is horizontal and its output points up. Run a Sparkline or Spark Pylons home. A tapped Well also allows **catalysis** (§5.4). It's cheap and safe, but you're defending a remote outpost and long links lose output.
    - **Jar it**: bring it home for full output, feeding, merging and Tinkling cores. This is the risky option.
 5. **Haul (the escort mission).** Jars by tier: **Gob-Jar** (T3: a cracked pickle jar in a scrap cage, holds Flicker/Steady), **Bell Jar** (T5, Roaring), **Ley Lantern** (T6, Primal). Pull the Well in with a few timing checks; miss one and it lashes out and resets that stake. While you carry it:
    - You walk slower, and you can't glide, Hookshot or ride Hurl Tubes until the Ley Lantern. (needs prototype: movement limits on a held item)
@@ -288,7 +288,7 @@ Glimmer from a Well or environmental generator carries its Temperament as a **Ti
 
 ### 5.4 Catalysis: the mid-game choice
 
-Route lower-grade energy *through* a tapped Wellhead and it comes out at the Well's grade with about 15% loss, against about 60% per Cascade stage. Look after good Wells and upgrading is cheap. Skip them and you pay the Cascade tax. This is the key reason to go exploring and to hold remote Wellheads.
+The Wellhead demands 40 units per solve and emits at the dim-Glimmer rank, scaled by the Well's harmony and by catalysis (`delivered - ceil(delivered × lossPercent / 100)`, default loss 15%). Corruption halves its output. Output is zero if the Well is missing or no longer Tapped. Look after good Wells and upgrading is cheap. Skip them and you pay the Cascade tax. This is the key reason to go exploring and to hold remote Wellheads.
 
 ### 5.5 Arcane era: Radiant and Prismatic (T6–7)
 
@@ -752,7 +752,14 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 | 31 | Slice 5a Fizz Damper | Powered at 2 Fizz/s per unit; three or more active dampers within four blocks smother a Wild Well |
 | 32 | Slice 5a stake spacing | Stake angular gaps are measured against equal spacing; a deviation greater than 40 degrees marks a stake leaning |
 | 33 | Slice 5a storm budget | At most one Steady-or-stronger Wild Well per 512×512 region; budget is configurable |
-| 34 | Slice 5b deferral | Wellhead/catalysis, Slurp Walker, Riftmoth feeding/corruption, and Cradle/seat changes remain deferred |
+| 34 | Slice 5b Core boundary | Engine owns pure catalysis math; Tech accesses Well state only through Core's public Well API |
 | 35 | Slice 5a carrier readout | The carrier gets a throttled notification; nearby crew read stability through Squint Goggles |
+| 36 | Wellhead ownership | Placement is allowed only above a crew-claimed Tethered Well; machine use and break honor the placer crew or the existing override permission |
+| 37 | Wellhead output | Demand 40; output uses current Well strength, placement harmony, catalysis loss, and a 50% corruption penalty; demand/output are inactive outside active areas |
+| 38 | Steady seating | Absent or positive jar stability is accepted; zero/burst stability is rejected; successful Steady-or-stronger seating grants `craftory:well/steady_seated`, not the Tier 4 unlock |
+| 39 | Riftmoth pressure | A claimed active Tapped/Seated Well rolls its configured 300-second/20% schedule; 60 seconds of feeding corrupts it. Per-Well defaults are configurable |
+| 40 | Affliction cleanup | Tracked confirmed-dead Riftmoths or a nearby active Tide/Growth Well cleanse corruption; `Larva_Void` is the Void-spawn stand-in, capped at three |
+| 41 | Poacher raid | A claimed active Well rolls the 1200-second/10% raid schedule; two Poachers and a Walker arrive. A 120-second siphon lowers one strength band, never below Flicker |
+| 42 | Walker appearance | Use the vanilla Coffer Goblin Guardian appearance as the bulky Walker body; no custom attachment or tint is required |
 
 Naming: a new mod name to replace "Craftory" is being chosen; see the README once decided.

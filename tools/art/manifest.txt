@@ -23,6 +23,9 @@ Common/Blocks/Craftory/Fizz_Damper/Fizz_Damper_On_Texture.png
 Common/Blocks/Craftory/Gasbag/Gasbag.blockymodel
 Common/Blocks/Craftory/Gasbag/Gasbag_Texture.png
 Common/Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim
+Common/Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor.blockymodel
+Common/Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Corrupted_Texture.png
+Common/Blocks/Craftory/Glimmerwell_Anchor/Glimmerwell_Anchor_Normal_Texture.png
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit.blockymodel
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Chomp.blockyanim
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Texture.png
@@ -75,6 +78,10 @@ Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Off_Texture.png
 Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_On.blockymodel
 Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_On_Texture.png
 Common/Blocks/Craftory/Wakebell_Anchor/Wakebell_Anchor_Sway.blockyanim
+Common/Blocks/Craftory/Wellhead/Wellhead_Off.blockymodel
+Common/Blocks/Craftory/Wellhead/Wellhead_Off_Texture.png
+Common/Blocks/Craftory/Wellhead/Wellhead_Pumping.blockymodel
+Common/Blocks/Craftory/Wellhead/Wellhead_Pumping_Texture.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Boom_Valve.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Boomshroom_Burner.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Crank_A_Fizz.png
@@ -82,6 +89,7 @@ Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Canister.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Charge.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Damper.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gasbag.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Glimmerwell_Anchor.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gutter_Boiler.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gutter_Gear.png
@@ -103,6 +111,7 @@ Common/Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Hammer.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Notebook.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Wrench.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Wakebell_Anchor.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Wellhead.png
 Common/Items/Craftory/Squint_Goggles/Squint_Goggles_Head.blockymodel
 Common/Items/Craftory/Squint_Goggles/Squint_Goggles_Head_Texture.png
 Common/Items/Craftory/Tinkers_Hammer/Tinkers_Hammer.blockymodel
@@ -120,4 +129,6 @@ Common/Particles/Craftory/Glimmer_Mote.png
 Common/Particles/Craftory/Smoke_Black.png
 Common/Particles/Craftory/Smoke_Grey.png
 Common/Particles/Craftory/Smoke_White.png
+Common/Trails/Craftory_Riftmoth_Feed.png
+Common/Trails/Craftory_Slurp_Siphon.png
 Server/Models/Intelligent/Craftory/Craftory_Grizzlecog.json
