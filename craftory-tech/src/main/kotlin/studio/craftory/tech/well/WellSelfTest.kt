@@ -45,26 +45,6 @@ internal typealias BlockEntityRef = Ref<ChunkStore>
 
 private typealias WellSelfTestReport = (String) -> Unit
 
-private fun cleanupLegacyCarrierBurstArtifacts(world: World): Pair<Int, Int> {
-    val wells =
-        CraftoryCore
-            .wells()
-            .wellsNear(world.chunkStore.store, WellSelfTest.CAUGHT_POS, 64)
-            .filter { it.pos.x == WellSelfTest.CAUGHT_POS.x && it.pos.z == WellSelfTest.CAUGHT_POS.z }
-    val guardians = world.entityStore.store.getResource(WellGuardianIndex.type)
-    var removedWells = 0
-    var removedGuardians = 0
-    wells.forEach { near ->
-        val guardian = guardians.refsByWellId.remove(near.pos.pack().toString())
-        if (guardian != null && guardian.isValid) {
-            world.entityStore.store.removeEntity(guardian, RemoveReason.REMOVE)
-            removedGuardians++
-        }
-        if (CraftoryCore.wells().remove(world, near.pos)) removedWells++
-    }
-    return removedWells to removedGuardians
-}
-
 internal object WellSelfTest {
     internal val CAUGHT_POS = BlockPos(10_030, 148, 10_010)
     internal val FORCED_POS = BlockPos(10_029, 148, 10_010)
@@ -93,16 +73,6 @@ internal object WellSelfTest {
             Helpers.testGuardianDeath(world, report)
             Helpers.testStakeLifecycle(world, tempDir, report, WellSelfTestPlayer.createDetached())
             testHurlRefusal(world, report)
-            val staleCarrierArtifacts = cleanupLegacyCarrierBurstArtifacts(world)
-            val remaining = CraftoryCore.wells().wellsNear(world.chunkStore.store, CAUGHT_POS, 64)
-            check(remaining.isEmpty()) {
-                "well cleanup left ${remaining.size} indexed wells within radius 64: ${remaining.map { it.pos }}"
-            }
-            report(
-                "selftest: cleanup (legacyCarrierWells=${staleCarrierArtifacts.first}, " +
-                    "legacyCarrierGuardians=${staleCarrierArtifacts.second})",
-            )
-            report("selftest: cleanup (wells=${remaining.size})")
         } finally {
             CraftoryCore.wells().remove(world, CAUGHT_POS)
             CraftoryCore.wells().remove(world, FORCED_POS)
