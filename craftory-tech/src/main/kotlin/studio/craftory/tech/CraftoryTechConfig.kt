@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec
 
 class CraftoryTechConfig(
     var scrapRush: ScrapRushSettings = ScrapRushSettings(),
+    var resonatorCrystalUses: Long = 200,
 ) {
     companion object {
         val CODEC: BuilderCodec<CraftoryTechConfig> =
@@ -15,6 +16,11 @@ class CraftoryTechConfig(
                     KeyedCodec("ScrapRush", ScrapRushSettings.CODEC),
                     { config, value -> config.scrapRush = value },
                     { it.scrapRush },
+                ).add()
+                .append(
+                    KeyedCodec("ResonatorCrystalUses", Codec.LONG),
+                    { config, value -> config.resonatorCrystalUses = value.coerceAtLeast(1) },
+                    { it.resonatorCrystalUses },
                 ).add()
                 .build()
     }

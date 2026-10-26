@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.util.Config
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.Crew
 import studio.craftory.core.api.energy.CraftoryEnergyEventsApi
+import studio.craftory.core.api.energy.EnergyFaces
 import studio.craftory.core.api.energy.MachineEnergyCondition
 import studio.craftory.core.api.energy.MachineEnergyConditionListener
 import studio.craftory.core.api.energy.MemberSpec
@@ -28,6 +29,10 @@ import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
 import studio.craftory.tech.machine.CanisterPageRefreshSystem
+import studio.craftory.tech.machine.CrackleCoilSystem
+import studio.craftory.tech.machine.CradleState
+import studio.craftory.tech.machine.CradleSystem
+import studio.craftory.tech.machine.CradleUseInteraction
 import studio.craftory.tech.machine.CraftoryBlockUseInteraction
 import studio.craftory.tech.machine.CraftoryHammerUseInteraction
 import studio.craftory.tech.machine.CraftoryOvenUseInteraction
@@ -53,6 +58,10 @@ import studio.craftory.tech.machine.MachineOwnerPlacementSystem
 import studio.craftory.tech.machine.MultiblockAssemblySystem
 import studio.craftory.tech.machine.OvenPower
 import studio.craftory.tech.machine.ReceiptUseInteraction
+import studio.craftory.tech.machine.ResonatorRuntimeConfig
+import studio.craftory.tech.machine.ResonatorState
+import studio.craftory.tech.machine.ResonatorSystem
+import studio.craftory.tech.machine.ResonatorUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.ScrapRushRaid
 import studio.craftory.tech.machine.ScrapRushSystem
@@ -75,6 +84,11 @@ import studio.craftory.tech.transport.HurlRiderLifecycle
 import studio.craftory.tech.transport.HurlStation
 import studio.craftory.tech.well.CodexPageUi
 import studio.craftory.tech.well.CodexUseInteraction
+import studio.craftory.tech.well.CradleBreakSystem
+import studio.craftory.tech.well.CradleIndex
+import studio.craftory.tech.well.CradleLifecycle
+import studio.craftory.tech.well.CradlePlaceSystem
+import studio.craftory.tech.well.FirstSparkSystem
 import studio.craftory.tech.well.GobJarUseInteraction
 import studio.craftory.tech.well.LensScanState
 import studio.craftory.tech.well.LensScanSystem
@@ -102,6 +116,7 @@ class CraftoryTechPlugin(
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
         WellRuntimeConfig.current = wellConfig.get()
+        ResonatorRuntimeConfig.crystalUses = config.get().resonatorCrystalUses.coerceAtLeast(1)
         CraftoryCore.registerModule("CraftoryTech", pluginVersion)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CRANK_TYPE,
@@ -114,6 +129,24 @@ class CraftoryTechPlugin(
         CraftoryCore.registerEnergyType(
             CraftoryIds.JUNK_HEART_TYPE,
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
+        )
+        CraftoryCore.registerConverterType(
+            CraftoryIds.CRACKLE_COIL_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 40, 0, 0, 1),
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
+            EnergyFaces.DOWN,
+            EnergyFaces.ALL xor EnergyFaces.DOWN,
+        )
+        CraftoryCore.registerConverterType(
+            CraftoryIds.RESONATOR_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 40, 0, 0, 1),
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
+            EnergyFaces.DOWN,
+            EnergyFaces.ALL xor EnergyFaces.DOWN,
+        )
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.WELL_CRADLE_TYPE,
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
         )
         CraftoryCore.multiblocks().register(JunkHeartTemplate.template)
         CraftoryCore.registerEnergyType(
@@ -185,6 +218,18 @@ class CraftoryTechPlugin(
                 CraftoryIds.JUNK_HEART_COMPONENT,
                 JunkHeartState.CODEC,
             )
+        ResonatorState.type =
+            chunkRegistry.registerComponent(
+                ResonatorState::class.java,
+                "CraftoryResonator",
+                ResonatorState.CODEC,
+            )
+        CradleState.type =
+            chunkRegistry.registerComponent(
+                CradleState::class.java,
+                "CraftoryCradle",
+                CradleState.CODEC,
+            )
         CraftoryCore.registerInspectableComponent(CraftoryIds.JUNK_HEART_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, JunkHeartState.type)
         }
@@ -248,6 +293,12 @@ class CraftoryTechPlugin(
         AssemblyViewIndex.type = chunkRegistry.registerResource(AssemblyViewIndex::class.java, ::AssemblyViewIndex)
         chunkRegistry.registerSystem(JunkHeartLifecycle())
         chunkRegistry.registerSystem(JunkHeartSystem())
+        CradleIndex.type = chunkRegistry.registerResource(CradleIndex::class.java, ::CradleIndex)
+        chunkRegistry.registerSystem(CradleLifecycle())
+        chunkRegistry.registerSystem(CrackleCoilSystem())
+        chunkRegistry.registerSystem(ResonatorSystem())
+        chunkRegistry.registerSystem(CradleSystem())
+        chunkRegistry.registerSystem(FirstSparkSystem())
         chunkRegistry.registerSystem(MultiblockAssemblySystem())
         chunkRegistry.registerSystem(GhostPreviewLifecycle())
         chunkRegistry.registerSystem(SelfTestSystem())
@@ -271,6 +322,8 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(JunkPowerHudSystem())
         entityRegistry.registerSystem(CanisterPageRefreshSystem())
         entityRegistry.registerSystem(JunkPowerKickSystem())
+        entityRegistry.registerSystem(CradlePlaceSystem())
+        entityRegistry.registerSystem(CradleBreakSystem())
         entityRegistry.registerSystem(MachineOwnerPlacementSystem())
         entityRegistry.registerSystem(BuildableMachineCraftGate())
         entityRegistry.registerSystem(LensScanSystem(wellConfig))
@@ -334,6 +387,14 @@ class CraftoryTechPlugin(
                 CraftoryIds.CODEX_USE_INTERACTION,
                 CodexUseInteraction::class.java,
                 CodexUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.RESONATOR_USE_INTERACTION,
+                ResonatorUseInteraction::class.java,
+                ResonatorUseInteraction.CODEC,
+            ).register(
+                CraftoryIds.CRADLE_USE_INTERACTION,
+                CradleUseInteraction::class.java,
+                CradleUseInteraction.CODEC,
             )
         val crews = CraftoryCore.crewService()
         crewKnowledgeSubscription = crews.onKnowledgeGranted { crew, _ -> evaluateTier(crew) }

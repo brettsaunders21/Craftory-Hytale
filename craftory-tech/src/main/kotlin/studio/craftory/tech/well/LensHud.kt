@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.util.Config
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.notebook.NotebookTierProgression
 import studio.craftory.tech.well.JarActions
 import studio.craftory.tech.well.WellConfig
 
@@ -200,6 +201,7 @@ internal class CodexPageUi(
         playerRef,
         CustomPageLifetime.CanDismissOrCloseThroughInteraction,
     ) {
+    @Suppress("LongMethod")
     override fun build(
         ref: Ref<EntityStore>,
         commandBuilder: UICommandBuilder,
@@ -241,6 +243,29 @@ internal class CodexPageUi(
                     "caught",
                     if (JarActions.FIRST_FLICKER_ID in crew.knowledge) "yes" else "no",
                 ),
+            ).set(
+                "#FirstSpark.Text",
+                Message.translation("server.craftory.codex.first-spark").param(
+                    "status",
+                    if (NotebookTierProgression.FIRST_SPARK_KNOWLEDGE in crew.knowledge) "done" else "not yet",
+                ),
+            ).set(
+                "#SeatedWell.Text",
+                Message.translation("server.craftory.codex.seated-well").param(
+                    "status",
+                    if (NotebookTierProgression.SEATED_FLICKER_KNOWLEDGE in crew.knowledge) {
+                        "Seated Flicker"
+                    } else {
+                        "none"
+                    },
+                ),
+            ).set(
+                "#TierProgress.Text",
+                when {
+                    crew.tier >= 3 -> Message.translation("server.craftory.codex.sparkbound")
+                    crew.tier == 2 -> Message.translation("server.craftory.codex.sparkbound-progress")
+                    else -> Message.translation("server.craftory.tier.locked")
+                },
             )
     }
 }

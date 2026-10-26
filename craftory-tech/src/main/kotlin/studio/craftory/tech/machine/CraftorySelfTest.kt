@@ -59,6 +59,7 @@ import studio.craftory.tech.machine.jank.repairWithScraps
 import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.well.SparkSelfTest
 import studio.craftory.tech.well.WellSelfTest
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1139,6 +1140,7 @@ object CraftorySelfTest {
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions())
             WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
+            SparkSelfTest.run { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
                 place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)

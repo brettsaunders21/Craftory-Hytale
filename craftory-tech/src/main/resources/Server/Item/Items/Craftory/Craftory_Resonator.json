@@ -1,0 +1,40 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Resonator.name",
+    "Description": "server.items.Craftory_Resonator.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture.Lighting"],
+  "Set": "Furniture_Goblin",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
+  "BlockType": {
+    "DrawType": "Model",
+    "Material": "Solid",
+    "Opacity": "Transparent",
+    "HitboxType": "Brazier_Goblin",
+    "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
+    "CustomModelTexture": [
+      {"Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png", "Weight": 1}
+    ],
+    "Interactions": {
+      "Use": {"Interactions": [{"Type": "Craftory_ResonatorUse"}]}
+    },
+    "BlockEntity": {
+      "Components": {
+        "Craftory_EnergyMember": {"TypeId": "craftory:resonator", "Stored": 0, "StoreRank": -1},
+        "CraftoryResonator": {"CrystalItemId": "", "Conversions": 0, "Tuning": 30, "Clouded": false}
+      }
+    }
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 16},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 3},
+      {"ItemId": "Item_Crystal_Cyan_Shard", "Quantity": 1}
+    ],
+    "BenchRequirement": [{"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}]
+  }
+}

@@ -27,6 +27,7 @@ python3 tools/art/preview.py <out_dir> ~/.gradle/caches/hytale-assets/release-0.
 
 ## Remaining
 
+- `Craftory_Crackle_Coil`, `Craftory_Resonator`, and `Craftory_Well_Cradle`: currently use the vanilla goblin brazier model and Gnasher Pit icon as placeholders; author dedicated block models, textures, and icons.
 - `Craftory_Hurl_Tube`: vanilla developer tube placeholder; replace with glass-and-scrap, player-sized tubes and connected bend/junction visuals.
 - `Craftory_Hurl_Station`: vanilla developer tube placeholder; replace with a glass-and-scrap boarding platform and station sign.
 - Hurl capsule: non-serialized vanilla Minecart model (debug-model fallback); replace with a player-sized capsule and mount animations. Camera smoothness remains unverified.
