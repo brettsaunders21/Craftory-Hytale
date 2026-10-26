@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class FirstSparkRulesTest {
     @Test
@@ -22,5 +23,16 @@ class FirstSparkRulesTest {
         assertEquals(FirstSparkRules.Action.RETRY_VESSA, FirstSparkRules.action(true, false, true))
         assertEquals(FirstSparkRules.Action.NONE, FirstSparkRules.action(true, true, true))
         assertEquals(FirstSparkRules.Action.NONE, FirstSparkRules.action(true, false, false))
+    }
+
+    @Test
+    fun `a pending Vessa spawn is shared by owners in the same crew`() {
+        val crewId = UUID.randomUUID()
+        val pending = FirstSparkPendingSpawns()
+
+        assertTrue(pending.begin(crewId))
+        assertFalse(pending.begin(crewId))
+        pending.finish(crewId)
+        assertTrue(pending.begin(crewId))
     }
 }

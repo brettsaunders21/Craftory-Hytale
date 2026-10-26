@@ -1,5 +1,18 @@
 package studio.craftory.tech.well
 
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+
+internal class FirstSparkPendingSpawns {
+    private val crewIds = ConcurrentHashMap.newKeySet<UUID>()
+
+    fun begin(crewId: UUID): Boolean = crewIds.add(crewId)
+
+    fun finish(crewId: UUID) {
+        crewIds.remove(crewId)
+    }
+}
+
 internal object FirstSparkRules {
     enum class Action {
         NONE,

@@ -78,9 +78,7 @@ internal object FirstSpark {
     private const val MAX_DISTANCE_SQUARED = 64L
     private const val SPARK_PARTICLE = "Impact_Spark"
     private const val SPARK_SOUND = "SFX_Interact"
-    private val pendingVessaSpawns =
-        java.util.concurrent.ConcurrentHashMap
-            .newKeySet<java.util.UUID>()
+    private val pendingVessaSpawns = FirstSparkPendingSpawns()
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     fun tryTrigger(
@@ -121,7 +119,7 @@ internal object FirstSpark {
         if (!FirstSparkRules.conditionMet(machineRunning, crew.tier, false, nearest.second)) return false
         val action = FirstSparkRules.action(alreadyKnown, vessaMet, conditionMet = true)
         if (action == FirstSparkRules.Action.NONE) return false
-        if (!pendingVessaSpawns.add(owner)) return false
+        if (!pendingVessaSpawns.begin(crew.id)) return false
         if (action == FirstSparkRules.Action.GRANT_AND_SPAWN) {
             crews.grantKnowledge(owner, CraftoryIds.FIRST_SPARK_KNOWLEDGE)
         }
@@ -151,7 +149,7 @@ internal object FirstSpark {
                         )
                     }
                 }
-                if (!vessaMet) {
+                if (CraftoryIds.VESSA_MET_KNOWLEDGE !in crews.crewOf(owner).knowledge) {
                     val airY = (machineY + 1..machineY + 3).firstOrNull { isAir(store, machineX, it, machineZ) }
                     if (airY != null) {
                         val spawned = VessaSpawner.spawn(world.entityStore.store, machineX, airY, machineZ)
@@ -162,7 +160,7 @@ internal object FirstSpark {
                     }
                 }
             } finally {
-                pendingVessaSpawns.remove(owner)
+                pendingVessaSpawns.finish(crew.id)
             }
         }
         return action == FirstSparkRules.Action.GRANT_AND_SPAWN
