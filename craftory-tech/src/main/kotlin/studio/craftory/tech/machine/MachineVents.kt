@@ -42,7 +42,7 @@ internal object MachineVents {
                     "Blocks/Craftory/Junk_Heart_Chimney/Junk_Heart_Chimney_Cap.blockymodel",
                 ),
             CraftoryIds.RATTLEWHEEL to MachineVent("Spark-Emitter", 0.5, 63.80003 / 32, 0.5),
-            CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 1.0, 62.47329 / 32, 0.5 + 15.6051 / 32),
+            CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 1.0, 60.03174 / 32, 0.5 - 0.94854 / 32),
             CraftoryIds.SHROOM_BED to MachineVent("Spore-Emitter", 1.0, 29.29885 / 32, 0.5),
             CraftoryIds.STORM_VANE to MachineVent("Spark-Emitter", 0.5, 63.0 / 32, 0.5),
         )

@@ -404,7 +404,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 checkScorchOvenRotations(run, store)
                 val oven = CraftorySelfTest.OVEN
                 val sidePipe = CraftorySelfTest.OVEN_FILLER_SIDE_PIPE
-                val filler = Vector3i(oven.x + 1, oven.y + 1, oven.z)
+                val filler = Vector3i(oven.x + 1, oven.y, oven.z)
                 val fillerOrigin = BlockFootprints.origin(store, filler.x, filler.y, filler.z)
                 val transport = ItemTransport.of(run.world)
                 val receiver = transport.hasReceiverAt(store, filler.x, filler.y, filler.z)
@@ -523,14 +523,16 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             store
                 .getComponent(run.sectionRef, BlockSection.getComponentType())
                 ?.getRotationIndex(x, y, z)
+        val expectedWidth = if (rotation % 2 == 0) 2 else 1
+        val expectedDepth = if (rotation % 2 == 0) 1 else 2
         val matchesRotation =
             placed &&
                 blockEntity != null &&
                 actualRotation == rotation &&
-                cells.size == 8 &&
-                cells.toSet().size == 8 &&
-                cells.map { it.x }.distinct().size == 2 &&
-                cells.map { it.z }.distinct().size == 2 &&
+                cells.size == 4 &&
+                cells.toSet().size == 4 &&
+                cells.map { it.x }.distinct().size == expectedWidth &&
+                cells.map { it.z }.distinct().size == expectedDepth &&
                 cells.map { it.y }.distinct().size == 2
         val details =
             "$rotation:placed=$placed entity=${blockEntity != null} rotation=$actualRotation " +
@@ -765,7 +767,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             "oven=$ovenNetwork side=$sidePipeNetwork top=$topPipeNetwork",
         )
         val pipeType = BlockType.fromString(CraftoryIds.PIPE)
-        val sideArm = pipeType?.getBlockForState(GutterpipeMask.stateName(1))?.id
+        val sideArm = pipeType?.getBlockForState(GutterpipeMask.stateName(1 shl 1))?.id
         val topArm = pipeType?.getBlockForState(GutterpipeMask.stateName(1 shl 3))?.id
         check(
             run,
@@ -3764,7 +3766,7 @@ object CraftorySelfTest {
     internal val CRANK = TestPosition(10_026, 150, 10_006)
     internal val OVEN = TestPosition(10_034, 150, 10_000)
     internal val OVEN_LINK_PIPE = TestPosition(10_034, 149, 10_000)
-    internal val OVEN_FILLER_SIDE_PIPE = TestPosition(10_033, 151, 10_000)
+    internal val OVEN_FILLER_SIDE_PIPE = TestPosition(10_036, 150, 10_000)
     private val OVEN_FILLER_TOP_PIPE = TestPosition(10_035, 152, 10_000)
     internal val GNASHER = TestPosition(10_044, 150, 10_006)
     internal val ANCHOR = TestPosition(10_040, 150, 10_012)
@@ -3816,7 +3818,7 @@ object CraftorySelfTest {
                     CHAIN_SHROOM_BED,
                 ) +
                 ovenFillerPipePositions() +
-                footprintCells(OVEN, 2, 2, 2) +
+                footprintCells(OVEN, 2, 2, 1) +
                 footprintCells(GNASHER, 2, 1) +
                 footprintCells(SHROOM_BED, 2, 1) +
                 footprintCells(WRENCH_TAKE_APART, 2, 1) +

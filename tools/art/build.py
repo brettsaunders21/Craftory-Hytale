@@ -46,7 +46,7 @@ MACHINE_FOOTPRINTS = {
     "Crackle_Coil": (1, 2, 1),
     "Resonator": (1, 1, 1),
     "Gnasher_Pit": (2, 1, 1),
-    "Scorch_Oven": (2, 2, 2),
+    "Scorch_Oven": (2, 2, 1),
     "Rattlewheel": (1, 2, 1),
     "Shroom_Bed": (2, 1, 1),
     "Boomshroom_Burner": (1, 2, 1),
@@ -66,6 +66,7 @@ PRESERVE_MULTIBLOCK_SHELLS = {
     "Gasbag_Frame",
     "Gasbag_Envelope",
 }
+TOP_PIPE_PORT_MACHINES = {"Boomshroom_Burner"}
 
 
 def seed(name: str) -> int:
@@ -143,52 +144,68 @@ def add_pipe_ports(name: str, model: Model) -> None:
     width, height, depth = MACHINE_FOOTPRINTS[name]
     flange_depth = 4
     flange_width = 14
+    flange_border = 3
 
-    def port(face: str, x: float, y: float, z: float, boundary: float, sign: int) -> None:
-        if face == "x":
+    def port(
+        face: str,
+        side: str,
+        x: float,
+        y: float,
+        z: float,
+        boundary: float,
+        sign: int,
+    ) -> None:
+        name = f"PipeFlange_{face}{side}"
+        center = boundary - sign * flange_depth / 2
+        mouth = boundary - sign * 0.75
+        if face == "X":
             model.roots.append(
-                Box(
-                    f"PipeFlange{face}{x}{y}{z}",
-                    (flange_depth, flange_width, flange_width),
-                    pos=(boundary - sign * flange_depth / 2, y, z),
-                    paint=gb.BRASS_RIV,
+                Box(name).add(
+                    Box(f"{name}Top", (flange_depth, flange_border, flange_width), pos=(center, y + 5.5, z), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Bottom", (flange_depth, flange_border, flange_width), pos=(center, y - 5.5, z), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Left", (flange_depth, 8, flange_border), pos=(center, y, z - 5.5), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Right", (flange_depth, 8, flange_border), pos=(center, y, z + 5.5), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Mouth", (1, 8, 8), pos=(mouth, y, z), paint=gb.PIPE_MOUTH),
                 ),
             )
-        elif face == "z":
+        elif face == "Z":
             model.roots.append(
-                Box(
-                    f"PipeFlange{face}{x}{y}{z}",
-                    (flange_width, flange_width, flange_depth),
-                    pos=(x, y, boundary - sign * flange_depth / 2),
-                    paint=gb.BRASS_RIV,
+                Box(name).add(
+                    Box(f"{name}Top", (flange_width, flange_border, flange_depth), pos=(x, y + 5.5, center), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Bottom", (flange_width, flange_border, flange_depth), pos=(x, y - 5.5, center), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Left", (flange_border, 8, flange_depth), pos=(x - 5.5, y, center), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Right", (flange_border, 8, flange_depth), pos=(x + 5.5, y, center), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Mouth", (8, 8, 1), pos=(x, y, mouth), paint=gb.PIPE_MOUTH),
                 ),
             )
         else:
             model.roots.append(
-                Box(
-                    f"PipeFlange{face}{x}{y}{z}",
-                    (flange_width, flange_depth, flange_width),
-                    pos=(x, boundary - sign * flange_depth / 2, z),
-                    paint=gb.BRASS_RIV,
+                Box(name).add(
+                    Box(f"{name}Front", (flange_width, flange_depth, flange_border), pos=(x, center, z - 5.5), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Back", (flange_width, flange_depth, flange_border), pos=(x, center, z + 5.5), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Left", (flange_border, flange_depth, 8), pos=(x - 5.5, center, z), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Right", (flange_border, flange_depth, 8), pos=(x + 5.5, center, z), paint=gb.PIPE_FLANGE),
+                    Box(f"{name}Mouth", (8, 1, 8), pos=(x, mouth, z), paint=gb.PIPE_MOUTH),
                 ),
             )
 
-    for y_cell in range(height):
-        y = y_cell * 32 + 16
-        for z_cell in range(depth):
-            z = z_cell * 32
-            for boundary, sign in ((-16, -1), (width * 32 - 16, 1)):
-                port("x", boundary, y, z, boundary, sign)
-        for x_cell in range(width):
-            x = x_cell * 32
-            for boundary, sign in ((-16, -1), (depth * 32 - 16, 1)):
-                port("z", x, y, boundary, boundary, sign)
-
-    for x_cell in range(width):
-        for z_cell in range(depth):
-            x = x_cell * 32
-            z = z_cell * 32
-            port("y", x, height * 32, z, height * 32, 1)
+    center_x = 16 * (width - 1)
+    center_z = 16 * (depth - 1)
+    lower_pipe_height = 16
+    port("X", "Negative", -16, lower_pipe_height, 0, -16, -1)
+    port("X", "Positive", width * 32 - 16, lower_pipe_height, (depth - 1) * 32, width * 32 - 16, 1)
+    port("Z", "Negative", 0, lower_pipe_height, -16, -16, -1)
+    port(
+        "Z",
+        "Positive",
+        (width - 1) * 32,
+        lower_pipe_height,
+        depth * 32 - 16,
+        depth * 32 - 16,
+        1,
+    )
+    if name in TOP_PIPE_PORT_MACHINES:
+        port("Y", "Top", center_x, height * 32, center_z, height * 32, 1)
 
 
 def connect_machine_geometry(model: Model) -> None:
@@ -330,6 +347,19 @@ def validate_block_models(name: str, models: dict[str, tuple[Model, dict]]) -> N
 
 
 def hitbox_for_models(name: str, models: list[Model]) -> dict:
+    if name == "Scorch_Oven":
+        return {
+            "Boxes": [
+                {
+                    "Min": {"X": 0.0625, "Y": 0.0, "Z": 0.0625},
+                    "Max": {"X": 1.9375, "Y": 1.3, "Z": 0.9375},
+                },
+                {
+                    "Min": {"X": 0.45, "Y": 1.3, "Z": 0.0625},
+                    "Max": {"X": 1.55, "Y": 2.0, "Z": 0.85},
+                },
+            ],
+        }
     if name in MACHINE_FOOTPRINTS:
         width, height, depth = MACHINE_FOOTPRINTS[name]
         return {

@@ -59,8 +59,8 @@
           },
           "front": {
             "offset": {
-              "x": 60,
-              "y": 65
+              "x": 84,
+              "y": 59
             },
             "mirror": {
               "x": false,
@@ -70,8 +70,8 @@
           },
           "back": {
             "offset": {
-              "x": 90,
-              "y": 65
+              "x": 0,
+              "y": 67
             },
             "mirror": {
               "x": false,
@@ -81,8 +81,8 @@
           },
           "left": {
             "offset": {
-              "x": 0,
-              "y": 74
+              "x": 30,
+              "y": 67
             },
             "mirror": {
               "x": false,
@@ -92,8 +92,8 @@
           },
           "right": {
             "offset": {
-              "x": 30,
-              "y": 74
+              "x": 60,
+              "y": 67
             },
             "mirror": {
               "x": false,
@@ -189,8 +189,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 78,
-                  "y": 79
+                  "x": 106,
+                  "y": 72
                 },
                 "mirror": {
                   "x": false,
@@ -200,8 +200,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 82,
-                  "y": 79
+                  "x": 110,
+                  "y": 72
                 },
                 "mirror": {
                   "x": false,
@@ -253,8 +253,8 @@
                 "textureLayout": {
                   "front": {
                     "offset": {
-                      "x": 6,
-                      "y": 83
+                      "x": 60,
+                      "y": 76
                     },
                     "mirror": {
                       "x": false,
@@ -264,8 +264,8 @@
                   },
                   "back": {
                     "offset": {
-                      "x": 21,
-                      "y": 83
+                      "x": 75,
+                      "y": 76
                     },
                     "mirror": {
                       "x": false,
@@ -275,8 +275,8 @@
                   },
                   "top": {
                     "offset": {
-                      "x": 36,
-                      "y": 83
+                      "x": 90,
+                      "y": 76
                     },
                     "mirror": {
                       "x": false,
@@ -286,8 +286,8 @@
                   },
                   "bottom": {
                     "offset": {
-                      "x": 51,
-                      "y": 83
+                      "x": 105,
+                      "y": 76
                     },
                     "mirror": {
                       "x": false,
@@ -298,7 +298,7 @@
                   "left": {
                     "offset": {
                       "x": 0,
-                      "y": 87
+                      "y": 89
                     },
                     "mirror": {
                       "x": false,
@@ -309,7 +309,7 @@
                   "right": {
                     "offset": {
                       "x": 3,
-                      "y": 87
+                      "y": 89
                     },
                     "mirror": {
                       "x": false,
@@ -398,7 +398,7 @@
                           "front": {
                             "offset": {
                               "x": 26,
-                              "y": 87
+                              "y": 89
                             },
                             "mirror": {
                               "x": false,
@@ -409,7 +409,7 @@
                           "back": {
                             "offset": {
                               "x": 27,
-                              "y": 87
+                              "y": 89
                             },
                             "mirror": {
                               "x": false,
@@ -420,7 +420,7 @@
                           "left": {
                             "offset": {
                               "x": 28,
-                              "y": 87
+                              "y": 89
                             },
                             "mirror": {
                               "x": false,
@@ -431,7 +431,7 @@
                           "right": {
                             "offset": {
                               "x": 29,
-                              "y": 87
+                              "y": 89
                             },
                             "mirror": {
                               "x": false,
@@ -441,8 +441,8 @@
                           },
                           "top": {
                             "offset": {
-                              "x": 121,
-                              "y": 90
+                              "x": 32,
+                              "y": 94
                             },
                             "mirror": {
                               "x": false,
@@ -452,8 +452,8 @@
                           },
                           "bottom": {
                             "offset": {
-                              "x": 122,
-                              "y": 90
+                              "x": 33,
+                              "y": 94
                             },
                             "mirror": {
                               "x": false,
@@ -505,8 +505,8 @@
                         "textureLayout": {
                           "top": {
                             "offset": {
-                              "x": 110,
-                              "y": 51
+                              "x": 70,
+                              "y": 30
                             },
                             "mirror": {
                               "x": false,
@@ -516,8 +516,8 @@
                           },
                           "bottom": {
                             "offset": {
-                              "x": 119,
-                              "y": 51
+                              "x": 79,
+                              "y": 30
                             },
                             "mirror": {
                               "x": false,
@@ -527,8 +527,8 @@
                           },
                           "front": {
                             "offset": {
-                              "x": 12,
-                              "y": 65
+                              "x": 36,
+                              "y": 59
                             },
                             "mirror": {
                               "x": false,
@@ -538,8 +538,8 @@
                           },
                           "back": {
                             "offset": {
-                              "x": 21,
-                              "y": 65
+                              "x": 45,
+                              "y": 59
                             },
                             "mirror": {
                               "x": false,
@@ -549,8 +549,8 @@
                           },
                           "left": {
                             "offset": {
-                              "x": 30,
-                              "y": 65
+                              "x": 54,
+                              "y": 59
                             },
                             "mirror": {
                               "x": false,
@@ -560,8 +560,8 @@
                           },
                           "right": {
                             "offset": {
-                              "x": 39,
-                              "y": 65
+                              "x": 63,
+                              "y": 59
                             },
                             "mirror": {
                               "x": false,
@@ -613,8 +613,8 @@
                             "textureLayout": {
                               "top": {
                                 "offset": {
-                                  "x": 80,
-                                  "y": 51
+                                  "x": 40,
+                                  "y": 30
                                 },
                                 "mirror": {
                                   "x": false,
@@ -624,8 +624,8 @@
                               },
                               "bottom": {
                                 "offset": {
-                                  "x": 91,
-                                  "y": 51
+                                  "x": 51,
+                                  "y": 30
                                 },
                                 "mirror": {
                                   "x": false,
@@ -636,7 +636,7 @@
                               "front": {
                                 "offset": {
                                   "x": 29,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -647,7 +647,7 @@
                               "back": {
                                 "offset": {
                                   "x": 40,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -658,7 +658,7 @@
                               "left": {
                                 "offset": {
                                   "x": 51,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -669,7 +669,7 @@
                               "right": {
                                 "offset": {
                                   "x": 62,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -721,8 +721,8 @@
                             "textureLayout": {
                               "top": {
                                 "offset": {
-                                  "x": 86,
-                                  "y": 79
+                                  "x": 114,
+                                  "y": 72
                                 },
                                 "mirror": {
                                   "x": false,
@@ -732,8 +732,8 @@
                               },
                               "bottom": {
                                 "offset": {
-                                  "x": 90,
-                                  "y": 79
+                                  "x": 118,
+                                  "y": 72
                                 },
                                 "mirror": {
                                   "x": false,
@@ -744,7 +744,7 @@
                               "front": {
                                 "offset": {
                                   "x": 97,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -755,7 +755,7 @@
                               "back": {
                                 "offset": {
                                   "x": 101,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -766,7 +766,7 @@
                               "left": {
                                 "offset": {
                                   "x": 105,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -777,7 +777,7 @@
                               "right": {
                                 "offset": {
                                   "x": 109,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -830,7 +830,7 @@
                               "front": {
                                 "offset": {
                                   "x": 18,
-                                  "y": 87
+                                  "y": 89
                                 },
                                 "mirror": {
                                   "x": false,
@@ -841,7 +841,7 @@
                               "back": {
                                 "offset": {
                                   "x": 20,
-                                  "y": 87
+                                  "y": 89
                                 },
                                 "mirror": {
                                   "x": false,
@@ -852,7 +852,7 @@
                               "left": {
                                 "offset": {
                                   "x": 22,
-                                  "y": 87
+                                  "y": 89
                                 },
                                 "mirror": {
                                   "x": false,
@@ -863,7 +863,7 @@
                               "right": {
                                 "offset": {
                                   "x": 24,
-                                  "y": 87
+                                  "y": 89
                                 },
                                 "mirror": {
                                   "x": false,
@@ -874,7 +874,7 @@
                               "top": {
                                 "offset": {
                                   "x": 113,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -885,7 +885,7 @@
                               "bottom": {
                                 "offset": {
                                   "x": 115,
-                                  "y": 90
+                                  "y": 92
                                 },
                                 "mirror": {
                                   "x": false,
@@ -941,8 +941,8 @@
                     "textureLayout": {
                       "top": {
                         "offset": {
-                          "x": 94,
-                          "y": 79
+                          "x": 122,
+                          "y": 72
                         },
                         "mirror": {
                           "x": false,
@@ -952,8 +952,8 @@
                       },
                       "bottom": {
                         "offset": {
-                          "x": 98,
-                          "y": 79
+                          "x": 0,
+                          "y": 76
                         },
                         "mirror": {
                           "x": false,
@@ -963,7 +963,7 @@
                       },
                       "front": {
                         "offset": {
-                          "x": 88,
+                          "x": 120,
                           "y": 83
                         },
                         "mirror": {
@@ -974,7 +974,7 @@
                       },
                       "back": {
                         "offset": {
-                          "x": 92,
+                          "x": 124,
                           "y": 83
                         },
                         "mirror": {
@@ -985,8 +985,8 @@
                       },
                       "left": {
                         "offset": {
-                          "x": 96,
-                          "y": 83
+                          "x": 0,
+                          "y": 86
                         },
                         "mirror": {
                           "x": false,
@@ -996,8 +996,8 @@
                       },
                       "right": {
                         "offset": {
-                          "x": 100,
-                          "y": 83
+                          "x": 4,
+                          "y": 86
                         },
                         "mirror": {
                           "x": false,
@@ -1051,8 +1051,8 @@
                 "textureLayout": {
                   "top": {
                     "offset": {
-                      "x": 102,
-                      "y": 79
+                      "x": 4,
+                      "y": 76
                     },
                     "mirror": {
                       "x": false,
@@ -1062,8 +1062,8 @@
                   },
                   "bottom": {
                     "offset": {
-                      "x": 106,
-                      "y": 79
+                      "x": 8,
+                      "y": 76
                     },
                     "mirror": {
                       "x": false,
@@ -1073,8 +1073,8 @@
                   },
                   "front": {
                     "offset": {
-                      "x": 104,
-                      "y": 83
+                      "x": 8,
+                      "y": 86
                     },
                     "mirror": {
                       "x": false,
@@ -1084,8 +1084,8 @@
                   },
                   "back": {
                     "offset": {
-                      "x": 108,
-                      "y": 83
+                      "x": 12,
+                      "y": 86
                     },
                     "mirror": {
                       "x": false,
@@ -1095,8 +1095,8 @@
                   },
                   "left": {
                     "offset": {
-                      "x": 112,
-                      "y": 83
+                      "x": 16,
+                      "y": 86
                     },
                     "mirror": {
                       "x": false,
@@ -1106,8 +1106,8 @@
                   },
                   "right": {
                     "offset": {
-                      "x": 116,
-                      "y": 83
+                      "x": 20,
+                      "y": 86
                     },
                     "mirror": {
                       "x": false,
@@ -1159,8 +1159,8 @@
                 "textureLayout": {
                   "top": {
                     "offset": {
-                      "x": 48,
-                      "y": 65
+                      "x": 72,
+                      "y": 59
                     },
                     "mirror": {
                       "x": false,
@@ -1170,8 +1170,8 @@
                   },
                   "bottom": {
                     "offset": {
-                      "x": 54,
-                      "y": 65
+                      "x": 78,
+                      "y": 59
                     },
                     "mirror": {
                       "x": false,
@@ -1182,7 +1182,7 @@
                   "front": {
                     "offset": {
                       "x": 73,
-                      "y": 90
+                      "y": 92
                     },
                     "mirror": {
                       "x": false,
@@ -1193,7 +1193,7 @@
                   "back": {
                     "offset": {
                       "x": 79,
-                      "y": 90
+                      "y": 92
                     },
                     "mirror": {
                       "x": false,
@@ -1204,7 +1204,7 @@
                   "left": {
                     "offset": {
                       "x": 85,
-                      "y": 90
+                      "y": 92
                     },
                     "mirror": {
                       "x": false,
@@ -1215,7 +1215,7 @@
                   "right": {
                     "offset": {
                       "x": 91,
-                      "y": 90
+                      "y": 92
                     },
                     "mirror": {
                       "x": false,
@@ -1267,8 +1267,8 @@
                 "textureLayout": {
                   "front": {
                     "offset": {
-                      "x": 0,
-                      "y": 65
+                      "x": 88,
+                      "y": 30
                     },
                     "mirror": {
                       "x": false,
@@ -1278,8 +1278,8 @@
                   },
                   "back": {
                     "offset": {
-                      "x": 2,
-                      "y": 65
+                      "x": 90,
+                      "y": 30
                     },
                     "mirror": {
                       "x": false,
@@ -1289,8 +1289,8 @@
                   },
                   "left": {
                     "offset": {
-                      "x": 4,
-                      "y": 65
+                      "x": 92,
+                      "y": 30
                     },
                     "mirror": {
                       "x": false,
@@ -1300,8 +1300,8 @@
                   },
                   "right": {
                     "offset": {
-                      "x": 6,
-                      "y": 65
+                      "x": 94,
+                      "y": 30
                     },
                     "mirror": {
                       "x": false,
@@ -1312,7 +1312,7 @@
                   "top": {
                     "offset": {
                       "x": 117,
-                      "y": 90
+                      "y": 92
                     },
                     "mirror": {
                       "x": false,
@@ -1323,7 +1323,7 @@
                   "bottom": {
                     "offset": {
                       "x": 119,
-                      "y": 90
+                      "y": 92
                     },
                     "mirror": {
                       "x": false,
@@ -1377,8 +1377,8 @@
             "textureLayout": {
               "top": {
                 "offset": {
-                  "x": 56,
-                  "y": 79
+                  "x": 84,
+                  "y": 72
                 },
                 "mirror": {
                   "x": false,
@@ -1388,8 +1388,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 67,
-                  "y": 79
+                  "x": 95,
+                  "y": 72
                 },
                 "mirror": {
                   "x": false,
@@ -1399,7 +1399,7 @@
               },
               "front": {
                 "offset": {
-                  "x": 66,
+                  "x": 98,
                   "y": 83
                 },
                 "mirror": {
@@ -1410,7 +1410,7 @@
               },
               "back": {
                 "offset": {
-                  "x": 77,
+                  "x": 109,
                   "y": 83
                 },
                 "mirror": {
@@ -1421,8 +1421,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 120,
-                  "y": 83
+                  "x": 24,
+                  "y": 86
                 },
                 "mirror": {
                   "x": false,
@@ -1432,8 +1432,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 124,
-                  "y": 83
+                  "x": 28,
+                  "y": 86
                 },
                 "mirror": {
                   "x": false,
@@ -1485,8 +1485,8 @@
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 110,
-                  "y": 79
+                  "x": 12,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1496,8 +1496,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 113,
-                  "y": 79
+                  "x": 15,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1507,8 +1507,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 116,
-                  "y": 79
+                  "x": 18,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1518,8 +1518,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 119,
-                  "y": 79
+                  "x": 21,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1530,7 +1530,7 @@
               "top": {
                 "offset": {
                   "x": 6,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1541,7 +1541,7 @@
               "bottom": {
                 "offset": {
                   "x": 9,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1616,7 +1616,7 @@
               "front": {
                 "offset": {
                   "x": 30,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1627,7 +1627,7 @@
               "back": {
                 "offset": {
                   "x": 59,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1638,7 +1638,7 @@
               "left": {
                 "offset": {
                   "x": 88,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1649,7 +1649,7 @@
               "right": {
                 "offset": {
                   "x": 0,
-                  "y": 90
+                  "y": 92
                 },
                 "mirror": {
                   "x": false,
@@ -1701,8 +1701,8 @@
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 122,
-                  "y": 79
+                  "x": 24,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1712,8 +1712,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 125,
-                  "y": 79
+                  "x": 27,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1723,8 +1723,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 0,
-                  "y": 83
+                  "x": 30,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1734,8 +1734,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 3,
-                  "y": 83
+                  "x": 33,
+                  "y": 76
                 },
                 "mirror": {
                   "x": false,
@@ -1746,7 +1746,7 @@
               "top": {
                 "offset": {
                   "x": 12,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1757,7 +1757,7 @@
               "bottom": {
                 "offset": {
                   "x": 15,
-                  "y": 87
+                  "y": 89
                 },
                 "mirror": {
                   "x": false,
@@ -1776,10 +1776,10 @@
     },
     {
       "id": "18",
-      "name": "PipeFlangex-16160",
+      "name": "PipeFlange_XNegative",
       "position": {
-        "x": -14.0,
-        "y": 16.0,
+        "x": 0.0,
+        "y": 0.0,
         "z": 0.0
       },
       "orientation": {
@@ -1789,7 +1789,7 @@
         "w": 1.0
       },
       "shape": {
-        "type": "box",
+        "type": "none",
         "offset": {
           "x": 0.0,
           "y": 0.0,
@@ -1801,93 +1801,563 @@
           "z": 1.0
         },
         "settings": {
-          "size": {
-            "x": 4.0,
-            "y": 14.0,
-            "z": 14.0
-          },
           "isPiece": false
         },
-        "textureLayout": {
-          "left": {
-            "offset": {
-              "x": 8,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "right": {
-            "offset": {
-              "x": 22,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "front": {
-            "offset": {
-              "x": 28,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "back": {
-            "offset": {
-              "x": 32,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "top": {
-            "offset": {
-              "x": 36,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "bottom": {
-            "offset": {
-              "x": 40,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          }
-        },
+        "textureLayout": {},
         "unwrapMode": "custom",
         "visible": true,
         "doubleSided": false,
         "shadingMode": "standard"
-      }
+      },
+      "children": [
+        {
+          "id": "19",
+          "name": "PipeFlange_XNegativeTop",
+          "position": {
+            "x": -14.0,
+            "y": 21.5,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 3.0,
+                "z": 14.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 8,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 12,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 0,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 14,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 32,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 36,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "20",
+          "name": "PipeFlange_XNegativeBottom",
+          "position": {
+            "x": -14.0,
+            "y": 10.5,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 3.0,
+                "z": 14.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 16,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 20,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 28,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 42,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 40,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 44,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "21",
+          "name": "PipeFlange_XNegativeLeft",
+          "position": {
+            "x": -14.0,
+            "y": 16.0,
+            "z": -5.5
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 8.0,
+                "z": 3.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 40,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 44,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 104,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 107,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 48,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 52,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "22",
+          "name": "PipeFlange_XNegativeRight",
+          "position": {
+            "x": -14.0,
+            "y": 16.0,
+            "z": 5.5
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 8.0,
+                "z": 3.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 48,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 52,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 110,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 113,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 56,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 60,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "23",
+          "name": "PipeFlange_XNegativeMouth",
+          "position": {
+            "x": -15.25,
+            "y": 16.0,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 1.0,
+                "y": 8.0,
+                "z": 8.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "left": {
+                "offset": {
+                  "x": 104,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 112,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 24,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 25,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 26,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 27,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        }
+      ]
     },
     {
-      "id": "19",
-      "name": "PipeFlangex16160",
+      "id": "24",
+      "name": "PipeFlange_XPositive",
       "position": {
-        "x": 14.0,
-        "y": 16.0,
+        "x": 0.0,
+        "y": 0.0,
         "z": 0.0
       },
       "orientation": {
@@ -1897,7 +2367,7 @@
         "w": 1.0
       },
       "shape": {
-        "type": "box",
+        "type": "none",
         "offset": {
           "x": 0.0,
           "y": 0.0,
@@ -1909,309 +2379,563 @@
           "z": 1.0
         },
         "settings": {
-          "size": {
-            "x": 4.0,
-            "y": 14.0,
-            "z": 14.0
-          },
           "isPiece": false
         },
-        "textureLayout": {
-          "left": {
-            "offset": {
-              "x": 36,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "right": {
-            "offset": {
-              "x": 50,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "front": {
-            "offset": {
-              "x": 44,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "back": {
-            "offset": {
-              "x": 48,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "top": {
-            "offset": {
-              "x": 52,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "bottom": {
-            "offset": {
-              "x": 56,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          }
-        },
+        "textureLayout": {},
         "unwrapMode": "custom",
         "visible": true,
         "doubleSided": false,
         "shadingMode": "standard"
-      }
+      },
+      "children": [
+        {
+          "id": "25",
+          "name": "PipeFlange_XPositiveTop",
+          "position": {
+            "x": 14.0,
+            "y": 21.5,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 3.0,
+                "z": 14.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 24,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 28,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 56,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 70,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 64,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 68,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "26",
+          "name": "PipeFlange_XPositiveBottom",
+          "position": {
+            "x": 14.0,
+            "y": 10.5,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 3.0,
+                "z": 14.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 32,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 36,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 84,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 98,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 72,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 76,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "27",
+          "name": "PipeFlange_XPositiveLeft",
+          "position": {
+            "x": 14.0,
+            "y": 16.0,
+            "z": -5.5
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 8.0,
+                "z": 3.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 56,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 60,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 116,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 119,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 80,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 84,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "28",
+          "name": "PipeFlange_XPositiveRight",
+          "position": {
+            "x": 14.0,
+            "y": 16.0,
+            "z": 5.5
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 4.0,
+                "y": 8.0,
+                "z": 3.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 64,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 68,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 122,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 125,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 88,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 92,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "29",
+          "name": "PipeFlange_XPositiveMouth",
+          "position": {
+            "x": 15.25,
+            "y": 16.0,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 1.0,
+                "y": 8.0,
+                "z": 8.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "left": {
+                "offset": {
+                  "x": 120,
+                  "y": 30
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 0,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 28,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 29,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 30,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 31,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        }
+      ]
     },
     {
-      "id": "20",
-      "name": "PipeFlangez016-16",
+      "id": "30",
+      "name": "PipeFlange_ZNegative",
       "position": {
-        "x": 0.0,
-        "y": 16.0,
-        "z": -14.0
-      },
-      "orientation": {
         "x": 0.0,
         "y": 0.0,
-        "z": 0.0,
-        "w": 1.0
-      },
-      "shape": {
-        "type": "box",
-        "offset": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "stretch": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "settings": {
-          "size": {
-            "x": 14.0,
-            "y": 14.0,
-            "z": 4.0
-          },
-          "isPiece": false
-        },
-        "textureLayout": {
-          "front": {
-            "offset": {
-              "x": 64,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "back": {
-            "offset": {
-              "x": 78,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "left": {
-            "offset": {
-              "x": 60,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "right": {
-            "offset": {
-              "x": 64,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "top": {
-            "offset": {
-              "x": 60,
-              "y": 74
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "bottom": {
-            "offset": {
-              "x": 74,
-              "y": 74
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          }
-        },
-        "unwrapMode": "custom",
-        "visible": true,
-        "doubleSided": false,
-        "shadingMode": "standard"
-      }
-    },
-    {
-      "id": "21",
-      "name": "PipeFlangez01616",
-      "position": {
-        "x": 0.0,
-        "y": 16.0,
-        "z": 14.0
-      },
-      "orientation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 1.0
-      },
-      "shape": {
-        "type": "box",
-        "offset": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "stretch": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "settings": {
-          "size": {
-            "x": 14.0,
-            "y": 14.0,
-            "z": 4.0
-          },
-          "isPiece": false
-        },
-        "textureLayout": {
-          "front": {
-            "offset": {
-              "x": 92,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "back": {
-            "offset": {
-              "x": 106,
-              "y": 30
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "left": {
-            "offset": {
-              "x": 68,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "right": {
-            "offset": {
-              "x": 72,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "top": {
-            "offset": {
-              "x": 88,
-              "y": 74
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "bottom": {
-            "offset": {
-              "x": 102,
-              "y": 74
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          }
-        },
-        "unwrapMode": "custom",
-        "visible": true,
-        "doubleSided": false,
-        "shadingMode": "standard"
-      }
-    },
-    {
-      "id": "22",
-      "name": "PipeFlangey0320",
-      "position": {
-        "x": 0.0,
-        "y": 30.0,
         "z": 0.0
       },
       "orientation": {
@@ -2221,7 +2945,7 @@
         "w": 1.0
       },
       "shape": {
-        "type": "box",
+        "type": "none",
         "offset": {
           "x": 0.0,
           "y": 0.0,
@@ -2233,89 +2957,1137 @@
           "z": 1.0
         },
         "settings": {
-          "size": {
-            "x": 14.0,
-            "y": 4.0,
-            "z": 14.0
-          },
           "isPiece": false
         },
-        "textureLayout": {
-          "top": {
-            "offset": {
-              "x": 0,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "bottom": {
-            "offset": {
-              "x": 14,
-              "y": 51
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "front": {
-            "offset": {
-              "x": 0,
-              "y": 79
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "back": {
-            "offset": {
-              "x": 14,
-              "y": 79
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "left": {
-            "offset": {
-              "x": 28,
-              "y": 79
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          },
-          "right": {
-            "offset": {
-              "x": 42,
-              "y": 79
-            },
-            "mirror": {
-              "x": false,
-              "y": false
-            },
-            "angle": 0
-          }
-        },
+        "textureLayout": {},
         "unwrapMode": "custom",
         "visible": true,
         "doubleSided": false,
         "shadingMode": "standard"
-      }
+      },
+      "children": [
+        {
+          "id": "31",
+          "name": "PipeFlange_ZNegativeTop",
+          "position": {
+            "x": 0.0,
+            "y": 21.5,
+            "z": -14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 14.0,
+                "y": 3.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 90,
+                  "y": 67
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 104,
+                  "y": 67
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 112,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 0,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 96,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 100,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "32",
+          "name": "PipeFlange_ZNegativeBottom",
+          "position": {
+            "x": 0.0,
+            "y": 10.5,
+            "z": -14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 14.0,
+                "y": 3.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 0,
+                  "y": 72
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 14,
+                  "y": 72
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 14,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 28,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 104,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 108,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "33",
+          "name": "PipeFlange_ZNegativeLeft",
+          "position": {
+            "x": -5.5,
+            "y": 16.0,
+            "z": -14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 3.0,
+                "y": 8.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "left": {
+                "offset": {
+                  "x": 72,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 76,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 0,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 3,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 36,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 39,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "34",
+          "name": "PipeFlange_ZNegativeRight",
+          "position": {
+            "x": 5.5,
+            "y": 16.0,
+            "z": -14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 3.0,
+                "y": 8.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "left": {
+                "offset": {
+                  "x": 80,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 84,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 6,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 9,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 42,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 45,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "35",
+          "name": "PipeFlange_ZNegativeMouth",
+          "position": {
+            "x": 0.0,
+            "y": 16.0,
+            "z": -15.25
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 8.0,
+                "y": 8.0,
+                "z": 1.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 8,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 16,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 32,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 33,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 0,
+                  "y": 94
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 8,
+                  "y": 94
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        }
+      ]
     },
     {
-      "id": "23",
+      "id": "36",
+      "name": "PipeFlange_ZPositive",
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "orientation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "w": 1.0
+      },
+      "shape": {
+        "type": "none",
+        "offset": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "stretch": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "settings": {
+          "isPiece": false
+        },
+        "textureLayout": {},
+        "unwrapMode": "custom",
+        "visible": true,
+        "doubleSided": false,
+        "shadingMode": "standard"
+      },
+      "children": [
+        {
+          "id": "37",
+          "name": "PipeFlange_ZPositiveTop",
+          "position": {
+            "x": 0.0,
+            "y": 21.5,
+            "z": 14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 14.0,
+                "y": 3.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 28,
+                  "y": 72
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 42,
+                  "y": 72
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 42,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 56,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 112,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 116,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "38",
+          "name": "PipeFlange_ZPositiveBottom",
+          "position": {
+            "x": 0.0,
+            "y": 10.5,
+            "z": 14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 14.0,
+                "y": 3.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "top": {
+                "offset": {
+                  "x": 56,
+                  "y": 72
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 70,
+                  "y": 72
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 70,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 84,
+                  "y": 83
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 120,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 124,
+                  "y": 86
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "39",
+          "name": "PipeFlange_ZPositiveLeft",
+          "position": {
+            "x": -5.5,
+            "y": 16.0,
+            "z": 14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 3.0,
+                "y": 8.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "left": {
+                "offset": {
+                  "x": 88,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 92,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 12,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 15,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 48,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 51,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "40",
+          "name": "PipeFlange_ZPositiveRight",
+          "position": {
+            "x": 5.5,
+            "y": 16.0,
+            "z": 14.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 3.0,
+                "y": 8.0,
+                "z": 4.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "left": {
+                "offset": {
+                  "x": 96,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 100,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "front": {
+                "offset": {
+                  "x": 18,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 21,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 54,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 57,
+                  "y": 76
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "41",
+          "name": "PipeFlange_ZPositiveMouth",
+          "position": {
+            "x": 0.0,
+            "y": 16.0,
+            "z": 15.25
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 8.0,
+                "y": 8.0,
+                "z": 1.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 24,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 32,
+                  "y": 51
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 34,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 35,
+                  "y": 59
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 16,
+                  "y": 94
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 24,
+                  "y": 94
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        }
+      ]
+    },
+    {
+      "id": "42",
       "name": "StructuralLinks",
       "position": {
         "x": 0.0,
@@ -2351,18 +4123,18 @@
       },
       "children": [
         {
-          "id": "24",
+          "id": "43",
           "name": "StructuralLink0",
           "position": {
             "x": -9.67857,
             "y": 15.81473,
-            "z": -1.60714
+            "z": -4.35714
           },
           "orientation": {
-            "x": 0.12777,
-            "y": 0.12241,
-            "z": 0.68088,
-            "w": 0.7107
+            "x": -0.09301,
+            "y": -0.0891,
+            "z": 0.68604,
+            "w": 0.71608
           },
           "shape": {
             "type": "box",
@@ -2379,7 +4151,7 @@
             "settings": {
               "size": {
                 "x": 1.0,
-                "y": 9.22865,
+                "y": 8.94767,
                 "z": 1.0
               },
               "isPiece": false
@@ -2387,8 +4159,8 @@
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 8,
-                  "y": 65
+                  "x": 96,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2398,8 +4170,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 9,
-                  "y": 65
+                  "x": 97,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2409,8 +4181,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 10,
-                  "y": 65
+                  "x": 98,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2420,8 +4192,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 11,
-                  "y": 65
+                  "x": 99,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2431,8 +4203,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 123,
-                  "y": 90
+                  "x": 34,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2442,8 +4214,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 124,
-                  "y": 90
+                  "x": 35,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2459,18 +4231,18 @@
           }
         },
         {
-          "id": "25",
+          "id": "44",
           "name": "StructuralLink1",
           "position": {
-            "x": 8.89238,
-            "y": 16.48744,
-            "z": -1.60714
+            "x": 11.28571,
+            "y": 8.72321,
+            "z": 3.21429
           },
           "orientation": {
-            "x": 0.10171,
-            "y": -0.11187,
-            "z": -0.73143,
-            "w": 0.66495
+            "x": -0.33476,
+            "y": 0.18097,
+            "z": -0.43978,
+            "w": 0.8135
           },
           "shape": {
             "type": "box",
@@ -2487,7 +4259,7 @@
             "settings": {
               "size": {
                 "x": 1.0,
-                "y": 10.75328,
+                "y": 9.13366,
                 "z": 1.0
               },
               "isPiece": false
@@ -2495,8 +4267,8 @@
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 102,
-                  "y": 51
+                  "x": 100,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2506,8 +4278,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 103,
-                  "y": 51
+                  "x": 101,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2517,8 +4289,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 104,
-                  "y": 51
+                  "x": 102,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2528,8 +4300,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 105,
-                  "y": 51
+                  "x": 103,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2539,8 +4311,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 125,
-                  "y": 90
+                  "x": 36,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2550,8 +4322,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 126,
-                  "y": 90
+                  "x": 37,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2567,18 +4339,18 @@
           }
         },
         {
-          "id": "26",
+          "id": "45",
           "name": "StructuralLink2",
           "position": {
-            "x": 1.89238,
-            "y": 16.48744,
+            "x": -5.42857,
+            "y": 15.81473,
             "z": -8.60714
           },
           "orientation": {
-            "x": -0.35173,
-            "y": -0.45381,
-            "z": 0.64713,
-            "w": 0.50156
+            "x": -0.68226,
+            "y": -0.12697,
+            "z": 0.13173,
+            "w": 0.70785
           },
           "shape": {
             "type": "box",
@@ -2595,7 +4367,7 @@
             "settings": {
               "size": {
                 "x": 1.0,
-                "y": 11.47199,
+                "y": 10.79302,
                 "z": 1.0
               },
               "isPiece": false
@@ -2603,8 +4375,8 @@
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 106,
-                  "y": 51
+                  "x": 62,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2614,8 +4386,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 107,
-                  "y": 51
+                  "x": 63,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2625,8 +4397,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 108,
-                  "y": 51
+                  "x": 64,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2636,8 +4408,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 109,
-                  "y": 51
+                  "x": 65,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2647,8 +4419,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 127,
-                  "y": 90
+                  "x": 38,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2658,8 +4430,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 0,
-                  "y": 92
+                  "x": 39,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2675,18 +4447,18 @@
           }
         },
         {
-          "id": "27",
+          "id": "46",
           "name": "StructuralLink3",
           "position": {
             "x": -2.67857,
-            "y": 11.47321,
+            "y": 8.72321,
             "z": 10.21429
           },
           "orientation": {
-            "x": 0.296,
-            "y": -0.08101,
-            "z": -0.25125,
-            "w": 0.91798
+            "x": 0.37006,
+            "y": -0.1986,
+            "z": -0.42915,
+            "w": 0.79965
           },
           "shape": {
             "type": "box",
@@ -2703,7 +4475,7 @@
             "settings": {
               "size": {
                 "x": 1.0,
-                "y": 12.9612,
+                "y": 9.93244,
                 "z": 1.0
               },
               "isPiece": false
@@ -2711,8 +4483,8 @@
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 76,
-                  "y": 51
+                  "x": 66,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2722,8 +4494,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 77,
-                  "y": 51
+                  "x": 67,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2733,8 +4505,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 78,
-                  "y": 51
+                  "x": 68,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2744,8 +4516,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 79,
-                  "y": 51
+                  "x": 69,
+                  "y": 30
                 },
                 "mirror": {
                   "x": false,
@@ -2755,8 +4527,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 1,
-                  "y": 92
+                  "x": 40,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
@@ -2766,8 +4538,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 2,
-                  "y": 92
+                  "x": 41,
+                  "y": 94
                 },
                 "mirror": {
                   "x": false,
