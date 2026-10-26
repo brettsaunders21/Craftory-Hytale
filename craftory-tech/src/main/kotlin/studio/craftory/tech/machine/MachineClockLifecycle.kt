@@ -1,5 +1,6 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
@@ -44,7 +45,10 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
                 studio.craftory.core.api.CraftoryCore
                     .energyAccess(store.externalData.world)
             ovenPower.lastFizzSolveTick = energy.lastSolveTick()
-            MachineClock.initialize(ovenPower, tick)
+            MachineClock.initialize(
+                ovenPower,
+                commandBuffer.getComponent(ref, ProcessingBenchBlock.getComponentType()),
+            )
         }
         val claw = commandBuffer.getComponent(ref, SnatcherClawState.type)
         if (claw != null) {
@@ -103,9 +107,15 @@ internal object MachineClock {
 
     fun initialize(
         state: OvenPower,
-        tick: Long,
+        bench: ProcessingBenchBlock?,
     ) {
-        state.lastDeliveredTick = tick
+        state.lastInputProgress = bench?.inputProgress
+        state.lastRecipeTimeSeconds =
+            bench
+                ?.takeIf { it.recipe != null }
+                ?.getRecipeTimeSeconds(1)
+        state.status = MachineStatus.IDLE
+        state.inventorySnapshot = bench?.let { OvenInventorySnapshot.capture(it) }
     }
 
     fun pause(
@@ -127,12 +137,5 @@ internal object MachineClock {
         tick: Long,
     ) {
         state.lastAutoCrankTick = tick
-    }
-
-    fun pause(
-        state: OvenPower,
-        tick: Long,
-    ) {
-        state.lastDeliveredTick = tick
     }
 }

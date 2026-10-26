@@ -5,6 +5,7 @@ package studio.craftory.tech.machine
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
 import com.hypixel.hytale.builtin.crafting.interaction.OpenProcessingBenchInteraction
+import com.hypixel.hytale.builtin.crafting.system.BenchSystems
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
@@ -233,11 +234,15 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
             BodgeSlots.type,
             EnergyMember.type,
             ProcessingBenchBlock.getComponentType(),
+            BenchBlock.getComponentType(),
             BlockModule.BlockStateInfo.getComponentType(),
         )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
-        setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
+        setOf(
+            SystemDependency(Order.AFTER, BenchSystems.ProcessingBenchTick::class.java),
+            SystemDependency(Order.BEFORE, EnergySolveSystem::class.java),
+        )
 
     override fun isParallel(
         systemIndex: Int,
@@ -269,82 +274,112 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         val benchBlock = chunk.getComponent(index, BenchBlock.getComponentType()) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val world = store.externalData.world
-        val tick = world.tick
-        if (!CraftoryCore.isAreaActive(store, blockState)) {
-            MachineClock.pause(power, tick)
+        val position = Vector3i()
+        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        ScorchOvenWindowTargets.update(world, position, benchBlock.windows.keys)
+        val id = BlockPos.pack(position.x, position.y, position.z)
+        val energy = CraftoryCore.energyAccess(world)
+        val previousProgress = power.lastInputProgress ?: bench.inputProgress
+        val previousRecipeTime = power.lastRecipeTimeSeconds
+        val activeArea = CraftoryCore.isAreaActive(store, blockState)
+
+        fun freeze(
+            status: MachineStatus,
+            suspendDemand: Boolean = true,
+            storedBefore: Long? = null,
+        ) {
+            val frozenProgress = previousProgress.coerceAtLeast(0f)
+            var inventoryRestored = false
+            power.inventorySnapshot?.let { snapshot ->
+                snapshot.inputStacks.forEachIndexed { slot, saved ->
+                    val index = slot.toShort()
+                    val current = bench.inputContainer.getItemStack(index)
+                    if (current != saved) {
+                        bench.inputContainer.setItemStackForSlot(
+                            index,
+                            saved?.withQuantity(saved.quantity) ?: ItemStack.EMPTY,
+                        )
+                        inventoryRestored = true
+                    }
+                }
+                snapshot.outputStacks.forEachIndexed { slot, saved ->
+                    val index = slot.toShort()
+                    val current = bench.outputContainer.getItemStack(index)
+                    if (current != saved) {
+                        bench.outputContainer.setItemStackForSlot(
+                            index,
+                            saved?.withQuantity(saved.quantity) ?: ItemStack.EMPTY,
+                        )
+                        inventoryRestored = true
+                    }
+                }
+            }
+            if (inventoryRestored) {
+                bench.checkForRecipeUpdate(benchBlock)
+                bench.sendProcessingSlots(benchBlock.windows)
+            }
+            if (bench.inputProgress != frozenProgress) {
+                bench.setInputProgress(frozenProgress)
+                bench.sendProgress(frozenProgress, benchBlock.windows)
+            }
+            power.inventorySnapshot = OvenInventorySnapshot.capture(bench)
+            power.lastInputProgress = frozenProgress
+            power.status = status
+            power.lastRecipeTimeSeconds =
+                bench.recipe?.let { bench.getRecipeTimeSeconds(1) }
+            if (suspendDemand && member.demand != 0L) energy.setDemand(id, 0)
             setBlockState(world, blockState, commandBuffer, "Off")
+            if (inventoryRestored || (storedBefore != null && power.storedFizz != storedBefore)) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+        }
+
+        if (!activeArea) {
+            freeze(MachineStatus.IDLE)
             return
         }
         if (jank.isStalled) {
-            MachineClock.pause(power, tick)
-            if (bench.isActive()) bench.setActive(false, benchBlock, blockState)
-            setBlockState(world, blockState, commandBuffer, "Off")
-            val position = blockState.worldPosition(commandBuffer) ?: return
-            val id = BlockPos.pack(position.x, position.y, position.z)
-            if (member.demand != 0L) CraftoryCore.energyAccess(world).setDemand(id, 0)
+            freeze(MachineStatus.STALLED)
             return
         }
-        if (!CraftoryCore.isEnergyTick(store)) return
-        val powerLoss = OvenPowerMath.updatePowerLoss(power.lastDeliveredTick, tick, member.delivered > 0)
-        power.lastDeliveredTick = powerLoss.lastDeliveredTick
-        if (bench.isActive() && powerLoss.shouldStop) {
-            bench.setActive(false, benchBlock, blockState)
-        }
-        setBlockState(world, blockState, commandBuffer, if (bench.isActive()) "On" else "Off")
-        val position = Vector3i()
-        if (!blockState.fillWorldPos(commandBuffer, position)) return
-        val id = BlockPos.pack(position.x, position.y, position.z)
-        val chargeStack = bench.fuelContainer.getItemStack(0.toShort())
-        val chargeCount =
-            if (chargeStack?.itemId == CraftoryIds.FIZZ_CHARGE) {
-                chargeStack.quantity
-            } else {
-                0
-            }
-        val fuelSlotAvailable =
-            chargeStack == null || chargeStack.isEmpty || chargeStack.itemId == CraftoryIds.FIZZ_CHARGE
-        val energy = CraftoryCore.energyAccess(world)
         val completedSolveTick = energy.lastSolveTick()
         val fizzUpdate =
             OvenFizzAccounting.update(
-                power.accumulatedFizz,
+                power.storedFizz,
                 power.lastFizzSolveTick,
                 completedSolveTick,
                 member.delivered,
-                hasRecipeInput(bench),
-                chargeCount,
-                fuelSlotAvailable,
+                slots.modifiers().energyUse.toDouble(),
             )
-        val demand = (fizzUpdate.demand * slots.modifiers().energyUse).toLong()
-        if (member.demand != demand) energy.setDemand(id, demand)
-        var dirty = false
+        if (member.demand != fizzUpdate.demand) energy.setDemand(id, fizzUpdate.demand)
+        val previousStoredFizz = power.storedFizz
         power.lastFizzSolveTick = fizzUpdate.lastFizzSolveTick
-        if (power.accumulatedFizz != fizzUpdate.accumulatedFizz) {
-            power.accumulatedFizz = fizzUpdate.accumulatedFizz
-            dirty = true
+        if (fizzUpdate.storedFizz > previousStoredFizz) power.receivedFizzFromNetwork = true
+        power.storedFizz = fizzUpdate.storedFizz
+        val processing =
+            OvenFizzAccounting.process(
+                storedFizz = power.storedFizz,
+                previousProgress = previousProgress,
+                currentProgress = bench.inputProgress,
+                previousRecipeTimeSeconds = previousRecipeTime,
+            )
+        if (processing.status == MachineStatus.NO_POWER) {
+            power.storedFizz = processing.storedFizz
+            freeze(MachineStatus.NO_POWER, suspendDemand = false, storedBefore = previousStoredFizz)
+            return
         }
-        if (fizzUpdate.shouldInsertCharge) {
-            val transaction =
-                bench.fuelContainer.setItemStackForSlot(
-                    0.toShort(),
-                    ItemStack(CraftoryIds.FIZZ_CHARGE, chargeCount + 1),
-                )
-            if (transaction.succeeded()) {
-                power.accumulatedFizz -= OvenFizzAccounting.FIZZ_PER_CHARGE
-                dirty = true
-            }
+        if (bench.inputProgress != processing.inputProgress) {
+            bench.setInputProgress(processing.inputProgress)
+            bench.sendProgress(processing.inputProgress, benchBlock.windows)
         }
-        if (dirty) blockState.markNeedsSaving(commandBuffer)
-    }
-
-    private fun hasRecipeInput(bench: ProcessingBenchBlock): Boolean =
-        bench.recipe != null &&
-            (0 until bench.inputContainer.capacity).any { slot ->
-                bench.inputContainer.getItemStack(slot.toShort())?.isEmpty == false
-            }
-
-    private companion object {
-        const val MAX_CHARGES = OvenFizzAccounting.MAX_CHARGES
+        power.storedFizz = processing.storedFizz
+        power.lastInputProgress = processing.inputProgress
+        power.lastRecipeTimeSeconds =
+            bench.recipe?.let { bench.getRecipeTimeSeconds(1) }
+        power.status = processing.status
+        power.inventorySnapshot = OvenInventorySnapshot.capture(bench)
+        setBlockState(world, blockState, commandBuffer, if (processing.advanced) "On" else "Off")
+        if (power.storedFizz != previousStoredFizz) blockState.markNeedsSaving(commandBuffer)
     }
 }
 
