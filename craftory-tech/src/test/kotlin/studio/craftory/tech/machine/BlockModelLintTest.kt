@@ -410,6 +410,30 @@ internal class BlockModelLintTest {
     }
 
     @Test
+    fun allCraftoryHitboxesStayWithinBlockCell() {
+        val files =
+            Files.walk(hitboxes).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".json") }.toList()
+            }
+        assertTrue(files.isNotEmpty(), "no Craftory hitbox JSON files found")
+        files.forEach { path ->
+            parse(path).getAsJsonArray("Boxes").forEachIndexed { boxIndex, boxElement ->
+                val box = boxElement.asJsonObject
+                listOf("Min", "Max").forEach { corner ->
+                    val vector = box.getAsJsonObject(corner)
+                    listOf("X", "Y", "Z").forEach { axis ->
+                        val coordinate = vector.get(axis).asDouble
+                        assertTrue(
+                            coordinate >= 0.0 && coordinate <= 1.0,
+                            "$path box $boxIndex $corner.$axis is outside [0,1]: $coordinate",
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun craftoryModelBlocksHaveFittedHitboxesAndAttachedParticles() {
         val hitboxByStem = hitboxFilesByStem(hitboxes)
         Files.list(items).use { paths ->

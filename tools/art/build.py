@@ -142,7 +142,7 @@ def hitbox_for_models(models: list[Model]) -> dict:
 
     def outward(value: float, lower: bool) -> float:
         rounded = math.floor(value * 32) / 32 if lower else math.ceil(value * 32) / 32
-        return round(rounded, 6)
+        return min(1.0, max(0.0, round(rounded, 6)))
 
     minimum = {
         "X": outward(0.5 + lo[0] / 32, True),
