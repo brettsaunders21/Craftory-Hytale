@@ -14,6 +14,7 @@ import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.ConverterMath
+import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
@@ -36,6 +37,8 @@ import studio.craftory.tech.well.WellheadPlacementSystem
 internal object Slice5bSelfTestChecks {
     const val CHECK_COUNT = 9
     const val PERSISTENCE_STAGE = 6
+    const val CATALYSIS_STAGE = 1
+    const val CATALYSIS_TICKS = 24L
 
     fun run(
         run: Slice5bSelfTestRun.Run,
@@ -59,7 +62,6 @@ internal object Slice5bSelfTestChecks {
             runCatching {
                 when (index) {
                     0 -> wellheadTapAndUntap(run)
-                    1 -> catalysis(run)
                     2 -> steadySeating(run)
                     3 -> feedAndCleanse(run)
                     4 -> raidSiphons(run)
@@ -92,17 +94,6 @@ internal object Slice5bSelfTestChecks {
         check(well.state == WellState.TAPPED) { "placement did not tap Well" }
         CraftoryCore.wells().setState(run.world, pos, WellState.TETHERED)
         check(well.state == WellState.TETHERED) { "untap did not restore TETHERED" }
-    }
-
-    private fun catalysis(run: Slice5bSelfTestRun.Run) {
-        check(run.fixtures[1].x == 10_632) { "catalysis fixture is not in its assigned chunk" }
-        val delivered = 40L
-        val loss = delivered - ConverterMath.catalyse(delivered)
-        val output = WellOutput.total(WellStrength.FLICKER, 1, delivered, false)
-        check(loss == 6L && output == WellOutput.base(WellStrength.FLICKER) + 34L) {
-            "delivered=$delivered loss=$loss output=$output"
-        }
-        check(CraftoryCore.gradeRank("dim_glimmer") == 2) { "output grade is not rank 2" }
     }
 
     private fun steadySeating(run: Slice5bSelfTestRun.Run) {
@@ -146,7 +137,7 @@ internal object Slice5bSelfTestChecks {
         val position = requireNotNull(entityStore.getComponent(entity, TransformComponent.getComponentType())).position
         JarCarrierSystem().processPlayer(entity, player, position, entityStore, run.world, run.world.tick)
         if (entityStore.getComponent(entity, JarCarrier.type) == null) {
-            entityStore.removeEntity(entity, RemoveReason.REMOVE)
+            Slice5bSelfTestFixtures.deferSyntheticPlayerRemoval(run, entity)
             crews.close()
             error("JarCarrier was not installed")
         }
@@ -156,7 +147,7 @@ internal object Slice5bSelfTestChecks {
             entityStore.getComponent(entity, JarCarrier.type) == null &&
                 movement.settings.baseSpeed == originalSpeed,
         ) { "JarCarrier removal did not restore movement" }
-        entityStore.removeEntity(entity, com.hypixel.hytale.component.RemoveReason.REMOVE)
+        Slice5bSelfTestFixtures.deferSyntheticPlayerRemoval(run, entity)
         crews.close()
     }
 
@@ -169,6 +160,7 @@ internal object Slice5bSelfTestChecks {
         val system = WellAfflictionSystem()
         system.startForSelfTest(run.world, pos, WellAfflictionFollower.MOTH, 1)
         val current = store.getComponent(ref, WellAffliction.type) ?: error("affliction missing")
+        current.mothIds.forEach { Slice5bSelfTestFixtures.recordNpc(run, it, WellAfflictionFollower.MOTH) }
         check(current.mothIds.isNotEmpty()) { "forced Riftmoth did not spawn" }
         system.advanceFeedForSelfTest(
             run.world,
@@ -207,6 +199,13 @@ internal object Slice5bSelfTestChecks {
         system.startRaidForSelfTest(run.world, pos)
         val state = store.getComponent(ref, WellAffliction.type) ?: error("raid state missing")
         check(state.walkerId.isNotEmpty()) { "Walker failed to spawn" }
+        state.raidNpcIds.forEach { id ->
+            Slice5bSelfTestFixtures.recordNpc(
+                run,
+                id,
+                if (id == state.walkerId) WellAfflictionFollower.WALKER else WellAfflictionFollower.POACHER,
+            )
+        }
         studio.craftory.tech.well
             .processRaid(run.world, pos, well, state)
         check(well.strength == WellStrength.STEADY) { "siphon strength=${well.strength}" }
@@ -225,10 +224,21 @@ internal object Slice5bSelfTestChecks {
         store.putComponent(ref, WellAffliction.type, WellAffliction())
         WellAfflictionSystem().startRaidForSelfTest(run.world, pos)
         val state = store.getComponent(ref, WellAffliction.type) ?: error("raid state missing")
+        state.raidNpcIds.forEach { id ->
+            Slice5bSelfTestFixtures.recordNpc(
+                run,
+                id,
+                if (id == state.walkerId) WellAfflictionFollower.WALKER else WellAfflictionFollower.POACHER,
+            )
+        }
         val walker = java.util.UUID.fromString(state.walkerId)
         state.raidNpcIds = state.raidNpcIds.filterNot { it == state.walkerId }.toTypedArray()
         state.walkerId = ""
         WellAfflictionSystem.onFollowerDeath(run.world, walker, pos, WellAfflictionFollower.WALKER)
+        run.world.entityStore.getRefFromUUID(walker)?.takeIf { it.isValid }?.let {
+            run.world.entityStore.store
+                .removeEntity(it, RemoveReason.REMOVE)
+        }
         studio.craftory.tech.well
             .processRaid(run.world, pos, well, state)
         check(well.strength == WellStrength.ROARING) { "strength changed after Walker death" }
@@ -242,7 +252,10 @@ internal object Slice5bSelfTestChecks {
         val head = BlockPos(pos.x, pos.y + 1, pos.z)
         val owner = java.util.UUID.randomUUID()
         assignMachineOwner(run.world, Vector3i(head.x, head.y, head.z), CraftoryIds.WELLHEAD, owner)
+        run.cleanupBlockPositions.add(head)
         val ref = BlockModule.getBlockEntity(run.world, head.x, head.y, head.z) ?: error("Wellhead missing")
+        WellSelfTestExclusions.registerBlock(ref)
+        run.excludedBlockRefs.add(ref)
         check(
             run.world.chunkStore.store
                 .getComponent(ref, MachineOwner.type)
@@ -252,7 +265,7 @@ internal object Slice5bSelfTestChecks {
         }
     }
 
-    private fun spawnClaimedWell(
+    internal fun spawnClaimedWell(
         run: Slice5bSelfTestRun.Run,
         pos: BlockPos,
         strength: WellStrength,
@@ -269,16 +282,18 @@ internal object Slice5bSelfTestChecks {
                 claimCrewId = claimCrewId,
             ) ?: error("Well failed to spawn at $pos")
         WellSelfTestExclusions.registerWell(pos)
+        run.cleanupWellPositions.add(pos)
         return run.world.chunkStore.store
             .getComponent(ref, Glimmerwell.type) ?: error("Well component missing")
     }
 
-    private fun place(
+    internal fun place(
         run: Slice5bSelfTestRun.Run,
         index: Int,
         blockId: String,
         pos: BlockPos,
     ) {
+        run.cleanupBlockPositions.add(pos)
         val type = requireNotNull(BlockType.fromString(blockId))
         val ref = run.sectionRefs[index] ?: error("fixture section missing")
         val store = run.world.chunkStore.store
@@ -296,7 +311,114 @@ internal object Slice5bSelfTestChecks {
                 SetBlockSettings.NONE,
             ),
         ) { "failed to place $blockId" }
-        BlockModule.getBlockEntity(run.world, pos.x, pos.y, pos.z)?.let { WellSelfTestExclusions.registerBlock(it) }
+        BlockModule.getBlockEntity(run.world, pos.x, pos.y, pos.z)?.let {
+            WellSelfTestExclusions.registerBlock(it)
+            run.excludedBlockRefs.add(it)
+        }
+    }
+}
+
+internal object Slice5bCatalysisCheck {
+    private const val TIMEOUT_TICKS = 600L
+
+    fun start(run: Slice5bSelfTestRun.Run) {
+        check(run.fixtures[1].x == 10_632) { "catalysis fixture is not in its assigned chunk" }
+        val pos = run.fixtures[1]
+        val head = BlockPos(pos.x, pos.y + 1, pos.z)
+        val crank = BlockPos(head.x - 1, head.y, head.z)
+        val sink = BlockPos(head.x, head.y + 1, head.z)
+        Slice5bSelfTestChecks.spawnClaimedWell(run, pos, WellStrength.FLICKER, WellState.TETHERED)
+        WellSelfTestExclusions.registerWellheadTest(pos)
+        Slice5bSelfTestChecks.place(run, 1, CraftoryIds.CRANK, crank)
+        Slice5bSelfTestChecks.place(run, 1, CraftoryIds.FIZZ_DAMPER, sink)
+        Slice5bSelfTestChecks.place(run, 1, CraftoryIds.WELLHEAD, head)
+        WellheadPlacementSystem().initializeForSelfTest(run.world, head, pos)
+        val store = run.world.chunkStore.store
+        val crankRef =
+            BlockModule.getBlockEntity(run.world, crank.x, crank.y, crank.z) ?: error("Crank producer missing")
+        val crankState = store.getComponent(crankRef, CrankState.type) ?: error("Crank state missing")
+        val crankMember = store.getComponent(crankRef, EnergyMember.type) ?: error("Crank energy node missing")
+        val crankBlockState =
+            store.getComponent(crankRef, BlockModule.BlockStateInfo.getComponentType()) ?: error("Crank block missing")
+        check(MachineActions.pulse(crankState, crankMember, crankBlockState, store, run.world.tick)) {
+            "Crank test source did not pulse"
+        }
+        val sinkRef =
+            BlockModule.getBlockEntity(run.world, sink.x, sink.y, sink.z) ?: error("output sink missing")
+        check(store.getComponent(sinkRef, EnergyMember.type) != null) { "output sink has no energy node" }
+        CraftoryCore.energyAccess(run.world).setDemand(sink.pack(), 2L)
+        val headRef = BlockModule.getBlockEntity(run.world, head.x, head.y, head.z) ?: error("Wellhead missing")
+        val headState = store.getComponent(headRef, WellheadState.type) ?: error("Wellhead state missing")
+        headState.harmony = 0
+        headState.lastHarmonyTick = run.world.tick
+        check(headState.harmony == 0) { "catalysis fixture has harmony=${headState.harmony}" }
+    }
+
+    fun finish(run: Slice5bSelfTestRun.Run) {
+        val pos = run.fixtures[1]
+        val head = BlockPos(pos.x, pos.y + 1, pos.z)
+        val sink = BlockPos(head.x, head.y + 1, head.z)
+        val energy = CraftoryCore.energyAccess(run.world)
+        val delivered = energy.converterInputDelivered(head.pack())
+        val emitted = energy.networkSupply(sink.pack())
+        val rank = energy.networkGrade(sink.pack())
+        val expected = ConverterMath.catalyse(delivered)
+        val lossPercent = if (delivered == 0L) 0.0 else (delivered - expected) * 100.0 / delivered
+        val store = run.world.chunkStore.store
+        val crank = BlockPos(head.x - 1, head.y, head.z)
+        val crankRef = BlockModule.getBlockEntity(run.world, crank.x, crank.y, crank.z)
+        val crankMember = crankRef?.let { store.getComponent(it, EnergyMember.type) }
+        val headRef = BlockModule.getBlockEntity(run.world, head.x, head.y, head.z)
+        val headMember = headRef?.let { store.getComponent(it, EnergyMember.type) }
+        val headState = headRef?.let { store.getComponent(it, WellheadState.type) }
+        val headBlock = headRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        val wellState =
+            CraftoryCore
+                .wells()
+                .wellsNear(store, pos, 0)
+                .firstOrNull()
+                ?.well
+                ?.state
+        val detail =
+            "elapsedTicks=${run.world.tick - run.stageStarted}, timeoutTicks=$TIMEOUT_TICKS, " +
+                "delivered=$delivered, emitted=$emitted, lossPercent=" +
+                "${String.format(java.util.Locale.ROOT, "%.1f", lossPercent)}, rank=$rank, " +
+                "sourceProduction=${crankMember?.production}, " +
+                "sourceNetwork=${energy.networkOf(crank.pack())}, " +
+                "inputNetwork=${energy.networkOf(head.pack())}, " +
+                "inputDemand=${headMember?.demand}, " +
+                "outputNetwork=${energy.converterOutputNetwork(head.pack())}, " +
+                "sinkNetwork=${energy.networkOf(sink.pack())}, " +
+                "headActive=${headBlock?.let { CraftoryCore.isAreaActive(store, it) }}, " +
+                "wellState=$wellState, headWell=${headState?.wellPosition?.let(BlockPos::unpack)}, " +
+                "pumping=${headState?.pumping}"
+        val passed =
+            delivered > 0L &&
+                emitted == expected &&
+                kotlin.math.abs(lossPercent - 15.0) < 0.5 &&
+                rank == WellOutput.GRADE_RANK
+        if (passed) {
+            run.passed++
+            run.context.sendMessage(Message.raw("selftest: PASS 5b Catalysis grade-up with 15% loss ($detail)"))
+        } else {
+            run.failed++
+            run.context.sendMessage(
+                Message.raw("selftest: FAIL 5b Catalysis grade-up with 15% loss ($detail, expected=$expected)"),
+            )
+        }
+    }
+
+    fun fail(
+        run: Slice5bSelfTestRun.Run,
+        detail: String,
+    ) {
+        run.failed++
+        run.context.sendMessage(
+            Message.raw(
+                "selftest: FAIL 5b Catalysis grade-up with 15% loss " +
+                    "(elapsedTicks=0, timeoutTicks=$TIMEOUT_TICKS, detail=$detail)",
+            ),
+        )
     }
 }
 
@@ -308,11 +430,24 @@ internal object Slice5bSelfTestSupport {
         studio.craftory.tech.well.Slice5bPersistenceSelfTest.run(
             run.world,
             run.fixtures[5],
-        ) { tapped, corrupted, detail ->
-            report(run, "TAPPED Well save/reload", tapped, detail)
-            report(run, "Corrupted Well save/reload", corrupted, detail)
+        ) { tapped, corrupted ->
+            report(
+                run,
+                "TAPPED Well save/reload",
+                tapped.passed,
+                "elapsedTicks=${tapped.elapsedTicks}, timeoutTicks=6000, detail=${tapped.detail}",
+            )
+            report(
+                run,
+                "Corrupted Well save/reload",
+                corrupted.passed,
+                "elapsedTicks=${corrupted.elapsedTicks}, timeoutTicks=6000, detail=${corrupted.detail}",
+            )
             complete()
         }
+        run.cleanupWellPositions.add(BlockPos(run.fixtures[5].x + 8, run.fixtures[5].y, run.fixtures[5].z))
+        run.cleanupWellPositions.add(BlockPos(run.fixtures[5].x + 12, run.fixtures[5].y, run.fixtures[5].z))
+        run.cleanupBlockPositions.addAll(run.cleanupWellPositions.filter { it.x >= run.fixtures[5].x + 8 })
     }
 
     fun timeout(

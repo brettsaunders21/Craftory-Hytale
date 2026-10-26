@@ -84,7 +84,7 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
                 ?.let { BlockPos.unpack(it) }
         val well =
             wellPosition
-                ?.takeUnless { WellSelfTestExclusions.isWell(it) }
+                ?.takeUnless { WellSelfTestExclusions.isWell(it, allowWellheadTest = true) }
                 ?.let {
                     CraftoryCore
                         .wells()

@@ -10,6 +10,7 @@ internal object WellSelfTestExclusions {
     private val blocks: MutableSet<Ref<ChunkStore>> = ConcurrentHashMap.newKeySet()
     private val entities: MutableSet<Ref<EntityStore>> = ConcurrentHashMap.newKeySet()
     private val wells: MutableSet<Long> = ConcurrentHashMap.newKeySet()
+    private val wellheadTestWells: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 
     fun registerBlock(ref: Ref<ChunkStore>) {
         blocks.add(ref)
@@ -36,10 +37,23 @@ internal object WellSelfTestExclusions {
     }
 
     fun releaseWell(position: BlockPos) {
-        wells.remove(position.pack())
+        val packed = position.pack()
+        wells.remove(packed)
+        wellheadTestWells.remove(packed)
     }
 
-    fun isWell(position: BlockPos): Boolean = position.pack() in wells
+    fun isWell(
+        position: BlockPos,
+        allowWellheadTest: Boolean = false,
+    ): Boolean {
+        val packed = position.pack()
+        return (packed in wells || packed in wellheadTestWells) &&
+            !(allowWellheadTest && packed in wellheadTestWells)
+    }
+
+    fun registerWellheadTest(position: BlockPos) {
+        wellheadTestWells.add(position.pack())
+    }
 
     fun cleanupCounts(): Triple<Int, Int, Int> = Triple(blocks.size, entities.size, wells.size)
 }

@@ -10,48 +10,69 @@ import studio.craftory.core.api.well.WellStrength
 import java.util.UUID
 
 internal object Slice5bPersistenceSelfTest {
+    data class Result(
+        val passed: Boolean,
+        val detail: String,
+        val elapsedTicks: Long,
+    )
+
     private val claimCrew = UUID.fromString("00000000-0000-0000-0000-000000000002")
 
     fun run(
         world: World,
         position: BlockPos,
-        complete: (Boolean, Boolean, String) -> Unit,
+        complete: (Result, Result) -> Unit,
     ) {
         val tappedPosition = BlockPos(position.x + 8, position.y, position.z)
         val corruptedPosition = BlockPos(position.x + 12, position.y, position.z)
+        val tappedStarted = world.tick
 
         fun finish(
-            tappedPassed: Boolean,
-            corruptedPassed: Boolean,
-            detail: String,
+            tapped: Result,
+            corrupted: Result,
         ) {
             WellSelfTestExclusions.releaseWell(tappedPosition)
             WellSelfTestExclusions.releaseWell(corruptedPosition)
-            complete(tappedPassed, corruptedPassed, detail)
+            complete(tapped, corrupted)
         }
         val tapped =
             runCatching { prepare(world, tappedPosition, WellState.TAPPED, false) }
                 .getOrElse { failure ->
-                    finish(false, false, "TAPPED fixture setup failed (${failure.message})")
+                    finish(
+                        Result(false, "fixture setup failed (${failure.message})", world.tick - tappedStarted),
+                        Result(false, "skipped because TAPPED setup failed", 0),
+                    )
                     return
                 }
         WellPersistenceSelfTest.saveAndUnload(
             tapped,
             complete = { tappedPassed, tappedDetail ->
+                val tappedResult = Result(tappedPassed, tappedDetail, world.tick - tappedStarted)
                 if (!tappedPassed) {
-                    finish(false, false, tappedDetail)
+                    finish(tappedResult, Result(false, "skipped because TAPPED reload failed", 0))
                     return@saveAndUnload
                 }
+                val corruptedStarted = world.tick
                 val corrupted =
                     runCatching { prepare(world, corruptedPosition, WellState.CORRUPTED, true) }
                         .getOrElse { failure ->
-                            finish(true, false, "Corrupted fixture setup failed (${failure.message})")
+                            finish(
+                                tappedResult,
+                                Result(
+                                    false,
+                                    "fixture setup failed (${failure.message})",
+                                    world.tick - corruptedStarted,
+                                ),
+                            )
                             return@saveAndUnload
                         }
                 WellPersistenceSelfTest.saveAndUnload(
                     corrupted,
                     complete = { corruptedPassed, corruptedDetail ->
-                        finish(true, corruptedPassed, "$tappedDetail; $corruptedDetail")
+                        finish(
+                            tappedResult,
+                            Result(corruptedPassed, corruptedDetail, world.tick - corruptedStarted),
+                        )
                     },
                 )
             },
