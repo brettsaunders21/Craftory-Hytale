@@ -24,5 +24,18 @@
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Tether_Stake/Tether_Stake_Texture.png", "Weight": 1}],
     "Support": {"Down": [{"FaceType": "Full"}]},
     "BlockEntity": {"Components": {"CraftoryTetherStake": {"Lean": false, "WellId": ""}}}
+  },
+  "Recipe": {
+    "TimeSeconds": 4,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 8},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 2},
+      {"ItemId": "Craftory_Spark_Shard", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Tether_Stake"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
   }
 }

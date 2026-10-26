@@ -20,5 +20,17 @@
     "BlockSoundSetId": "Soft",
     "PhysicalMaterialId": "Wool",
     "BlockEntity": {"Components": {"CraftoryTubeNode": {"Kind": "tube"}}}
+  },
+  "Recipe": {
+    "TimeSeconds": 2,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 4},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Hurl_Tube", "Quantity": 4}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
   }
 }

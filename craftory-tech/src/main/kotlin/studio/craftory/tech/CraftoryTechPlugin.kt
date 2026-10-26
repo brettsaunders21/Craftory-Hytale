@@ -53,6 +53,7 @@ import studio.craftory.tech.machine.GasbagSystem
 import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
+import studio.craftory.tech.machine.GrizzlecogVisitSystem
 import studio.craftory.tech.machine.GutterBoilerSystem
 import studio.craftory.tech.machine.GutterpipeStateSystem
 import studio.craftory.tech.machine.JankSystem
@@ -430,6 +431,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(ScorchOvenSystem())
         chunkRegistry.registerSystem(JankSystem())
         chunkRegistry.registerSystem(ScrapRushSystem(config.get().scrapRush))
+        chunkRegistry.registerSystem(GrizzlecogVisitSystem(config.get().grizzlecogVisits))
         chunkRegistry.registerSystem(GutterBoilerSystem())
         chunkRegistry.registerSystem(GutterpipeStateSystem())
         chunkRegistry.registerSystem(SloshtankStateSystem())
