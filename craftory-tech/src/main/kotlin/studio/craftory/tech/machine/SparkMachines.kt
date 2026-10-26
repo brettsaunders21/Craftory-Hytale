@@ -256,7 +256,14 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         if (!blockState.fillWorldPos(commandBuffer, cursor)) return
         if (!CraftoryCore.isAreaActive(store, blockState)) return
         val wellPosition = BlockPos(cursor.x, cursor.y + 1, cursor.z)
-        if (WellSelfTestExclusions.isWell(wellPosition)) return
+        if (WellSelfTestExclusions.isWell(wellPosition)) {
+            if (member.production != 0L) {
+                CraftoryCore
+                    .energyAccess(store.externalData.world)
+                    .setProduction(BlockPos.pack(cursor.x, cursor.y, cursor.z), 0, WellOutput.GRADE_RANK)
+            }
+            return
+        }
         updateProduction(store, wellPosition, state, member, blockState, commandBuffer, cursor)
     }
 
