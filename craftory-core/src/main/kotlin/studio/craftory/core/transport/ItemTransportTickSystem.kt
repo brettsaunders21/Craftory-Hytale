@@ -1,4 +1,4 @@
-package studio.craftory.core.api.transport
+package studio.craftory.core.transport
 
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.system.tick.TickingSystem

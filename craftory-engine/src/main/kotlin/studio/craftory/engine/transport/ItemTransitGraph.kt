@@ -36,6 +36,9 @@ fun interface DirtyNodeVisitor {
     fun visit(nodePos: Long)
 }
 
+private const val DIRTY_FLUSH_INTERVAL_TICKS = 20L
+private const val NO_FLUSH_TICK = Long.MIN_VALUE
+
 @Suppress("LargeClass", "TooManyFunctions")
 class ItemTransitGraph(
     private val speedPerTick: Int = DEFAULT_SPEED_PER_TICK,
@@ -58,6 +61,10 @@ class ItemTransitGraph(
     private var nodeItemCounts = IntArray(INITIAL_CAPACITY)
     private var componentCount = 0
     private var networkItemCounts = IntArray(INITIAL_CAPACITY)
+    private var networkLastFlushTicks = LongArray(INITIAL_CAPACITY) { NO_FLUSH_TICK }
+    private var networkDrainStamps = IntArray(INITIAL_CAPACITY)
+    private var networkDrainDue = BooleanArray(INITIAL_CAPACITY)
+    private var networkDrainEpoch = 0
     private var awakeNetworkSize = 0
     private var queue = IntArray(INITIAL_CAPACITY)
     private var visitOrder = IntArray(INITIAL_CAPACITY)
@@ -146,6 +153,7 @@ class ItemTransitGraph(
         networkNodeCounts[handle] = 1
         nodeItemCounts[handle] = 0
         networkItemCounts[handle] = 0
+        networkLastFlushTicks[handle] = NO_FLUSH_TICK
         componentCount++
         for (face in FACES.indices) {
             val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
@@ -316,6 +324,75 @@ class ItemTransitGraph(
             visitor.visit(nodePositions[handle])
         }
         dirtyCount = 0
+    }
+
+    fun drainDirty(
+        tick: Long,
+        visitor: DirtyNodeVisitor,
+    ) {
+        drainDirty(tick, null, null, visitor)
+    }
+
+    fun drainDirtyInChunk(
+        tick: Long,
+        chunkX: Int,
+        chunkZ: Int,
+        visitor: DirtyNodeVisitor,
+    ) {
+        drainDirty(tick, chunkX, chunkZ, visitor)
+    }
+
+    private fun drainDirty(
+        tick: Long,
+        chunkX: Int?,
+        chunkZ: Int?,
+        visitor: DirtyNodeVisitor,
+    ) {
+        if (networkDrainEpoch == Int.MAX_VALUE) {
+            Arrays.fill(networkDrainStamps, 0)
+            networkDrainEpoch = 1
+        } else {
+            networkDrainEpoch++
+        }
+        val epoch = networkDrainEpoch
+        var retainedCount = 0
+        for (index in 0 until dirtyCount) {
+            val handle = dirtyHandles[index]
+            if (!nodeActive[handle] || dirtyGenerations[index] != nodeGenerations[handle]) continue
+            val nodePos = nodePositions[handle]
+            val inChunk =
+                chunkX == null ||
+                    (
+                        (PackedPosition.x(nodePos) shr 5) == chunkX &&
+                            (PackedPosition.z(nodePos) shr 5) == chunkZ
+                    )
+            val network = nodeNetworks[handle]
+            var due = inChunk && chunkX != null
+            if (inChunk && chunkX == null) {
+                due =
+                    if (networkDrainStamps[network] == epoch) {
+                        networkDrainDue[network]
+                    } else {
+                        val lastFlush = networkLastFlushTicks[network]
+                        val flushNow = lastFlush == NO_FLUSH_TICK || tick - lastFlush >= DIRTY_FLUSH_INTERVAL_TICKS
+                        networkDrainStamps[network] = epoch
+                        networkDrainDue[network] = flushNow
+                        if (flushNow) networkLastFlushTicks[network] = tick
+                        flushNow
+                    }
+            } else if (due) {
+                networkLastFlushTicks[network] = tick
+            }
+            if (due) {
+                dirtyFlags[handle] = false
+                visitor.visit(nodePos)
+            } else {
+                dirtyHandles[retainedCount] = handle
+                dirtyGenerations[retainedCount] = dirtyGenerations[index]
+                retainedCount++
+            }
+        }
+        dirtyCount = retainedCount
     }
 
     fun itemsOwnedBy(pos: Long): List<TransitItemRecord> {
@@ -517,6 +594,7 @@ class ItemTransitGraph(
         val firstNetwork = nodeNetworks[firstHandle]
         val secondNetwork = nodeNetworks[secondHandle]
         if (firstNetwork == secondNetwork) return
+        val lastFlushTick = maxFlushTick(networkLastFlushTicks[firstNetwork], networkLastFlushTicks[secondNetwork])
 
         val largeNetwork: Int
         val smallNetwork: Int
@@ -544,12 +622,24 @@ class ItemTransitGraph(
         networkNodeCounts[largeNetwork] += networkNodeCounts[smallNetwork]
         networkNodeCounts[smallNetwork] = 0
         networkHeads[smallNetwork] = -1
+        networkLastFlushTicks[largeNetwork] = lastFlushTick
+        networkLastFlushTicks[smallNetwork] = NO_FLUSH_TICK
 
         val mergedItemCount = networkItemCounts[largeNetwork] + networkItemCounts[smallNetwork]
         setNetworkItemCount(smallNetwork, 0)
         setNetworkItemCount(largeNetwork, mergedItemCount)
         componentCount--
     }
+
+    private fun maxFlushTick(
+        first: Long,
+        second: Long,
+    ): Long =
+        when {
+            first == NO_FLUSH_TICK -> second
+            second == NO_FLUSH_TICK -> first
+            else -> maxOf(first, second)
+        }
 
     private fun collectNeighbours(handle: Int): Int {
         var count = 0
@@ -566,11 +656,13 @@ class ItemTransitGraph(
         oldNetwork: Int,
         formerNeighbourCount: Int,
     ) {
+        val lastFlushTick = networkLastFlushTicks[oldNetwork]
         setNetworkItemCount(oldNetwork, 0)
         networkNodeCounts[oldNetwork] = 0
         networkHeads[oldNetwork] = -1
         if (formerNeighbourCount == 0) {
             componentCount--
+            networkLastFlushTicks[oldNetwork] = NO_FLUSH_TICK
             return
         }
 
@@ -618,6 +710,7 @@ class ItemTransitGraph(
             val size = componentSizes[component]
             val root = componentRoots[component]
             setNetworkItemCount(root, 0)
+            networkLastFlushTicks[root] = lastFlushTick
             networkNodeCounts[root] = size
             networkHeads[root] = visitOrder[start]
             var itemCount = 0
@@ -770,6 +863,12 @@ class ItemTransitGraph(
             networkPrevious.copyOf(capacity).also { Arrays.fill(it, networkPrevious.size, capacity, -1) }
         networkHeads = networkHeads.copyOf(capacity).also { Arrays.fill(it, networkHeads.size, capacity, -1) }
         networkNodeCounts = networkNodeCounts.copyOf(capacity)
+        networkLastFlushTicks =
+            networkLastFlushTicks.copyOf(capacity).also {
+                Arrays.fill(it, networkLastFlushTicks.size, capacity, NO_FLUSH_TICK)
+            }
+        networkDrainStamps = networkDrainStamps.copyOf(capacity)
+        networkDrainDue = networkDrainDue.copyOf(capacity)
         nodeItemCounts = nodeItemCounts.copyOf(capacity)
         queue = queue.copyOf(capacity)
         visitOrder = visitOrder.copyOf(capacity)
@@ -786,6 +885,12 @@ class ItemTransitGraph(
         networkItemCounts = networkItemCounts.copyOf(capacity)
         networkNodeCounts = networkNodeCounts.copyOf(capacity)
         networkHeads = networkHeads.copyOf(capacity).also { Arrays.fill(it, networkHeads.size, capacity, -1) }
+        networkLastFlushTicks =
+            networkLastFlushTicks.copyOf(capacity).also {
+                Arrays.fill(it, networkLastFlushTicks.size, capacity, NO_FLUSH_TICK)
+            }
+        networkDrainStamps = networkDrainStamps.copyOf(capacity)
+        networkDrainDue = networkDrainDue.copyOf(capacity)
     }
 
     private fun ensureDirtyCapacity(required: Int) {

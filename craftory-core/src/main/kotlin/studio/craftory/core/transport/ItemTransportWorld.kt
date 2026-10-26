@@ -1,6 +1,6 @@
 @file:Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements", "NestedBlockDepth")
 
-package studio.craftory.core.api.transport
+package studio.craftory.core.transport
 
 import com.hypixel.hytale.component.Component
 import com.hypixel.hytale.component.ComponentType
@@ -18,6 +18,9 @@ import org.joml.Vector3d
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.transport.ItemPipe
+import studio.craftory.core.api.transport.ItemTransport
+import studio.craftory.core.api.transport.ItemTransportAccess
 import studio.craftory.engine.transport.ItemKeyTable
 import studio.craftory.engine.transport.ItemTransitGraph
 import studio.craftory.engine.transport.NodeActivity
@@ -107,7 +110,17 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
             activityCache.beginTick()
         }
         graph.tick(activity, sink)
-        graph.drainDirty(dirtyVisitor)
+        graph.drainDirty(tick, dirtyVisitor)
+    }
+
+    fun flushDirtyChunk(
+        currentStore: Store<ChunkStore>,
+        chunkX: Int,
+        chunkZ: Int,
+        tick: Long,
+    ) {
+        bind(currentStore)
+        graph.drainDirtyInChunk(tick, chunkX, chunkZ, dirtyVisitor)
     }
 
     fun insert(

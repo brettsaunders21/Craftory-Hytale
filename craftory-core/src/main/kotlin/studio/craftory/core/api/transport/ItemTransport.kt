@@ -7,6 +7,7 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.BlockPos
+import studio.craftory.core.transport.ItemTransportWorld
 import java.util.concurrent.ConcurrentHashMap
 
 object ItemTransport {

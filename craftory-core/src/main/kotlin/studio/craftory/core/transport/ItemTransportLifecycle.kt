@@ -1,4 +1,4 @@
-package studio.craftory.core.api.transport
+package studio.craftory.core.transport
 
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.CommandBuffer
@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
+import studio.craftory.core.api.transport.ItemPipe
 import studio.craftory.engine.transport.NodeRemovalReason
 
 internal class ItemTransportLifecycle : RefSystem<ChunkStore>() {

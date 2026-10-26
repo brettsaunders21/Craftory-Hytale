@@ -53,7 +53,7 @@ internal class MachineClockLifecycle : RefSystem<ChunkStore>() {
         reason: RemoveReason,
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
-    ) = Unit
+    ): Unit = Unit
 }
 
 internal object MachineClock {

@@ -1,6 +1,6 @@
 @file:Suppress("TooManyFunctions", "LoopWithTooManyJumpStatements")
 
-package studio.craftory.core.api.transport
+package studio.craftory.core.transport
 
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ComponentType

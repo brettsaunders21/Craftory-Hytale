@@ -8,6 +8,26 @@ import org.junit.jupiter.api.Test
 
 class ItemTransitGraphTest {
     @Test
+    fun `dirty visits are throttled to once per network every 20 ticks`() {
+        val graph = ItemTransitGraph(speedPerTick = 1)
+        val start = pos(0)
+        val next = pos(1)
+        graph.addNode(start)
+        graph.addNode(next)
+        val sink = RecordingSink(pos(99))
+        graph.insert(start, 1, 1, 0, Long.MIN_VALUE, sink)
+        graph.drainDirty { }
+        val visitsAtTick = ArrayList<Long>()
+
+        repeat(45) { tick ->
+            graph.tick(ALWAYS_ACTIVE, sink)
+            graph.drainDirty(tick.toLong()) { visitsAtTick += tick.toLong() }
+        }
+
+        assertEquals(listOf(0L, 20L, 40L), visitsAtTick)
+    }
+
+    @Test
     fun `items follow a line and arrive at its only destination`() {
         val graph = ItemTransitGraph()
         val start = pos(0)
