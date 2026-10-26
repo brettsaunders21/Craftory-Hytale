@@ -25,7 +25,8 @@
     "KnowledgeRequired": false,
     "Input": [
       {"ItemId": "Ingredient_Scraps", "Quantity": 6},
-      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1}
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1},
+      {"ItemId": "Ingredient_Fibre", "Quantity": 2}
     ],
     "Output": [{"ItemId": "Craftory_Catch_Net"}],
     "BenchRequirement": [

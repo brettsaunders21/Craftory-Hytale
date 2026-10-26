@@ -31,4 +31,15 @@ class GrizzlecogVisitLogicTest {
 
         assertSame(eligible, player)
     }
+
+    @Test
+    fun `expired visit records retry or drop according to loaded state and age`() {
+        val day = WorldTimeResource.NANOS_PER_DAY
+        val record = GrizzlecogVisitRecord("npc", 0L)
+
+        assertEquals(GrizzlecogVisitExpiry.KEEP, GrizzlecogVisitLogic.expiryDecision(day / 2, record, true))
+        assertEquals(GrizzlecogVisitExpiry.DESPAWN_AND_DROP, GrizzlecogVisitLogic.expiryDecision(day * 2, record, true))
+        assertEquals(GrizzlecogVisitExpiry.KEEP, GrizzlecogVisitLogic.expiryDecision(day * 2, record, false))
+        assertEquals(GrizzlecogVisitExpiry.DROP, GrizzlecogVisitLogic.expiryDecision(day * 8, record, false))
+    }
 }

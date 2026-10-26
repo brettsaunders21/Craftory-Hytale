@@ -12,7 +12,9 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock
+import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
@@ -51,6 +53,11 @@ internal class PolishSelfTestRun : Resource<ChunkStore> {
         var expectedState = ""
         var cleanupStartTick = 0L
         var visitStarted = false
+        var visitStartedTick = 0L
+        var visitUuid: String? = null
+        var summarySent = false
+        var passed = 0
+        var failed = 0
         var completed = false
     }
 
@@ -65,7 +72,7 @@ internal class PolishSelfTestRun : Resource<ChunkStore> {
 
 @Suppress("TooManyFunctions", "LargeClass")
 internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
-    @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught")
+    @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught", "LongMethod", "MaxLineLength")
     override fun tick(
         dt: Float,
         systemIndex: Int,
@@ -75,6 +82,12 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         if (run.completed) return
         try {
             if (!run.ready) {
+                if (run.world.tick - run.stageStartTick > SETUP_TIMEOUT_TICKS) {
+                    run.setupFailure =
+                        "setup phase timeout elapsed=${run.world.tick - run.stageStartTick} loading=${run.loading}"
+                    finishFailedSetup(run, store)
+                    return
+                }
                 if (run.setupFailure != null) {
                     finishFailedSetup(run, store)
                 } else if (run.sectionRef != null) {
@@ -86,7 +99,8 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                 return
             }
             keepTestSectionTicking(run, store)
-            when (run.stage) {
+            val phase = run.stage
+            when (phase) {
                 0 -> setupClawCase(run, store)
                 1 -> checkClawCase(run, store)
                 2 -> checkPipeShapes(run)
@@ -101,20 +115,37 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                 11 -> cleanup(run, store)
                 12 -> pollCleanup(run, store)
             }
+            if (!run.completed && run.stage == phase && run.world.tick - run.stageStartTick > phaseTimeout(phase)) {
+                val detail = phaseDetails(run)
+                PolishSelfTest.fail(
+                    run,
+                    "phase ${phaseName(phase)}",
+                    "timeout elapsed=${run.world.tick - run.stageStartTick} $detail",
+                )
+                if (phase >= 11) {
+                    finish(run, store)
+                } else {
+                    run.stage = 11
+                    run.stageStartTick = run.world.tick
+                }
+            }
         } catch (failure: Exception) {
             val detail = failure.message ?: failure::class.simpleName.orEmpty()
             if (!run.ready) {
                 run.setupFailure = detail
                 run.loading = false
+            } else if (run.stage >= 11) {
+                PolishSelfTest.fail(run, "phase ${phaseName(run.stage)}", detail)
+                finish(run, store)
             } else {
-                PolishSelfTest.fail(run, "runner", detail)
+                PolishSelfTest.fail(run, "phase ${phaseName(run.stage)}", detail)
                 run.stage = 11
                 run.stageStartTick = run.world.tick
             }
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "LongMethod", "MaxLineLength")
     private fun prepare(
         run: PolishSelfTestRun.Run,
         store: Store<ChunkStore>,
@@ -139,6 +170,9 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                         val testPositions = CraftorySelfTest.testPositions(run.world)
                         check(PolishSelfTest.fixturePositions().all { it in testPositions }) {
                             "polish fixtures missing from burner test positions"
+                        }
+                        check(PolishSelfTest.fixturesShareSection()) {
+                            "polish fixture crosses the burner chunk section"
                         }
                         PolishSelfTest.clearTestArea(run, store)
                         PolishSelfTest.place(
@@ -525,6 +559,7 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.previousAnchorMaxChargeMinutes)
         run.cleanupStartTick = run.world.tick
         run.stage = 12
+        run.stageStartTick = run.world.tick
     }
 
     private fun setupMultiblocks(
@@ -637,37 +672,139 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         return JunkHeartActions.kick(run.world, store, controllerRef, kickTick, mayOperate = true) is KickResult.Formed
     }
 
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "TooGenericExceptionCaught")
     private fun pollCleanup(
         run: PolishSelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
-        if (run.visitStarted) return
+        if (run.visitStarted) {
+            if (run.world.tick - run.visitStartedTick > VISIT_TIMEOUT_TICKS) {
+                PolishSelfTest.fail(
+                    run,
+                    "e grizzlecog visit",
+                    "timeout elapsed=${run.world.tick - run.visitStartedTick} uuid=${run.visitUuid}",
+                )
+                run.visitUuid?.let { GrizzlecogVisitSystem.despawnForSelfTest(run.world, it) }
+                val floorRemoved = clearVisitFloor(run, store)
+                val finalCounters = PolishSelfTest.cleanupCounters(run)
+                PolishSelfTest.report(
+                    run,
+                    "cleanup after visit",
+                    finalCounters.isClear && floorRemoved,
+                    "$finalCounters floorRemoved=$floorRemoved",
+                )
+                finish(run, store)
+            }
+            return
+        }
         val counters = PolishSelfTest.cleanupCounters(run)
         if (counters.isClear || run.world.tick - run.cleanupStartTick >= CLEANUP_TIMEOUT_TICKS) {
             val passed = counters.isClear
             PolishSelfTest.report(run, "cleanup", passed, counters.toString())
             run.visitStarted = true
+            run.visitStartedTick = run.world.tick
+            run.stageStartTick = run.world.tick
+            placeVisitFloor(run)
             GrizzlecogVisitSystem.startForSelfTest(
                 run.world,
                 Vector3i(PolishSelfTest.ANCHOR.x, PolishSelfTest.ANCHOR.y, PolishSelfTest.ANCHOR.z),
             ) { present, uuid, detail ->
-                run.world.execute {
-                    PolishSelfTest.report(run, "e grizzlecog visit", present, detail)
-                    val despawned = uuid?.let { GrizzlecogVisitSystem.despawnForSelfTest(run.world, it) } == true
-                    val absent = uuid?.let { !GrizzlecogVisitSystem.isGrizzlecogPresent(run.world, it) } == true
-                    PolishSelfTest.report(
-                        run,
-                        "e grizzlecog cleanup",
-                        despawned && absent,
-                        "despawned=$despawned absent=$absent",
-                    )
-                    val finalCounters = PolishSelfTest.cleanupCounters(run)
-                    PolishSelfTest.report(run, "cleanup after visit", finalCounters.isClear, finalCounters.toString())
-                    run.completed = true
-                    store.getResource(PolishSelfTestRun.type).active = null
+                if (run.completed) {
+                    uuid?.let { GrizzlecogVisitSystem.despawnForSelfTest(run.world, it) }
+                } else {
+                    run.visitUuid = uuid
+                    try {
+                        PolishSelfTest.report(run, "e grizzlecog visit", present, detail)
+                        val despawned = uuid?.let { GrizzlecogVisitSystem.despawnForSelfTest(run.world, it) } == true
+                        val absent = uuid?.let { !GrizzlecogVisitSystem.isGrizzlecogPresent(run.world, it) } == true
+                        PolishSelfTest.report(
+                            run,
+                            "e grizzlecog cleanup",
+                            despawned && absent,
+                            "despawned=$despawned absent=$absent",
+                        )
+                    } catch (failure: Exception) {
+                        PolishSelfTest.fail(run, "e grizzlecog visit", failure.message ?: "visit completion failed")
+                    } finally {
+                        val floorRemoved = clearVisitFloor(run, store)
+                        val finalCounters = PolishSelfTest.cleanupCounters(run)
+                        PolishSelfTest.report(
+                            run,
+                            "cleanup after visit",
+                            finalCounters.isClear && floorRemoved,
+                            "$finalCounters floorRemoved=$floorRemoved",
+                        )
+                        finish(run, store)
+                    }
                 }
             }
         }
+    }
+
+    private fun placeVisitFloor(run: PolishSelfTestRun.Run) {
+        val position = PolishSelfTest.VISIT_FLOOR
+        val sectionRef = run.sectionRef ?: error("visit floor section missing")
+        val type = BlockType.fromString(CraftoryIds.SCRAP_PLATING) ?: error("scrap floor block missing")
+        val blockId = BlockType.getAssetMap().getIndex(type.id)
+        check(
+            BlockOperations.setBlock(
+                run.world.chunkStore,
+                sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                blockId,
+                type,
+                0,
+                0,
+                SetBlockSettings.NONE,
+            ),
+        ) { "visit floor placement failed" }
+    }
+
+    private fun clearVisitFloor(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ): Boolean =
+        runCatching {
+            PolishSelfTest.clearFixtures(run, store, listOf(PolishSelfTest.VISIT_FLOOR))
+            PolishSelfTest.isEmptyAt(run, PolishSelfTest.VISIT_FLOOR)
+        }.getOrDefault(false)
+
+    private fun phaseTimeout(phase: Int): Long =
+        if (phase == 12) PHASE_TIMEOUT_TICKS + VISIT_TIMEOUT_TICKS else PHASE_TIMEOUT_TICKS
+
+    private fun phaseName(phase: Int) =
+        when (phase) {
+            0 -> "claw setup"
+            1 -> "claw transfer"
+            2 -> "pipe shapes"
+            3 -> "pipe arm removal"
+            4 -> "corner transfer"
+            5 -> "canister fill bands"
+            6 -> "sloshtank fill bands"
+            7 -> "multiblock setup"
+            8 -> "unformed boiler"
+            9 -> "formed boiler"
+            10 -> "damaged controller"
+            11 -> "cleanup"
+            else -> "visit cleanup"
+        }
+
+    private fun phaseDetails(run: PolishSelfTestRun.Run) =
+        "stage=${run.stage} bandIndex=${run.bandIndex} cleanup=${PolishSelfTest.cleanupCounters(run)}"
+
+    private fun finish(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        if (run.summarySent) return
+        run.summarySent = true
+        runCatching {
+            run.context.sendMessage(Message.raw("selftest: polish ${run.passed} passed, ${run.failed} failed"))
+        }
+        run.completed = true
+        store.getResource(PolishSelfTestRun.type).active = null
     }
 
     private fun finishFailedSetup(
@@ -677,8 +814,7 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         PolishSelfTest.fail(run, "setup", run.setupFailure ?: "unknown setup error")
         run.setupFailure = null
         if (run.sectionRef == null) {
-            run.completed = true
-            store.getResource(PolishSelfTestRun.type).active = null
+            finish(run, store)
             return
         }
         run.ready = true
@@ -686,6 +822,9 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
     }
 
     companion object {
+        private const val SETUP_TIMEOUT_TICKS = 300L
+        private const val VISIT_TIMEOUT_TICKS = 100L
+        private const val PHASE_TIMEOUT_TICKS = 400L
         private const val CHEST_ID = "Furniture_Crude_Chest_Small"
         private const val ITEM_ID = "Plant_Crop_Mushroom_Common_Brown"
         private const val WATER_SOURCE = "Water_Source"
@@ -734,8 +873,9 @@ internal object PolishSelfTest {
     val CLAW = position(10_023, 152, 10_012)
     val CANISTER = position(10_024, 152, 10_014)
     val SLOSHTANK = position(10_027, 152, 10_014)
-    val BOILER = position(10_028, 150, 10_018)
-    val GASBAG = position(10_030, 150, 10_018)
+    val BOILER = position(10_028, 150, 10_014)
+    val GASBAG = position(10_030, 150, 10_014)
+    val VISIT_FLOOR = position(ANCHOR.x, ANCHOR.y - 1, ANCHOR.z)
 
     val BANDS =
         listOf(
@@ -817,8 +957,18 @@ internal object PolishSelfTest {
                 GasbagTemplate.template.parts.map {
                     position(GASBAG.x + it.offset.x, GASBAG.y + it.offset.y, GASBAG.z + it.offset.z)
                 }
-        return (clawNeighbours + shapePositions + listOf(ANCHOR, CANISTER, SLOSHTANK) + multiblockPositions).distinct()
+        return (
+            clawNeighbours + shapePositions + listOf(ANCHOR, CANISTER, SLOSHTANK, VISIT_FLOOR) + multiblockPositions
+        ).distinct()
     }
+
+    fun fixturesShareSection(): Boolean {
+        val section = sectionKey(ANCHOR)
+        return fixturePositions().all { sectionKey(it) == section }
+    }
+
+    private fun sectionKey(position: CraftorySelfTest.TestPosition) =
+        Triple(position.x shr 5, position.y shr 5, position.z shr 5)
 
     fun clawPositions(): List<CraftorySelfTest.TestPosition> =
         fixturePositions().filter { position ->
@@ -909,6 +1059,17 @@ internal object PolishSelfTest {
         return BlockType.getAssetMap().getAsset(section.get(position.x, position.y, position.z))
     }
 
+    fun isEmptyAt(
+        run: PolishSelfTestRun.Run,
+        position: CraftorySelfTest.TestPosition,
+    ): Boolean {
+        val sectionRef = run.sectionRef ?: return false
+        val section =
+            run.world.chunkStore.store
+                .getComponent(sectionRef, BlockSection.getComponentType()) ?: return false
+        return section.get(position.x, position.y, position.z) == BlockType.EMPTY_ID
+    }
+
     fun stateName(
         run: PolishSelfTestRun.Run,
         position: CraftorySelfTest.TestPosition,
@@ -989,8 +1150,9 @@ internal object PolishSelfTest {
         passed: Boolean,
         detail: String,
     ) {
+        if (passed) run.passed++ else run.failed++
         val result = if (passed) "PASS" else "FAIL"
-        run.context.sendMessage(Message.raw("selftest: polish $case $result ($detail)"))
+        runCatching { run.context.sendMessage(Message.raw("selftest: polish $case $result ($detail)")) }
     }
 
     fun fail(

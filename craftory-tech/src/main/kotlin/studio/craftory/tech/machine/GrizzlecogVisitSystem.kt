@@ -1,26 +1,34 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.codec.Codec
+import com.hypixel.hytale.codec.KeyedCodec
+import com.hypixel.hytale.codec.builder.BuilderCodec
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
+import com.hypixel.hytale.component.Resource
+import com.hypixel.hytale.component.ResourceType
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.function.consumer.TriConsumer
 import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.World
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.npc.NPCPlugin
 import com.hypixel.hytale.server.npc.entities.NPCEntity
 import com.hypixel.hytale.server.spawning.SpawnTestResult
+import org.joml.Vector3d
 import org.joml.Vector3i
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.tech.CraftoryIds
@@ -47,7 +55,66 @@ internal data class GrizzlecogVisitPosition(
     val z: Double,
 )
 
+internal data class GrizzlecogVisitRecord(
+    val uuid: String,
+    val spawnedAtNanos: Long,
+)
+
+internal enum class GrizzlecogVisitExpiry {
+    KEEP,
+    DESPAWN_AND_DROP,
+    DROP,
+}
+
+internal class GrizzlecogVisitLedger(
+    var npcIds: Array<String> = emptyArray(),
+    var spawnedAtNanos: LongArray = longArrayOf(),
+) : Resource<ChunkStore> {
+    fun records(): List<GrizzlecogVisitRecord> =
+        (0 until minOf(npcIds.size, spawnedAtNanos.size)).map {
+            GrizzlecogVisitRecord(npcIds[it], spawnedAtNanos[it])
+        }
+
+    fun replace(records: List<GrizzlecogVisitRecord>) {
+        npcIds = records.map { it.uuid }.toTypedArray()
+        spawnedAtNanos = records.map { it.spawnedAtNanos }.toLongArray()
+    }
+
+    fun add(record: GrizzlecogVisitRecord) = replace(records() + record)
+
+    override fun clone(): Resource<ChunkStore> = GrizzlecogVisitLedger(npcIds.copyOf(), spawnedAtNanos.copyOf())
+
+    companion object {
+        lateinit var type: ResourceType<ChunkStore, GrizzlecogVisitLedger>
+        val CODEC: BuilderCodec<GrizzlecogVisitLedger> =
+            BuilderCodec
+                .builder(GrizzlecogVisitLedger::class.java, ::GrizzlecogVisitLedger)
+                .append(
+                    KeyedCodec("NpcIds", Codec.STRING_ARRAY),
+                    { state, value -> state.npcIds = value },
+                    { it.npcIds },
+                ).add()
+                .append(
+                    KeyedCodec("SpawnedAtNanos", Codec.LONG_ARRAY),
+                    { state, value -> state.spawnedAtNanos = value },
+                    { it.spawnedAtNanos },
+                ).add()
+                .build()
+    }
+}
+
 internal object GrizzlecogVisitLogic {
+    fun expiryDecision(
+        nowNanos: Long,
+        record: GrizzlecogVisitRecord,
+        npcLoaded: Boolean,
+    ): GrizzlecogVisitExpiry {
+        val age = (nowNanos - record.spawnedAtNanos).coerceAtLeast(0L)
+        if (age >= 7L * WorldTimeResource.NANOS_PER_DAY) return GrizzlecogVisitExpiry.DROP
+        if (age < WorldTimeResource.NANOS_PER_DAY || !npcLoaded) return GrizzlecogVisitExpiry.KEEP
+        return GrizzlecogVisitExpiry.DESPAWN_AND_DROP
+    }
+
     fun chanceFromElapsed(
         elapsedNanos: Long,
         averageIntervalInGameDays: Double,
@@ -83,13 +150,7 @@ internal class GrizzlecogVisitSystem(
         var lastGameTimeNanos: Long = Long.MIN_VALUE,
     )
 
-    private data class ActiveVisit(
-        val uuid: String,
-        val spawnedAtNanos: Long,
-    )
-
     private val schedules = mutableMapOf<UUID, ScheduleState>()
-    private val activeVisits = mutableMapOf<UUID, MutableList<ActiveVisit>>()
 
     override fun tick(
         dt: Float,
@@ -103,7 +164,7 @@ internal class GrizzlecogVisitSystem(
                 .getResource(WorldTimeResource.getResourceType())
                 .gameTime ?: return
         val now = gameTime.epochSecond * 1_000_000_000L + gameTime.nano
-        despawnExpiredVisits(world, worldId, now)
+        despawnExpiredVisits(world, store, now)
 
         val schedule = schedules.getOrPut(worldId, ::ScheduleState)
         if (schedule.lastEvaluationTick == world.tick) return
@@ -131,7 +192,7 @@ internal class GrizzlecogVisitSystem(
                 settings.nearbyRadius,
             ) ?: return
         val player = players.firstOrNull { it.first.uuid == candidate.uuid }?.second ?: return
-        spawnVisit(world, worldId, now, candidate, player)
+        spawnVisit(world, now, candidate, player)
     }
 
     private fun eligibleCandidates(
@@ -173,7 +234,6 @@ internal class GrizzlecogVisitSystem(
 
     private fun spawnVisit(
         world: World,
-        worldId: UUID,
         now: Long,
         candidate: GrizzlecogVisitCandidate,
         player: PlayerRef,
@@ -196,42 +256,90 @@ internal class GrizzlecogVisitSystem(
                 position.y,
                 position.z,
             ) ?: return
-        activeVisits.getOrPut(worldId, ::mutableListOf).add(ActiveVisit(uuid, now))
+        storeVisit(world, uuid, now)
         player.sendMessage(Message.translation("server.craftory.grizzlecog.visit"))
     }
 
     private fun despawnExpiredVisits(
         world: World,
-        worldId: UUID,
+        store: Store<ChunkStore>,
         now: Long,
     ) {
-        val visits = activeVisits[worldId] ?: return
-        val expired =
-            visits.filter { now - it.spawnedAtNanos >= WorldTimeResource.NANOS_PER_DAY }
-        if (expired.isEmpty()) return
-        despawnByIds(world, expired.mapTo(mutableSetOf()) { it.uuid })
-        visits.removeAll(expired.toSet())
+        val ledger = store.getResource(GrizzlecogVisitLedger.type)
+        val records = ledger.records()
+        val remaining =
+            records.filter { record ->
+                val loaded = isGrizzlecogPresent(world, record.uuid)
+                when (GrizzlecogVisitLogic.expiryDecision(now, record, loaded)) {
+                    GrizzlecogVisitExpiry.KEEP -> {
+                        true
+                    }
+
+                    GrizzlecogVisitExpiry.DESPAWN_AND_DROP -> {
+                        despawnByIds(world, setOf(record.uuid))
+                        false
+                    }
+
+                    GrizzlecogVisitExpiry.DROP -> {
+                        if (loaded) despawnByIds(world, setOf(record.uuid))
+                        false
+                    }
+                }
+            }
+        if (remaining != records) ledger.replace(remaining)
     }
 
     companion object {
+        @Suppress("TooGenericExceptionCaught")
         fun startForSelfTest(
             world: World,
             position: Vector3i,
             onComplete: (Boolean, String?, String) -> Unit,
         ) {
-            world.execute {
-                val uuid = spawnGrizzlecogWithColumnProbe(world, position.x, position.y, position.z)
-                val present = uuid != null && isGrizzlecogPresent(world, uuid)
-                onComplete(present, uuid, "spawn=${uuid ?: "failed"} present=$present")
-            }
+            val result =
+                try {
+                    if (!hasSolidTestFloor(world, position)) {
+                        Triple(false, null, "spawn=skipped solid-floor=false")
+                    } else {
+                        val spawn =
+                            NPCPlugin.get().spawnNPC(
+                                world.entityStore.store,
+                                CraftoryIds.GRIZZLECOG,
+                                null,
+                                Vector3d(position.x + 0.5, position.y.toDouble(), position.z + 0.5),
+                                Rotation3f(0f, 0f, 0f),
+                            )
+                        val ref = spawn?.left()
+                        val npc = spawn?.right() as? NPCEntity
+                        val uuid =
+                            ref?.let {
+                                world.entityStore.store
+                                    .getComponent(it, UUIDComponent.getComponentType())
+                                    ?.uuid
+                                    ?.toString()
+                            }
+                        if (ref != null && (npc?.roleName != CraftoryIds.GRIZZLECOG || uuid == null)) {
+                            world.entityStore.store.removeEntity(ref, RemoveReason.REMOVE)
+                        }
+                        if (uuid != null && npc?.roleName == CraftoryIds.GRIZZLECOG) {
+                            storeVisit(world, uuid, gameTimeNanos(world) ?: 0L)
+                        }
+                        val present = uuid != null && isGrizzlecogPresent(world, uuid)
+                        Triple(present, uuid, "spawn=${uuid ?: "failed"} present=$present floor=solid")
+                    }
+                } catch (failure: Exception) {
+                    Triple(false, null, "spawn=failed error=${failure.message ?: failure.javaClass.simpleName}")
+                }
+            onComplete(result.first, result.second, result.third)
         }
 
         fun despawnForSelfTest(
             world: World,
             uuid: String,
         ): Boolean {
-            val ref = findGrizzlecog(world, uuid) ?: return false
-            world.entityStore.store.removeEntity(ref, RemoveReason.REMOVE)
+            findGrizzlecog(world, uuid)?.let { world.entityStore.store.removeEntity(it, RemoveReason.REMOVE) }
+            val ledger = world.chunkStore.store.getResource(GrizzlecogVisitLedger.type)
+            ledger.replace(ledger.records().filterNot { it.uuid == uuid })
             return !isGrizzlecogPresent(world, uuid)
         }
 
@@ -264,6 +372,38 @@ internal class GrizzlecogVisitSystem(
                     onSpawn,
                 )
             return uuid.takeIf { result == SpawnTestResult.TEST_OK }
+        }
+
+        private fun storeVisit(
+            world: World,
+            uuid: String,
+            spawnedAtNanos: Long,
+        ) {
+            world.chunkStore.store
+                .getResource(GrizzlecogVisitLedger.type)
+                .add(GrizzlecogVisitRecord(uuid, spawnedAtNanos))
+        }
+
+        private fun hasSolidTestFloor(
+            world: World,
+            position: Vector3i,
+        ): Boolean {
+            val x = position.x
+            val y = position.y - 1
+            val z = position.z
+            val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(x, y, z) ?: return false
+            val section =
+                world.chunkStore.store.getComponent(sectionRef, BlockSection.getComponentType()) ?: return false
+            val blockType = BlockType.getAssetMap().getAsset(section.get(x, y, z)) ?: return false
+            return blockType.id == CraftoryIds.SCRAP_PLATING
+        }
+
+        private fun gameTimeNanos(world: World): Long? {
+            val gameTime =
+                world.entityStore.store
+                    .getResource(WorldTimeResource.getResourceType())
+                    .gameTime ?: return null
+            return gameTime.epochSecond * 1_000_000_000L + gameTime.nano
         }
 
         @Suppress("LoopWithTooManyJumpStatements")

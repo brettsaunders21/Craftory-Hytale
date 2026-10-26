@@ -54,6 +54,7 @@ import studio.craftory.tech.machine.GasbagTemplate
 import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
+import studio.craftory.tech.machine.GrizzlecogVisitLedger
 import studio.craftory.tech.machine.GrizzlecogVisitSystem
 import studio.craftory.tech.machine.GutterBoilerSystem
 import studio.craftory.tech.machine.GutterBoilerTemplate
@@ -424,6 +425,12 @@ class CraftoryTechPlugin(
             chunkRegistry.registerResource(FluidSelfTestRun::class.java, ::FluidSelfTestRun)
         PolishSelfTestRun.type =
             chunkRegistry.registerResource(PolishSelfTestRun::class.java, ::PolishSelfTestRun)
+        GrizzlecogVisitLedger.type =
+            chunkRegistry.registerResource(
+                GrizzlecogVisitLedger::class.java,
+                "CraftoryGrizzlecogVisitLedger",
+                GrizzlecogVisitLedger.CODEC,
+            )
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())

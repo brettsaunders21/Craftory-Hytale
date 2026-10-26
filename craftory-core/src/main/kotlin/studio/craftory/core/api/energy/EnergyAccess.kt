@@ -77,6 +77,7 @@ class EnergyAccess internal constructor(
         return energy.drainStored(pos, amount)
     }
 
+    /** For tooling and selftests only; bypasses production/transfer rules. */
     fun setStored(
         pos: Long,
         amount: Long,
