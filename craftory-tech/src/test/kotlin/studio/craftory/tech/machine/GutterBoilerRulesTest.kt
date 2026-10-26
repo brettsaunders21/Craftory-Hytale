@@ -37,6 +37,14 @@ class GutterBoilerRulesTest {
     }
 
     @Test
+    fun `high pressure whistle is throttled to once every three seconds`() {
+        assertTrue(GutterBoilerRules.isWhistleDue(0, Long.MIN_VALUE))
+        assertTrue(!GutterBoilerRules.isWhistleDue(40, 0))
+        assertTrue(GutterBoilerRules.isWhistleDue(60, 0))
+        assertTrue(GutterBoilerRules.isWhistleDue(120, 60))
+    }
+
+    @Test
     fun `pop knockback points radially away with upward force`() {
         val away = GutterBoilerRules.popKnockback(1.0, 2.0, 4.0, 6.0)
         assertTrue(away.x > 0.0)

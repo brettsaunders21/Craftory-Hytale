@@ -123,9 +123,17 @@ private fun updateBoilerState(
     val beforeWater = state.water
     val beforeFuelTicks = state.fuelTicks
     val beforeOnline = state.online
+    val beforeLastWhistleTick = state.lastWhistleTick
     val update = GutterBoilerActions.advance(state, lavaBelow)
+    if (state.online &&
+        state.pressure > HIGH_PRESSURE_THRESHOLD &&
+        GutterBoilerRules.isWhistleDue(world.tick, state.lastWhistleTick)
+    ) {
+        state.lastWhistleTick = world.tick
+        GutterBoilerEffects.whistle(world, x, y, z)
+    }
     val stateChanged =
-        hasBoilerStateChanged(beforePressure, beforeWater, beforeFuelTicks, beforeOnline, state)
+        hasBoilerStateChanged(beforePressure, beforeWater, beforeFuelTicks, beforeOnline, beforeLastWhistleTick, state)
     val visualChanged = setBlockState(world, blockState, commandBuffer, boilerVisualState(state, lavaBelow))
     if (stateChanged || visualChanged) blockState.markNeedsSaving(commandBuffer)
     if (update.popped) GutterBoilerEffects.pop(world, x, y, z)
@@ -136,13 +144,17 @@ private fun hasBoilerStateChanged(
     water: Long,
     fuelTicks: Long,
     online: Boolean,
+    lastWhistleTick: Long,
     state: BoilerState,
 ): Boolean {
     if (pressure != state.pressure) return true
     if (water != state.water) return true
     if (fuelTicks != state.fuelTicks) return true
-    return online != state.online
+    if (online != state.online) return true
+    return lastWhistleTick != state.lastWhistleTick
 }
+
+private const val HIGH_PRESSURE_THRESHOLD = 95
 
 private fun boilerVisualState(
     state: BoilerState,

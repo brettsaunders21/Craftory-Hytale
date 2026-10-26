@@ -172,10 +172,10 @@ def fizz_canister(fill: float):
 
 
 def sloshtank(fill: float):
-    tank = Box("Tank", (20, 26, 20), pos=(0, 13, 0), rot=(0, 3, 1), paint=metal(TIN, rust=0.3, corrugated=True))
+    tank = Box("Tank", (20, 26, 20), pos=(0, 13.5, 0), rot=(0, 3, 1), paint=metal(TIN, rust=0.3, corrugated=True))
     tank.add(
         Box("Top", (22, 3, 22), pos=(0, 13, 0), paint=RUSTY),
-        Box("Bottom", (22, 3, 22), pos=(0, -13, 0), paint=DARK_TIN),
+        Box("Bottom", (22, 3, 22), pos=(0, -11, 0), paint=DARK_TIN),
         Box("WaterGlass", (8, 19, 2), pos=(-3, -1, 10.4), paint=glass(FIZZ, fill)),
         Box("GlassFrameL", (1, 22, 2), pos=(-7.5, -1, 10.7), paint=BRASS_P),
         Box("GlassFrameR", (1, 22, 2), pos=(1.5, -1, 10.7), paint=BRASS_P),
@@ -206,16 +206,16 @@ def gutter_boiler(lit: bool, offline: bool = False):
             rot=(0, 0 if not offline else -12, 0 if not offline else 15),
             paint=BRASS_RIV if not offline else SOOT_RUST,
         ),
-        Box("BasePlate", (29, 3, 25), pos=(0, -12, 0), paint=SOOT_RUST),
+        Box("BasePlate", (29, 3, 25), pos=(0, -10, 0), paint=SOOT_RUST),
         Box("PressureGlass", (9, 11, 2), pos=(0, 1, 11.4), paint=glass(FIZZ, 0.9 if lit else 0.2)),
         Box("GaugeFrame", (13, 14, 2), pos=(0, 1, 11.8), paint=BRASS_RIV),
         Box("GaugeNeedle", (1, 8, 1), pos=(0, 1, 13), rot=(0, 0, -25 if lit else -65), paint=glow_paint),
         Box("GaugeHub", (3, 3, 2), pos=(0, 1, 13.5), paint=BRASS_P),
-        Box("ValveStem", (4, 7, 4), pos=(12, 8, -5), paint=BRASS_P).add(
+        Box("ValveStem", (4, 7, 4), pos=(9, 8, -5), paint=BRASS_P).add(
             Box("ValveWheel", (10, 2, 10), pos=(0, 4, 0), rot=(0, 10, 0), paint=RUSTY),
         ),
-        Box("Flue", (9, 10, 9), pos=(-7, 22, -3), paint=SOOT_RUST),
-        Box("FlueLip", (13, 2, 13), pos=(-7, 27, -3), paint=BRASS_RIV),
+        Box("Flue", (8, 6, 8), pos=(-7, 15, -3), paint=SOOT_RUST),
+        Box("FlueLip", (12, 2, 12), pos=(-7, 18, -3), paint=BRASS_RIV),
         lashing("BoilerStrap", (2, 23, 24), pos=(10, 0, 0)),
     )
     if offline:
@@ -233,8 +233,8 @@ def gasbag():
     bag = Box("GasbagBelly", (19, 18, 17), pos=(0, 20, 0), rot=(0, 3, -2), paint=leather((0.55, 0.43, 0.29)))
     bag.add(
         Box("BagMiddle", (23, 13, 20), pos=(0, 0, 0), paint=leather((0.51, 0.39, 0.26))),
-        Box("Shoulder", (17, 6, 16), pos=(0, 10, 0), rot=(0, 2, -2), paint=leather((0.51, 0.39, 0.26))),
-        Box("Crown", (10, 5, 11), pos=(0, 15, 0), rot=(0, -3, 1), paint=leather((0.58, 0.46, 0.32))),
+        Box("Shoulder", (17, 6, 16), pos=(0, 8, 0), rot=(0, 2, -2), paint=leather((0.51, 0.39, 0.26))),
+        Box("Crown", (10, 5, 11), pos=(0, 8, 0), rot=(0, -3, 1), paint=leather((0.58, 0.46, 0.32))),
         Box("TaperedBase", (14, 5, 14), pos=(0, -10, 0), rot=(0, -2, 1), paint=leather((0.52, 0.40, 0.28))),
         Box("CanvasPatch", (9, 7, 2), pos=(7, -1, 10.5), rot=(0, 0, 8), paint=solid((0.63, 0.48, 0.31))),
         Box("TinPatch", (6, 6, 1), pos=(-6, 5, 10.7), rot=(0, 0, -8), paint=metal(RUST, rust=0.2)),
@@ -252,10 +252,10 @@ def gasbag():
         Box("FrameLegR", (2, 14, 2), pos=(8, -7, -7), paint=BRASS_P),
         Box("FrameCrossbar", (18, 2, 2), pos=(0, -12, -7), paint=BRASS_P),
         lashing("NetBelt", (24, 2, 21), pos=(0, -4, 0), rot=(0, 0, 3)),
-        lashing("NetRopeA", (2, 25, 2), pos=(-8, 0, 10), rot=(0, 0, 30)),
-        lashing("NetRopeB", (2, 25, 2), pos=(8, 0, 10), rot=(0, 0, -30)),
-        lashing("NetRopeC", (2, 24, 2), pos=(-8, 0, -10), rot=(0, 0, -30)),
-        lashing("NetRopeD", (2, 24, 2), pos=(8, 0, -10), rot=(0, 0, 30)),
+        lashing("NetRopeA", (2, 25, 2), pos=(-7, 0, 10), rot=(0, 0, 30)),
+        lashing("NetRopeB", (2, 25, 2), pos=(7, 0, 10), rot=(0, 0, -30)),
+        lashing("NetRopeC", (2, 24, 2), pos=(-7, 0, -10), rot=(0, 0, -30)),
+        lashing("NetRopeD", (2, 24, 2), pos=(7, 0, -10), rot=(0, 0, 30)),
         bolt("PatchRivetA", (4, 3, 11), paint=BRASS_P),
         bolt("PatchRivetB", (10, -3, 11), paint=BRASS_P),
     )

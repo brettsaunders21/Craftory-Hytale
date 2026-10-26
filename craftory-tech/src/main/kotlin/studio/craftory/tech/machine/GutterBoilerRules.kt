@@ -38,6 +38,13 @@ object GutterBoilerRules {
 
     fun vent(pressure: Int): Int? = if (pressure > VENT_THRESHOLD) (pressure - VENT_DROP).coerceAtLeast(0) else null
 
+    fun isWhistleDue(
+        tick: Long,
+        lastWhistleTick: Long,
+    ): Boolean =
+        lastWhistleTick == Long.MIN_VALUE ||
+            (tick >= lastWhistleTick && tick - lastWhistleTick >= WHISTLE_INTERVAL_TICKS)
+
     fun vent(state: BoilerState): Boolean {
         val pressure = vent(state.pressure) ?: return false
         state.pressure = pressure
@@ -99,6 +106,7 @@ object GutterBoilerRules {
     const val RERIVET_SCRAPS = 2
     const val KNOCKBACK_FORCE = 0.8
     const val KNOCKBACK_UPWARD = 0.3
+    const val WHISTLE_INTERVAL_TICKS = 60L
 }
 
 object GutterBoilerActions {

@@ -12,8 +12,9 @@ class BoilerState(
     var water: Long = 0,
     var fuelTicks: Long = 0,
     var online: Boolean = true,
+    var lastWhistleTick: Long = Long.MIN_VALUE,
 ) : Component<ChunkStore> {
-    override fun clone(): Component<ChunkStore> = BoilerState(pressure, water, fuelTicks, online)
+    override fun clone(): Component<ChunkStore> = BoilerState(pressure, water, fuelTicks, online, lastWhistleTick)
 
     companion object {
         lateinit var type: ComponentType<ChunkStore, BoilerState>
@@ -37,6 +38,11 @@ class BoilerState(
                 ).add()
                 .append(KeyedCodec("Online", Codec.BOOLEAN), { state, value -> state.online = value }, { it.online })
                 .add()
+                .append(
+                    KeyedCodec("LastWhistleTick", Codec.LONG),
+                    { state, value -> state.lastWhistleTick = value },
+                    { it.lastWhistleTick },
+                ).add()
                 .build()
     }
 }

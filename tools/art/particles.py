@@ -75,20 +75,6 @@ def mote(seed=3) -> Image.Image:
     return _img(a)
 
 
-def steam() -> Image.Image:
-    a = np.zeros((SIZE, SIZE, 4), np.float32)
-    yy, xx = np.mgrid[0:SIZE, 0:SIZE] + 0.5
-    alpha = np.zeros((SIZE, SIZE), np.float32)
-    for cx, cy, rx, ry in ((13, 22, 5, 7), (18, 15, 6, 8), (13, 7, 5, 6)):
-        d = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
-        alpha = np.maximum(alpha, np.clip(1.35 - d, 0, 1))
-    alpha = _quantise(alpha * 0.62, 3)
-    highlight = np.clip(1 - np.hypot(xx - 11, yy - 8) / 18, 0, 1)[..., None]
-    a[..., :3] = np.array((0.62, 0.79, 0.82)) * (1 - highlight) + np.array((0.92, 0.98, 0.96)) * highlight
-    a[..., 3] = alpha
-    return _img(a)
-
-
 def textures() -> dict[str, Image.Image]:
     return {
         "Fizz_Spark": spark(),
@@ -96,5 +82,4 @@ def textures() -> dict[str, Image.Image]:
         "Smoke_Grey": smoke((0.50, 0.50, 0.50), 4),
         "Smoke_Black": smoke((0.12, 0.11, 0.11), 6),
         "Glimmer_Mote": mote(),
-        "Craftory_Steam": steam(),
     }

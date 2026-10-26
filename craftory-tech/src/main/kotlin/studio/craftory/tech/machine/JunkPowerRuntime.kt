@@ -2,6 +2,7 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
+import com.hypixel.hytale.builtin.crafting.system.BenchSystems
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
@@ -22,6 +23,7 @@ import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.protocol.SoundCategory
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.item.config.Item
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.entity.InteractionContext
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent
@@ -58,6 +60,14 @@ import java.util.logging.Level
 
 private const val BUCKET_VOLUME = 1_000L
 private const val BOILER_FIZZ_CHARGE_BURN_TICKS = 200L
+private const val FILLED_WATER_BUCKET_STATE = "Filled_Water"
+
+private fun filledWaterBucketItemId(stack: ItemStack?): String? {
+    if (stack == null || stack.quantity != 1) return null
+    val emptyBucket = Item.getAssetMap().getAsset(CraftoryIds.EMPTY_WOODEN_BUCKET) ?: return null
+    if (emptyBucket.getStateForItem(stack.itemId) != FILLED_WATER_BUCKET_STATE) return null
+    return emptyBucket.getItemIdForState(FILLED_WATER_BUCKET_STATE)
+}
 
 internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
@@ -187,7 +197,10 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
-        setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
+        setOf(
+            SystemDependency(Order.BEFORE, EnergySolveSystem::class.java),
+            SystemDependency(Order.BEFORE, BenchSystems.ProcessingBenchTick::class.java),
+        )
 
     override fun isParallel(
         systemIndex: Int,
@@ -222,6 +235,13 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
             MachineClock.pause(power, tick)
             return
         }
+        val progressAdjustment = TinkeredSpeed.progressAdjustment(dt, member.deliveredRank)
+        val hasFizzCharge = bench.fuelContainer.getItemStack(0.toShort())?.itemId == CraftoryIds.FIZZ_CHARGE
+        if (progressAdjustment > 0f && bench.isActive() && hasRecipeInput(bench)) {
+            if (bench.fuelTime > 0f || hasFizzCharge) {
+                bench.inputProgress -= progressAdjustment
+            }
+        }
         if (!CraftoryCore.isEnergyTick(store)) return
         val powerLoss = OvenPowerMath.updatePowerLoss(power.lastDeliveredTick, tick, member.delivered > 0)
         power.lastDeliveredTick = powerLoss.lastDeliveredTick
@@ -248,7 +268,6 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
                 power.lastFizzSolveTick,
                 completedSolveTick,
                 member.delivered,
-                member.deliveredRank,
                 hasRecipeInput(bench),
                 chargeCount,
                 fuelSlotAvailable,
@@ -480,22 +499,21 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val fluidTank = store.getComponent(ref, FluidTank.type)
         if (fluidTank != null) {
             val transport = FluidTransport.of(world)
-            val filledBucket =
-                heldItem != null &&
-                    heldItem.itemId == CraftoryIds.WATER_WOODEN_BUCKET &&
-                    heldItem.quantity == 1
-            val canFit =
-                filledBucket &&
-                    transport.capacity(position.x, position.y, position.z) -
+            val filledBucketItemId = filledWaterBucketItemId(heldItem)
+            val hasRoom =
+                transport.capacity(position.x, position.y, position.z) -
                     transport.amount(position.x, position.y, position.z) >= BUCKET_VOLUME
-            if (canFit && context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)) {
+            if (filledBucketItemId != null &&
+                hasRoom &&
+                context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)
+            ) {
                 val accepted = transport.insert(position.x, position.y, position.z, "Water_Source", BUCKET_VOLUME)
                 if (accepted != BUCKET_VOLUME) {
                     if (accepted > 0) transport.drain(position.x, position.y, position.z, accepted)
                     val rolledBack =
                         context.replaceHeldStack(
                             ItemStack(CraftoryIds.EMPTY_WOODEN_BUCKET, 1),
-                            CraftoryIds.WATER_WOODEN_BUCKET,
+                            filledBucketItemId,
                         )
                     check(rolledBack) {
                         "failed to roll back an incomplete water bucket exchange"
@@ -547,8 +565,7 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
                 }
 
                 heldItem != null &&
-                    heldItem.itemId == CraftoryIds.WATER_WOODEN_BUCKET &&
-                    heldItem.quantity == 1 &&
+                    filledWaterBucketItemId(heldItem) != null &&
                     boiler.water <= GutterBoilerRules.CAPACITY - BUCKET_VOLUME -> {
                     if (context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)) {
                         boiler.water += BUCKET_VOLUME

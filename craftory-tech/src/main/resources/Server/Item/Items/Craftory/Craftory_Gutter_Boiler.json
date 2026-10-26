@@ -15,7 +15,7 @@
     "DrawType": "Model",
     "Opacity": "Transparent",
     "Group": "GoblinLab_Generator",
-    "HitboxType": "GoblinLab_Generator",
+    "HitboxType": "Full",
     "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Off.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Off_Texture.png"}],
     "Interactions": {

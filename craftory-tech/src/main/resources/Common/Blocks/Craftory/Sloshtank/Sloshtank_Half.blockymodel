@@ -5,7 +5,7 @@
       "name": "Tank",
       "position": {
         "x": 0.0,
-        "y": 13.0,
+        "y": 13.5,
         "z": 0.0
       },
       "orientation": {
@@ -221,7 +221,7 @@
           "name": "Bottom",
           "position": {
             "x": 0.0,
-            "y": -13.0,
+            "y": -11.0,
             "z": 0.0
           },
           "orientation": {

@@ -17,7 +17,6 @@ object CraftoryIds {
     const val GASBAG = "Craftory_Gasbag"
     const val SCRAP_PLATING = "Craftory_Scrap_Plating"
     const val EMPTY_WOODEN_BUCKET = "Container_Bucket"
-    const val WATER_WOODEN_BUCKET = "*Container_Bucket_State_Filled_Water"
     const val WAKEBELL_ANCHOR = "Craftory_Wakebell_Anchor"
     const val SQUINT_GOGGLES = "Craftory_Squint_Goggles"
     const val FIZZ_CHARGE = "Craftory_Fizz_Charge"

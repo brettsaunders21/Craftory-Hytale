@@ -32,6 +32,21 @@ internal object GutterBoilerEffects {
         }
     }
 
+    fun whistle(
+        world: World,
+        x: Int,
+        y: Int,
+        z: Int,
+    ) {
+        world.execute {
+            playSound(
+                world.entityStore.store,
+                HIGH_PRESSURE_SOUND_ID,
+                Vector3d(x + 0.5, y + 1.0, z + 0.5),
+            )
+        }
+    }
+
     private fun spawnSteam(
         world: World,
         x: Int,
@@ -41,12 +56,16 @@ internal object GutterBoilerEffects {
         val store = world.entityStore.store
         val position = Vector3d(x + 0.5, y + 1.0, z + 0.5)
         ParticleUtil.spawnParticleEffect(STEAM_PARTICLE_ID, position, store)
-        BOILER_WHISTLE_SOUND_ID?.let { soundId ->
-            val soundIndex = SoundEvent.getAssetMap().getIndex(soundId)
-            if (soundIndex >= 0) {
-                SoundUtil.playSoundEvent3d(soundIndex, SoundCategory.SFX, position, store)
-            }
-        }
+        playSound(store, VENT_POP_SOUND_ID, position)
+    }
+
+    private fun playSound(
+        store: com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>,
+        soundId: String,
+        position: Vector3d,
+    ) {
+        val soundIndex = SoundEvent.getAssetMap().getIndex(soundId)
+        if (soundIndex >= 0) SoundUtil.playSoundEvent3d(soundIndex, SoundCategory.SFX, position, store)
     }
 
     private fun applyPopKnockback(
@@ -86,7 +105,8 @@ internal object GutterBoilerEffects {
         knockback.setTimer(0.0F)
     }
 
-    private const val STEAM_PARTICLE_ID = "Craftory_Steam"
-    private val BOILER_WHISTLE_SOUND_ID: String? = null
+    const val STEAM_PARTICLE_ID = "Goblin_Decorative_Steam"
+    const val VENT_POP_SOUND_ID = "SFX_Emit_Goblin_Steam_A"
+    const val HIGH_PRESSURE_SOUND_ID = "SFX_Emit_Goblin_Machine_A_Steam_Bursts_Winding"
     private const val PLAYER_RADIUS_SQUARED = 16.0
 }

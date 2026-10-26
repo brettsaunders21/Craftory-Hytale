@@ -14,6 +14,9 @@ import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid
+import com.hypixel.hytale.server.core.asset.type.item.config.Item
+import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
@@ -50,6 +53,7 @@ internal class FluidSelfTestRun : Resource<ChunkStore> {
         var testTicking = true
         var loading = false
         var setupFailure: String? = null
+        var setupFailureReported = false
         var cleanupComplete = false
         var heldChunk = false
         var keepLoadedCount = 0
@@ -94,17 +98,26 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
         val run = store.getResource(FluidSelfTestRun.type).active ?: return
         try {
             if (run.cleanupComplete) return
-            FluidSelfTestSetup.keepTestSectionsTicking(run, store)
-            if (run.world.tick - run.startTick >= FluidSelfTestCases.MAX_RUNTIME_TICKS) {
-                FluidSelfTestState.fail(run, "F${run.stage}", "selftest timed out")
+            if (run.blocksCleared) {
                 FluidSelfTestCleanup.cleanup(run, store)
                 return
             }
             if (run.setupFailure != null) {
-                FluidSelfTestState.fail(run, "setup", run.setupFailure ?: "unknown setup failure")
+                run.testTicking = false
+                if (!run.setupFailureReported) {
+                    run.setupFailureReported = true
+                    FluidSelfTestState.fail(run, "setup", run.setupFailure ?: "unknown setup failure")
+                }
                 FluidSelfTestCleanup.cleanup(run, store)
                 return
             }
+            if (run.world.tick - run.startTick >= FluidSelfTestCases.MAX_RUNTIME_TICKS) {
+                run.testTicking = false
+                FluidSelfTestState.fail(run, "F${run.stage}", "selftest timed out")
+                FluidSelfTestCleanup.cleanup(run, store)
+                return
+            }
+            FluidSelfTestSetup.keepTestSectionsTicking(run, store)
             if (!run.initialized) {
                 if (!run.loading) FluidSelfTestCases.loadAndPlace(run)
                 return
@@ -132,6 +145,7 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         failure: RuntimeException,
     ) {
+        run.testTicking = false
         FluidSelfTestState.fail(
             run,
             "F${run.stage}",
@@ -828,7 +842,7 @@ internal object FluidSelfTestSetup {
         run: FluidSelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
-        if (!run.testTicking) return
+        if (!run.testTicking || run.blocksCleared || run.cleanupComplete) return
         val sectionRef =
             runCatching {
                 run.world.chunkStore
@@ -874,10 +888,10 @@ internal object FluidSelfTestSetup {
         val ref =
             run.world.chunkStore
                 .getChunkReference(chunkIndex)
-                ?.takeIf { it.isValid } ?: return
-        store.getComponent(ref, WorldChunk.getComponentType())?.removeKeepLoaded()
+                ?.takeIf { it.isValid }
+        ref?.let { store.getComponent(it, WorldChunk.getComponentType())?.removeKeepLoaded() }
         run.heldChunk = false
-        run.keepLoadedCount--
+        run.keepLoadedCount = (run.keepLoadedCount - 1).coerceAtLeast(0)
     }
 
     fun clearBlock(
@@ -984,8 +998,43 @@ internal object FluidSelfTest {
         world.execute {
             val resource = world.chunkStore.store.getResource(FluidSelfTestRun.type)
             if (resource.active != null) return@execute
-            resource.active = FluidSelfTestRun.Run(context, world, world.tick)
+            val run = FluidSelfTestRun.Run(context, world, world.tick)
+            resource.active = run
+            FluidSelfTestAssetChecks.check(run)
             context.sendMessage(Message.raw("selftest: starting fluid cases F1-F9"))
         }
+    }
+}
+
+private object FluidSelfTestAssetChecks {
+    fun check(run: FluidSelfTestRun.Run) {
+        check(run, "Water_Source fluid") { Fluid.getAssetMap().getAsset("Water_Source") != null }
+        check(run, "Water fluid") { Fluid.getAssetMap().getAsset("Water") != null }
+        check(run, "Lava_Source fluid") { Fluid.getAssetMap().getAsset("Lava_Source") != null }
+        check(run, "Lava fluid") { Fluid.getAssetMap().getAsset("Lava") != null }
+
+        val bucket = Item.getAssetMap().getAsset(CraftoryIds.EMPTY_WOODEN_BUCKET)
+        check(run, "Container_Bucket item") { bucket != null }
+        val filledWaterBucketId = bucket?.getItemIdForState("Filled_Water")
+        check(run, "Container_Bucket Filled_Water state") {
+            filledWaterBucketId != null && Item.getAssetMap().getAsset(filledWaterBucketId) != null
+        }
+        check(run, GutterBoilerEffects.VENT_POP_SOUND_ID) {
+            SoundEvent.getAssetMap().getIndex(GutterBoilerEffects.VENT_POP_SOUND_ID) >= 0
+        }
+        check(run, GutterBoilerEffects.HIGH_PRESSURE_SOUND_ID) {
+            SoundEvent.getAssetMap().getIndex(GutterBoilerEffects.HIGH_PRESSURE_SOUND_ID) >= 0
+        }
+        check(run, GutterBoilerEffects.STEAM_PARTICLE_ID) {
+            ParticleSystem.getAssetMap().getAsset(GutterBoilerEffects.STEAM_PARTICLE_ID) != null
+        }
+    }
+
+    private inline fun check(
+        run: FluidSelfTestRun.Run,
+        id: String,
+        isPresent: () -> Boolean,
+    ) {
+        if (!isPresent()) FluidSelfTestState.fail(run, "assets", "missing asset: $id")
     }
 }
