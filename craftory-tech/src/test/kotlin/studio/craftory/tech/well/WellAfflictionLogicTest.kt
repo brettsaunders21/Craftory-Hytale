@@ -22,4 +22,10 @@ class WellAfflictionLogicTest {
         assertEquals(WellStrength.FLICKER, WellAfflictionRules.strengthAfterSiphon(WellStrength.STEADY))
         assertEquals(WellStrength.FLICKER, WellAfflictionRules.strengthAfterSiphon(WellStrength.FLICKER))
     }
+
+    @Test
+    fun `siphon progress pauses while owner crew is offline`() {
+        assertEquals(12, SiphonProgressRules.nextElapsedSeconds(12, ownerCrewOnline = false))
+        assertEquals(13, SiphonProgressRules.nextElapsedSeconds(12, ownerCrewOnline = true))
+    }
 }

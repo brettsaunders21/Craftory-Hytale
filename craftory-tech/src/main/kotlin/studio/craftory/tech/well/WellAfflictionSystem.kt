@@ -111,9 +111,9 @@ internal class WellAfflictionSystem : EntityTickingSystem<ChunkStore>() {
         if (createdAffliction) blockState.markNeedsSaving(commandBuffer)
         if (well.state != WellState.SEATED && well.state != WellState.TAPPED) return
         cleanseIfReady(world, position, well, affliction, commandBuffer, blockState)
-        processRaid(world, position, well, affliction)
-        val crewId = well.claimCrewId ?: return
-        if (!hasOnlineCrewMember(crewId, world)) return
+        val ownerCrewOnline = well.claimCrewId?.let { hasOnlineCrewMember(it, world) } == true
+        processRaid(world, position, well, affliction, ownerCrewOnline)
+        if (!ownerCrewOnline) return
         updateBeamsAndFeed(world, position, well)
         spawnOnSchedule(world, position)
     }

@@ -207,7 +207,7 @@ internal object Slice5bSelfTestChecks {
             )
         }
         studio.craftory.tech.well
-            .processRaid(run.world, pos, well, state)
+            .processRaid(run.world, pos, well, state, ownerCrewOnline = true)
         check(well.strength == WellStrength.STEADY) { "siphon strength=${well.strength}" }
         studio.craftory.tech.well
             .despawnFollowers(run.world, state.raidNpcIds)
@@ -240,7 +240,7 @@ internal object Slice5bSelfTestChecks {
                 .removeEntity(it, RemoveReason.REMOVE)
         }
         studio.craftory.tech.well
-            .processRaid(run.world, pos, well, state)
+            .processRaid(run.world, pos, well, state, ownerCrewOnline = true)
         check(well.strength == WellStrength.ROARING) { "strength changed after Walker death" }
         studio.craftory.tech.well
             .despawnFollowers(run.world, state.raidNpcIds)
