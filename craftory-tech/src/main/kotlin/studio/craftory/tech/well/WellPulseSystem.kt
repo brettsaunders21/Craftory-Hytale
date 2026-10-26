@@ -61,19 +61,20 @@ internal class WellPulseSystem(
                 .wells()
                 .wellsNear(world.chunkStore.store, origin, config.get().pulseRadius.coerceAtLeast(0))
         wells.forEach { well ->
-            if (well.well.state != WellState.WILD) return@forEach
+            if (WellSelfTestExclusions.isWell(well.pos)) return@forEach
+            if (well.well.state != WellState.WILD && !well.well.corrupted) return@forEach
             val id = well.pos.pack()
             if (!WellBirthRules.cooldownElapsed(state.lastPulseByPosition[id], tick, 20L)) return@forEach
             state.lastPulseByPosition[id] = tick
             val drift = sin(tick / 8.0) * 0.25
             ParticleUtil.spawnParticleEffect(
-                "Magic_Sparks_GS",
+                if (well.well.corrupted) CraftoryIds.CHIMNEY_SMOKE_PARTICLE else "Magic_Sparks_GS",
                 Vector3d(well.pos.x + 0.5 + drift, well.pos.y + 1.2, well.pos.z + 0.5),
                 store,
             )
             if (well.well.strength == WellStrength.FLICKER) {
                 ParticleUtil.spawnParticleEffect(
-                    "Magic_Sparks_GS",
+                    if (well.well.corrupted) CraftoryIds.CHIMNEY_SMOKE_PARTICLE else "Magic_Sparks_GS",
                     Vector3d(well.pos.x + 0.5 - drift, well.pos.y + 1.6, well.pos.z + 0.5),
                     store,
                 )

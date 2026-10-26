@@ -19,7 +19,9 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellState
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.CradleSystem
 import studio.craftory.tech.machine.WellheadState
+import java.util.UUID
 
 internal class WellheadPlacementSystem :
     EntityEventSystem<EntityStore, PlaceBlockEvent>(PlaceBlockEvent::class.java) {
@@ -40,12 +42,12 @@ internal class WellheadPlacementSystem :
         val wellPosition = BlockPos(position.x, position.y - 1, position.z)
         val world = store.externalData.world
         val well =
-            CraftoryCore.wells().wellsNear(world.chunkStore.store, wellPosition, 0)
-                .firstOrNull()?.well
-        if (well == null ||
-            well.state != WellState.TETHERED ||
-            (well.claimCrewId != placerCrewId && !override)
-        ) {
+            CraftoryCore
+                .wells()
+                .wellsNear(world.chunkStore.store, wellPosition, 0)
+                .firstOrNull()
+                ?.well
+        if (!isValidTarget(well, placerCrewId, override)) {
             event.isCancelled = true
             player.sendMessage(Message.translation("server.craftory.wellhead.invalid-well"))
             return
@@ -53,14 +55,26 @@ internal class WellheadPlacementSystem :
         world.execute { initializeWellhead(world, BlockPos(position.x, position.y, position.z), wellPosition) }
     }
 
+    private fun isValidTarget(
+        well: Glimmerwell?,
+        placerCrewId: UUID,
+        override: Boolean,
+    ): Boolean =
+        well != null &&
+            well.state == WellState.TETHERED &&
+            (well.claimCrewId == placerCrewId || override)
+
     private fun initializeWellhead(
         world: World,
         position: BlockPos,
         wellPosition: BlockPos,
     ) {
         val liveWell =
-            CraftoryCore.wells().wellsNear(world.chunkStore.store, wellPosition, 0)
-                .firstOrNull()?.well
+            CraftoryCore
+                .wells()
+                .wellsNear(world.chunkStore.store, wellPosition, 0)
+                .firstOrNull()
+                ?.well
                 ?: return
         if (liveWell.state != WellState.TETHERED) return
         val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
@@ -78,8 +92,7 @@ internal class WellheadPlacementSystem :
     }
 }
 
-internal class WellheadBreakSystem :
-    EntityEventSystem<EntityStore, BreakBlockEvent>(BreakBlockEvent::class.java) {
+internal class WellheadBreakSystem : EntityEventSystem<EntityStore, BreakBlockEvent>(BreakBlockEvent::class.java) {
     override fun getQuery(): Query<EntityStore> = Query.and(PlayerRef.getComponentType())
 
     override fun handle(
@@ -117,7 +130,12 @@ internal class WellheadDamageSystem :
         if (event.isCancelled || event.blockType.id != CraftoryIds.WELLHEAD) return
         val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
         val position = event.targetBlock
-        if (!mayOperate(store.externalData.world, wellPosition(store.externalData.world, position.x, position.y, position.z), player)) {
+        if (!mayOperate(
+                store.externalData.world,
+                wellPosition(store.externalData.world, position.x, position.y, position.z),
+                player,
+            )
+        ) {
             event.isCancelled = true
             player.sendMessage(Message.translation("server.craftory.wellhead.foreign-crew"))
         }
@@ -145,7 +163,10 @@ private fun mayOperate(
     if (player.hasPermission("hytale.command.craftory.wrench.any")) return true
     val position = wellPosition ?: return false
     val well =
-        CraftoryCore.wells().wellsNear(world.chunkStore.store, position, 0)
-            .firstOrNull()?.well ?: return false
+        CraftoryCore
+            .wells()
+            .wellsNear(world.chunkStore.store, position, 0)
+            .firstOrNull()
+            ?.well ?: return false
     return well.claimCrewId == CraftoryCore.crewService().crewOf(player.uuid).id
 }

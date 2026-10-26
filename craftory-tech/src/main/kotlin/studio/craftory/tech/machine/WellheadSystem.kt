@@ -2,12 +2,12 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
+import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.dependency.Dependency
 import com.hypixel.hytale.component.dependency.Order
 import com.hypixel.hytale.component.dependency.SystemDependency
-import com.hypixel.hytale.component.Store
-import com.hypixel.hytale.component.system.tick.EntityTickingSystem
 import com.hypixel.hytale.component.query.Query
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
@@ -23,7 +23,6 @@ import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
-import studio.craftory.tech.well.CradleSystem
 import studio.craftory.tech.well.WellSelfTestExclusions
 
 internal object WellOutput {
@@ -84,8 +83,13 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
         val well =
             wellPosition
                 ?.takeUnless { WellSelfTestExclusions.isWell(it) }
-                ?.let { CraftoryCore.wells().wellsNear(store, it, 0).firstOrNull()?.well }
-                ?.takeIf { it.state == WellState.TAPPED }
+                ?.let {
+                    CraftoryCore
+                        .wells()
+                        .wellsNear(store, it, 0)
+                        .firstOrNull()
+                        ?.well
+                }?.takeIf { it.state == WellState.TAPPED }
         if (!CraftoryCore.isAreaActive(store, blockState) || well == null) {
             energy.setDemand(id, 0)
             energy.setConverterOutput(id, 0, DIM_GLIMMER_RANK)
@@ -145,8 +149,9 @@ internal class WellheadSystem : EntityTickingSystem<ChunkStore>() {
                 world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return
             val store = world.chunkStore.store
             val section = store.getComponent(sectionRef, BlockSection.getComponentType()) ?: return
-            val current = BlockType.getAssetMap().getAsset(section.get(position.x and 31, position.y and 31, position.z and 31))
-                ?: return
+            val current =
+                BlockType.getAssetMap().getAsset(section.get(position.x and 31, position.y and 31, position.z and 31))
+                    ?: return
             if (current.getBlockForState(name) == null) return
             BlockOperations.setBlockInteractionState(
                 world.chunkStore,

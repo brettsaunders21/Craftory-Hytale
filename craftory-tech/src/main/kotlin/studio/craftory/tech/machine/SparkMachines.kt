@@ -257,6 +257,18 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         if (!CraftoryCore.isAreaActive(store, blockState)) return
         val wellPosition = BlockPos(cursor.x, cursor.y + 1, cursor.z)
         if (WellSelfTestExclusions.isWell(wellPosition)) return
+        updateProduction(store, wellPosition, state, member, blockState, commandBuffer, cursor)
+    }
+
+    private fun updateProduction(
+        store: Store<ChunkStore>,
+        wellPosition: BlockPos,
+        state: CradleState,
+        member: EnergyMember,
+        blockState: BlockModule.BlockStateInfo,
+        commandBuffer: CommandBuffer<ChunkStore>,
+        cursor: Vector3i,
+    ) {
         val wellRef = findWell(store, wellPosition)
         val well = wellRef?.let { store.getComponent(it, Glimmerwell.type) }
         if (well != null && state.seatedStrength != well.strength.name) {

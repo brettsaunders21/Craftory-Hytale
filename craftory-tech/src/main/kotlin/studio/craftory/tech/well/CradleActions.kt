@@ -29,15 +29,7 @@ internal object CradleActions {
         filledJar: ItemStack,
         crews: CrewService,
     ): Ref<ChunkStore>? {
-        if (filledJar.itemId != CraftoryIds.GOB_JAR_FILLED) return null
-        if (!canSeatStability(filledJar.getFromMetadataOrNull(GobJarMetadata.STABILITY))) return null
-        val temperament =
-            filledJar.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT)?.let(Temperament::fromId) ?: return null
-        val strength =
-            filledJar
-                .getFromMetadataOrNull(GobJarMetadata.STRENGTH)
-                ?.let { raw -> WellStrength.entries.firstOrNull { it.name.equals(raw, true) } } ?: return null
-        val taste = filledJar.getFromMetadataOrNull(GobJarMetadata.TASTE) ?: return null
+        val contents = parseJar(filledJar) ?: return null
         val above = BlockPos(cradlePosition.x, cradlePosition.y + 1, cradlePosition.z)
         if (CradleSystem.findWell(world.chunkStore.store, above) != null) return null
         val crew = crews.crewOf(playerUuid)
@@ -45,10 +37,10 @@ internal object CradleActions {
             CraftoryCore.wells().spawn(
                 world,
                 above,
-                temperament,
-                strength,
+                contents.temperament,
+                contents.strength,
                 WellState.SEATED,
-                taste,
+                contents.taste,
                 crew.id,
             ) ?: return null
         val cradleRef =
@@ -64,14 +56,33 @@ internal object CradleActions {
             CraftoryCore.wells().remove(world, above)
             return null
         }
-        state.seatedStrength = strength.name
-        state.harmony = CradleSystem.harmonyAt(store, cradlePosition, taste)
+        state.seatedStrength = contents.strength.name
+        state.harmony = CradleSystem.harmonyAt(store, cradlePosition, contents.taste)
         store.getComponent(cradleRef, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
         crews.grantKnowledge(playerUuid, SEATED_KNOWLEDGE)
-        if (strength == WellStrength.FLICKER) crews.grantKnowledge(playerUuid, SEATED_FLICKER_KNOWLEDGE)
-        if (strength >= WellStrength.STEADY) crews.grantKnowledge(playerUuid, STEADY_SEATED_KNOWLEDGE)
+        if (contents.strength == WellStrength.FLICKER) crews.grantKnowledge(playerUuid, SEATED_FLICKER_KNOWLEDGE)
+        if (contents.strength >= WellStrength.STEADY) crews.grantKnowledge(playerUuid, STEADY_SEATED_KNOWLEDGE)
         return wellRef
     }
 
     internal fun canSeatStability(stability: Double?): Boolean = stability == null || stability > 0.0
+
+    private fun parseJar(filledJar: ItemStack): JarContents? {
+        if (filledJar.itemId != CraftoryIds.GOB_JAR_FILLED) return null
+        if (!canSeatStability(filledJar.getFromMetadataOrNull(GobJarMetadata.STABILITY))) return null
+        val temperament =
+            filledJar.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT)?.let(Temperament::fromId) ?: return null
+        val strength =
+            filledJar
+                .getFromMetadataOrNull(GobJarMetadata.STRENGTH)
+                ?.let { raw -> WellStrength.entries.firstOrNull { it.name.equals(raw, true) } } ?: return null
+        val taste = filledJar.getFromMetadataOrNull(GobJarMetadata.TASTE) ?: return null
+        return JarContents(temperament, strength, taste)
+    }
+
+    private data class JarContents(
+        val temperament: Temperament,
+        val strength: WellStrength,
+        val taste: String,
+    )
 }
