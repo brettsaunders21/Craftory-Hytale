@@ -182,7 +182,7 @@ class NotebookPageUi(
             .set("#GuideTitle.Text", Message.translation(NotebookGuide.tierGuideKey(crew.tier)))
             .set("#NextBanner.Visible", nextStep != null)
             .set(
-                "#NextText.Text",
+                "#NextText.TextSpans",
                 nextStep?.let {
                     Message
                         .translation("server.craftory.notebook.guide.next")
@@ -190,7 +190,7 @@ class NotebookPageUi(
                 } ?: Message.raw(""),
             ).set("#GuideNextBanner.Visible", nextStep != null)
             .set(
-                "#GuideNextText.Text",
+                "#GuideNextText.TextSpans",
                 nextStep?.let {
                     Message
                         .translation("server.craftory.notebook.guide.next")

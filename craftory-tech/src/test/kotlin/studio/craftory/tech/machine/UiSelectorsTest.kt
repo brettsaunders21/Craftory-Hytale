@@ -109,6 +109,62 @@ internal fun validateUiSelectors(
     return errors
 }
 
+internal fun validateNestedMessageTextParameters(kotlinRoots: List<Path>): List<String> {
+    val errors = mutableListOf<String>()
+    val setCall = Regex("""\.set\s*\(""")
+    val textSelector = Regex("""^\s*"([^"]+\.Text)"\s*,""")
+    val nestedMessageParameter = Regex("""\.param\s*\(\s*"[^"]+"\s*,\s*Message(?:\.|\s)""")
+    for (path in kotlinRoots.flatMap(::regularFiles).filter { it.fileName.toString().endsWith(".kt") }) {
+        val source = Files.readString(path)
+        for (match in setCall.findAll(source)) {
+            val arguments = callArgumentBody(source, match.range.last)
+            val selector = textSelector.find(arguments)?.groupValues?.get(1) ?: continue
+            if (nestedMessageParameter.containsMatchIn(arguments)) {
+                val line = source.take(match.range.first).count { it == '\n' } + 1
+                errors += "$path:$line: nested Message parameter used with .Text selector '$selector'"
+            }
+        }
+    }
+    return errors
+}
+
+private fun callArgumentBody(
+    source: String,
+    openingIndex: Int,
+): String {
+    var depth = 1
+    var inString = false
+    var escaped = false
+    for (index in openingIndex + 1 until source.length) {
+        val char = source[index]
+        if (inString) {
+            if (escaped) {
+                escaped = false
+            } else if (char == '\\') {
+                escaped = true
+            } else if (char == '"') {
+                inString = false
+            }
+        } else {
+            when (char) {
+                '"' -> {
+                    inString = true
+                }
+
+                '(' -> {
+                    depth++
+                }
+
+                ')' -> {
+                    depth--
+                    if (depth == 0) return source.substring(openingIndex + 1, index)
+                }
+            }
+        }
+    }
+    return ""
+}
+
 internal fun validateUiTranslationReferences(resourceRoots: List<Path>): List<String> {
     val languageReferences =
         resourceRoots
@@ -180,6 +236,21 @@ class UiSelectorsTest {
                 uiRoot = root.resolve("craftory-tech/src/main/resources/Common/UI/Custom/Craftory"),
                 languageFile = root.resolve("craftory-tech/src/main/resources/Server/Languages/en-US/server.lang"),
             )
+        assertTrue(errors.isEmpty(), errors.joinToString("\n"))
+    }
+
+    @Test
+    fun `UI text sets do not pass nested Message parameters`() {
+        val root = repoRoot()
+        val kotlinRoots =
+            Files.list(root).use { modules ->
+                modules
+                    .filter { Files.isDirectory(it) && it.fileName.toString().startsWith("craftory-") }
+                    .map { it.resolve("src/main/kotlin") }
+                    .filter { Files.isDirectory(it) }
+                    .toList()
+            }
+        val errors = validateNestedMessageTextParameters(kotlinRoots)
         assertTrue(errors.isEmpty(), errors.joinToString("\n"))
     }
 
