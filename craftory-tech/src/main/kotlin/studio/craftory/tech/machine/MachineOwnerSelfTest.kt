@@ -351,12 +351,11 @@ private object MachineOwnerSelfTestCleanup {
     private fun removePlayers(run: MachineOwnerSelfTestRun): Int {
         var removed = 0
         run.playerRefs.forEach { ref ->
-            val wasValid = ref.isValid
-            if (wasValid) {
+            if (ref.isValid) {
                 runCatching { run.entityStore.removeEntity(ref, RemoveReason.REMOVE) }
                     .onFailure { recordFailure(run, it) }
             }
-            if (wasValid && !ref.isValid) removed++
+            if (!ref.isValid) removed++
             WellSelfTestExclusions.releaseEntity(ref)
         }
         return removed
