@@ -102,7 +102,7 @@ Group {
       @Chip #ChipNoPower {
         @Fill = (TexturePath: "Energy/ChipNoPower.png", Border: 6);
         @Icon { @Texture = "Energy/StatusNoPower.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
-        Label { Text: %server.craftory.hud.energy.status.no-power; Style: (FontSize: 11, TextColor: #f08a84, RenderBold: true, VerticalAlignment: Center); }
+        Label { Text: %server.craftory.hud.energy.status.no_power; Style: (FontSize: 11, TextColor: #f08a84, RenderBold: true, VerticalAlignment: Center); }
       }
 
       @Chip #ChipStalled {
