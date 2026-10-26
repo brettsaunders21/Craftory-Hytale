@@ -1,5 +1,6 @@
 package studio.craftory.tech.notebook
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -28,6 +29,29 @@ class CustomUiSelectorTest {
 
         assertTrue(violations.none { it.startsWith("missing:") }, violations.joinToString())
         assertTrue(violations.none { it.startsWith("chained:") }, violations.joinToString())
+    }
+
+    @Test
+    fun `Notebook tab and page events rebuild the complete page`() {
+        val source =
+            Files.readString(
+                techRoot().resolve("src/main/kotlin/studio/craftory/tech/notebook/NotebookPageUi.kt"),
+            )
+        val handler =
+            source
+                .substringAfter(
+                    "override fun handleDataEvent(",
+                ).substringBefore("private fun selectedPage()")
+
+        listOf("Pages", "NextSteps", "SelectPage").forEach { action ->
+            val branchStart = handler.indexOf("\"$action\" -> {")
+            assertTrue(branchStart >= 0, "$action event handler is missing")
+            val branchEnd = handler.indexOf("\n            }", branchStart)
+            assertTrue(branchEnd > branchStart, "$action event handler is incomplete")
+            val branch = handler.substring(branchStart, branchEnd)
+            assertTrue(branch.contains("rebuild()"), "$action must rebuild all crew-dependent state")
+            assertFalse(branch.contains("sendUpdate("), "$action must not send a partial update")
+        }
     }
 
     private fun selectorViolations(

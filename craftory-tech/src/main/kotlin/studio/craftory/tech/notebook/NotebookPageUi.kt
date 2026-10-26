@@ -110,32 +110,18 @@ class NotebookPageUi(
 
             "Pages" -> {
                 activeTab = Tab.PAGES
-                val commands = UICommandBuilder()
-                setTab(commands, activeTab)
-                sendUpdate(commands, false)
+                rebuild()
             }
 
             "NextSteps" -> {
                 activeTab = Tab.NEXT_STEPS
-                val commands = UICommandBuilder()
-                setTab(commands, activeTab)
-                sendUpdate(commands, false)
+                rebuild()
             }
 
             "SelectPage" -> {
                 if (NotebookPages.pages.none { it.id == data.pageId }) return
                 selectedPageId = data.pageId
-                val crew = crews.crewOf(playerRef.uuid)
-                val commands = UICommandBuilder()
-                NotebookPages.pages.forEachIndexed { index, page ->
-                    val tile = "#IconList[$index]"
-                    val selected = page.id == selectedPageId
-                    commands
-                        .set("$tile #ButtonSelected.Visible", selected)
-                        .set("$tile #ButtonNotSelected.Visible", !selected)
-                }
-                renderPageDetails(commands, crew, selectedPage())
-                sendUpdate(commands, false)
+                rebuild()
             }
         }
     }
