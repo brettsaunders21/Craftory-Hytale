@@ -149,9 +149,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
             val playerEntity = chunk.getReferenceTo(index)
             val hudState =
                 commandBuffer.getComponent(playerEntity, EnergyHudState.type)
-                    ?: EnergyHudState().also {
-                        commandBuffer.putComponent(playerEntity, EnergyHudState.type, it)
-                    }
+                    ?: EnergyHudState().also { commandBuffer.putComponent(playerEntity, EnergyHudState.type, it) }
             val goggles =
                 player.inventory
                     ?.armor
@@ -318,7 +316,7 @@ class CanisterPage private constructor(
     ) {
         if (snapshot == lastSnapshot) return
         lastSnapshot = snapshot
-        commands.set("#Title.Text", snapshot.name)
+        commands.set("#TitleLabel.Text", snapshot.name)
         commands.set("#Energy.Value", progress(snapshot.stored, snapshot.capacity))
         commands.set("#EnergyLabel.Text", "${snapshot.stored} / ${snapshot.capacity} Fizz")
         commands.set("#In.Text", "In: ${snapshot.supply} Fizz/t")

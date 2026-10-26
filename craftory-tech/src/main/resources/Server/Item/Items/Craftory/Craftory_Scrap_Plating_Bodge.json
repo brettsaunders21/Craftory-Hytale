@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Scrap_Plating_Bodge.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scrap_Plating_Bodge.png",
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

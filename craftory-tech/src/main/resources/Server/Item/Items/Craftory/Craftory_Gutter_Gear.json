@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Gutter_Gear.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gutter_Gear.png",
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

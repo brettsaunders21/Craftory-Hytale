@@ -4,8 +4,9 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Silver.png",
   "Categories": [
-    "Items.Ingredients"
+    "Craftory.Materials"
   ],
+  "Quality": "Common",
   "MaxStack": 100,
   "Recipe": {
     "Input": [
@@ -28,7 +29,7 @@
     ],
     "TimeSeconds": 6
   },
-  "PlayerAnimationsId": "Item",
   "Model": "Items/Craftory/Grit/Grit_Pile.blockymodel",
-  "Texture": "Items/Craftory/Grit/Grit_Silver_Texture.png"
+  "Texture": "Items/Craftory/Grit/Grit_Silver_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

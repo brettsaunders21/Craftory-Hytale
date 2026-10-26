@@ -7,7 +7,7 @@ $C.@PageOverlay {
     Anchor: (Width: 500);
 
     #Title {
-      $C.@Title {
+      $C.@Title #TitleLabel {
         @Text = "Fizz Canister";
       }
     }

@@ -4,10 +4,11 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Glimmer_Dust.png",
   "Categories": [
-    "Items.Ingredients"
+    "Craftory.Materials"
   ],
+  "Quality": "Common",
   "MaxStack": 100,
-  "PlayerAnimationsId": "Item",
   "Model": "Items/Craftory/Glimmer_Dust/Glimmer_Dust.blockymodel",
-  "Texture": "Items/Craftory/Glimmer_Dust/Glimmer_Dust_Texture.png"
+  "Texture": "Items/Craftory/Glimmer_Dust/Glimmer_Dust_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

@@ -4,9 +4,8 @@
     "Description": "server.items.Craftory_Scorch_Oven.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scorch_Oven.png",
-  "Categories": [
-    "Furniture.Benches"
-  ],
+  "Categories": ["Craftory.Machines"],
+  "Quality": "Common",
   "Recipe": {
     "TimeSeconds": 2,
     "KnowledgeRequired": false,

@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Squawk_Box.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Squawk_Box.png",
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

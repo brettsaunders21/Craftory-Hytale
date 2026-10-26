@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Muffler.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Muffler.png",
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

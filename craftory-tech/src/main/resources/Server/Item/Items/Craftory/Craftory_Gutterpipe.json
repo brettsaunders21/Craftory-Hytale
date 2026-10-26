@@ -5,13 +5,11 @@
   },
   "ItemLevel": 10,
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gutterpipe.png",
-  "Categories": [
-    "Tool.TechnicalBlocks"
-  ],
+  "Categories": ["Craftory.Logistics"],
   "SubCategory": "BlockSets",
   "PlayerAnimationsId": "Block",
   "Set": "Build",
-  "Quality": "Technical",
+  "Quality": "Common",
   "ItemSoundSetId": "ISS_Blocks_Stone",
   "IconProperties": {
     "Scale": 0.58823,

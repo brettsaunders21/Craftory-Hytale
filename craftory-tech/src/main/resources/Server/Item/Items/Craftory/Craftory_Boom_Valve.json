@@ -4,6 +4,7 @@
     "Description": "server.items.Craftory_Boom_Valve.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boom_Valve.png",
+  "Categories": ["Craftory.Materials"],
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

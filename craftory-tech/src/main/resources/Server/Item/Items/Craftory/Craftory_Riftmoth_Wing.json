@@ -4,10 +4,11 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Riftmoth_Wing.png",
   "Categories": [
-    "Items.Ingredients"
+    "Craftory.Materials"
   ],
+  "Quality": "Uncommon",
   "MaxStack": 100,
-  "PlayerAnimationsId": "Item",
   "Model": "Items/Craftory/Riftmoth_Wing/Riftmoth_Wing.blockymodel",
-  "Texture": "Items/Craftory/Riftmoth_Wing/Riftmoth_Wing_Texture.png"
+  "Texture": "Items/Craftory/Riftmoth_Wing/Riftmoth_Wing_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

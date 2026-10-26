@@ -4,10 +4,11 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Spark_Shard.png",
   "Categories": [
-    "Items.Ingredients"
+    "Craftory.Materials"
   ],
+  "Quality": "Uncommon",
   "MaxStack": 100,
-  "PlayerAnimationsId": "Item",
   "Model": "Items/Craftory/Spark_Shard/Spark_Shard.blockymodel",
-  "Texture": "Items/Craftory/Spark_Shard/Spark_Shard_Texture.png"
+  "Texture": "Items/Craftory/Spark_Shard/Spark_Shard_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

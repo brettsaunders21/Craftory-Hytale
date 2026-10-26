@@ -4,9 +4,10 @@
     "Description": "server.items.Craftory_Grizzlecog_Receipt.description"
   },
   "Icon": "Icons/ItemsGenerated/GoblinLab_Console.png",
+  "Categories": ["Craftory.Tools"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Interactions": {
     "Use": {
       "Interactions": [

@@ -5,9 +5,9 @@
   },
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
-  "Categories": ["Furniture.Lighting"],
+  "Categories": ["Craftory.Power"],
   "Set": "Furniture_Goblin",
-  "Quality": "Technical",
+  "Quality": "Uncommon",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gutter_Boiler.png",
   "MaxStack": 1,
   "BlockType": {

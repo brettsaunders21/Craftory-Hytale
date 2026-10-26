@@ -4,9 +4,7 @@
     "Description": "server.items.Craftory_Squint_Goggles.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Squint_Goggles.png",
-  "Categories": [
-    "Armor"
-  ],
+  "Categories": ["Craftory.Tools"],
   "PlayerAnimationsId": "Item",
   "Quality": "Common",
   "MaxStack": 1,

@@ -4,11 +4,12 @@
     "Description": "server.items.Craftory_Tinkers_Hammer.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Hammer.png",
-  "Model": "Items/Tools/Hammer/Crude.blockymodel",
-  "Texture": "Items/Tools/Hammer/Crude_Texture.png",
+  "Categories": ["Craftory.Tools"],
+  "Model": "Items/Craftory/Tinkers_Hammer/Tinkers_Hammer.blockymodel",
+  "Texture": "Items/Craftory/Tinkers_Hammer/Tinkers_Hammer_Texture.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Interactions": {
     "Secondary": {
       "Interactions": [

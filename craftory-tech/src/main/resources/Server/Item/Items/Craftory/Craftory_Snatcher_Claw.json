@@ -4,13 +4,11 @@
     "Description": "server.items.Craftory_Snatcher_Claw.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Snatcher_Claw.png",
-  "Categories": [
-    "Furniture.Benches"
-  ],
+  "Categories": ["Craftory.Machines"],
   "MaxStack": 1,
   "ItemLevel": 1,
   "PlayerAnimationsId": "Block",
-  "Quality": "Technical",
+  "Quality": "Uncommon",
   "ItemSoundSetId": "ISS_Blocks_Stone",
   "BlockType": {
     "Material": "Solid",

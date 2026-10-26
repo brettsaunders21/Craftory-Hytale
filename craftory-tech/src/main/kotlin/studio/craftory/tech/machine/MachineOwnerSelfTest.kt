@@ -215,8 +215,7 @@ private object MachineOwnerSelfTestSetup {
         run.players += player
         val ref = player.reference ?: error("synthetic player entity is missing")
         run.playerRefs += ref
-        run.world.entityStore.store
-            .putComponent(ref, HeadRotation.getComponentType(), HeadRotation())
+        run.entityStore.putComponent(ref, HeadRotation.getComponentType(), HeadRotation())
         WellSelfTestExclusions.registerEntity(ref)
         return player
     }

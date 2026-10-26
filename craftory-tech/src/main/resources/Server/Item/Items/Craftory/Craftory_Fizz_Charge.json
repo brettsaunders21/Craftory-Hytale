@@ -5,9 +5,8 @@
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Fizz_Charge.png",
   "MaxStack": 99,
-  "Categories": [
-    "Items.Ingredients"
-  ],
+  "Categories": ["Craftory.Power"],
+  "Quality": "Common",
   "ResourceTypes": [
     {
       "Id": "Craftory_Fizz"

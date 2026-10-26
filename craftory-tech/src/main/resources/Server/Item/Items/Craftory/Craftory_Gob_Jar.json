@@ -4,9 +4,10 @@
     "Description": "server.items.Craftory_Gob_Jar.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gob_Jar.png",
+  "Categories": ["Craftory.Wells"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Interactions": {
     "Secondary": {
       "Interactions": [
