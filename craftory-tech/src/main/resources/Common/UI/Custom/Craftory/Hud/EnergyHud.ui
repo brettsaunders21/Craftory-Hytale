@@ -21,11 +21,11 @@ $C = "../../Common.ui";
 };
 
 @Chip = Group {
-  @Fill = "";
+  @Fill = ();
   LayoutMode: Left;
   Anchor: (Height: 20, Right: 4);
   Padding: (Horizontal: 6);
-  Background: (TexturePath: @Fill, Border: 6);
+  Background: @Fill;
   Visible: false;
 };
 
@@ -88,31 +88,31 @@ Group {
       Anchor: (Height: 20, Top: 8);
 
       @Chip #ChipRunning {
-        @Fill = "Energy/ChipRunning.png";
+        @Fill = (TexturePath: "Energy/ChipRunning.png", Border: 6);
         @Icon { @Texture = "Energy/StatusRunning.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
         Label { Text: %server.craftory.hud.energy.status.running; Style: (FontSize: 11, TextColor: #9fe39a, RenderBold: true, VerticalAlignment: Center); }
       }
 
       @Chip #ChipIdle {
-        @Fill = "Energy/ChipIdle.png";
+        @Fill = (TexturePath: "Energy/ChipIdle.png", Border: 6);
         @Icon { @Texture = "Energy/StatusIdle.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
         Label { Text: %server.craftory.hud.energy.status.idle; Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); }
       }
 
       @Chip #ChipNoPower {
-        @Fill = "Energy/ChipNoPower.png";
+        @Fill = (TexturePath: "Energy/ChipNoPower.png", Border: 6);
         @Icon { @Texture = "Energy/StatusNoPower.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
         Label { Text: %server.craftory.hud.energy.status.no-power; Style: (FontSize: 11, TextColor: #f08a84, RenderBold: true, VerticalAlignment: Center); }
       }
 
       @Chip #ChipStalled {
-        @Fill = "Energy/ChipWarn.png";
+        @Fill = (TexturePath: "Energy/ChipWarn.png", Border: 6);
         @Icon { @Texture = "Energy/StatusStalled.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
         Label { Text: %server.craftory.hud.energy.status.stalled; Style: (FontSize: 11, TextColor: #e8a93b, RenderBold: true, VerticalAlignment: Center); }
       }
 
       @Chip #ChipStolen {
-        @Fill = "Energy/ChipNoPower.png";
+        @Fill = (TexturePath: "Energy/ChipNoPower.png", Border: 6);
         @Icon { @Texture = "Energy/StatusStolen.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
         Label { Text: %server.craftory.hud.energy.status.stolen; Style: (FontSize: 11, TextColor: #f08a84, RenderBold: true, VerticalAlignment: Center); }
       }
