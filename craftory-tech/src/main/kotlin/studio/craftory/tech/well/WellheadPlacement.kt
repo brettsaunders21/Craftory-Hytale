@@ -118,7 +118,16 @@ internal class WellheadBreakSystem : EntityEventSystem<EntityStore, BreakBlockEv
             player.sendMessage(Message.translation("server.craftory.wellhead.foreign-crew"))
             return
         }
-        if (wellPosition != null) CraftoryCore.wells().setState(world, wellPosition, WellState.TETHERED)
+        if (wellPosition != null) {
+            val well =
+                CraftoryCore
+                    .wells()
+                    .wellsNear(world.chunkStore.store, wellPosition, 0)
+                    .firstOrNull()
+                    ?.well
+            val state = well?.let { TetherStakeRules.afterWellheadBreak(it.state) }
+            if (state != null) CraftoryCore.wells().setState(world, wellPosition, state)
+        }
     }
 }
 

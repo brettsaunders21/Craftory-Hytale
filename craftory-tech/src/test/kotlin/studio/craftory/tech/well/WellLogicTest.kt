@@ -2,14 +2,29 @@ package studio.craftory.tech.well
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.well.Temperament
+import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import java.util.UUID
 import kotlin.random.Random
 
 class WellLogicTest {
+    @Test
+    fun `removed tether stakes dormant tethered and tapped wells`() {
+        assertEquals(WellState.DORMANT, TetherStakeRules.afterStakeRemoval(WellState.TETHERED))
+        assertEquals(WellState.DORMANT, TetherStakeRules.afterStakeRemoval(WellState.TAPPED))
+        assertNull(TetherStakeRules.afterStakeRemoval(WellState.WILD))
+    }
+
+    @Test
+    fun `breaking wellhead restores only tapped wells to tethered`() {
+        assertEquals(WellState.TETHERED, TetherStakeRules.afterWellheadBreak(WellState.TAPPED))
+        assertNull(TetherStakeRules.afterWellheadBreak(WellState.DORMANT))
+    }
+
     @Test
     fun `seating rejects zero and negative jar stability but accepts absent stability`() {
         assertTrue(CradleActions.canSeatStability(null))
