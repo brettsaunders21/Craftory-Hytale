@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
@@ -214,6 +215,7 @@ private object MachineOwnerSelfTestSetup {
         run.players += player
         val ref = player.reference ?: error("synthetic player entity is missing")
         run.playerRefs += ref
+        run.entityStore.putComponent(ref, HeadRotation.getComponentType(), HeadRotation())
         WellSelfTestExclusions.registerEntity(ref)
         return player
     }
