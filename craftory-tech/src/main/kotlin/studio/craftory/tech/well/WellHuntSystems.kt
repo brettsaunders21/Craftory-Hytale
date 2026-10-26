@@ -325,8 +325,7 @@ internal object TetherStakeRules {
             else -> null
         }
 
-    fun afterWellheadBreak(state: WellState): WellState? =
-        if (state == WellState.TAPPED) WellState.TETHERED else null
+    fun afterWellheadBreak(state: WellState): WellState? = if (state == WellState.TAPPED) WellState.TETHERED else null
 }
 
 internal class TetherStakeBeamSystem : EntityTickingSystem<ChunkStore>() {
