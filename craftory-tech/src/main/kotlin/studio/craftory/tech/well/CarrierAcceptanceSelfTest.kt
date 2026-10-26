@@ -33,6 +33,28 @@ internal data class CarrierFixtureArea(
     val origin: BlockPos,
 )
 
+private class CarrierAcceptanceReporter(
+    private val send: (String) -> Unit,
+) : (String) -> Unit {
+    private var passed = 0
+    private var failed = 0
+    private var summarySent = false
+
+    override fun invoke(message: String) {
+        when {
+            message.startsWith("selftest: PASS") -> passed++
+            message.startsWith("selftest: FAIL") -> failed++
+        }
+        send(message)
+    }
+
+    fun summary() {
+        if (summarySent) return
+        summarySent = true
+        send("selftest: carrier $passed passed, $failed failed")
+    }
+}
+
 private fun loadCarrierTestSection(
     world: World,
     complete: (CarrierFixtureArea?, String?) -> Unit,
@@ -144,6 +166,7 @@ internal object CarrierAcceptanceSelfTest {
         val origin: BlockPos,
         val report: (String) -> Unit,
         val onComplete: () -> Unit,
+        val reportSummary: () -> Unit,
         var lastBurstStatus: String = "not polled",
         var lastBurstReportTick: Long = Long.MIN_VALUE,
         var phase: Phase = Phase.PICKUP,
@@ -153,6 +176,9 @@ internal object CarrierAcceptanceSelfTest {
         var wellCount: Int = 0,
         var guardianCount: Int = 0,
         var preexistingWellIds: Set<Long> = emptySet(),
+        var expectedBurstWellPosition: BlockPos? = null,
+        val createdBurstWells: MutableMap<BlockPos, Ref<ChunkStore>> = linkedMapOf(),
+        val createdBurstGuardians: MutableMap<BlockPos, Ref<EntityStore>> = linkedMapOf(),
     )
 
     private var active: Run? = null
@@ -162,29 +188,33 @@ internal object CarrierAcceptanceSelfTest {
         report: (String) -> Unit,
         onComplete: () -> Unit = {},
     ) {
+        val reporter = CarrierAcceptanceReporter(report)
         if (active != null) {
-            report("selftest: FAIL carrier live acceptance already has an active run")
+            reporter("selftest: FAIL carrier live acceptance already has an active run")
+            reporter.summary()
             onComplete()
             return
         }
         loadCarrierTestSection(world) { fixtureArea, error ->
             if (error != null) {
-                report("selftest: FAIL carrier live acceptance $error")
+                reporter("selftest: FAIL carrier live acceptance $error")
+                reporter.summary()
                 onComplete()
                 return@loadCarrierTestSection
             }
             val area =
                 fixtureArea ?: run {
-                    report("selftest: FAIL carrier live acceptance fixture area is unavailable")
+                    reporter("selftest: FAIL carrier live acceptance fixture area is unavailable")
+                    reporter.summary()
                     onComplete()
                     return@loadCarrierTestSection
                 }
             val setup =
-                createRun(world, area, report, onComplete)
-                    ?: run {
-                        onComplete()
-                        return@loadCarrierTestSection
-                    }
+                createRun(world, area, reporter, onComplete, reporter::summary) ?: run {
+                    reporter.summary()
+                    onComplete()
+                    return@loadCarrierTestSection
+                }
             world.chunkStore.store
                 .getComponent(area.chunkRef, WorldChunk.getComponentType())
                 ?.addKeepLoaded()
@@ -202,6 +232,7 @@ internal object CarrierAcceptanceSelfTest {
         fixtureArea: CarrierFixtureArea,
         report: (String) -> Unit,
         onComplete: () -> Unit,
+        reportSummary: () -> Unit,
     ): Pair<Run, TransformComponent>? {
         val origin = fixtureArea.origin
         val player = WellSelfTestPlayer.createCarrierSelfTestPlayer(world, origin)
@@ -249,6 +280,7 @@ internal object CarrierAcceptanceSelfTest {
                 origin,
                 report,
                 onComplete,
+                reportSummary,
             )
         WellSelfTestExclusions.registerEntity(entity)
         if (!insertFilledJar(storage, slot, report)) {
@@ -377,12 +409,24 @@ internal object CarrierAcceptanceSelfTest {
         val movementRestored = carrier == null && speed != null && abs(speed - run.originalSpeed) <= 0.01f
         if (itemGone && movementRestored) {
             run.report("selftest: PASS carrier removal restores movement and component")
+            val burstOrigin =
+                store.getComponent(run.entity, TransformComponent.getComponentType())?.position?.let {
+                    BlockPos(floor(it.x).toInt(), floor(it.y).toInt(), floor(it.z).toInt())
+                }
+            run.expectedBurstWellPosition =
+                burstOrigin?.let { WellBirths.findSurface(world, it.x, it.z, it.y) }
             run.preexistingWellIds =
-                CraftoryCore
-                    .wells()
-                    .wellsNear(world.chunkStore.store, run.origin, 2)
-                    .map { it.pos.pack() }
-                    .toSet()
+                run.expectedBurstWellPosition
+                    ?.let { expected ->
+                        CraftoryCore
+                            .wells()
+                            .wellsNear(
+                                world.chunkStore.store,
+                                expected,
+                                0,
+                            ).map { it.pos.pack() }
+                            .toSet()
+                    } ?: emptySet()
             run.storage.setItemStackForSlot(run.slot, testJar(0.0))
             run.phase = Phase.BURST
             run.startedTick = world.tick
@@ -395,19 +439,30 @@ internal object CarrierAcceptanceSelfTest {
         store: Store<EntityStore>,
         tick: Long,
     ) {
-        val well =
-            CraftoryCore
-                .wells()
-                .wellsNear(run.world.chunkStore.store, run.origin, 2)
-                .firstOrNull { it.well.state == WellState.WILD && it.pos.pack() !in run.preexistingWellIds }
         val item = run.storage.getItemStack(run.slot)
         val jarGone = item?.itemId != CraftoryIds.GOB_JAR_FILLED
+        val expectedPosition = run.expectedBurstWellPosition
+        val well =
+            if (jarGone && expectedPosition != null && expectedPosition.pack() !in run.preexistingWellIds) {
+                CraftoryCore
+                    .wells()
+                    .wellsNear(run.world.chunkStore.store, run.origin, 2)
+                    .firstOrNull { it.pos == expectedPosition && it.well.state == WellState.WILD }
+            } else {
+                null
+            }
         val guardianId = well?.pos?.pack()?.toString()
         val guardians = store.getResource(WellGuardianIndex.type)
         if (well != null) {
+            run.createdBurstWells.putIfAbsent(well.pos, well.ref)
             WellGuardianCalmSystem().trySpawnGuardian(run.world, store, well.pos, well.well, guardians)
+            WellSelfTestExclusions.registerWell(well.pos)
         }
-        val guardian = guardianId?.let { guardians.refsByWellId[it]?.isValid } == true
+        val guardianRef = guardianId?.let { guardians.refsByWellId[it] }
+        if (well != null && guardianRef?.isValid == true) {
+            run.createdBurstGuardians.putIfAbsent(well.pos, guardianRef)
+        }
+        val guardian = guardianRef?.isValid == true
         val stability = item?.getFromMetadataOrNull(GobJarMetadata.STABILITY)
         run.lastBurstStatus =
             "jarGone=$jarGone stability=$stability well=${well?.pos} guardianIndexed=$guardian"
@@ -439,6 +494,7 @@ internal object CarrierAcceptanceSelfTest {
             "selftest: cleanup (carrierWells=${run.wellCount}, carrierGuardians=${run.guardianCount}, " +
                 "carrierPlayersCreated=1, carrierPlayersRemoved=$playerRemoved, remainingWells=$remainingWells)",
         )
+        run.reportSummary()
         WellSelfTestExclusions.releaseEntity(run.entity)
         active = null
         run.onComplete()
@@ -467,24 +523,30 @@ internal object CarrierAcceptanceSelfTest {
         run: Run,
         store: Store<EntityStore>,
     ): Int {
-        val nearby =
-            CraftoryCore
-                .wells()
-                .wellsNear(run.world.chunkStore.store, run.origin, 2)
-                .filter { it.well.state == WellState.WILD && it.pos.pack() !in run.preexistingWellIds }
-        nearby.forEach { well ->
-            val id = well.pos.pack().toString()
-            val guardian = store.getResource(WellGuardianIndex.type).refsByWellId.remove(id)
+        val registry = CraftoryCore.wells()
+        val guardians = store.getResource(WellGuardianIndex.type)
+        run.createdBurstWells.forEach { (position, wellRef) ->
+            val id = position.pack().toString()
+            val guardian = run.createdBurstGuardians[position]
             if (guardian != null && guardian.isValid) {
+                if (guardians.refsByWellId[id] == guardian) guardians.refsByWellId.remove(id)
                 store.removeEntity(guardian, RemoveReason.REMOVE)
                 run.guardianCount++
             }
-            if (CraftoryCore.wells().remove(run.world, well.pos)) run.wellCount++
+            val currentWell =
+                registry
+                    .wellsNear(run.world.chunkStore.store, position, 0)
+                    .firstOrNull { it.pos == position && it.ref == wellRef }
+            if (currentWell != null && registry.remove(run.world, position)) run.wellCount++
         }
-        return CraftoryCore
-            .wells()
-            .wellsNear(run.world.chunkStore.store, run.origin, 2)
-            .count { it.well.state == WellState.WILD && it.pos.pack() !in run.preexistingWellIds }
+        val remaining =
+            run.createdBurstWells.count { (position, wellRef) ->
+                registry
+                    .wellsNear(run.world.chunkStore.store, position, 0)
+                    .any { it.pos == position && it.ref == wellRef }
+            }
+        if (remaining == 0) run.createdBurstWells.keys.forEach(WellSelfTestExclusions::releaseWell)
+        return remaining
     }
 }
 

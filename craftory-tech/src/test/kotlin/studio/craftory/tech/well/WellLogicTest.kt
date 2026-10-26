@@ -194,6 +194,16 @@ class WellLogicTest {
     }
 
     @Test
+    fun `damage from fractional stability reaches zero and bursts on the next pass`() {
+        val afterDamage = JarCarrierRules.stabilityAfter(0.5, 0.0, 1, 0.0)
+        val nextPassStability = JarCarrierRules.drainForSecond(afterDamage, Temperament.SPARK, WeatherKind.CLEAR)
+
+        assertEquals(0.0, afterDamage)
+        assertTrue(JarCarrierRules.shouldBurst(nextPassStability))
+        assertEquals(JarCarrierRules.BurstResult.CONSUME, JarCarrierRules.burstResult(nextPassStability, true))
+    }
+
+    @Test
     fun `zero ambush chance disables the roll`() {
         assertFalse(JarCarrierRules.ambushRoll(0.0, Random(1)))
         assertTrue(JarCarrierRules.ambushRoll(1.0, Random(1)))
