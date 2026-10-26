@@ -48,9 +48,9 @@ class NotebookPageUi(
         NotebookPages.pages.forEachIndexed { index, page ->
             val prefix = "#Page$index"
             commandBuilder
-                .set("$prefix.Name.Text", Message.translation(page.nameKey))
+                .set("$prefix #Name.Text", Message.translation(page.nameKey))
                 .set(
-                    "$prefix.Status.Text",
+                    "$prefix #Status.Text",
                     Message.translation(
                         if (page.id in crew.knowledge) {
                             "server.craftory.notebook.found"
@@ -58,7 +58,7 @@ class NotebookPageUi(
                             "server.craftory.notebook.missing"
                         },
                     ),
-                ).set("$prefix.Source.Text", Message.translation(page.sourceKey))
+                ).set("$prefix #Source.Text", Message.translation(page.sourceKey))
         }
     }
 }
