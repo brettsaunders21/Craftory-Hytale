@@ -3,6 +3,7 @@ package studio.craftory.core.api.crew
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParseException
+import studio.craftory.core.api.well.Temperament
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
@@ -39,6 +40,7 @@ class CrewService private constructor(
         val members: MutableSet<UUID>,
         val pendingInvites: MutableSet<UUID>,
         val knowledge: MutableSet<String>,
+        val insight: MutableMap<Temperament, Long>,
         var tier: Int,
         var solo: Boolean,
     ) {
@@ -52,6 +54,7 @@ class CrewService private constructor(
                 knowledge.toSet(),
                 tier,
                 solo,
+                insight.toMap(),
             )
     }
 
@@ -62,6 +65,7 @@ class CrewService private constructor(
         var members: List<String> = emptyList(),
         var pendingInvites: List<String> = emptyList(),
         var knowledge: List<String> = emptyList(),
+        var insight: Map<String, Long> = emptyMap(),
         var tier: Int = 1,
         var solo: Boolean = false,
     )
@@ -148,6 +152,9 @@ class CrewService private constructor(
 
                 val solo = current ?: crewForPlayerLocked(target)
                 destination.knowledge.addAll(solo.knowledge)
+                solo.insight.forEach { (temperament, amount) ->
+                    destination.insight[temperament] = destination.insight[temperament].saturatingPlus(amount)
+                }
                 destination.tier = maxOf(destination.tier, solo.tier)
                 detachMemberLocked(solo, target)
                 destination.members.add(target)
@@ -167,12 +174,13 @@ class CrewService private constructor(
                 val current = crewForPlayerLocked(playerUuid)
                 if (current.solo) return@synchronized current.snapshot() to emptyList()
                 val carriedKnowledge = current.knowledge.toSet()
+                val carriedInsight = current.insight.toMap()
                 val carriedTier = current.tier
                 detachMemberLocked(current, playerUuid)
                 if (current.owner == playerUuid && current.members.isNotEmpty()) {
                     current.owner = current.members.minBy(UUID::toString)
                 }
-                val solo = createSoloLocked(playerUuid, carriedKnowledge, carriedTier)
+                val solo = createSoloLocked(playerUuid, carriedKnowledge, carriedInsight, carriedTier)
                 val changed =
                     buildList {
                         add(solo.snapshot())
@@ -195,10 +203,11 @@ class CrewService private constructor(
                 if (crew.solo || crew.owner != owner) return@synchronized null
                 if (target == owner || target !in crew.members) return@synchronized null
                 val carriedKnowledge = crew.knowledge.toSet()
+                val carriedInsight = crew.insight.toMap()
                 val carriedTier = crew.tier
                 crew.pendingInvites.remove(target)
                 detachMemberLocked(crew, target)
-                val solo = createSoloLocked(target, carriedKnowledge, carriedTier)
+                val solo = createSoloLocked(target, carriedKnowledge, carriedInsight, carriedTier)
                 markDirtyLocked()
                 listOf(solo.snapshot(), crew.snapshot())
             } ?: return false
@@ -242,6 +251,31 @@ class CrewService private constructor(
         synchronized(lock) {
             ensureOpen()
             crewForPlayerLocked(playerUuid).tier
+        }
+
+    fun addInsight(
+        crewId: UUID,
+        temperament: Temperament,
+        amount: Long,
+    ): Boolean {
+        require(amount >= 0) { "Insight amount must not be negative" }
+        val changed =
+            synchronized(lock) {
+                ensureOpen()
+                val crew = crews[crewId] ?: return@synchronized null
+                if (amount == 0L) return@synchronized null
+                crew.insight[temperament] = crew.insight[temperament].saturatingPlus(amount)
+                markDirtyLocked()
+                crew.snapshot()
+            } ?: return false
+        notifyCrewChanged(listOf(changed))
+        return true
+    }
+
+    fun insight(crewId: UUID): Map<Temperament, Long> =
+        synchronized(lock) {
+            ensureOpen()
+            crews[crewId]?.insight?.toMap().orEmpty()
         }
 
     fun setTier(
@@ -300,6 +334,7 @@ class CrewService private constructor(
     private fun createSoloLocked(
         playerUuid: UUID,
         knowledge: Set<String>,
+        insight: Map<Temperament, Long> = emptyMap(),
         tier: Int = 1,
     ): CrewData {
         val crew =
@@ -310,6 +345,7 @@ class CrewService private constructor(
                 members = mutableSetOf(playerUuid),
                 pendingInvites = mutableSetOf(),
                 knowledge = knowledge.toMutableSet(),
+                insight = insight.toMutableMap(),
                 tier = tier,
                 solo = true,
             )
@@ -317,6 +353,11 @@ class CrewService private constructor(
         playerCrews[playerUuid] = crew.id
         markDirtyLocked()
         return crew
+    }
+
+    private fun Long?.saturatingPlus(amount: Long): Long {
+        val current = this ?: 0L
+        return if (Long.MAX_VALUE - current < amount) Long.MAX_VALUE else current + amount
     }
 
     private fun notifyCrewChanged(changedCrews: Iterable<Crew>) {
@@ -403,6 +444,11 @@ class CrewService private constructor(
                         members = crew.members.map(UUID::toString).sorted(),
                         pendingInvites = crew.pendingInvites.map(UUID::toString).sorted(),
                         knowledge = crew.knowledge.sorted(),
+                        insight =
+                            crew.insight
+                                .entries
+                                .associate { (temperament, amount) -> temperament.id to amount }
+                                .toSortedMap(),
                         tier = crew.tier,
                         solo = crew.solo,
                     )
@@ -470,6 +516,12 @@ class CrewService private constructor(
                 members = members,
                 pendingInvites = stored.pendingInvites.map(UUID::fromString).toMutableSet(),
                 knowledge = stored.knowledge.toMutableSet(),
+                insight =
+                    stored.insight
+                        .orEmpty()
+                        .mapNotNull { (id, amount) -> Temperament.fromId(id)?.let { it to amount } }
+                        .toMap()
+                        .toMutableMap(),
                 tier = stored.tier.coerceAtLeast(1),
                 solo = stored.solo,
             )

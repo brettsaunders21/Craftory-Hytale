@@ -16,6 +16,7 @@ import studio.craftory.core.api.energy.EnergyMemberType
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockRegistry
+import studio.craftory.core.api.well.WellAccess
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyWorld
@@ -25,6 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 
 @Suppress("TooManyFunctions")
 object CraftoryCore {
+    private val wellAccess = WellAccess()
     private val modules = ConcurrentSkipListMap<String, String>()
     private val energyTypes = ConcurrentHashMap<String, EnergyMemberType>()
     private val commandHandlers = ConcurrentHashMap<String, (CommandContext) -> CompletableFuture<Void>>()
@@ -102,6 +104,8 @@ object CraftoryCore {
     }
 
     fun crewService(): CrewService = checkNotNull(currentCrewService) { "Crew service is unavailable" }
+
+    fun wells(): WellAccess = wellAccess
 
     fun unregisterCrewService(service: CrewService) {
         if (currentCrewService === service) currentCrewService = null

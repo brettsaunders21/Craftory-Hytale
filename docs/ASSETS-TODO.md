@@ -20,3 +20,5 @@ Replace these vanilla placeholders with Craftory Blockbench models and textures:
 - Jank rattle steam: `Decorative/Goblin/Goblin_Decorative_Steam`.
 - High-Jank grey smoke: `Deployables/Healing_Totem/Totem_Heal_Smoke`.
 - Jank rattle/fizzle sound: `SFX_GoblinLab_Broken_Device`.
+- `Craftory_Glimmerwell_Anchor`: replace the invisible, non-solid discovery placeholder with a Glimmerwell model, temperament-tinted glow, and pulse/mote effects.
+- Glimmerwell discovery effects currently use the vanilla `Impact_Spark` particle and `SFX_Interact` sound as placeholders; replace with authored pulse and resonance assets.

@@ -1,0 +1,34 @@
+Group {
+  Anchor: (Top: 24, CenterHorizontal: 0, Width: 360);
+  LayoutMode: Top;
+  Background: #000000(0.65);
+  Padding: (Full: 12);
+
+  Label #Title {
+    Text: "Glimmerwell resonance";
+    Style: (FontSize: 18, RenderBold: true);
+    Anchor: (Bottom: 6);
+  }
+
+  Label #RingTemperament {
+    Text: "Temperament: 0%";
+    Style: (FontSize: 16, TextColor: #96a9be);
+    Anchor: (Bottom: 4);
+  }
+
+  Label #RingStrength {
+    Text: "Strength: 0%";
+    Style: (FontSize: 16, TextColor: #96a9be);
+    Anchor: (Bottom: 4);
+  }
+
+  Label #RingState {
+    Text: "State: 0%";
+    Style: (FontSize: 16, TextColor: #96a9be);
+    Anchor: (Bottom: 4);
+  }
+
+  Label #Progress {
+    Text: "Resonance ring 1/3 — press to lock.";
+  }
+}

@@ -18,6 +18,8 @@ import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.well.Glimmerwell
+import studio.craftory.core.api.well.WellIndex
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyMemberLifecycle
@@ -27,6 +29,7 @@ import studio.craftory.core.multiblock.MultiblockIndex
 import studio.craftory.core.multiblock.MultiblockLifecycle
 import studio.craftory.core.multiblock.MultiblockPlaceSystem
 import studio.craftory.core.multiblock.MultiblockValidationSystem
+import studio.craftory.core.well.WellLifecycle
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Level
 
@@ -63,11 +66,19 @@ class CraftoryCorePlugin(
                 MultiblockController.CODEC,
             )
         MultiblockIndex.type = chunkRegistry.registerResource(MultiblockIndex::class.java, ::MultiblockIndex)
+        Glimmerwell.type =
+            chunkRegistry.registerComponent(
+                Glimmerwell::class.java,
+                "Craftory_Glimmerwell",
+                Glimmerwell.CODEC,
+            )
+        WellIndex.type = chunkRegistry.registerResource(WellIndex::class.java, ::WellIndex)
         chunkRegistry.registerSystem(EnergyMemberLifecycle())
         chunkRegistry.registerSystem(MultiblockLifecycle())
         chunkRegistry.registerSystem(MultiblockValidationSystem())
         getEntityStoreRegistry().registerSystem(MultiblockPlaceSystem())
         getEntityStoreRegistry().registerSystem(MultiblockBreakSystem())
+        chunkRegistry.registerSystem(WellLifecycle())
         chunkRegistry.registerSystem(EnergySolveSystem())
         val command = CraftoryCommand(pluginVersion, config, crews)
         getCommandRegistry().registerCommand(command)
@@ -109,6 +120,7 @@ class CraftoryCorePlugin(
             addSubCommand(ConfigCommand(config))
             addSubCommand(CraftoryCrewCommand(crews))
             addSubCommand(CraftoryGrantCommand(crews))
+            addSubCommand(WellCommand())
         }
 
         override fun execute(context: CommandContext): CompletableFuture<Void> {

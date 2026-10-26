@@ -23,6 +23,10 @@ object CraftoryIds {
     const val SCRAP_PLATING_BODGE = "Craftory_Scrap_Plating_Bodge"
     const val SQUAWK_BOX = "Craftory_Squawk_Box"
     const val MUFFLER = "Craftory_Muffler"
+    const val GLIMMER_LENS = "Craftory_Glimmer_Lens"
+    const val GOB_JAR = "Craftory_Gob_Jar"
+    const val GOB_JAR_FILLED = "Craftory_Gob_Jar_Filled"
+    const val CODEX = "Craftory_Codex"
 
     const val CRANK_TYPE = "craftory:crank_a_fizz"
     const val BURNER_TYPE = "craftory:boomshroom_burner"
@@ -57,4 +61,10 @@ object CraftoryIds {
     const val BODGE_USE_INTERACTION = "Craftory_BodgeUse"
     const val OVEN_USE_INTERACTION = "Craftory_OvenUse"
     const val NOTEBOOK_PAGE = "Craftory_Tinkers_Notebook"
+    const val CODEX_PAGE = "Craftory_Codex"
+    const val LENS_USE_INTERACTION = "Craftory_LensUse"
+    const val JAR_USE_INTERACTION = "Craftory_JarUse"
+    const val LENS_HUD = "Craftory_LensHud"
+    const val INSIGHT_HUD = "Craftory_InsightHud"
+    const val CODEX_USE_INTERACTION = "Craftory_CodexUse"
 }
