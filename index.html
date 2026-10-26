@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Craftory for Hytale: goblin tech meets arcane power</title>
+<meta name="description" content="Craftory is a co-op technology-and-magic mod for Hytale. Build goblin junk machines, hunt living Glimmerwells and power your base with them.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="img/Fizz_Spark.png">
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top"><img src="img/Fizz_Spark.png" alt="">Craftory</a>
+  <nav>
+    <a href="#journey">Journey</a><a href="#machines">Machines</a><a href="#wells">Wells</a>
+    <a href="#logistics">Logistics</a><a href="#coop">Co-op</a><a href="#start">Get started</a><a href="#status">Status</a>
+  </nav>
+</header>
+
+<section id="top" class="hero">
+  <div class="hero-text">
+    <p class="kicker">A Hytale technology &amp; magic mod</p>
+    <h1>Bang junk together.<br><span>Tame the storm.</span></h1>
+    <p class="lede">Craftory starts in a goblin scrapyard, with cranks, burners and pipes held together with hope. Then it climbs into wired-up crystals and living Glimmerwells you hunt, calm, jar and carry home through the storm. It's built for two friends in co-op from the first block.</p>
+    <div class="cta"><a class="btn" href="#start">Get started</a><a class="btn ghost" href="#journey">See the journey</a></div>
+    <p class="note">Early access: Tiers 1–3 are in testing on live servers.</p>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="orbit">
+      <img src="img/Crank_A_Fizz.png" alt=""><img src="img/Scorch_Oven.png" alt=""><img src="img/Storm_Vane.png" alt="">
+      <img src="img/Junk_Heart_Firebox.png" alt=""><img src="img/Tether_Stake.png" alt=""><img src="img/Wakebell_Anchor.png" alt="">
+    </div>
+    <img class="core" src="img/Glimmer_Mote.png" alt="">
+  </div>
+</section>
+
+<section id="journey">
+  <h2>The journey</h2>
+  <p class="sub">Every tier is unlocked by doing something in the world, not just crafting it. Pick a tier.</p>
+  <div class="tiers" role="tablist" id="tierTabs"></div>
+  <article class="tier-card" id="tierCard" role="tabpanel" aria-live="polite"></article>
+</section>
+
+<section id="machines">
+  <h2>Machines &amp; tools</h2>
+  <p class="sub">Everything in the early tiers. Filter by what it does.</p>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="machineGrid"></div>
+</section>
+
+<section id="energy" class="band">
+  <h2>Graded energy</h2>
+  <p class="sub">Power comes in grades. A machine accepts its grade or anything higher, so upgrading your generators keeps old machines running, and some get faster.</p>
+  <div class="grades">
+    <div class="grade g0"><b>Fizz</b><span>Crank, Burner, Rattlewheel, Shroom Bed</span></div>
+    <div class="arrow">→</div>
+    <div class="grade g1"><b>Pressurised Fizz</b><span>Gutter Boiler, Gasbag storage</span></div>
+    <div class="arrow">→</div>
+    <div class="grade g2"><b>Dim Glimmer</b><span>Crackle Coil, Resonator, Wells</span></div>
+    <div class="arrow">→</div>
+    <div class="grade g3 locked"><b>Bright Glimmer…</b><span>coming in Tier 4</span></div>
+  </div>
+</section>
+
+<section id="wells">
+  <h2>Hunting a Glimmerwell</h2>
+  <p class="sub">Wells are living sources of magic. They're born in storms, rain and battles, and they don't want to come home with you.</p>
+  <div class="stepper">
+    <ol id="wellSteps"></ol>
+    <div class="step-body" id="wellStepBody" aria-live="polite"></div>
+  </div>
+  <div class="temperaments" id="temperaments"></div>
+</section>
+
+<section id="logistics" class="band">
+  <h2>Logistics you can watch</h2>
+  <div class="cols3">
+    <div class="feature"><img src="img/Gutterpipe.png" alt=""><h3>Gutterpipes</h3><p>You can see the items rattling through. Pipes carry an item lane and a fluid lane. Paint daubs sort items by colour, and the Snatcher Claw pulls from chests and machines.</p></div>
+    <div class="feature"><img src="img/Gutter_Gear.png" alt=""><h3>Fluids</h3><p>Stack Sloshtanks to make bigger tanks. Pipes pull water from source blocks. The Gutter Boiler turns water into Pressurised Fizz, and Gasbags store it (keep fire away).</p></div>
+    <div class="feature"><img src="img/Boom_Valve.png" alt=""><h3>Hurl Tubes</h3><p>Ride a tube network between named stations, or get fired from a Hurl Cannon at a Catch Net. Rides cost a little Fizz. You can't board one while carrying a jarred Well.</p></div>
+  </div>
+</section>
+
+<section id="coop">
+  <h2>Made for two</h2>
+  <div class="cols2">
+    <ul class="ticks">
+      <li><b>Crews.</b> <code>/craftory crew create</code>, then invite your friend. Research, Notebook pages, Insight and tier progress are shared.</li>
+      <li><b>Ownership.</b> Machines belong to the crew that placed them. Outsiders can't take them apart or straighten your tether stakes.</li>
+      <li><b>Two-person jobs.</b> One player tethers and jars a Well while the other fights off its guardian and Poacher ambushes on the way home.</li>
+      <li><b>Shared readouts.</b> Squint Goggles show a crewmate's jar Stability, and machine status at a glance.</li>
+      <li><b>Bases keep running.</b> Machines pause when nobody's around. A fuelled Wakebell Anchor keeps an area ticking while you're out exploring.</li>
+    </ul>
+    <div class="quote"><p>"You hold the Damper line, I'll get the stakes in, then we run it home before the rain hits."</p><span>the kind of evening Craftory is built for</span></div>
+  </div>
+</section>
+
+<section id="start" class="band">
+  <h2>Get started</h2>
+  <div class="cols2">
+    <div>
+      <h3>Install (server)</h3>
+      <ol class="steps">
+        <li>Use a Hytale server on version <b>0.7.4</b>.</li>
+        <li>Put <code>craftory-core</code> and <code>craftory-tech</code> in the server's mods folder. Tech needs Core.</li>
+        <li>Start the server and join. Grizzlecog the goblin trader sells your first parts.</li>
+      </ol>
+      <h3>Build from source</h3>
+      <pre><code>git clone https://github.com/brettsaunders21/Craftory-Hytale
+cd Craftory-Hytale
+./gradlew setupHytaleDev   # one-time Hytale sign-in
+./gradlew build
+./gradlew runAllMods       # dev server with both plugins</code></pre>
+    </div>
+    <div>
+      <h3>Your first hour</h3>
+      <ol class="steps">
+        <li>Buy a <b>Crank-a-Fizz</b> and a <b>Fizz Canister</b> from Grizzlecog.</li>
+        <li>Crank, store the Fizz, and run a <b>Scorch Oven</b> to smelt your first bars.</li>
+        <li>Use the <b>Tinker's Wrench</b> on machines you don't know yet to take them apart and learn their Notebook pages.</li>
+        <li>Find all 8 Tinkered pages, then hammer together a <b>Junk Heart</b> to reach Tier 2.</li>
+        <li>Wait for a storm. Your first Flicker is out there.</li>
+      </ol>
+      <h3>Commands</h3>
+      <table class="cmds" id="cmds"></table>
+    </div>
+  </div>
+</section>
+
+<section id="status">
+  <h2>Status &amp; roadmap</h2>
+  <div class="roadmap" id="roadmap"></div>
+  <p class="note">Art in this guide is rendered from the mod's own models and textures. In-game lighting will look different.</p>
+</section>
+
+<footer>
+  <p>Craftory for Hytale, an unofficial fan mod. Not affiliated with Hypixel Studios. <a href="https://github.com/brettsaunders21/Craftory-Hytale">Source on GitHub</a></p>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
