@@ -62,7 +62,9 @@ import studio.craftory.tech.machine.jank.repairWithScraps
 import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.well.WellPersistenceSelfTest
 import studio.craftory.tech.well.WellSelfTest
+import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Random
@@ -963,7 +965,6 @@ object CraftorySelfTest {
             HurlSelfTest(run).start {
                 run.hurlFinished = true
                 run.cleanupTick = run.world.tick + 20
-                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
             }
         }
     }
@@ -979,7 +980,16 @@ object CraftorySelfTest {
             CraftorySelfTest.releaseTestKeepLoaded(run)
             store.getResource(SelfTestRun.type).active = null
         }
-        TransportSelfTest.start(run.context, run.world)
+        WellPersistenceSelfTest.run(run.world) { passed, detail ->
+            run.world.execute {
+                if (passed) run.passed++ else run.failed++
+                run.context.sendMessage(
+                    Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $detail"),
+                )
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+                TransportSelfTest.start(run.context, run.world)
+            }
+        }
     }
 
     internal fun retainTestKeepLoaded(
@@ -3351,6 +3361,7 @@ object CraftorySelfTest {
                     SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
+                WellSelfTestFixtures.fixturePositions().map { TestPosition(it.x, it.y, it.z) } +
                 heartPositions()
         ).distinct()
 }

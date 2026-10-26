@@ -155,8 +155,12 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         tick: Long,
     ) {
         val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
-        val jar = findFilledJar(inventory)
         val existing = store.getComponent(ref, JarCarrier.type)
+        if (store.getComponent(ref, MountedComponent.getComponentType()) != null) {
+            if (existing != null) removeCarrier(ref, playerRef, store, inventory, existing)
+            return
+        }
+        val jar = findFilledJar(inventory)
         if (jar == null) {
             if (existing != null) removeCarrier(ref, playerRef, store, inventory, existing)
             return
@@ -493,11 +497,15 @@ internal class JarCarrierSeatLifecycle : com.hypixel.hytale.component.system.Ref
         store: Store<EntityStore>,
         commandBuffer: CommandBuffer<EntityStore>,
     ) {
-        store.getComponent(ref, JarCarrier.type)?.let { carrier ->
+        val carrier = store.getComponent(ref, JarCarrier.type)
+        if (carrier != null) {
             flushCarrierForSeat(ref, carrier, store)
         }
         commandBuffer.tryRemoveComponent(ref, JarCarrier.type)
-        store.getComponent(ref, MovementManager.getComponentType())?.resetDefaultsAndUpdate(ref, store)
+        val player = store.getComponent(ref, PlayerRef.getComponentType()) ?: return
+        val movement = store.getComponent(ref, MovementManager.getComponentType()) ?: return
+        if (carrier != null) movement.settings.baseSpeed = carrier.originalBaseSpeed
+        movement.update(player.packetHandler)
     }
 
     override fun onEntityRemove(

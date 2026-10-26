@@ -40,6 +40,7 @@ import studio.craftory.tech.CraftoryIds
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 private fun spawnStormStrikeEffects(
@@ -70,7 +71,7 @@ private fun randomLoadedPlayer(
     var selected: PlayerRef? = null
     var seen = 0
     Universe.get().getPlayers().forEach { candidate ->
-        if (candidate.worldUuid == worldId) {
+        if (candidate.worldUuid == worldId && candidate.reference?.isValid == true) {
             seen++
             if (Random.nextInt(seen) == 0) selected = candidate
         }
@@ -139,6 +140,66 @@ object WellBirths {
             if (isSurface(world, target)) return target
         }
         return null
+    }
+
+    internal fun stormVanesWithin(
+        world: World,
+        position: BlockPos,
+        radius: Int,
+    ): Int {
+        val vaneIndex = BlockType.getAssetMap().getIndex(CraftoryIds.STORM_VANE)
+        if (vaneIndex <= 0) return 0
+        var count = 0
+        val radiusSquared = radius * radius
+        for (x in position.x - radius..position.x + radius) {
+            for (z in position.z - radius..position.z + radius) {
+                val dx = x - position.x
+                val dz = z - position.z
+                if (dx * dx + dz * dz <= radiusSquared && hasVaneAtSurface(world, x, z, vaneIndex)) {
+                    count++
+                }
+            }
+        }
+        return count
+    }
+
+    internal fun highestSurfaceWithin(
+        world: World,
+        origin: BlockPos,
+        radius: Int,
+    ): BlockPos? {
+        val radiusSquared = radius * radius
+        var highest: BlockPos? = null
+        for (dx in -radius..radius) {
+            for (dz in -radius..radius) {
+                val horizontalSquared = dx * dx + dz * dz
+                if (horizontalSquared > radiusSquared) continue
+                val verticalRadius = floor(sqrt((radiusSquared - horizontalSquared).toDouble())).toInt()
+                val x = origin.x + dx
+                val z = origin.z + dz
+                val minimumY = origin.y - verticalRadius
+                val maximumY = origin.y + verticalRadius
+                val heightmap =
+                    world.chunkStore.getChunkComponent(
+                        ChunkUtil.indexChunkFromBlock(x, z),
+                        HeightmapColumn.getComponentType(),
+                    )
+                val surfaceY = heightmap?.getCollisionHeight(x and 31, z and 31)
+                val candidate =
+                    if (surfaceY != null && surfaceY != HeightmapColumn.NO_HEIGHT &&
+                        surfaceY + 1 in minimumY..maximumY
+                    ) {
+                        BlockPos(x, surfaceY + 1, z).takeIf { isSurface(world, it) }
+                    } else {
+                        (maximumY downTo minimumY)
+                            .firstNotNullOfOrNull { y ->
+                                BlockPos(x, y, z).takeIf { isSurface(world, it) }
+                            }
+                    }
+                if (candidate != null && (highest == null || candidate.y > highest.y)) highest = candidate
+            }
+        }
+        return highest
     }
 
     private fun isSurface(
@@ -249,7 +310,7 @@ internal class WellBirthSystem(
             )
         val region = regionId(strikeOrigin.x shr 9, strikeOrigin.z shr 9)
         if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
-        val strength = StormHuntRules.rollStormStrength(stormVanesWithin(world, strikeOrigin, 64), Random)
+        val strength = StormHuntRules.rollStormStrength(WellBirths.stormVanesWithin(world, strikeOrigin, 64), Random)
         if (strength != WellStrength.FLICKER &&
             !StormHuntRules.canSpawnStrongWell(
                 strongWildWellsInRegion(world, strikeOrigin),
@@ -258,7 +319,7 @@ internal class WellBirthSystem(
         ) {
             return
         }
-        val strikePosition = randomStrikePosition(world, strikeOrigin, Random) ?: return
+        val strikePosition = highestStrikePosition(world, strikeOrigin) ?: return
         if (WellBirths.spawnStormcall(world, strikePosition, strength) != null) {
             state.lastStormcallByRegion[region] = now
             state.stormCrackles[strikePosition.pack()] = now + 30L * 20L
@@ -312,41 +373,10 @@ internal class WellBirthSystem(
             }
     }
 
-    private fun randomStrikePosition(
+    private fun highestStrikePosition(
         world: World,
         player: BlockPos,
-        random: Random,
-    ): BlockPos? {
-        repeat(8) {
-            val angle = random.nextDouble() * Math.PI * 2.0
-            val radius = random.nextDouble() * 24.0
-            val x = player.x + (cos(angle) * radius).toInt()
-            val z = player.z + (sin(angle) * radius).toInt()
-            WellBirths.findSurface(world, x, z, player.y)?.let { return it }
-        }
-        return WellBirths.findSurface(world, player.x, player.z, player.y)
-    }
-
-    private fun stormVanesWithin(
-        world: World,
-        position: BlockPos,
-        radius: Int,
-    ): Int {
-        val vaneIndex = BlockType.getAssetMap().getIndex(CraftoryIds.STORM_VANE)
-        if (vaneIndex <= 0) return 0
-        var count = 0
-        val radiusSquared = radius * radius
-        for (x in position.x - radius..position.x + radius) {
-            for (z in position.z - radius..position.z + radius) {
-                val dx = x - position.x
-                val dz = z - position.z
-                if (dx * dx + dz * dz <= radiusSquared && hasVaneAtSurface(world, x, z, vaneIndex)) {
-                    count++
-                }
-            }
-        }
-        return count
-    }
+    ): BlockPos? = WellBirths.highestSurfaceWithin(world, player, 24)
 
     private fun stormEffects(
         player: PlayerRef,
@@ -413,7 +443,7 @@ private fun pulseEffects(
     ParticleUtil.spawnParticleEffect("Magic_Sparks_GS", position, store)
     SoundUtil.playSoundEvent2dToPlayer(
         player,
-        "SFX_Interact",
+        "SFX_Global_Weather_Thunder",
         SoundCategory.SFX,
     )
 }

@@ -44,12 +44,13 @@ private typealias BlockEntityRef = Ref<ChunkStore>
 private typealias WellSelfTestReport = (String) -> Unit
 
 internal object WellSelfTest {
-    private val CAUGHT_POS = BlockPos(10_030, 148, 10_010)
-    private val FORCED_POS = BlockPos(10_029, 148, 10_010)
-    private val BLOCK_REMOVED_POS = BlockPos(10_028, 148, 10_010)
-    internal val STAKED_POS = BlockPos(10_040, 148, 10_020)
-    internal val SMOTHERED_POS = BlockPos(10_060, 148, 10_020)
-    internal val CALMED_POS = BlockPos(10_080, 148, 10_020)
+    internal val CAUGHT_POS = BlockPos(10_030, 148, 10_010)
+    internal val FORCED_POS = BlockPos(10_029, 148, 10_010)
+    internal val BLOCK_REMOVED_POS = BlockPos(10_028, 148, 10_010)
+    internal val VANE_POS = BlockPos(10_020, 148, 10_015)
+    internal val STAKED_POS = BlockPos(10_022, 148, 10_020)
+    internal val SMOTHERED_POS = BlockPos(10_010, 148, 10_020)
+    internal val CALMED_POS = BlockPos(10_010, 148, 10_027)
 
     fun run(
         world: World,
@@ -62,6 +63,7 @@ internal object WellSelfTest {
             testJarAndScan(world, tempDir, report)
             testEmptyBlockRemoval(world, report)
             testStormcall(world, report)
+            WellStormVaneSelfTest.run(world, report)
             testRuntimeAssets(report)
             testChunkReload(world, report)
             Helpers.testCarrierReload(world, report)
@@ -202,7 +204,7 @@ internal object WellSelfTest {
             listOf("Lightning", "Magic_Sparks_GS", "Dungeon_Goblin_Toxic_Water")
                 .filter { ParticleSystem.getAssetMap().getAsset(it) == null }
         val missingSounds =
-            listOf("SFX_Global_Weather_Thunder", "SFX_Interact")
+            listOf("SFX_Global_Weather_Thunder", "SFX_Crystal_Hit")
                 .filter { SoundEvent.getAssetMap().getIndex(it) < 0 }
         val chainBeam = Beam.getAssetMap().getIndex("Chain")
         report(
@@ -215,7 +217,7 @@ internal object WellSelfTest {
         world: World,
         report: (String) -> Unit,
     ) {
-        val position = CraftorySelfTest.TestPosition(10_020, 148, 10_015)
+        val position = CraftorySelfTest.TestPosition(VANE_POS.x, VANE_POS.y, VANE_POS.z)
         val store = world.chunkStore.store
         val sectionRef =
             world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
@@ -242,6 +244,7 @@ internal object WellSelfTest {
             state.lastUpdateTick = world.tick
             store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
             val unloaded = store.removeEntity(ref, RemoveReason.UNLOAD)
+            WellSelfTestExclusions.releaseBlock(ref)
             ref = store.addEntity(unloaded, AddReason.LOAD) ?: error("Vane reload failed")
             WellSelfTestExclusions.registerBlock(ref)
             val restored = store.getComponent(ref, StormVaneState.type)

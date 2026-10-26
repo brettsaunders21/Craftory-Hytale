@@ -47,7 +47,7 @@ internal object LensScanner {
             )
             SoundUtil.playSoundEvent2dToPlayer(
                 playerRef,
-                "SFX_Interact",
+                "SFX_Crystal_Hit",
                 SoundCategory.SFX,
             )
         } else {
