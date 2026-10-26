@@ -70,6 +70,16 @@ class WellLogicTest {
     }
 
     @Test
+    fun `tether claim preserves a foreign crew unless overridden`() {
+        val claimant = UUID.randomUUID()
+        val foreign = UUID.randomUUID()
+        assertTrue(canTetherWellClaim(null, claimant, hasOverride = false))
+        assertTrue(canTetherWellClaim(claimant, claimant, hasOverride = false))
+        assertFalse(canTetherWellClaim(foreign, claimant, hasOverride = false))
+        assertTrue(canTetherWellClaim(foreign, claimant, hasOverride = true))
+    }
+
+    @Test
     fun `strong wild well budget is scoped to 512 block regions`() {
         assertEquals(0 to 0, StormHuntRules.regionOf(511, 511))
         assertEquals(1 to 1, StormHuntRules.regionOf(512, 512))

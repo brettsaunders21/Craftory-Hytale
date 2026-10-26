@@ -420,7 +420,7 @@ internal fun straightenTetherStake(
     if (!JarActions.mayUseWellClaim(placerUuid, well.claimCrewId, placerCrewId, crews, hasOverride)) return false
     state.leaning = false
     store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
-    tetherStakeIfComplete(world, wellPosition, well, placer, crews)
+    tetherStakeIfComplete(world, wellPosition, well, placer, crews, hasOverride)
     return true
 }
 
@@ -451,15 +451,23 @@ private fun tetherStakeIfComplete(
     well: Glimmerwell,
     placer: UUID,
     crews: CrewService,
+    hasOverride: Boolean = false,
 ) {
     val stakes = collectStakes(world, world.chunkStore.store, wellPosition)
     val leaningCount = stakes.count { it.second.leaning }
     if (!TetherRules.tetherComplete(well.state, well.strength, stakes.size, leaningCount)) return
     val claimant = runCatching { crews.crewOf(placer).id }.getOrNull() ?: return
+    if (!canTetherWellClaim(well.claimCrewId, claimant, hasOverride)) return
     well.state = WellState.TETHERED
     well.claimCrewId = claimant
     markWellNeedsSaving(world.chunkStore.store, wellPosition)
 }
+
+internal fun canTetherWellClaim(
+    existingClaim: UUID?,
+    claimant: UUID,
+    hasOverride: Boolean,
+): Boolean = hasOverride || existingClaim == null || existingClaim == claimant
 
 private fun collectStakes(
     world: World,
