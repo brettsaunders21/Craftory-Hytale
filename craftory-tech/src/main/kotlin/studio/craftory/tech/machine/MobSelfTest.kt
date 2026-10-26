@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.query.Query
+import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.modules.block.BlockModule
@@ -15,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
 import studio.craftory.core.api.BlockPos
@@ -34,6 +36,7 @@ internal object MobSelfTest {
         val sectionRef: Ref<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>,
     ) {
         val refs = mutableListOf<Ref<EntityStore>>()
+        val roleRefs = mutableListOf<Ref<EntityStore>>()
         var kill: CraftoryMobKill? = null
         var subscription: AutoCloseable? = null
         var spawnPolls = 0
@@ -59,8 +62,13 @@ internal object MobSelfTest {
                     try {
                         placeFloor(state)
                         prepareMobArea(state)
-                        spawnRoles(state)
-                        pollSpawns(state)
+                        verifyHomeCodec(state)
+                        logSectionState(
+                            state,
+                            "mob setup",
+                            Vector3d(MOB_AREA.x.toDouble(), MOB_AREA.y.toDouble(), MOB_AREA.z.toDouble()),
+                        )
+                        beginDrainTest(state)
                     } catch (failure: Exception) {
                         check(run, false, "mob test setup", failure.message ?: failure.javaClass.simpleName)
                         cleanup(state)
@@ -156,30 +164,26 @@ internal object MobSelfTest {
 
     private fun spawnRoles(state: State) {
         val world = state.run.world
-        val roles =
-            listOf(
-                CraftoryIds.GLIMMER_WISP,
-                CraftoryIds.SPARKJAW,
-                CraftoryIds.RIFTMOTH,
-                CraftoryIds.GOBLIN_POACHER,
-            )
-        roles.forEachIndexed { index, roleId ->
+        ROLE_IDS.forEachIndexed { index, roleId ->
             val position =
                 Vector3d(
                     FLOOR_MIN_X + 0.5 + index,
                     MOB_AREA.y.toDouble(),
                     MOB_AREA.z + 0.5,
                 )
-            CraftoryMobs.spawn(world, roleId, position, HOME)?.let(state.refs::add)
+            CraftoryMobs.spawn(world, roleId, position, HOME)?.let {
+                state.refs += it
+                state.roleRefs += it
+            }
         }
     }
 
     private fun pollSpawns(state: State) {
-        val allSpawned = state.refs.size == ROLE_COUNT && state.refs.all { it.isValid }
+        val allSpawned = state.roleRefs.size == ROLE_COUNT && state.roleRefs.all { it.isValid }
         if (allSpawned || state.spawnPolls >= MAX_POLLS) {
             val store = state.run.world.entityStore.store
             ROLE_IDS.forEach { roleId ->
-                val ref = state.refs.firstOrNull { store.getComponent(it, MobHome.type)?.roleId == roleId }
+                val ref = state.roleRefs.firstOrNull { store.getComponent(it, MobHome.type)?.roleId == roleId }
                 check(state.run, ref?.isValid == true, "mob spawn $roleId")
                 val mobHome = ref?.let { store.getComponent(it, MobHome.type) }
                 check(
@@ -188,7 +192,6 @@ internal object MobSelfTest {
                     "mob home $roleId",
                 )
             }
-            verifyHomeCodec(state)
             beginKillTest(state)
             return
         }
@@ -197,19 +200,23 @@ internal object MobSelfTest {
     }
 
     private fun verifyHomeCodec(state: State) {
-        val store = state.run.world.entityStore.store
-        val mobHome = state.refs.firstNotNullOfOrNull { store.getComponent(it, MobHome.type) }
-        val decoded =
-            mobHome?.let { component ->
-                val extraInfo = ExtraInfo()
-                MobHome.CODEC.decode(MobHome.CODEC.encode(component, extraInfo), ExtraInfo())
-            }
+        val mobHome =
+            MobHome(
+                roleId = ROLE_IDS.first(),
+                hasHome = true,
+                homeX = HOME.x,
+                homeY = HOME.y,
+                homeZ = HOME.z,
+                leashRadius = 12.0,
+            )
+        val extraInfo = ExtraInfo()
+        val decoded = MobHome.CODEC.decode(MobHome.CODEC.encode(mobHome, extraInfo), ExtraInfo())
         check(
             state.run,
             decoded == mobHome &&
-                mobHome?.roleId == ROLE_IDS.first() &&
-                mobHome?.home == HOME &&
-                mobHome?.leashRadius == 12.0,
+                decoded.roleId == ROLE_IDS.first() &&
+                decoded.home == HOME &&
+                decoded.leashRadius == 12.0,
             "mob home codec round-trip",
         )
     }
@@ -217,9 +224,9 @@ internal object MobSelfTest {
     private fun beginKillTest(state: State) {
         state.subscription = CraftoryMobs.onCraftoryMobKilled { state.kill = it }
         val target =
-            state.refs.firstOrNull() ?: run {
+            state.roleRefs.firstOrNull() ?: run {
                 check(state.run, false, "mob kill hook")
-                beginDrainTest(state)
+                finishMobs(state)
                 return
             }
         val store = state.run.world.entityStore.store
@@ -251,7 +258,7 @@ internal object MobSelfTest {
             )
             state.subscription?.close()
             state.subscription = null
-            beginDrainTest(state)
+            finishMobs(state)
             return
         }
         state.killPolls++
@@ -262,13 +269,13 @@ internal object MobSelfTest {
         val canisterPosition = BlockPos(MOB_CANISTER.x, MOB_CANISTER.y, MOB_CANISTER.z)
         try {
             if (!prepareCanisterDrain(state, canisterPosition)) {
-                finishMobs(state)
+                beginLiveChecks(state)
                 return
             }
             pollCanisterCharge(state, canisterPosition)
         } catch (failure: Exception) {
             check(state.run, false, "riftmoth drain setup", failure.message ?: failure.javaClass.simpleName)
-            finishMobs(state)
+            beginLiveChecks(state)
         }
     }
 
@@ -296,40 +303,7 @@ internal object MobSelfTest {
         val world = state.run.world
         val energy = CraftoryCore.energyAccess(world)
         if (energy.stored(canisterPosition.pack()) >= DRAIN_PER_SECOND) {
-            val producerStopped = stopMobCanisterProducer(state)
-            CraftorySelfTest.detachCanisterProducers(world, state.sectionRef, listOf(MOB_BURNER, MOB_PIPE))
-            afterTicks(world, NETWORK_SETTLE_TICKS) {
-                state.drainStart = energy.stored(canisterPosition.pack())
-                val supply = energy.networkSupply(canisterPosition.pack())
-                check(
-                    state.run,
-                    state.drainStart >= DRAIN_PER_SECOND && producerStopped,
-                    "riftmoth drain canister isolated",
-                    "stored=${state.drainStart}, producerStopped=$producerStopped, networkSupply=$supply",
-                )
-                if (state.drainStart < DRAIN_PER_SECOND || !producerStopped) {
-                    finishMobs(state)
-                    return@afterTicks
-                }
-                val moth =
-                    CraftoryMobs.spawn(
-                        world,
-                        CraftoryIds.RIFTMOTH,
-                        Vector3d(canisterPosition.x + 1.5, canisterPosition.y + 1.0, canisterPosition.z + 0.5),
-                        canisterPosition,
-                    )
-                if (moth != null) state.refs += moth
-                afterTicks(world, DRAIN_TEST_TICKS) {
-                    val remaining = CraftoryCore.energyAccess(world).stored(canisterPosition.pack())
-                    check(
-                        state.run,
-                        moth != null && state.drainStart - remaining >= DRAIN_PER_SECOND,
-                        "riftmoth drains adjacent canister",
-                        "stored=${state.drainStart}, remaining=$remaining",
-                    )
-                    finishMobs(state)
-                }
-            }
+            isolateAndSpawnDrainMoth(state, canisterPosition)
             return
         }
         if (state.drainChargePolls >= MAX_POLLS) {
@@ -339,11 +313,118 @@ internal object MobSelfTest {
                 "riftmoth canister charges",
                 "stored=${energy.stored(canisterPosition.pack())}",
             )
-            finishMobs(state)
+            beginLiveChecks(state)
             return
         }
         state.drainChargePolls++
         afterTicks(world, POLL_INTERVAL) { pollCanisterCharge(state, canisterPosition) }
+    }
+
+    private fun isolateAndSpawnDrainMoth(
+        state: State,
+        canisterPosition: BlockPos,
+    ) {
+        val world = state.run.world
+        val energy = CraftoryCore.energyAccess(world)
+        val producerStopped = stopMobCanisterProducer(state)
+        CraftorySelfTest.detachCanisterProducers(world, state.sectionRef, listOf(MOB_BURNER, MOB_PIPE))
+        afterTicks(world, NETWORK_SETTLE_TICKS) {
+            state.drainStart = energy.stored(canisterPosition.pack())
+            val supply = energy.networkSupply(canisterPosition.pack())
+            check(
+                state.run,
+                state.drainStart >= DRAIN_PER_SECOND && producerStopped,
+                "riftmoth drain canister isolated",
+                "stored=${state.drainStart}, producerStopped=$producerStopped, networkSupply=$supply",
+            )
+            if (state.drainStart < DRAIN_PER_SECOND || !producerStopped) {
+                beginLiveChecks(state)
+                return@afterTicks
+            }
+            val spawnPosition = Vector3d(canisterPosition.x + 1.5, canisterPosition.y + 1.0, canisterPosition.z + 0.5)
+            val nonTicking = logSectionState(state, "Riftmoth drain spawn", spawnPosition)
+            if (nonTicking) {
+                state.run.context.sendMessage(
+                    Message.raw("selftest: SKIP riftmoth drain (NonTicking: needs a nearby player)"),
+                )
+                beginLiveChecks(state)
+                return@afterTicks
+            }
+            val moth =
+                CraftoryMobs.spawn(
+                    world,
+                    CraftoryIds.RIFTMOTH,
+                    spawnPosition,
+                    canisterPosition,
+                )
+            if (moth != null) state.refs += moth
+            afterTicks(world, DRAIN_TEST_TICKS) {
+                val remaining = CraftoryCore.energyAccess(world).stored(canisterPosition.pack())
+                check(
+                    state.run,
+                    moth != null && state.drainStart - remaining >= DRAIN_PER_SECOND,
+                    "riftmoth drains adjacent canister",
+                    "stored=${state.drainStart}, remaining=$remaining",
+                )
+                beginLiveChecks(state)
+            }
+        }
+    }
+
+    private fun beginLiveChecks(state: State) {
+        val spawnPosition = Vector3d(FLOOR_MIN_X + 0.5, MOB_AREA.y.toDouble(), MOB_AREA.z + 0.5)
+        if (logSectionState(state, "Craftory role spawns", spawnPosition)) {
+            state.run.context.sendMessage(
+                Message.raw("selftest: SKIP mob live checks (NonTicking: needs a nearby player)"),
+            )
+            finishMobs(state)
+            return
+        }
+        spawnRoles(state)
+        pollSpawns(state)
+    }
+
+    private fun logSectionState(
+        state: State,
+        phase: String,
+        position: Vector3d,
+    ): Boolean {
+        val world = state.run.world
+        val blockX = position.x.toInt()
+        val blockY = position.y.toInt()
+        val blockZ = position.z.toInt()
+        val sectionCoordinates =
+            Triple(
+                ChunkUtil.chunkCoordinate(blockX),
+                ChunkUtil.chunkCoordinate(blockY),
+                ChunkUtil.chunkCoordinate(blockZ),
+            )
+        val mobSectionCoordinates =
+            Triple(
+                ChunkUtil.chunkCoordinate(MOB_AREA.x),
+                ChunkUtil.chunkCoordinate(MOB_AREA.y),
+                ChunkUtil.chunkCoordinate(MOB_AREA.z),
+            )
+        val sectionRef =
+            world.chunkStore
+                .getChunkSectionReferenceAtBlock(blockX, blockY, blockZ)
+                ?.takeIf { it.isValid }
+                ?: if (sectionCoordinates == mobSectionCoordinates && state.sectionRef.isValid) {
+                    state.sectionRef
+                } else {
+                    error("mob selftest section is unavailable at $blockX,$blockY,$blockZ")
+                }
+        val nonTicking =
+            world.chunkStore.store.getComponent(sectionRef, ChunkStore.REGISTRY.getNonTickingComponentType()) != null
+        state.run.context.sendMessage(
+            Message.raw(
+                "selftest: mob section state " +
+                    "(phase=$phase, tick=${world.tick}, pos=${position.x},${position.y},${position.z}, " +
+                    "section=$sectionCoordinates, sameAsMobArea=${sectionCoordinates == mobSectionCoordinates}, " +
+                    "NonTicking=$nonTicking)",
+            ),
+        )
+        return nonTicking
     }
 
     private fun stopMobCanisterProducer(state: State): Boolean {

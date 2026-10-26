@@ -152,10 +152,11 @@ crystal-and-scrap hybrid tiers, then pure arcane magic. It builds on Hytale Upda
 ### Mobs
 
 Core's persisted `MobHome` entity component marks Craftory mobs and stores their role and optional home.
-`CraftoryMobs.spawn` adds that marker and initializes the vanilla NPC leash point; the Core kill hook reports
-deaths to listeners. Core refreshes leash points periodically and relies on role leash behavior for movement.
-Tech's Riftmoth drain finds adjacent energy storage and debits it through the public
-`EnergyAccess.requestDebit` API.
+`CraftoryMobs.spawn` attaches that marker and initializes the vanilla NPC leash point before entity insertion;
+the Core kill hook reports deaths to listeners. If the target section is not entity-ticking, spawn returns null
+while Hytale stores the mob with the chunk, including its home, for loading when the section ticks. Core refreshes
+leash points periodically and relies on role leash behavior for movement. Tech's Riftmoth drain finds adjacent
+energy storage and debits it through the public `EnergyAccess.requestDebit` API.
 
 ## 8. Milestones
 

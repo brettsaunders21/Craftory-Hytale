@@ -749,6 +749,16 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
 
     private fun finishAnchorDisable(run: SelfTestRun.Run) {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+        runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
+            .onSuccess { result ->
+                if (result.liveDrops > 0) {
+                    run.context.sendMessage(
+                        Message.raw("selftest: cleared main Gnasher drops before mob test (${result.liveDrops})"),
+                    )
+                }
+            }.onFailure { failure ->
+                run.context.sendMessage(Message.raw("selftest: main fixture cleanup failed (${failure.message})"))
+            }
         CraftorySelfTest.releaseTestKeepLoaded(run)
         run.anchorDisabledReported = true
         run.phase = 6
