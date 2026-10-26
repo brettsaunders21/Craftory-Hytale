@@ -102,6 +102,8 @@ class ItemTransportAccess internal constructor(
 
     fun itemOwnerAt(index: Int): Long = runtime.itemOwner(index)
 
+    fun itemTargetAt(index: Int): Long = runtime.itemTarget(index)
+
     fun itemProgressAt(index: Int): Int = runtime.itemProgress(index)
 
     fun clearDisplaysInArea(

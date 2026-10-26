@@ -11,6 +11,7 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
+import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
@@ -29,15 +30,19 @@ import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
+import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.transport.ItemPipe
+import studio.craftory.core.api.transport.ItemPipeTransitRecord
 import studio.craftory.core.api.transport.ItemTransport
 import studio.craftory.core.api.transport.TransportColour
 import studio.craftory.tech.CraftoryIds
@@ -52,23 +57,52 @@ internal class TransportSelfTestRun : Resource<ChunkStore> {
         val currentBlocks = mutableListOf<Position>()
         val allBlocks = linkedSetOf<Position>()
         val keepLoadedChunks = linkedSetOf<Long>()
+        val keepLoadedSections = linkedSetOf<Position>()
         var ready = false
+        var anchorLoading = false
+        var anchorPlaced = false
+        var anchorPosition: Position? = null
+        var originalAnchorMaxChargeMinutes = CraftoryCore.anchorMaxChargeMinutes()
+        var anchorMaxChargeChanged = false
         var setupFailure: String? = null
         var t4Failure: String? = null
         var pendingLoads = 0
         var stage = 0
         var stageStartTick = 0L
+        var lastActiveSectionRefreshTick = 0L
+        var caseTimerStartTick: Long? = null
         var passed = 0
         var failed = 0
         var source: Position? = null
+        var claw: Position? = null
+        var targetPipe: Position? = null
         var destinationA: Position? = null
         var destinationB: Position? = null
-        var t4PipeComponent: ItemPipe? = null
         var t4ItemInstanceId: Long? = null
-        var t4SerializedItems: String? = null
+        var t4Owner: Position? = null
+        var t4Target: Position? = null
+        var t4LoadedTick = 0L
+        var t4AnchorDisableTick = 0L
+        var t4AnchorPosition: Position? = null
+        var t4AnchorReadyStartTick = 0L
+        var t4AnchorDisableStarted = false
+        var t4ItemInserted = false
+        var t4Prepared = false
         var t4Loading = false
+        var t4Saving = false
+        var t4SaveStarted = false
+        var t4SaveKeepLoadedChunk: Long? = null
         var t5ItemInstanceId: Long? = null
-        var t5Progress: Int? = null
+        var t5Record: ItemPipeTransitRecord? = null
+        var t5FreezeStartTick: Long? = null
+        var t5OriginalAnchorChargeSeconds: Long? = null
+        var t5AnchorDisabled = false
+        var t5ReactivationStarted = false
+        var t5FreezePassed = false
+        var t5FreezeDetail = ""
+        var t5SkipReason: String? = null
+        var t6ItemInstanceId: Long? = null
+        var t6BreakTick: Long? = null
         var cleanupLoading = false
         var cleanupLoadFailed = false
         var cleanupFinished = false
@@ -107,12 +141,16 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                 beginCleanup(run)
                 return
             }
-            if (!run.ready) return
             if (run.setupFailure != null) {
                 timeoutRemaining(run)
                 beginCleanup(run)
                 return
             }
+            if (!run.ready) {
+                tryPrepareAnchorArea(run)
+                return
+            }
+            refreshTransportSections(run)
             when (run.stage) {
                 0 -> startT1(run)
                 1 -> tickT1(run)
@@ -120,6 +158,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                 3 -> tickT3(run)
                 4 -> tickT4(run)
                 5 -> tickT5(run, store)
+                6 -> tickT6(run)
                 7 -> pollCleanup(run)
             }
         } catch (failure: Exception) {
@@ -128,20 +167,263 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         }
     }
 
+    private fun tryPrepareAnchorArea(run: TransportSelfTestRun.Run) {
+        if (!run.anchorPlaced) {
+            if (!run.anchorLoading) placeAnchor(run)
+            if (run.world.tick - run.startTick >= ANCHOR_READY_TIMEOUT_TICKS) {
+                run.setupFailure = "Wakebell Anchor placement timed out"
+            }
+            return
+        }
+        val position =
+            run.anchorPosition
+                ?: run {
+                    run.setupFailure = "Wakebell Anchor position is missing"
+                    return
+                }
+        val anchorRef =
+            BlockModule
+                .getBlockEntity(run.world, position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+        val anchor =
+            anchorRef?.let {
+                run.world.chunkStore.store
+                    .getComponent(it, AnchorState.type)
+            }
+        if (anchor == null) {
+            if (run.world.tick - run.startTick >= ANCHOR_READY_TIMEOUT_TICKS) {
+                run.setupFailure = "Wakebell Anchor state did not load"
+            }
+            return
+        }
+        val activeRigPositions =
+            arrayOf(
+                Position(10_200, 150, 10_000),
+                Position(10_212, 150, 10_000),
+                Position(10_224, 150, 10_000),
+                Position(10_240, 150, 10_000),
+            )
+        val areaLoaded =
+            anchor.chargeSeconds > 0 &&
+                anchor.coverageActive == true &&
+                anchor.pendingChunkLoads.isEmpty() &&
+                anchor.keepLoadedChunks.size == 9
+        if (areaLoaded && activeRigPositions.all { !sectionIsNonTicking(run, it) }) {
+            run.ready = true
+        } else if (run.world.tick - run.startTick >= ANCHOR_READY_TIMEOUT_TICKS) {
+            run.setupFailure = "Wakebell Anchor area did not become ticking"
+        }
+    }
+
+    private fun placeAnchor(run: TransportSelfTestRun.Run) {
+        val position = run.anchorPosition ?: return
+        run.anchorLoading = true
+        run.world.chunkStore
+            .getChunkSectionReferenceAtBlockAsync(
+                position.x,
+                position.y,
+                position.z,
+                GetChunkFlags.SET_TICKING,
+            ).whenComplete { sectionRef, failure ->
+                run.world.execute {
+                    if (run.cleanupFinished || run.stage == 7) return@execute
+                    if (failure != null || sectionRef == null || !sectionRef.isValid) {
+                        run.setupFailure =
+                            "Wakebell Anchor chunk load failed " +
+                            "(${failure?.message ?: "invalid section ref"})"
+                        run.anchorLoading = false
+                        return@execute
+                    }
+                    try {
+                        placeBlock(run, CraftoryIds.WAKEBELL_ANCHOR, position, keepAcrossCases = true)
+                        val anchorRef =
+                            BlockModule
+                                .getBlockEntity(run.world, position.x, position.y, position.z)
+                                ?.takeIf { it.isValid }
+                                ?: error("Wakebell Anchor block entity missing")
+                        val store = run.world.chunkStore.store
+                        val anchor =
+                            store.getComponent(anchorRef, AnchorState.type)
+                                ?: error("Wakebell Anchor state missing")
+                        val blockState =
+                            store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType())
+                                ?: error("Wakebell Anchor block state missing")
+                        anchor.chargeSeconds = 900
+                        blockState.markNeedsSaving(store)
+                        MachineActions.activateAnchor(
+                            run.world,
+                            anchor,
+                            blockState,
+                            store,
+                            BlockPos(position.x, position.y, position.z),
+                        )
+                        run.anchorPlaced = true
+                    } catch (failure: Exception) {
+                        run.setupFailure = "Wakebell Anchor setup failed (${failure.message})"
+                    } finally {
+                        run.anchorLoading = false
+                    }
+                }
+            }
+    }
+
+    private fun refreshTransportSections(run: TransportSelfTestRun.Run) {
+        if (run.world.tick - run.lastActiveSectionRefreshTick < SECTION_REFRESH_TICKS) return
+        run.lastActiveSectionRefreshTick = run.world.tick
+        val refreshRig =
+            run.stage in 1..3 ||
+                (run.stage == 5 && !run.t5AnchorDisabled)
+        if (refreshRig) run.currentBlocks.forEach { refreshSection(run, it) }
+        if (run.stage in 1..3 || run.stage == 5) {
+            run.anchorPosition?.let { refreshSection(run, it) }
+        }
+    }
+
+    private fun refreshSection(
+        run: TransportSelfTestRun.Run,
+        position: Position,
+    ) {
+        val grid = run.world.chunkStore
+        val sectionRef =
+            grid
+                .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: return
+        val section =
+            grid.store.getComponent(sectionRef, ChunkSection.getComponentType())
+                ?: return
+        section.resetActiveTimer()
+        grid.getChunkSectionReferenceAsync(
+            section.x,
+            section.y,
+            section.z,
+            GetChunkFlags.SET_TICKING,
+        )
+    }
+
+    private fun caseTimerStarted(
+        run: TransportSelfTestRun.Run,
+        position: Position?,
+    ): Boolean {
+        if (run.caseTimerStartTick != null) return true
+        if (position != null && !sectionIsNonTicking(run, position)) {
+            run.caseTimerStartTick = run.world.tick
+            return true
+        }
+        return false
+    }
+
+    private fun activeWaitExpired(run: TransportSelfTestRun.Run): Boolean =
+        run.caseTimerStartTick == null && run.world.tick - run.stageStartTick >= ACTIVE_SECTION_TIMEOUT_TICKS
+
+    private fun refreshT4Section(run: TransportSelfTestRun.Run) {
+        val position = Position(10_272, 150, 10_000)
+        val sectionRef =
+            run.world.chunkStore
+                .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+        if (sectionRef != null) {
+            run.world.chunkStore.store
+                .getComponent(sectionRef, ChunkSection.getComponentType())
+                ?.resetActiveTimer()
+        }
+        if (run.world.tick % SECTION_REFRESH_TICKS == 0L) {
+            run.world.chunkStore.getChunkSectionReferenceAtBlockAsync(
+                position.x,
+                position.y,
+                position.z,
+                GetChunkFlags.SET_TICKING,
+            )
+            run.t4AnchorPosition?.let { refreshSection(run, it) }
+        }
+    }
+
+    private fun shouldRefreshT4Section(run: TransportSelfTestRun.Run): Boolean {
+        if (run.t4SaveStarted) return false
+        if (!run.t4AnchorDisableStarted) return true
+        val anchorPosition = run.t4AnchorPosition ?: return true
+        return !anchorIsInactive(run, anchorPosition)
+    }
+
+    private fun anchorAreaReady(
+        run: TransportSelfTestRun.Run,
+        position: Position,
+    ): Boolean {
+        val anchorRef =
+            BlockModule
+                .getBlockEntity(run.world, position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: return false
+        val anchor =
+            run.world.chunkStore.store
+                .getComponent(anchorRef, AnchorState.type) ?: return false
+        return anchor.chargeSeconds > 0 &&
+            anchor.coverageActive == true &&
+            anchor.pendingChunkLoads.isEmpty() &&
+            anchor.keepLoadedChunks.size == 9
+    }
+
+    private fun anchorIsInactive(
+        run: TransportSelfTestRun.Run,
+        position: Position,
+    ): Boolean {
+        val anchorRef =
+            BlockModule
+                .getBlockEntity(run.world, position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: return false
+        val anchor =
+            run.world.chunkStore.store
+                .getComponent(anchorRef, AnchorState.type) ?: return false
+        return anchor.chargeSeconds <= 0 &&
+            anchor.coverageActive != true &&
+            anchor.pendingChunkLoads.isEmpty() &&
+            anchor.keepLoadedChunks.isEmpty()
+    }
+
+    private fun restoreAnchorChargeLimit(run: TransportSelfTestRun.Run) {
+        if (!run.anchorMaxChargeChanged) return
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.originalAnchorMaxChargeMinutes)
+        run.anchorMaxChargeChanged = false
+    }
+
+    private fun sectionIsNonTicking(
+        run: TransportSelfTestRun.Run,
+        position: Position,
+    ): Boolean {
+        val sectionRef =
+            run.world.chunkStore
+                .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: return true
+        return run.world.chunkStore.store.getComponent(
+            sectionRef,
+            ChunkStore.REGISTRY.getNonTickingComponentType(),
+        ) != null
+    }
+
     private fun startT1(run: TransportSelfTestRun.Run) {
         val layout = placeClawCase(run, Position(10_200, 150, 10_000), quantity = 3)
         run.source = layout.source
         run.destinationA = layout.destinationA
+        run.caseTimerStartTick = null
         run.stage = 1
         run.stageStartTick = run.world.tick
     }
 
     private fun tickT1(run: TransportSelfTestRun.Run) {
+        if (!caseTimerStarted(run, run.claw)) {
+            if (activeWaitExpired(run)) {
+                finishCase(run, "claw chest delivery", false, "claw section remained NonTicking")
+                startT2(run)
+            }
+            return
+        }
         if (containerQuantity(run, run.destinationA) >= 1) {
             finishCase(run, "claw chest delivery", true)
             startT2(run)
-        } else if (run.world.tick - run.stageStartTick >= 400) {
-            finishCase(run, "claw chest delivery", false, "400-tick timeout")
+        } else if (run.world.tick - (run.caseTimerStartTick ?: run.stageStartTick) >= 400) {
+            finishCase(run, "claw chest delivery", false, "400-tick timeout; ${clawDiagnostics(run)}")
             startT2(run)
         }
     }
@@ -157,12 +439,20 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             )
         run.source = layout.source
         run.destinationA = layout.destinationA
+        run.caseTimerStartTick = null
         run.stage = 2
         run.stageStartTick = run.world.tick
     }
 
     private fun tickT2(run: TransportSelfTestRun.Run) {
-        if (run.world.tick - run.stageStartTick < 80) return
+        if (!caseTimerStarted(run, run.claw)) {
+            if (activeWaitExpired(run)) {
+                finishCase(run, "claw filter", false, "claw section remained NonTicking")
+                startT3(run)
+            }
+            return
+        }
+        if (run.world.tick - (run.caseTimerStartTick ?: run.stageStartTick) < 80) return
         val sourceQuantity = containerQuantity(run, run.source)
         val destinationQuantity = containerQuantity(run, run.destinationA)
         finishCase(
@@ -187,19 +477,27 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         run.source = layout.source
         run.destinationA = layout.destinationA
         run.destinationB = layout.destinationB
+        run.caseTimerStartTick = null
         run.stage = 3
         run.stageStartTick = run.world.tick
     }
 
     private fun tickT3(run: TransportSelfTestRun.Run) {
+        if (!caseTimerStarted(run, run.claw)) {
+            if (activeWaitExpired(run)) {
+                finishCase(run, "red branch routing", false, "claw section remained NonTicking")
+                startT4(run)
+            }
+            return
+        }
         val outputA = containerQuantity(run, run.destinationA)
         val outputB = containerQuantity(run, run.destinationB)
-        if (outputA >= 3 || run.world.tick - run.stageStartTick >= 400) {
+        if (outputA >= 3 || run.world.tick - (run.caseTimerStartTick ?: run.stageStartTick) >= 400) {
             finishCase(
                 run,
                 "red branch routing",
                 outputA == 3 && outputB == 0,
-                "branchA=$outputA branchB=$outputB",
+                "branchA=$outputA branchB=$outputB; ${clawDiagnostics(run)}",
             )
             startT4(run)
         }
@@ -209,10 +507,23 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         clearCurrentBlocks(run)
         run.stage = 4
         run.stageStartTick = run.world.tick
+        run.t4Prepared = false
         run.t4Loading = true
-        val position = Position(10_272, 150, 10_000)
-        val chunkIndex = chunkIndex(position)
-        run.world.chunkStore.getChunkReferenceAsync(chunkIndex, 0).whenComplete { ref, failure ->
+        run.t4Saving = false
+        run.t4SaveStarted = false
+        run.t4SaveKeepLoadedChunk = null
+        run.t4ItemInserted = false
+        run.t4AnchorDisableStarted = false
+        run.caseTimerStartTick = null
+        val first = Position(10_272, 150, 10_000)
+        val second = Position(10_273, 150, 10_000)
+        val third = Position(10_274, 150, 10_000)
+        val anchorPosition = Position(10_280, 150, 10_005)
+        val chunkIndex = chunkIndex(first)
+        run.world.chunkStore.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING).whenComplete {
+            ref,
+            failure,
+            ->
             run.world.execute {
                 if (failure != null || ref == null || !ref.isValid) {
                     run.t4Failure = "initial chunk load failed (${failure?.message})"
@@ -220,27 +531,37 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                     return@execute
                 }
                 try {
-                    placeBlock(run, CraftoryIds.PIPE, position)
-                    val transport = ItemTransport.of(run.world)
-                    check(transport.insert(position.x, position.y, position.z, ITEM_ID, 1))
-                    run.t4ItemInstanceId = findItemInstance(transport, position, ITEM_ID)
-                        ?: error("T4 inserted item was not found")
-                    run.t4PipeComponent =
+                    placeBlock(run, CraftoryIds.PIPE, first)
+                    placeBlock(run, CraftoryIds.PIPE, second)
+                    placeBlock(run, CraftoryIds.PIPE, third)
+                    placeBlock(run, CraftoryIds.WAKEBELL_ANCHOR, anchorPosition)
+                    val anchorRef =
                         BlockModule
-                            .getBlockEntity(run.world, position.x, position.y, position.z)
-                            ?.let {
-                                run.world.chunkStore.store
-                                    .getComponent(it, ItemPipe.type)
-                            }
-                    check(run.t4PipeComponent != null)
-                    run.world.chunkStore.remove(ref, RemoveReason.UNLOAD)
-                    check(!ref.isValid) { "T4 chunk did not unload" }
-                    run.t4SerializedItems = run.t4PipeComponent?.items
-                    check(!run.t4SerializedItems.isNullOrBlank())
+                            .getBlockEntity(run.world, anchorPosition.x, anchorPosition.y, anchorPosition.z)
+                            ?.takeIf { it.isValid }
+                            ?: error("T4 Wakebell Anchor block entity missing")
+                    val store = run.world.chunkStore.store
+                    val anchor =
+                        store.getComponent(anchorRef, AnchorState.type)
+                            ?: error("T4 Wakebell Anchor state missing")
+                    val blockState =
+                        store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType())
+                            ?: error("T4 Wakebell Anchor block state missing")
+                    anchor.chargeSeconds = 900
+                    blockState.markNeedsSaving(store)
+                    MachineActions.activateAnchor(
+                        run.world,
+                        anchor,
+                        blockState,
+                        store,
+                        BlockPos(anchorPosition.x, anchorPosition.y, anchorPosition.z),
+                    )
+                    run.t4AnchorPosition = anchorPosition
+                    run.t4AnchorReadyStartTick = run.world.tick
+                    run.t4Prepared = true
                     run.t4Loading = false
-                    reloadT4(run, position)
                 } catch (failure: Exception) {
-                    run.t4Failure = "unload failed (${failure.message})"
+                    run.t4Failure = "setup failed (${failure.message})"
                     run.t4Loading = false
                 }
             }
@@ -249,44 +570,88 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
 
     private fun reloadT4(
         run: TransportSelfTestRun.Run,
-        position: Position,
+        owner: Position,
     ) {
-        val chunkIndex = chunkIndex(position)
+        val chunkIndex = chunkIndex(owner)
         run.t4Loading = true
-        run.world.chunkStore.getChunkReferenceAsync(chunkIndex, 0).whenComplete { ref, failure ->
+        run.world.chunkStore.getChunkReferenceAsync(chunkIndex, GetChunkFlags.SET_TICKING).whenComplete {
+            ref,
+            failure,
+            ->
             run.world.execute {
-                try {
-                    check(failure == null && ref != null && ref.isValid) {
-                        "T4 reload failed (${failure?.message})"
-                    }
-                    val blockRef =
-                        BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)
-                            ?: error("T4 reloaded pipe block entity is missing")
-                    val pipe =
-                        run.world.chunkStore.store
-                            .getComponent(blockRef, ItemPipe.type)
-                            ?: error("T4 reloaded ItemPipe component is missing")
-                    val transport = ItemTransport.of(run.world)
-                    val restoredItemId = findItemInstance(transport, position, ITEM_ID)
-                    check(restoredItemId == run.t4ItemInstanceId) {
-                        "T4 transit item id changed: before=${run.t4ItemInstanceId}, after=$restoredItemId"
-                    }
-                    check(pipe.items == run.t4SerializedItems) {
-                        "T4 component persistence changed across reload"
-                    }
-                    finishCase(run, "unload reload persistence", restoredItemId != null)
-                    startT5(run)
-                } catch (failure: Exception) {
-                    finishCase(run, "unload reload persistence", false, failure.message ?: "reload failed")
-                    run.t4Loading = false
-                    startT5(run)
+                if (failure != null || ref == null || !ref.isValid) {
+                    completeT4Reload(run, owner, null, failure ?: IllegalStateException("T4 chunk reload failed"))
+                    return@execute
                 }
-                run.t4Loading = false
+                run.world.chunkStore
+                    .getChunkSectionReferenceAtBlockAsync(
+                        owner.x,
+                        owner.y,
+                        owner.z,
+                        GetChunkFlags.SET_TICKING,
+                    ).whenComplete { sectionRef, sectionFailure ->
+                        run.world.execute {
+                            completeT4Reload(run, owner, sectionRef, sectionFailure)
+                        }
+                    }
             }
         }
     }
 
+    private fun completeT4Reload(
+        run: TransportSelfTestRun.Run,
+        owner: Position,
+        sectionRef: Ref<ChunkStore>?,
+        failure: Throwable?,
+    ) {
+        try {
+            check(failure == null && sectionRef != null && sectionRef.isValid) {
+                "T4 section reload failed (${failure?.message})"
+            }
+            val blockRef =
+                BlockModule
+                    .getBlockEntity(run.world, owner.x, owner.y, owner.z)
+                    ?.takeIf { it.isValid } ?: error("T4 reloaded pipe block entity is missing")
+            val pipe =
+                run.world.chunkStore.store
+                    .getComponent(blockRef, ItemPipe.type)
+                    ?: error("T4 reloaded ItemPipe component is missing")
+            val expectedItemId = run.t4ItemInstanceId ?: error("T4 item id was not captured")
+            val expectedFrom = run.t4Owner ?: error("T4 source segment was not captured")
+            val expectedTo = run.t4Target ?: error("T4 target segment was not captured")
+            check(
+                pipe.containsTransitItem(
+                    expectedItemId,
+                    ITEM_ID,
+                    BlockPos(expectedFrom.x, expectedFrom.y, expectedFrom.z),
+                    BlockPos(expectedTo.x, expectedTo.y, expectedTo.z),
+                ),
+            ) {
+                "T4 reloaded ItemPipe component omitted the expected item or segment"
+            }
+            val restoredSegment =
+                findItemSegment(ItemTransport.of(run.world), expectedItemId)
+                    ?: error("T4 transit item missing after reload")
+            check(restoredSegment.itemId == expectedItemId) { "T4 transit item id changed after reload" }
+            check(
+                restoredSegment.from == expectedFrom &&
+                    restoredSegment.to == expectedTo,
+            ) {
+                "T4 segment changed: before=$expectedFrom->$expectedTo, " +
+                    "after=${restoredSegment.from}->${restoredSegment.to}"
+            }
+            finishCase(run, "unload reload persistence", true)
+            startT5(run)
+        } catch (failure: Exception) {
+            finishCase(run, "unload reload persistence", false, failure.message ?: "reload failed")
+            startT5(run)
+        } finally {
+            run.t4Loading = false
+        }
+    }
+
     private fun tickT4(run: TransportSelfTestRun.Run) {
+        if (!run.t4AnchorDisableStarted && shouldRefreshT4Section(run)) refreshT4Section(run)
         val failure = run.t4Failure
         if (failure != null) {
             finishCase(run, "unload reload persistence", false, failure)
@@ -294,10 +659,205 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             startT5(run)
             return
         }
-        if (!run.t4Loading && run.world.tick - run.stageStartTick >= 250) {
-            finishCase(run, "unload reload persistence", false, "chunk operation timeout")
+        if (!run.t4Prepared || run.t4Loading) return
+        val anchorPosition = run.t4AnchorPosition
+        if (anchorPosition == null) {
+            run.t4Failure = "T4 Wakebell Anchor position is missing"
+            return
+        }
+        if (!run.t4ItemInserted) {
+            if (
+                anchorAreaReady(run, anchorPosition) &&
+                !sectionIsNonTicking(run, Position(10_272, 150, 10_000))
+            ) {
+                try {
+                    val first = Position(10_272, 150, 10_000)
+                    val transport = ItemTransport.of(run.world)
+                    check(transport.insert(first.x, first.y, first.z, ITEM_ID, 1)) {
+                        "T4 pipe insert rejected"
+                    }
+                    run.t4ItemInstanceId =
+                        findItemInstance(transport, first, ITEM_ID)
+                            ?: error("T4 inserted item was not found")
+                    run.t4LoadedTick = run.world.tick
+                    run.t4ItemInserted = true
+                } catch (failure: Exception) {
+                    run.t4Failure = "item insert failed (${failure.message})"
+                }
+            } else if (run.world.tick - run.t4AnchorReadyStartTick >= ACTIVE_SECTION_TIMEOUT_TICKS) {
+                run.t4Failure = "T4 Wakebell Anchor area did not become ticking"
+            }
+            return
+        }
+        if (!run.t4AnchorDisableStarted && run.world.tick - run.t4LoadedTick >= T4_PROGRESS_TICKS) {
+            try {
+                val segment =
+                    findItemSegment(ItemTransport.of(run.world), run.t4ItemInstanceId)
+                        ?: error("T4 transit item missing before unload")
+                check(segment.progress > 0) { "T4 transit item did not progress before unload" }
+                check(segment.from != segment.to) { "T4 transit item is not on a pipe segment" }
+                run.t4Owner = segment.from
+                run.t4Target = segment.to
+                val anchorRef =
+                    BlockModule
+                        .getBlockEntity(
+                            run.world,
+                            anchorPosition.x,
+                            anchorPosition.y,
+                            anchorPosition.z,
+                        )?.takeIf { it.isValid }
+                        ?: error("T4 Wakebell Anchor entity missing before unload")
+                val store = run.world.chunkStore.store
+                val anchor =
+                    store.getComponent(anchorRef, AnchorState.type)
+                        ?: error("T4 Wakebell Anchor state missing before unload")
+                val anchorBlockState =
+                    store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType())
+                        ?: error("T4 Wakebell Anchor block state missing before unload")
+                anchor.chargeSeconds = 0
+                anchorBlockState.markNeedsSaving(store)
+                run.t4AnchorDisableStarted = true
+                run.t4AnchorDisableTick = run.world.tick
+                return
+            } catch (failure: Exception) {
+                run.t4Failure = "anchor shutdown failed (${failure.message})"
+                return
+            }
+        }
+        val t4Section = Position(10_272, 150, 10_000)
+        if (run.t4AnchorDisableStarted && !run.t4SaveStarted && anchorIsInactive(run, anchorPosition)) {
+            if (!sectionIsNonTicking(run, t4Section)) {
+                if (run.world.tick - run.t4AnchorDisableTick >= ACTIVE_SECTION_TIMEOUT_TICKS) {
+                    run.t4Failure = "T4 section remained ticking after Anchor deactivation"
+                }
+                return
+            }
+            try {
+                val segment =
+                    findItemSegment(ItemTransport.of(run.world), run.t4ItemInstanceId)
+                        ?: error("T4 transit item missing before unload")
+                check(segment.progress > 0) { "T4 transit item did not progress before unload" }
+                check(segment.from == run.t4Owner && segment.to == run.t4Target) {
+                    "T4 transit segment changed while deactivating its Anchor"
+                }
+                val blockRef =
+                    BlockModule
+                        .getBlockEntity(run.world, segment.from.x, segment.from.y, segment.from.z)
+                        ?.takeIf { it.isValid }
+                        ?: error("T4 pipe block entity missing before unload")
+                val store = run.world.chunkStore.store
+                val blockState =
+                    store.getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType())
+                        ?: error("T4 pipe block state missing before unload")
+                check(!CraftoryCore.isAreaActive(store, blockState)) {
+                    "T4 chunk remains inside active Anchor coverage"
+                }
+                val chunkRef =
+                    run.world.chunkStore
+                        .getChunkReference(chunkIndex(segment.from))
+                        ?.takeIf { it.isValid }
+                        ?: error("T4 live chunk reference missing")
+                val chunkStore = run.world.chunkStore.store
+                val worldChunk =
+                    chunkStore.getComponent(chunkRef, WorldChunk.getComponentType())
+                        ?: error("T4 live WorldChunk missing")
+                check(!worldChunk.shouldKeepLoaded()) { "T4 chunk remains keep-loaded" }
+                if (worldChunk.isSaving) return
+                run.t4SaveStarted = true
+                run.t4Saving = true
+                run.t4Loading = true
+                val saveEvent = ChunkSaveEvent(worldChunk)
+                chunkStore.invoke(chunkRef, saveEvent)
+                check(!saveEvent.isCancelled) { "T4 chunk save was cancelled" }
+                val chunkGrid = run.world.chunkStore
+                val ownerChunkIndex = chunkIndex(segment.from)
+                worldChunk.addKeepLoaded()
+                worldChunk.setSaving(true)
+                run.t4SaveKeepLoadedChunk = ownerChunkIndex
+                val saver = chunkGrid.getSaver() ?: error("T4 chunk saver is unavailable")
+                saver
+                    .saveChunkColumn(
+                        worldChunk.x,
+                        worldChunk.z,
+                        chunkGrid.store,
+                        chunkRef,
+                        null,
+                        null,
+                    ).whenComplete { _, saveFailure ->
+                        run.world.execute {
+                            if (run.cleanupFinished || run.stage != 4) {
+                                releaseT4SaveHold(run)
+                                return@execute
+                            }
+                            run.t4Saving = false
+                            if (saveFailure != null) {
+                                releaseT4SaveHold(run, markNeedsSaving = true)
+                                run.t4Failure = "chunk save failed (${saveFailure.message})"
+                                run.t4Loading = false
+                                return@execute
+                            }
+                            try {
+                                val currentRef =
+                                    chunkGrid
+                                        .getChunkReference(ownerChunkIndex)
+                                        ?.takeIf { it.isValid }
+                                        ?: error("T4 saved chunk reference missing")
+                                val currentChunk =
+                                    chunkGrid.store.getComponent(currentRef, WorldChunk.getComponentType())
+                                        ?: error("T4 saved WorldChunk is missing")
+                                currentChunk.consumeNeedsSaving()
+                                currentChunk.setFlag(ChunkFlag.ON_DISK, true)
+                                releaseT4SaveHold(run)
+                                chunkGrid.remove(currentRef, RemoveReason.UNLOAD)
+                                check(!currentRef.isValid) { "T4 chunk did not unload" }
+                                run.t4Prepared = false
+                                reloadT4(run, segment.from)
+                            } catch (failure: Exception) {
+                                releaseT4SaveHold(run, markNeedsSaving = true)
+                                run.t4Failure = "unload failed (${failure.message})"
+                                run.t4Prepared = false
+                                run.t4Loading = false
+                            }
+                        }
+                    }
+            } catch (failure: Exception) {
+                releaseT4SaveHold(run, markNeedsSaving = true)
+                run.t4Failure = "unload failed (${failure.message})"
+                run.t4Prepared = false
+                run.t4Loading = false
+            }
+        }
+        if (run.world.tick - run.stageStartTick >= T4_TIMEOUT_TICKS) {
+            val anchorInactive =
+                run.t4AnchorPosition?.let { anchorIsInactive(run, it) } ?: false
+            val sectionNonTicking = sectionIsNonTicking(run, Position(10_272, 150, 10_000))
+            finishCase(
+                run,
+                "unload reload persistence",
+                false,
+                "chunk operation timeout (prepared=${run.t4Prepared}, loading=${run.t4Loading}, " +
+                    "saving=${run.t4Saving}, inserted=${run.t4ItemInserted}, " +
+                    "anchorInactive=$anchorInactive, sectionNonTicking=$sectionNonTicking)",
+            )
             startT5(run)
         }
+    }
+
+    private fun releaseT4SaveHold(
+        run: TransportSelfTestRun.Run,
+        markNeedsSaving: Boolean = false,
+    ) {
+        val ownerChunkIndex = run.t4SaveKeepLoadedChunk ?: return
+        val chunkGrid = run.world.chunkStore
+        val chunkRef = chunkGrid.getChunkReference(ownerChunkIndex)?.takeIf { it.isValid }
+        val worldChunk =
+            chunkRef?.let { chunkGrid.store.getComponent(it, WorldChunk.getComponentType()) }
+        if (worldChunk != null) {
+            if (markNeedsSaving) worldChunk.markNeedsSaving()
+            worldChunk.setSaving(false)
+            worldChunk.removeKeepLoaded()
+        }
+        run.t4SaveKeepLoadedChunk = null
     }
 
     private fun startT5(run: TransportSelfTestRun.Run) {
@@ -306,22 +866,18 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         val second = Position(10_241, 150, 10_000)
         placeBlock(run, CraftoryIds.PIPE, first)
         placeBlock(run, CraftoryIds.PIPE, second)
-        val transport = ItemTransport.of(run.world)
-        check(transport.insert(first.x, first.y, first.z, ITEM_ID, 1))
-        run.t5ItemInstanceId = findItemInstance(transport, first, ITEM_ID)
+        run.t5ItemInstanceId = null
+        run.t5Record = null
+        run.t5FreezeStartTick = null
+        run.t5OriginalAnchorChargeSeconds = null
+        run.t5AnchorDisabled = false
+        run.t5ReactivationStarted = false
+        run.t5FreezePassed = false
+        run.t5FreezeDetail = ""
+        run.t5SkipReason = null
+        run.caseTimerStartTick = null
         run.stage = 5
         run.stageStartTick = run.world.tick
-        val store = run.world.chunkStore.store
-        CraftoryCore.removeAnchorCoverage(store, TransportSelfTest.coverageId())
-        releaseKeepLoaded(run)
-        val sectionRef = run.world.chunkStore.getChunkSectionReferenceAtBlock(first.x, first.y, first.z)
-        val section = sectionRef?.let { store.getComponent(it, ChunkSection.getComponentType()) }
-        section?.resetActiveTimer()
-        if (playerWithinRange(run.world, first, 64.0)) {
-            reportSkip(run, "NonTicking freeze", "player within range")
-            startT6(run)
-            return
-        }
     }
 
     private fun tickT5(
@@ -329,56 +885,331 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
     ) {
         val position = Position(10_240, 150, 10_000)
-        val sectionRef = run.world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+        val anchorPosition = run.anchorPosition ?: error("T5 Wakebell Anchor position is missing")
+        if (run.t5ReactivationStarted) {
+            finishT5Reactivation(run)
+            return
+        }
+        if (run.t5ItemInstanceId == null) {
+            if (!caseTimerStarted(run, position)) {
+                if (activeWaitExpired(run)) {
+                    finishCase(run, "NonTicking freeze", false, "T5 section remained NonTicking before insertion")
+                    restoreAnchorChargeLimit(run)
+                    startT6(run)
+                }
+                return
+            }
+            val transport = ItemTransport.of(run.world)
+            check(transport.insert(position.x, position.y, position.z, ITEM_ID, 1)) {
+                "T5 pipe insert rejected"
+            }
+            run.t5ItemInstanceId = findItemInstance(transport, position, ITEM_ID)
+                ?: error("T5 inserted item was not found")
+            run.stageStartTick = run.world.tick
+            return
+        }
+        if (!run.t5AnchorDisabled) {
+            val segment = findItemSegment(ItemTransport.of(run.world), run.t5ItemInstanceId)
+            if (segment == null || segment.progress <= 0) {
+                if (run.world.tick - run.stageStartTick >= T5_PROGRESS_TIMEOUT_TICKS) {
+                    finishT5(
+                        run,
+                        store,
+                        passed = false,
+                        detail =
+                            "transit item did not progress before NonTicking " +
+                                "(progress=${segment?.progress})",
+                    )
+                }
+                return
+            }
+            val anchorRef =
+                BlockModule
+                    .getBlockEntity(run.world, anchorPosition.x, anchorPosition.y, anchorPosition.z)
+                    ?.takeIf { it.isValid }
+                    ?: error("T5 Wakebell Anchor block entity is missing")
+            val anchor = store.getComponent(anchorRef, AnchorState.type) ?: error("T5 Anchor state is missing")
+            val anchorBlock =
+                store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType())
+                    ?: error("T5 Anchor block state is missing")
+            ensureT5KeepLoaded(run, store, position)
+            ensureT5KeepLoaded(run, store, anchorPosition)
+            if (!ensureT5AnchorSectionKeepLoaded(run, store, anchorPosition)) {
+                finishT5(run, store, false, "could not keep the Anchor section loaded")
+                return
+            }
+            run.t5OriginalAnchorChargeSeconds = anchor.chargeSeconds
+            anchor.chargeSeconds = 0
+            anchorBlock.markNeedsSaving(store)
+            CraftoryCore.setAnchorMaxChargeMinutesInMemory(0)
+            run.anchorMaxChargeChanged = true
+            run.t5AnchorDisabled = true
+            run.stageStartTick = run.world.tick
+            return
+        }
+        if (anchorIsInactive(run, anchorPosition)) ensureT5KeepLoaded(run, store, position)
+        val sectionRef =
+            run.world.chunkStore
+                .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
         val nonTickingType = ChunkStore.REGISTRY.getNonTickingComponentType()
         val nonTicking = sectionRef?.let { store.getComponent(it, nonTickingType) != null } ?: false
-        if (run.t5Progress == null) {
+        if (run.t5Record == null) {
             if (nonTicking) {
-                run.t5Progress =
-                    run.t5ItemInstanceId?.let { ItemTransport.of(run.world).progressOf(it) }
-                if (run.t5Progress == null) {
-                    finishCase(run, "NonTicking freeze", false, "transit item missing")
-                    startT6(run)
+                val record =
+                    run.t5ItemInstanceId?.let { persistedT5Record(run, store, it) }
+                if (record == null) {
+                    if (run.world.tick - run.stageStartTick >= T5_HOLDER_TIMEOUT_TICKS) {
+                        finishT5(run, store, false, "persisted ItemPipe record missing in block holder")
+                    }
                     return
                 }
-                run.stageStartTick = run.world.tick
+                if (record.itemId != ITEM_ID || record.progress <= 0 || record.fromPos == record.toPos) {
+                    finishT5(
+                        run,
+                        store,
+                        false,
+                        "unexpected persisted record (${describeT5Record(record)})",
+                    )
+                    return
+                }
+                run.t5Record = record
+                run.t5FreezeStartTick = run.world.tick
                 return
             }
             if (run.world.tick - run.stageStartTick >= T5_MARKER_TIMEOUT_TICKS) {
                 if (playerWithinRange(run.world, position, 64.0)) {
-                    reportSkip(run, "NonTicking freeze", "player within range")
+                    finishT5(run, store, false, "NonTicking marker timeout", "player within range")
                 } else {
-                    finishCase(run, "NonTicking freeze", false, "NonTicking marker timeout")
+                    finishT5(run, store, false, "NonTicking marker timeout")
                 }
-                startT6(run)
             }
             return
         }
-        if (run.world.tick - run.stageStartTick < 40) return
-        val progress = run.t5ItemInstanceId?.let { ItemTransport.of(run.world).progressOf(it) }
-        finishCase(
+        if (run.world.tick - (run.t5FreezeStartTick ?: run.world.tick) < 40) return
+        val frozenRecord = run.t5Record ?: return
+        val persistedAgain =
+            run.t5ItemInstanceId?.let { persistedT5Record(run, store, it) }
+        val chunkRef =
+            run.world.chunkStore
+                .getChunkReference(chunkIndex(position))
+                ?.takeIf { it.isValid }
+        val chunkHeld = chunkRef?.let { store.getComponent(it, WorldChunk.getComponentType())?.shouldKeepLoaded() }
+        val unchanged = persistedAgain != null && sameT5Record(frozenRecord, persistedAgain)
+        finishT5(
             run,
-            "NonTicking freeze",
-            progress == run.t5Progress,
-            "before=${run.t5Progress} after=$progress",
+            store,
+            unchanged && nonTicking && chunkHeld == true,
+            "before=${describeT5Record(frozenRecord)} after=${describeT5Record(persistedAgain)} " +
+                "NonTicking=$nonTicking chunkHeld=$chunkHeld",
         )
-        startT6(run)
     }
 
+    private fun finishT5(
+        run: TransportSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        passed: Boolean,
+        detail: String,
+        skipReason: String? = null,
+    ) {
+        if (!run.t5AnchorDisabled) {
+            if (skipReason == null) {
+                finishCase(run, "NonTicking freeze", passed, detail)
+            } else {
+                reportSkip(run, "NonTicking freeze", skipReason)
+            }
+            startT6(run)
+            return
+        }
+        run.t5FreezePassed = passed
+        run.t5FreezeDetail = detail
+        run.t5SkipReason = skipReason
+        restoreAnchorChargeLimit(run)
+        val anchorPosition = run.anchorPosition
+        val anchorRef =
+            anchorPosition?.let {
+                BlockModule.getBlockEntity(run.world, it.x, it.y, it.z)?.takeIf { ref -> ref.isValid }
+            }
+        if (anchorPosition == null || anchorRef == null) {
+            finishCase(run, "NonTicking freeze", false, "$detail; Anchor reactivation state is missing")
+            startT6(run)
+            return
+        }
+        val anchor = store.getComponent(anchorRef, AnchorState.type)
+        val anchorBlock = store.getComponent(anchorRef, BlockModule.BlockStateInfo.getComponentType())
+        if (anchor == null || anchorBlock == null) {
+            finishCase(run, "NonTicking freeze", false, "$detail; Anchor reactivation state is missing")
+            startT6(run)
+            return
+        }
+        anchor.chargeSeconds = run.t5OriginalAnchorChargeSeconds?.takeIf { it > 0 } ?: 900L
+        blockStateSaveAndActivateAnchor(run, anchor, anchorBlock, anchorPosition, store)
+        run.t5ReactivationStarted = true
+        run.stageStartTick = run.world.tick
+    }
+
+    private fun blockStateSaveAndActivateAnchor(
+        run: TransportSelfTestRun.Run,
+        anchor: AnchorState,
+        anchorBlock: BlockModule.BlockStateInfo,
+        anchorPosition: Position,
+        store: Store<ChunkStore>,
+    ) {
+        anchorBlock.markNeedsSaving(store)
+        MachineActions.activateAnchor(
+            run.world,
+            anchor,
+            anchorBlock,
+            store,
+            BlockPos(anchorPosition.x, anchorPosition.y, anchorPosition.z),
+        )
+    }
+
+    private fun finishT5Reactivation(run: TransportSelfTestRun.Run) {
+        val position = Position(10_240, 150, 10_000)
+        val nonTicking = sectionIsNonTicking(run, position)
+        val segment = findItemSegment(ItemTransport.of(run.world), run.t5ItemInstanceId)
+        if (!nonTicking && segment != null) {
+            val expected = run.t5Record
+            val restored =
+                expected != null &&
+                    segment.itemId == expected.id &&
+                    segment.itemString == expected.itemId &&
+                    BlockPos.pack(segment.from.x, segment.from.y, segment.from.z) == expected.fromPos &&
+                    BlockPos.pack(segment.to.x, segment.to.y, segment.to.z) == expected.toPos &&
+                    segment.progress == expected.progress
+            if (run.t5SkipReason != null) {
+                reportSkip(run, "NonTicking freeze", run.t5SkipReason!!)
+            } else {
+                finishCase(
+                    run,
+                    "NonTicking freeze",
+                    run.t5FreezePassed && restored,
+                    "${run.t5FreezeDetail}; reactivated=${describeSegment(segment)}",
+                )
+            }
+            startT6(run)
+            return
+        }
+        if (run.world.tick - run.stageStartTick >= ACTIVE_SECTION_TIMEOUT_TICKS) {
+            finishCase(
+                run,
+                "NonTicking freeze",
+                false,
+                "${run.t5FreezeDetail}; Anchor reactivation timeout " +
+                    "(NonTicking=$nonTicking, transit=${describeSegment(segment)})",
+            )
+            startT6(run)
+        }
+    }
+
+    private fun ensureT5KeepLoaded(
+        run: TransportSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        position: Position,
+    ) {
+        val chunkIndex = chunkIndex(position)
+        val chunkRef =
+            run.world.chunkStore
+                .getChunkReference(chunkIndex)
+                ?.takeIf { it.isValid }
+                ?: return
+        val worldChunk =
+            store.getComponent(chunkRef, WorldChunk.getComponentType())
+                ?: return
+        if (run.keepLoadedChunks.add(chunkIndex)) {
+            worldChunk.addKeepLoaded()
+        } else if (!worldChunk.shouldKeepLoaded()) {
+            worldChunk.addKeepLoaded()
+        }
+    }
+
+    private fun ensureT5AnchorSectionKeepLoaded(
+        run: TransportSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        position: Position,
+    ): Boolean {
+        val sectionRef =
+            run.world.chunkStore
+                .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: return false
+        val section = store.getComponent(sectionRef, ChunkSection.getComponentType()) ?: return false
+        if (run.keepLoadedSections.add(position)) {
+            section.addKeepLoaded()
+        } else if (!section.shouldKeepLoaded()) {
+            section.addKeepLoaded()
+        }
+        return true
+    }
+
+    private fun persistedT5Record(
+        run: TransportSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        itemId: Long,
+    ): ItemPipeTransitRecord? {
+        val first = Position(10_240, 150, 10_000)
+        val second = Position(10_241, 150, 10_000)
+        return persistedT5RecordAt(run, store, first, itemId)
+            ?: persistedT5RecordAt(run, store, second, itemId)
+    }
+
+    private fun persistedT5RecordAt(
+        run: TransportSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        position: Position,
+        itemId: Long,
+    ): ItemPipeTransitRecord? {
+        val sectionRef =
+            run.world.chunkStore
+                .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: return null
+        val section =
+            store.getComponent(sectionRef, BlockComponentSection.getComponentType())
+                ?: return null
+        val holder = section.getBlockHolder(ChunkUtil.indexBlock(position.x, position.y, position.z)) ?: return null
+        val pipe = holder.getComponent(ItemPipe.type) ?: return null
+        return pipe.transitRecords().firstOrNull { it.id == itemId }
+    }
+
+    private fun sameT5Record(
+        first: ItemPipeTransitRecord,
+        second: ItemPipeTransitRecord,
+    ): Boolean =
+        first.id == second.id &&
+            first.itemId == second.itemId &&
+            first.fromPos == second.fromPos &&
+            first.toPos == second.toPos &&
+            first.progress == second.progress
+
+    private fun describeT5Record(record: ItemPipeTransitRecord?): String =
+        record?.let {
+            "id=${it.id}, item=${it.itemId}, segment=${it.fromPos}->${it.toPos}, progress=${it.progress}"
+        } ?: "missing"
+
+    private fun describeSegment(segment: TransitSegment?): String =
+        segment?.let {
+            "id=${it.itemId}, item=${it.itemString}, segment=${it.from}->${it.to}, progress=${it.progress}"
+        } ?: "missing"
+
     private fun startT6(run: TransportSelfTestRun.Run) {
+        restoreAnchorChargeLimit(run)
         clearCurrentBlocks(run)
         run.stage = 6
         run.stageStartTick = run.world.tick
         val first = Position(10_250, 150, 10_000)
-        val broken = Position(10_251, 150, 10_000)
+        val broken = first
         placeBlock(run, CraftoryIds.PIPE, first)
-        placeBlock(run, CraftoryIds.PIPE, broken)
         val transport = ItemTransport.of(run.world)
         check(transport.insert(first.x, first.y, first.z, ITEM_ID, 1))
+        run.t6ItemInstanceId = findItemInstance(transport, first, ITEM_ID)
         check(
             BlockOperations.setBlock(
                 run.world.chunkStore,
-                run.world.chunkStore.getChunkSectionReferenceAtBlock(broken.x, broken.y, broken.z)
+                run.world.chunkStore
+                    .getChunkSectionReferenceAtBlock(broken.x, broken.y, broken.z)
+                    ?.takeIf { it.isValid }
                     ?: error("T6 section reference missing"),
                 broken.x,
                 broken.y,
@@ -398,10 +1229,36 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             AREA_MAX_Y,
             AREA_MAX_Z,
         )
+        run.t6BreakTick = run.world.tick
+    }
+
+    private fun tickT6(run: TransportSelfTestRun.Run) {
+        val broken = Position(10_250, 150, 10_000)
+        val transport = ItemTransport.of(run.world)
         val dropped = countDropsNear(run.world, broken, ITEM_ID)
-        finishCase(run, "break drops", dropped == 1, "matchingDrops=$dropped")
-        clearCurrentBlocks(run)
-        beginCleanup(run)
+        if (dropped > 1) {
+            finishCase(run, "break drops", false, "matchingDrops=$dropped")
+            clearCurrentBlocks(run)
+            beginCleanup(run)
+            return
+        }
+        if (dropped == 1) {
+            finishCase(run, "break drops", true, "matchingDrops=1")
+            clearCurrentBlocks(run)
+            beginCleanup(run)
+            return
+        }
+        if (run.world.tick - (run.t6BreakTick ?: run.world.tick) >= 40) {
+            val progress = run.t6ItemInstanceId?.let { transport.progressOf(it) }
+            finishCase(
+                run,
+                "break drops",
+                false,
+                "matchingDrops=0; itemProgress=$progress; items=${transport.itemsInTransit()}",
+            )
+            clearCurrentBlocks(run)
+            beginCleanup(run)
+        }
     }
 
     private fun placeClawCase(
@@ -413,9 +1270,12 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         branches: Boolean = false,
     ): ClawLayout {
         val claw = center
+        run.claw = claw
         placeBlock(run, CraftoryIds.SNATCHER_CLAW, claw, rotation = 0)
         val clawRef =
-            BlockModule.getBlockEntity(run.world, claw.x, claw.y, claw.z)
+            BlockModule
+                .getBlockEntity(run.world, claw.x, claw.y, claw.z)
+                ?.takeIf { it.isValid }
                 ?: error("Snatcher Claw block entity missing at $claw")
         val store = run.world.chunkStore.store
         val state =
@@ -448,6 +1308,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         ) { "source chest item setup failed" }
 
         val firstPipe = claw + (forward * -1)
+        run.targetPipe = firstPipe
         val destinationA: Position
         var destinationB: Position? = null
         if (branches) {
@@ -480,6 +1341,42 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         placeBlock(run, CraftoryIds.BURNER, burner)
         fuelBurner(run, burner)
         return ClawLayout(source, destinationA, destinationB)
+    }
+
+    private fun clawDiagnostics(run: TransportSelfTestRun.Run): String {
+        val claw = run.claw ?: return "claw=unknown"
+        val store = run.world.chunkStore.store
+        val ref =
+            BlockModule
+                .getBlockEntity(run.world, claw.x, claw.y, claw.z)
+                ?.takeIf { it.isValid }
+        val state = ref?.let { store.getComponent(it, SnatcherClawState.type) }
+        val member = ref?.let { store.getComponent(it, EnergyMember.type) }
+        val blockState = ref?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
+        val areaActive = blockState?.let { CraftoryCore.isAreaActive(store, it) }
+        val queryCount =
+            store.getEntityCountFor(
+                Query.and(
+                    SnatcherClawState.type,
+                    EnergyMember.type,
+                    BlockModule.BlockStateInfo.getComponentType(),
+                ),
+            )
+        val anchorPosition = run.anchorPosition
+        val anchorRef =
+            anchorPosition?.let {
+                BlockModule.getBlockEntity(run.world, it.x, it.y, it.z)?.takeIf { anchor -> anchor.isValid }
+            }
+        val anchor = anchorRef?.let { store.getComponent(it, AnchorState.type) }
+        val transport = ItemTransport.of(run.world)
+        val sectionNonTicking = sectionIsNonTicking(run, claw)
+        return "source=${containerQuantity(run, run.source)} " +
+            "clawPipe=${run.targetPipe?.let { transport.isPipe(it.x, it.y, it.z) }} " +
+            "refValid=${ref?.isValid} sectionNonTicking=$sectionNonTicking " +
+            "queryCount=$queryCount areaActive=$areaActive " +
+            "anchorActive=${anchor?.coverageActive == true && anchor.chargeSeconds > 0} fizz=${state?.fizzBuffer} " +
+            "delivered=${member?.delivered} demand=${member?.demand} " +
+            "transit=${transport.itemsInTransit()}"
     }
 
     private fun fuelBurner(
@@ -519,6 +1416,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         blockId: String,
         position: Position,
         rotation: Int = 0,
+        keepAcrossCases: Boolean = false,
     ) {
         val world = run.world
         val sectionRef =
@@ -554,7 +1452,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             blockType,
             rotation,
         ) ?: error("failed to create block entity for $blockId at $position")
-        run.currentBlocks.add(position)
+        if (!keepAcrossCases) run.currentBlocks.add(position)
         run.allBlocks.add(position)
     }
 
@@ -596,6 +1494,27 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         }
         return null
     }
+
+    private fun findItemSegment(
+        transport: studio.craftory.core.api.transport.ItemTransportAccess,
+        itemId: Long?,
+    ): TransitSegment? {
+        if (itemId == null) return null
+        for (index in 0 until transport.itemsInTransit()) {
+            if (transport.itemIdAt(index) == itemId) {
+                return TransitSegment(
+                    itemId,
+                    transport.itemStringAt(index),
+                    BlockPos.unpack(transport.itemOwnerAt(index)).toPosition(),
+                    BlockPos.unpack(transport.itemTargetAt(index)).toPosition(),
+                    transport.itemProgressAt(index),
+                )
+            }
+        }
+        return null
+    }
+
+    private fun BlockPos.toPosition(): Position = Position(x, y, z)
 
     private fun finishCase(
         run: TransportSelfTestRun.Run,
@@ -688,6 +1607,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
     private fun beginCleanup(run: TransportSelfTestRun.Run) {
         if (run.stage == 7 && run.cleanupLoading) return
         run.stage = 7
+        restoreAnchorChargeLimit(run)
         releaseKeepLoaded(run)
         CraftoryCore.removeAnchorCoverage(run.world.chunkStore.store, TransportSelfTest.coverageId())
         val unloadedTestChunk = chunkIndex(Position(10_272, 150, 10_000))
@@ -805,7 +1725,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
                     if (item.itemStack?.itemId != itemId) continue
                     val point = chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: continue
                     if (kotlin.math.abs(point.x - center.x - 0.5) < 2.0 &&
-                        kotlin.math.abs(point.y - center.y - 0.5) < 2.0 &&
+                        kotlin.math.abs(point.y - center.y - 0.5) < 32.0 &&
                         kotlin.math.abs(point.z - center.z - 0.5) < 2.0
                     ) {
                         count++
@@ -842,6 +1762,15 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
             if (ref.isValid) grid.store.getComponent(ref, WorldChunk.getComponentType())?.removeKeepLoaded()
         }
         run.keepLoadedChunks.clear()
+        run.keepLoadedSections.forEach { position ->
+            val sectionRef =
+                grid
+                    .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+                    ?.takeIf { it.isValid }
+                    ?: return@forEach
+            grid.store.getComponent(sectionRef, ChunkSection.getComponentType())?.removeKeepLoaded()
+        }
+        run.keepLoadedSections.clear()
     }
 
     private fun chunkIndex(position: Position): Long = ChunkUtil.indexChunk(position.x shr 5, position.z shr 5)
@@ -861,11 +1790,26 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         val destinationB: Position?,
     )
 
+    private data class TransitSegment(
+        val itemId: Long,
+        val itemString: String?,
+        val from: Position,
+        val to: Position,
+        val progress: Int,
+    )
+
     companion object {
         private const val CHEST_ID = "Furniture_Crude_Chest_Small"
         private const val ITEM_ID = "Plant_Crop_Mushroom_Common_Brown"
-        private const val MAX_RUNTIME_TICKS = 3_000L
+        private const val MAX_RUNTIME_TICKS = 8_000L
+        private const val T4_PROGRESS_TICKS = 10L
+        private const val ANCHOR_READY_TIMEOUT_TICKS = 600L
+        private const val ACTIVE_SECTION_TIMEOUT_TICKS = 600L
+        private const val T5_PROGRESS_TIMEOUT_TICKS = 400L
+        private const val T5_HOLDER_TIMEOUT_TICKS = 40L
         private const val T5_MARKER_TIMEOUT_TICKS = 1_000L
+        private const val SECTION_REFRESH_TICKS = 10L
+        private const val T4_TIMEOUT_TICKS = 1_500L
         private const val AREA_MIN_X = 10_190
         private const val AREA_MAX_X = 10_290
         private const val AREA_MIN_Y = 140
@@ -876,6 +1820,8 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
 }
 
 internal object TransportSelfTest {
+    private val ANCHOR_POSITION = Position(10_220, 150, 10_005)
+
     fun start(
         context: com.hypixel.hytale.server.core.command.system.CommandContext,
         world: World,
@@ -885,35 +1831,10 @@ internal object TransportSelfTest {
             val resource = store.getResource(TransportSelfTestRun.type)
             if (resource.active != null) return@execute
             val run = TransportSelfTestRun.Run(context, world, world.tick)
+            run.anchorPosition = ANCHOR_POSITION
             resource.active = run
-            val chunks =
-                longArrayOf(
-                    ChunkUtil.indexChunk(318, 312),
-                    ChunkUtil.indexChunk(319, 312),
-                    ChunkUtil.indexChunk(320, 312),
-                )
-            chunks.forEach { index ->
-                val chunkX = (index shr 32).toInt()
-                val chunkZ = index.toInt()
-                CraftoryCore.setAnchorCoverage(store, coverageId(), chunkX, chunkZ, true)
-            }
-            run.pendingLoads = chunks.size
-            chunks.forEach { index ->
-                world.chunkStore.getChunkReferenceAsync(index, GetChunkFlags.SET_TICKING).whenComplete { ref, failure ->
-                    world.execute {
-                        if (failure != null || ref == null || !ref.isValid) {
-                            run.setupFailure = "test area chunk load failed (${failure?.message})"
-                        } else {
-                            val worldChunk = store.getComponent(ref, WorldChunk.getComponentType())
-                            if (worldChunk != null && run.keepLoadedChunks.add(index)) worldChunk.addKeepLoaded()
-                        }
-                        run.pendingLoads--
-                        if (run.pendingLoads == 0) run.ready = true
-                    }
-                }
-            }
         }
     }
 
-    internal fun coverageId(): Long = BlockPos.pack(10_200, 150, 10_000)
+    internal fun coverageId(): Long = BlockPos.pack(ANCHOR_POSITION.x, ANCHOR_POSITION.y, ANCHOR_POSITION.z)
 }

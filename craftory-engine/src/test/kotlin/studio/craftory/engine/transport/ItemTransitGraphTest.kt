@@ -136,6 +136,25 @@ class ItemTransitGraphTest {
     }
 
     @Test
+    fun `moving item marks its owner dirty for persistence`() {
+        val graph = ItemTransitGraph()
+        val start = pos(0)
+        val destination = pos(1)
+        graph.addNode(start)
+        graph.addNode(destination)
+        val sink = RecordingSink(destination)
+        graph.insert(start, 2, 1, 0, Long.MIN_VALUE, sink)
+        graph.drainDirty { }
+
+        graph.tick(ALWAYS_ACTIVE, sink)
+
+        var dirtyNode: Long? = null
+        graph.drainDirty { dirtyNode = it }
+
+        assertEquals(start, dirtyNode)
+    }
+
+    @Test
     fun `delivered items leave no awake networks`() {
         val graph = ItemTransitGraph(speedPerTick = ItemTransitGraph.SEGMENT_LENGTH)
         val start = pos(0)

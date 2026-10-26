@@ -382,7 +382,8 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
 
         fun shutdownAll() {
             allStates.forEach { state ->
-                state.world?.execute { state.despawnAll() }
+                val currentWorld = state.world
+                if (currentWorld?.isAlive == true) currentWorld.execute { state.despawnAll() }
             }
             allStates.clear()
         }

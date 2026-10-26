@@ -283,7 +283,10 @@ class ItemTransitGraph(
             }
             val destinationHandle = nodeMap.getOrDefault(toPositions[itemIndex], -1)
             if (destinationHandle < 0) {
-                progresses[itemIndex] = SEGMENT_LENGTH
+                if (progresses[itemIndex] != SEGMENT_LENGTH) {
+                    progresses[itemIndex] = SEGMENT_LENGTH
+                    markDirty(ownerHandle)
+                }
                 itemIndex++
                 continue
             }
@@ -295,6 +298,7 @@ class ItemTransitGraph(
                 if (!removed) itemIndex++
                 continue
             }
+            markDirty(ownerHandle)
             itemIndex++
         }
     }

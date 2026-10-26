@@ -23,8 +23,14 @@ internal class ItemTransportLifecycle : RefSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         if (reason != AddReason.LOAD && reason != AddReason.SPAWN) return
-        val pipe = commandBuffer.getComponent(ref, ItemPipe.type) ?: return
-        val blockState = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val pipe =
+            commandBuffer.getComponent(ref, ItemPipe.type)
+                ?: store.getComponent(ref, ItemPipe.type)
+                ?: return
+        val blockState =
+            commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
+                ?: store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
+                ?: return
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val runtime = store.getResource(ItemTransportWorld.type)
@@ -38,8 +44,14 @@ internal class ItemTransportLifecycle : RefSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
-        val pipe = commandBuffer.getComponent(ref, ItemPipe.type) ?: return
-        val blockState = commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val pipe =
+            commandBuffer.getComponent(ref, ItemPipe.type)
+                ?: store.getComponent(ref, ItemPipe.type)
+                ?: return
+        val blockState =
+            commandBuffer.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
+                ?: store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
+                ?: return
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
         val runtime = store.getResource(ItemTransportWorld.type)

@@ -107,9 +107,7 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
             activityCache.beginTick()
         }
         graph.tick(activity, sink)
-        if (tick % SAVE_INTERVAL_TICKS == 0L) {
-            graph.drainDirty(dirtyVisitor)
-        }
+        graph.drainDirty(dirtyVisitor)
     }
 
     fun insert(
@@ -141,6 +139,8 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
     fun itemIdString(index: Int): String? = itemKeys.key(graph.itemKey(index))
 
     fun itemOwner(index: Int): Long = graph.itemFrom(index)
+
+    fun itemTarget(index: Int): Long = graph.itemTo(index)
 
     fun itemProgress(index: Int): Int = graph.itemProgress(index)
 
@@ -357,18 +357,21 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
         ) {
             val currentStore = store ?: return
             val itemId = itemKeys.key(itemKey) ?: return
-            val entityStore = currentStore.externalData.world.entityStore.store
-            val holder =
-                ItemComponent.generateItemDrop(
-                    entityStore,
-                    ItemStack(itemId, quantity),
-                    Vector3d(worldX, worldY, worldZ),
-                    Rotation3f.ZERO,
-                    0f,
-                    0f,
-                    0f,
-                ) ?: return
-            entityStore.addEntity(holder, com.hypixel.hytale.component.AddReason.SPAWN)
+            val world = currentStore.externalData.world
+            world.execute {
+                val entityStore = world.entityStore.store
+                val holder =
+                    ItemComponent.generateItemDrop(
+                        entityStore,
+                        ItemStack(itemId, quantity),
+                        Vector3d(worldX, worldY, worldZ),
+                        Rotation3f.ZERO,
+                        0f,
+                        0f,
+                        0f,
+                    ) ?: return@execute
+                entityStore.addEntity(holder, com.hypixel.hytale.component.AddReason.SPAWN)
+            }
         }
     }
 
@@ -402,7 +405,6 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
     }
 
     companion object {
-        private const val SAVE_INTERVAL_TICKS = 100L
         private val PROCESSING_BENCH_COMPONENT =
             com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
                 .getComponentType()

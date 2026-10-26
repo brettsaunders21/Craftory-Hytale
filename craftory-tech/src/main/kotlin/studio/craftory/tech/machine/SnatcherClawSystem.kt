@@ -52,26 +52,38 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
 
     override fun tick(
         dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
         index: Int,
         chunk: ArchetypeChunk<ChunkStore>,
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
+        val world = store.externalData.world
+        val tick = world.tick
         val state = chunk.getComponent(index, SnatcherClawState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        val world = store.externalData.world
-        val tick = world.tick
+        val hasPosition = blockState.fillWorldPos(commandBuffer, position)
+        val areaActive = CraftoryCore.isAreaActive(store, blockState)
+        val energyTick = areaActive && CraftoryCore.isEnergyTick(store)
         val energy = CraftoryCore.energyAccess(world)
         val completedSolveTick = energy.lastSolveTick()
-        if (!CraftoryCore.isAreaActive(store, blockState)) {
+        if (!areaActive) {
             state.lastFizzSolveTick = completedSolveTick
             if (blockState.fillWorldPos(commandBuffer, position)) {
                 energy.setDemand(BlockPos.pack(position.x, position.y, position.z), 0)
             }
             return
         }
-        if (!CraftoryCore.isEnergyTick(store)) return
+        if (!energyTick) return
 
         var changed = false
         if (completedSolveTick != Long.MIN_VALUE && completedSolveTick != state.lastFizzSolveTick) {
@@ -89,7 +101,7 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
             state.lastFizzSolveTick = completedSolveTick
         }
 
-        if (!blockState.fillWorldPos(commandBuffer, position)) return
+        if (!hasPosition) return
         val packedPosition = BlockPos.pack(position.x, position.y, position.z)
         val demand = (SnatcherClawState.FIZZ_PER_ITEM - state.fizzBuffer).coerceAtLeast(0)
         if (member.demand != demand) energy.setDemand(packedPosition, demand)
@@ -102,10 +114,15 @@ internal class SnatcherClawSystem : EntityTickingSystem<ChunkStore>() {
             return
         }
 
-        val direction = snatcherClawFrontDirection(blockState, commandBuffer) ?: return
+        val direction =
+            snatcherClawFrontDirection(blockState, commandBuffer)
+                ?: return
         sourcePosition.set(position.x + direction.x(), position.y, position.z + direction.z())
         val sourceRef =
-            BlockModule.getBlockEntity(world, sourcePosition.x, sourcePosition.y, sourcePosition.z) ?: return
+            BlockModule
+                .getBlockEntity(world, sourcePosition.x, sourcePosition.y, sourcePosition.z)
+                ?.takeIf { it.isValid }
+                ?: return
         val sourceStore = world.chunkStore.store
         val sourceContainer =
             sourceStore.getComponent(sourceRef, ItemContainerBlock.getComponentType())?.getItemContainer()
