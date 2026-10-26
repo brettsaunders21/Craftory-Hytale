@@ -1048,6 +1048,7 @@ internal object MachineActions {
         if (playerRef?.hasPermission("hytale.command.craftory.wrench.any") == true) return true
         return ownerUuid in crews.crewOf(playerUuid).members
     }
+
     private fun hasNonEmptyMachineContents(
         blockRef: Ref<ChunkStore>,
         store: Store<ChunkStore>,

@@ -14,8 +14,8 @@ import studio.craftory.core.api.energy.CraftoryEnergyEventsApi
 import studio.craftory.core.api.energy.MachineEnergyCondition
 import studio.craftory.core.api.energy.MachineEnergyConditionListener
 import studio.craftory.core.api.energy.MemberSpec
-import studio.craftory.core.api.multiblock.MultiblockController
 import studio.craftory.core.api.mob.CraftoryMobs
+import studio.craftory.core.api.multiblock.MultiblockController
 import studio.craftory.tech.command.ScrapRushCommand
 import studio.craftory.tech.command.SummonCommand
 import studio.craftory.tech.machine.AnchorLifecycle
@@ -65,12 +65,12 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.machine.ShroomBedState
 import studio.craftory.tech.machine.ShroomBedSystem
-import studio.craftory.tech.machine.jank.BodgeSlots
-import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
 import studio.craftory.tech.machine.TransportSelfTestSystem
+import studio.craftory.tech.machine.jank.BodgeSlots
+import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.mob.RiftmothDrainSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
