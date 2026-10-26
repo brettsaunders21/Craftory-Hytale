@@ -12,7 +12,7 @@ internal object WellStormVaneSelfTest {
         world: com.hypixel.hytale.server.core.universe.world.World,
         report: (String) -> Unit,
     ) {
-        val vane = WellSelfTest.VANE_POS
+        val vane = WellSelfTestFixtures.vanePosition(world)
         val position = CraftorySelfTest.TestPosition(vane.x, vane.y, vane.z)
         val store = world.chunkStore.store
         val sectionRef =

@@ -1215,7 +1215,7 @@ object CraftorySelfTest {
                 store.getComponent(sectionRef, BlockComponentSection.getComponentType())
                     ?: error("block component section is missing")
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
-            clear(world, sectionRef, testPositions())
+            clear(world, sectionRef, testPositions(world))
             clear(world, drySectionRef, listOf(RATTLEWHEEL_DRY))
             WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
@@ -3284,7 +3284,7 @@ object CraftorySelfTest {
                 lastAutoCrankTick = world.tick
                 lastPulseTick = null
             }
-        testPositions().forEach { position ->
+        testPositions(world).forEach { position ->
             BlockOperations.setBlock(
                 world.chunkStore,
                 sectionRef,
@@ -3341,7 +3341,7 @@ object CraftorySelfTest {
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }
 
-    private fun testPositions(): List<TestPosition> =
+    private fun testPositions(world: World): List<TestPosition> =
         (
             listOf(BURNER) + pipePositions() +
                 listOf(
@@ -3361,7 +3361,7 @@ object CraftorySelfTest {
                     SHROOM_BED_COVER,
                     CHAIN_SHROOM_BED,
                 ) +
-                WellSelfTestFixtures.fixturePositions().map { TestPosition(it.x, it.y, it.z) } +
+                WellSelfTestFixtures.fixturePositions(world).map { TestPosition(it.x, it.y, it.z) } +
                 heartPositions()
         ).distinct()
 }

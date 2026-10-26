@@ -217,7 +217,8 @@ internal object WellSelfTest {
         world: World,
         report: (String) -> Unit,
     ) {
-        val position = CraftorySelfTest.TestPosition(VANE_POS.x, VANE_POS.y, VANE_POS.z)
+        val vane = WellSelfTestFixtures.vanePosition(world)
+        val position = CraftorySelfTest.TestPosition(vane.x, vane.y, vane.z)
         val store = world.chunkStore.store
         val sectionRef =
             world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
