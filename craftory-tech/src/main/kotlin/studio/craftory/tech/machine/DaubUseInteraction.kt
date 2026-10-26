@@ -30,10 +30,14 @@ class DaubUseInteraction : SimpleBlockInteraction() {
     ) {
         val colour = heldItem?.itemId?.let(::daubColour) ?: return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
-        val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
+        val ref =
+            BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: run {
+                player.sendMessage(Message.translation("server.craftory.transport.not-pipe"))
+                return
+            }
         val store = world.chunkStore.store
-        val owner = ref?.let { store.getComponent(it, MachineOwner.type)?.placerUuid }
-        if (ref != null && !mayUseMachine(owner, player.uuid, player, CraftoryCore.crewService())) {
+        val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+        if (!mayUseMachine(owner, player.uuid, player, CraftoryCore.crewService())) {
             player.sendMessage(Message.translation("server.craftory.transport.foreign-crew"))
             return
         }

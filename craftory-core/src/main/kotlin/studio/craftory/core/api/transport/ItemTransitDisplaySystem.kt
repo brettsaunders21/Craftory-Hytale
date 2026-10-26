@@ -96,6 +96,10 @@ internal class ItemTransitDisplayState : Resource<ChunkStore> {
             incrementChunkCount(chunkKey, chunkIndex)
             val id = runtime.itemId(index)
             var displayIndex = displayIndexes.getOrDefault(id, -1)
+            if (displayIndex >= 0 && displayRefs[displayIndex]?.isValid != true) {
+                removeDisplayAt(displayIndex, currentWorld)
+                displayIndex = -1
+            }
             if (displayIndex < 0) {
                 val ref = createDisplay(currentWorld, runtime, index, x, y, z) ?: continue
                 displayIndex = addDisplay(id, ref)

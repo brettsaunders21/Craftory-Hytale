@@ -36,19 +36,19 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
     private var freeReferenceIndexes = IntArray(32)
     private var freeReferenceCount = 0
     private var nextReferenceIndex = 0
-    private val activityCache = ChunkActivityCache()
+    private val activityCache = SectionActivityCache()
     private var store: Store<ChunkStore>? = null
     private var currentTick = Long.MIN_VALUE
     private val activity =
         NodeActivity { position ->
             val currentStore = store ?: return@NodeActivity false
-            val chunkKey = chunkKey(position)
-            val cached = activityCache.get(chunkKey)
+            val sectionKey = sectionKey(position)
+            val cached = activityCache.get(sectionKey)
             if (cached != null) return@NodeActivity cached
             val ref = referenceAt(position) ?: return@NodeActivity false
             val blockState = currentStore.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())
             val active = blockState?.let { CraftoryCore.isAreaActive(currentStore, it) } ?: false
-            activityCache.put(chunkKey, active)
+            activityCache.put(sectionKey, active)
             active
         }
     private val sink = TransportSink()
@@ -242,10 +242,14 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
             ?.markNeedsSaving(currentStore)
     }
 
-    private fun chunkKey(position: Long): Long {
+    private fun sectionKey(position: Long): Long {
         val x = PackedPosition.x(position) shr 5
+        val y = PackedPosition.y(position) shr 5
         val z = PackedPosition.z(position) shr 5
-        return (x.toLong() shl 32) xor (z.toLong() and 0xffffffffL)
+        val mask = 0x1fffffL
+        return ((x.toLong() and mask) shl 42) or
+            ((y.toLong() and mask) shl 21) or
+            (z.toLong() and mask)
     }
 
     private fun referenceAt(position: Long): Ref<ChunkStore>? {
@@ -531,7 +535,7 @@ internal class TransportLongIntMap(
     }
 }
 
-private class ChunkActivityCache {
+private class SectionActivityCache {
     private var keys = LongArray(32)
     private var values = ByteArray(32)
     private var usedSlots = IntArray(32)

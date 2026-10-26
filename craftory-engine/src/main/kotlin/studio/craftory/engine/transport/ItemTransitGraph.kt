@@ -4,6 +4,7 @@ package studio.craftory.engine.transport
 
 import studio.craftory.engine.energy.LongIntMap
 import java.util.Arrays
+import java.util.SplittableRandom
 
 enum class NodeRemovalReason {
     BREAK,
@@ -80,7 +81,8 @@ class ItemTransitGraph(
     private var originPositions = LongArray(INITIAL_CAPACITY)
     private var waitTicks = IntArray(INITIAL_CAPACITY)
     private var itemSize = 0
-    private var nextItemId = 1L
+    private val itemIdRandom =
+        SplittableRandom(System.nanoTime() xor System.identityHashCode(this).toLong())
 
     init {
         require(speedPerTick in 1..SEGMENT_LENGTH)
@@ -149,12 +151,15 @@ class ItemTransitGraph(
             val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
             if (adjacent >= 0 && adjacent != handle) mergeNetworks(handle, adjacent)
         }
+        var reassignedPersistedId = false
         persistedItems.forEach { record ->
             require(record.fromPos == pos)
             require(record.quantity > 0 && record.colour in 0..4)
-            appendItem(record)
-            if (record.id >= nextItemId) nextItemId = record.id + 1
+            val id = if (record.id < 0 || hasItemId(record.id)) newItemId() else record.id
+            appendItem(if (id == record.id) record else record.copy(id = id))
+            if (id != record.id) reassignedPersistedId = true
         }
+        if (reassignedPersistedId) markDirty(handle)
     }
 
     fun connect(
@@ -236,7 +241,7 @@ class ItemTransitGraph(
             return REJECTED_ITEM_ID
         }
         ensureItemCapacity(itemSize + 1)
-        val id = nextItemId++
+        val id = newItemId()
         val itemIndex = itemSize++
         itemIds[itemIndex] = id
         itemKeys[itemIndex] = itemKey
@@ -692,6 +697,21 @@ class ItemTransitGraph(
         waitTicks[index] = 0
         val ownerHandle = nodeMap.getOrDefault(record.fromPos, -1)
         if (ownerHandle >= 0) incrementOwnerCount(ownerHandle)
+    }
+
+    private fun newItemId(): Long {
+        var id: Long
+        do {
+            id = itemIdRandom.nextLong() and Long.MAX_VALUE
+        } while (hasItemId(id))
+        return id
+    }
+
+    private fun hasItemId(id: Long): Boolean {
+        for (index in 0 until itemSize) {
+            if (itemIds[index] == id) return true
+        }
+        return false
     }
 
     private fun removeItemAt(index: Int) {

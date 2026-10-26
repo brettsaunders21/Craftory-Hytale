@@ -91,7 +91,7 @@ object TransitItemCodec {
             } else {
                 decodeItemId(fields[8]) ?: return null
             }
-        if (id <= 0 || key < 0 || quantity <= 0 || colour !in 0..4 || progress !in 0..ItemTransitGraph.SEGMENT_LENGTH) {
+        if (id < 0 || key < 0 || quantity <= 0 || colour !in 0..4 || progress !in 0..ItemTransitGraph.SEGMENT_LENGTH) {
             return null
         }
         return TransitItemRecord(id, key, quantity, colour, from, to, progress, origin, itemId)

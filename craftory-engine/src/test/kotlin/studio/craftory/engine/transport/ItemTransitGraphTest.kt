@@ -120,6 +120,35 @@ class ItemTransitGraphTest {
     }
 
     @Test
+    fun `partially reloaded pipes with overlapping persisted ids remain unique`() {
+        val graph = ItemTransitGraph()
+        val loadedPipe = pos(40)
+        val unloadedPipe = pos(80)
+        val sink = RecordingSink(pos(99))
+        val overlappingId = 57L
+        val loadedRecord = transitRecord(overlappingId, loadedPipe)
+        val unloadedRecord = transitRecord(overlappingId, unloadedPipe)
+
+        assertEquals(loadedRecord.id, unloadedRecord.id)
+        graph.addNode(loadedPipe, persistedItems = listOf(loadedRecord))
+        graph.drainDirty { }
+        val insertedId = graph.insert(loadedPipe, 3, 1, 0, Long.MIN_VALUE, sink)
+        graph.drainDirty { }
+
+        assertTrue(insertedId >= 0)
+        assertFalse(graph.containsNode(unloadedPipe))
+        graph.addNode(unloadedPipe, persistedItems = listOf(unloadedRecord))
+        val dirtyNodes = ArrayList<Long>()
+        graph.drainDirty { dirtyNodes.add(it) }
+
+        val itemIds = (0 until graph.itemCount).map { graph.itemId(it) }
+        assertEquals(3, itemIds.size)
+        assertEquals(itemIds.size, itemIds.toSet().size)
+        assertTrue(itemIds.all { it >= 0 })
+        assertEquals(listOf(unloadedPipe), dirtyNodes)
+    }
+
+    @Test
     fun `inactive source node freezes item progress`() {
         val graph = ItemTransitGraph()
         val start = pos(0)
@@ -236,7 +265,7 @@ class ItemTransitGraphTest {
     fun `transit codec round trips records and ignores malformed fields`() {
         val records =
             listOf(
-                TransitItemRecord(12, 3, 8, 4, pos(-4, 5, -6), pos(1, 2, 3), 750, pos(8, 9, 10), "Ore_Copper"),
+                TransitItemRecord(0, 3, 8, 4, pos(-4, 5, -6), pos(1, 2, 3), 750, pos(8, 9, 10), "Ore_Copper"),
                 TransitItemRecord(13, 9, 1, 0, pos(0), pos(1), 250, Long.MIN_VALUE),
             )
 
@@ -263,6 +292,11 @@ class ItemTransitGraphTest {
         y: Int = 0,
         z: Int = 0,
     ): Long = PackedPosition.pack(x, y, z)
+
+    private fun transitRecord(
+        id: Long,
+        owner: Long,
+    ) = TransitItemRecord(id, 1, 1, 0, owner, owner, 500, Long.MIN_VALUE)
 
     private companion object {
         val ALWAYS_ACTIVE = NodeActivity { true }
