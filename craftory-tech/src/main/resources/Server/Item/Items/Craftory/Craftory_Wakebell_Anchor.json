@@ -37,6 +37,7 @@
   "ItemLevel": 1,
   "ItemSoundSetId": "ISS_Items_Metal",
   "BlockType": {
+    "HitboxType": "Craftory/Craftory_Wakebell_Anchor",
     "BlockParticleSetId": "Metal",
     "DrawType": "Model",
     "Flags": {},

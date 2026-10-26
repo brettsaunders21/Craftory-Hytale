@@ -13,7 +13,7 @@
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
-    "HitboxType": "Brazier_Goblin",
+    "HitboxType": "Craftory/Craftory_Resonator",
     "CustomModel": "Blocks/Craftory/Resonator/Resonator.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Resonator/Resonator_Texture.png"}],
     "Interactions": {

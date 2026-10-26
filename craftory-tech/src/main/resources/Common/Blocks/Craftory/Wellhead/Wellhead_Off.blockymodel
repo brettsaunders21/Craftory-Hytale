@@ -5,14 +5,14 @@
       "name": "PressureTank",
       "position": {
         "x": 0.0,
-        "y": 15.0,
+        "y": 14.0,
         "z": 0.0
       },
       "orientation": {
         "x": 0.0,
-        "y": 0.0349,
+        "y": 0.0,
         "z": 0.0,
-        "w": 0.99939
+        "w": 1.0
       },
       "shape": {
         "type": "box",
@@ -1409,7 +1409,7 @@
           "name": "SocketGlow",
           "position": {
             "x": 0.0,
-            "y": -13.0,
+            "y": -13.5,
             "z": 0.0
           },
           "orientation": {

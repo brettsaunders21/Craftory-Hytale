@@ -28,7 +28,7 @@
         }
       }
     },
-    "HitboxType": "Branch",
+    "HitboxType": "Craftory/Craftory_Hurl_Cannon",
     "Gathering": {"Breaking": {"GatherType": "Rocks"}},
     "BlockSoundSetId": "Soft",
     "PhysicalMaterialId": "Wool",

@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.ParticleUtil
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
 import com.hypixel.hytale.server.core.universe.world.World
 import org.joml.Vector3d
+import studio.craftory.tech.CraftoryIds
 
 internal object GutterBoilerEffects {
     fun vent(
@@ -69,7 +70,7 @@ internal object GutterBoilerEffects {
         z: Int,
     ) {
         val store = world.entityStore.store
-        val position = Vector3d(x + 0.5, y + 1.0, z + 0.5)
+        val position = MachineVents.position(CraftoryIds.GUTTER_BOILER, x, y, z) ?: return
         ParticleUtil.spawnParticleEffect(STEAM_PARTICLE_ID, position, store)
         playSound(store, VENT_POP_SOUND_ID, position)
     }

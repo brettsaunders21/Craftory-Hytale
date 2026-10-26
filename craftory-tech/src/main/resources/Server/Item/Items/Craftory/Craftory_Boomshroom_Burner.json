@@ -20,7 +20,7 @@
       },
       "UseDefaultDropWhenPlaced": true
     },
-    "HitboxType": "Brazier_Goblin",
+    "HitboxType": "Craftory/Craftory_Boomshroom_Burner",
     "Material": "Solid",
     "Opacity": "Transparent",
     "ParticleColor": "#716d65",
@@ -52,7 +52,7 @@
           "Particles": [
             {
               "SystemId": "Campfire_New_Cartoon",
-              "TargetNodeName": "Flame-Emitter",
+          "TargetNodeName": "Smoke-Emitter",
               "Scale": 1
             }
           ],

@@ -43,6 +43,18 @@ internal object GutterpipeMask {
         )
 
     fun stateName(mask: Int): String = "C${mask.coerceIn(0, 63).toString().padStart(2, '0')}"
+
+    fun connects(
+        neighborId: String?,
+        hasItemReceiver: Boolean,
+        isFluidNode: Boolean,
+        energyNetwork: Int,
+    ): Boolean =
+        neighborId == CraftoryIds.PIPE ||
+            neighborId == CraftoryIds.SNATCHER_CLAW ||
+            hasItemReceiver ||
+            isFluidNode ||
+            energyNetwork >= 0
 }
 
 internal class GutterpipeStateSystem : EntityTickingSystem<ChunkStore>() {
@@ -98,11 +110,12 @@ internal class GutterpipeStateSystem : EntityTickingSystem<ChunkStore>() {
             val neighborType = blockTypeAt(store, x, y, z)
             val neighborId = neighborType?.let(::baseBlockId)
             val connected =
-                neighborId == CraftoryIds.PIPE ||
-                    neighborId == CraftoryIds.SNATCHER_CLAW ||
-                    itemTransport.hasReceiverAt(store, x, y, z) ||
-                    fluidTransport.isNode(x, y, z) ||
-                    energy.networkOf(BlockPos.pack(x, y, z)) >= 0
+                GutterpipeMask.connects(
+                    neighborId,
+                    itemTransport.hasReceiverAt(store, x, y, z),
+                    fluidTransport.isNode(x, y, z),
+                    energy.networkOf(BlockPos.pack(x, y, z)),
+                )
             if (connected) mask = mask or face.mask
         }
 

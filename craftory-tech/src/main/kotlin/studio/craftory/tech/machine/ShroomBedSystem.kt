@@ -227,9 +227,10 @@ internal class ShroomBedSystem(
     ) {
         state.stored = 0
         state.twitch = 0
+        val vent = MachineVents.position(CraftoryIds.SHROOM_BED, position.x, position.y, position.z) ?: return
         ParticleUtil.spawnParticleEffect(
             "Impact_Spark",
-            Vector3d(position.x + 0.5, position.y + 0.8, position.z + 0.5),
+            vent,
             world.entityStore.store,
         )
         applyKnockback(world, position)

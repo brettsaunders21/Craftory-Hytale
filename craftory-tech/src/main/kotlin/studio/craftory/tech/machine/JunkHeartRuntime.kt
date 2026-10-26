@@ -153,11 +153,12 @@ internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
             state.smokeTicks = 0
             val position = Vector3i()
             if (blockState.fillWorldPos(commandBuffer, position)) {
-                val top = MultiblockGeometry.worldPosition(BlockPos(position.x, position.y, position.z), CHIMNEY_TOP, 0)
+                val top = MachineVents.position(CraftoryIds.JUNK_HEART, position.x, position.y, position.z)
                 world.execute {
+                    if (top == null) return@execute
                     ParticleUtil.spawnParticleEffect(
                         CraftoryIds.CHIMNEY_SMOKE_PARTICLE,
-                        Vector3d(top.x + HALF, top.y.toDouble(), top.z + HALF),
+                        top,
                         world.entityStore.store,
                     )
                 }
@@ -174,7 +175,6 @@ internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
         const val HEART_SAVE_INTERVAL_TICKS = 20L
         const val SMOKE_INTERVAL_TICKS = 20
         const val HALF = 0.5
-        val CHIMNEY_TOP = BlockPos(0, 3, 0)
     }
 }
 

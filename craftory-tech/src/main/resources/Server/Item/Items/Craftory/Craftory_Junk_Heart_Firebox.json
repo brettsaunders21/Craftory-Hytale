@@ -20,7 +20,7 @@
       },
       "UseDefaultDropWhenPlaced": true
     },
-    "HitboxType": "Brazier_Goblin",
+    "HitboxType": "Craftory/Craftory_Junk_Heart_Firebox",
     "Material": "Solid",
     "Opacity": "Transparent",
     "ParticleColor": "#716d65",

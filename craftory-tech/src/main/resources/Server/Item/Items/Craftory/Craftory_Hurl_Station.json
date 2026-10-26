@@ -14,7 +14,7 @@
     "Opacity": "Transparent",
     "CustomModel": "Blocks/Craftory/Hurl_Station/Hurl_Station.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Station/Hurl_Station_Texture.png"}],
-    "HitboxType": "Branch",
+    "HitboxType": "Craftory/Craftory_Hurl_Station",
     "Gathering": {"Breaking": {"GatherType": "Rocks"}},
     "BlockSoundSetId": "Soft",
     "PhysicalMaterialId": "Wool",

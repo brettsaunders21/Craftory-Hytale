@@ -13,7 +13,7 @@
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
-    "HitboxType": "Brazier_Goblin",
+    "HitboxType": "Craftory/Craftory_Crackle_Coil",
     "CustomModel": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Crackle_Coil/Crackle_Coil_Off_Texture.png"}],
     "State": {

@@ -13,7 +13,7 @@
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
-    "HitboxType": "Brazier_Goblin",
+    "HitboxType": "Craftory/Craftory_Well_Cradle",
     "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty_Texture.png"}],
     "State": {

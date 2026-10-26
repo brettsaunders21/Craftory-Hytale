@@ -5,14 +5,14 @@
       "name": "Boiler",
       "position": {
         "x": 0.0,
-        "y": 12.0,
+        "y": 11.5,
         "z": 0.0
       },
       "orientation": {
-        "x": 0.00015,
-        "y": 0.01745,
-        "z": -0.00873,
-        "w": 0.99981
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "w": 1.0
       },
       "shape": {
         "type": "box",
@@ -978,9 +978,9 @@
           "id": "10",
           "name": "Flue",
           "position": {
-            "x": -7.0,
+            "x": 0.0,
             "y": 15.0,
-            "z": -3.0
+            "z": 0.0
           },
           "orientation": {
             "x": 0.0,
@@ -1086,9 +1086,9 @@
           "id": "11",
           "name": "FlueLip",
           "position": {
-            "x": -7.0,
+            "x": 0.0,
             "y": 18.0,
-            "z": -3.0
+            "z": 0.0
           },
           "orientation": {
             "x": 0.0,
@@ -1832,6 +1832,42 @@
                 "angle": 0
               }
             },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "18",
+          "name": "Steam-Emitter",
+          "position": {
+            "x": 0.0,
+            "y": 20.0,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "none",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "isPiece": false
+            },
+            "textureLayout": {},
             "unwrapMode": "custom",
             "visible": true,
             "doubleSided": false,

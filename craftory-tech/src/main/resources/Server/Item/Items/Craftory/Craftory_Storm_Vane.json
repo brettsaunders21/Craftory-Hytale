@@ -11,6 +11,7 @@
   "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
+    "HitboxType": "Craftory/Craftory_Storm_Vane",
     "BlockParticleSetId": "Wood",
     "DrawType": "Model",
     "Flags": {},

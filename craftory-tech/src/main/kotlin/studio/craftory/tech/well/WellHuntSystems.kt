@@ -30,6 +30,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.EnvironmentSe
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
+import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.MachineVents
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
@@ -173,9 +175,10 @@ internal class FizzDamperSystem : EntityTickingSystem<ChunkStore>() {
     ) {
         if (!powered || (state.lastFoamTick != Long.MIN_VALUE && tick - state.lastFoamTick < 20L)) return
         state.lastFoamTick = tick
+        val vent = MachineVents.position(CraftoryIds.FIZZ_DAMPER, pos.x, pos.y, pos.z) ?: return
         ParticleUtil.spawnParticleEffect(
             "Dungeon_Goblin_Toxic_Water",
-            Vector3d(pos.x + 0.5, pos.y + 0.8, pos.z + 0.5),
+            vent,
             world.entityStore.store,
         )
     }

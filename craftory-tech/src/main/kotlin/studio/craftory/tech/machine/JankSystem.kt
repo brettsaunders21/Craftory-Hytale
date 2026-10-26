@@ -79,6 +79,7 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
 
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
+        val ventPosition = MachineVents.position(blockState, position, store) ?: return
         val memberId = BlockPos.pack(position.x, position.y, position.z)
         val worldUuid = store.externalData.world.worldConfig.uuid
         var dirty = false
@@ -105,7 +106,7 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
             jank.apply(result.state)
             dirty = result.state != before
             if (result.fizzled) {
-                emitFizzle(position, store.externalData.world.entityStore.store)
+                emitFizzle(ventPosition, position, store.externalData.world.entityStore.store)
                 if (slots.modifiers().squawk) {
                     alertCrew(
                         chunk.getComponent(index, MachineOwner.type)?.placerUuid,
@@ -119,6 +120,7 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
         if (jank.value >= JankTuning.RATTLE_THRESHOLD) {
             if (jank.effectTicks <= 0) {
                 emitRattle(
+                    ventPosition,
                     position,
                     store.externalData.world.entityStore.store,
                     greySmoke = jank.value >= JankTuning.GREY_SMOKE_FIZZLE_THRESHOLD,
@@ -135,29 +137,23 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
     }
 
     private fun emitFizzle(
-        position: Vector3i,
+        position: Vector3d,
+        blockPosition: Vector3i,
         entityStore: Store<EntityStore>,
     ) {
-        ParticleUtil.spawnParticleEffect(
-            FIZZLE_PARTICLE,
-            Vector3d(position.x + 0.5, position.y + 1.0, position.z + 0.5),
-            entityStore,
-        )
-        playSound(position, entityStore)
+        ParticleUtil.spawnParticleEffect(FIZZLE_PARTICLE, position, entityStore)
+        playSound(blockPosition, entityStore)
     }
 
     private fun emitRattle(
-        position: Vector3i,
+        position: Vector3d,
+        blockPosition: Vector3i,
         entityStore: Store<EntityStore>,
         greySmoke: Boolean,
         muffled: Boolean,
     ) {
-        ParticleUtil.spawnParticleEffect(
-            if (greySmoke) GREY_SMOKE_PARTICLE else RATTLE_PARTICLE,
-            Vector3d(position.x + 0.5, position.y + 1.0, position.z + 0.5),
-            entityStore,
-        )
-        if (!muffled) playSound(position, entityStore)
+        ParticleUtil.spawnParticleEffect(if (greySmoke) GREY_SMOKE_PARTICLE else RATTLE_PARTICLE, position, entityStore)
+        if (!muffled) playSound(blockPosition, entityStore)
     }
 
     private fun playSound(

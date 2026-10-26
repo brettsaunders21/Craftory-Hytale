@@ -11,6 +11,7 @@
   "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
+    "HitboxType": "Craftory/Craftory_Rattlewheel",
     "BlockParticleSetId": "Wood",
     "DrawType": "Model",
     "Flags": {},
