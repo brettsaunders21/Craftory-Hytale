@@ -58,7 +58,6 @@ import studio.craftory.tech.notebook.NotebookPages
 import java.util.logging.Level
 
 private const val BUCKET_VOLUME = 1_000L
-private const val BOILER_FIZZ_CHARGE_BURN_TICKS = 200L
 private const val FILLED_WATER_BUCKET_STATE = "Filled_Water"
 
 private fun filledWaterBucketItemId(stack: ItemStack?): String? {
@@ -1241,17 +1240,12 @@ private fun InteractionContext.addBoilerFuel(
     blockState: BlockModule.BlockStateInfo,
     store: Store<ChunkStore>,
 ) {
-    val burnTicks =
-        if (heldItem.itemId == CraftoryIds.FIZZ_CHARGE) {
-            BOILER_FIZZ_CHARGE_BURN_TICKS
-        } else {
-            JunkPowerFuels.definitions.firstOrNull { it.itemId == heldItem.itemId }?.burnTicks ?: return
-        }
+    if (GutterBoilerActions.fuelBurnTicks(heldItem.itemId) <= 0) return
     val container = heldItemContainer ?: return
     val slot = heldItemSlot.toShort()
     val stack = container.getItemStack(slot) ?: return
     if (stack.itemId != heldItem.itemId || stack.quantity != heldItem.quantity || !consumeHeld()) return
-    state.fuelTicks = (state.fuelTicks + burnTicks).coerceAtMost(Long.MAX_VALUE)
+    GutterBoilerActions.addFuel(state, heldItem.itemId)
     blockState.markNeedsSaving(store)
 }
 

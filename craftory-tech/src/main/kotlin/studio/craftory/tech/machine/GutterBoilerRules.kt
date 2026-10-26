@@ -1,5 +1,7 @@
 package studio.craftory.tech.machine
 
+import studio.craftory.tech.CraftoryIds
+
 data class BoilerStep(
     val pressure: Int,
     val water: Long,
@@ -108,9 +110,39 @@ object GutterBoilerRules {
     const val KNOCKBACK_FORCE = 0.8
     const val KNOCKBACK_UPWARD = 0.3
     const val WHISTLE_INTERVAL_TICKS = 60L
+    const val BOILER_FIZZ_CHARGE_BURN_TICKS = 200L
 }
 
 object GutterBoilerActions {
+    fun acceptWater(
+        state: BoilerState,
+        fluidId: String,
+        amount: Long,
+    ): Long {
+        if (fluidId != "Water_Source" && fluidId != "Water") return 0
+        val accepted = minOf(amount.coerceAtLeast(0), (GutterBoilerRules.CAPACITY - state.water).coerceAtLeast(0))
+        state.water += accepted
+        return accepted
+    }
+
+    fun fuelBurnTicks(itemId: String): Long =
+        if (itemId == CraftoryIds.FIZZ_CHARGE) {
+            GutterBoilerRules.BOILER_FIZZ_CHARGE_BURN_TICKS
+        } else {
+            JunkPowerFuels.definitions.firstOrNull { it.itemId == itemId }?.burnTicks ?: 0L
+        }
+
+    fun addFuel(
+        state: BoilerState,
+        itemId: String,
+    ): Long {
+        val burnTicks = fuelBurnTicks(itemId)
+        if (burnTicks <= 0) return 0
+        val added = minOf(burnTicks, Long.MAX_VALUE - state.fuelTicks.coerceAtLeast(0))
+        state.fuelTicks = (state.fuelTicks.coerceAtLeast(0) + added)
+        return added
+    }
+
     fun advance(
         state: BoilerState,
         lavaBelow: Boolean,

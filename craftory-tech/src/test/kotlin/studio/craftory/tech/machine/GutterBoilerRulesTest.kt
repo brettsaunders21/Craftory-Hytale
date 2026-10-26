@@ -3,8 +3,41 @@ package studio.craftory.tech.machine
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import studio.craftory.tech.CraftoryIds
 
 class GutterBoilerRulesTest {
+    @Test
+    fun `base block id resolves variant to its base`() {
+        assertEquals(
+            "Craftory_Gutter_Boiler",
+            baseBlockId("Craftory_Gutter_Boiler_State_Definitions_Offline", "Craftory_Gutter_Boiler"),
+        )
+        assertEquals("Variant_Block", baseBlockId("Variant_Block", null))
+    }
+
+    @Test
+    fun `boiler actions accept water up to capacity`() {
+        val boiler = BoilerState(water = 3_500)
+        assertEquals(300, GutterBoilerActions.acceptWater(boiler, "Water", 300))
+        assertEquals(3_800, boiler.water)
+        assertEquals(200, GutterBoilerActions.acceptWater(boiler, "Water_Source", 1_000))
+        assertEquals(4_000, boiler.water)
+        assertEquals(0, GutterBoilerActions.acceptWater(boiler, "Lava_Source", 100))
+        assertEquals(4_000, boiler.water)
+    }
+
+    @Test
+    fun `boiler actions resolve and add supported fuel`() {
+        assertEquals(200, GutterBoilerActions.fuelBurnTicks(CraftoryIds.FIZZ_CHARGE))
+        assertEquals(200, GutterBoilerActions.fuelBurnTicks("Plant_Crop_Mushroom_Common_Brown"))
+        assertEquals(0, GutterBoilerActions.fuelBurnTicks("Unknown_Fuel"))
+
+        val boiler = BoilerState(fuelTicks = Long.MAX_VALUE - 100)
+        assertEquals(100, GutterBoilerActions.addFuel(boiler, CraftoryIds.FIZZ_CHARGE))
+        assertEquals(Long.MAX_VALUE, boiler.fuelTicks)
+        assertEquals(0, GutterBoilerActions.addFuel(boiler, "Unknown_Fuel"))
+    }
+
     @Test
     fun `pressure rises consumes water and produces pressurised fizz`() {
         val step = GutterBoilerRules.step(79, 100, fueled = true, lavaBelow = false, online = true)

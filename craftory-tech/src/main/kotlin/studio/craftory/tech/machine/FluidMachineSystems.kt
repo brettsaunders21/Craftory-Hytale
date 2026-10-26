@@ -363,10 +363,7 @@ internal fun registerBoilerFluidHandler() {
     FluidTransport.registerHandler(
         BoilerState.type,
         FluidHandler { state, fluid, amount ->
-            if (fluid != "Water_Source" && fluid != "Water") return@FluidHandler 0
-            val accepted = minOf(amount, GutterBoilerRules.CAPACITY - state.water)
-            state.water += accepted
-            accepted
+            GutterBoilerActions.acceptWater(state, fluid, amount)
         },
     )
 }
