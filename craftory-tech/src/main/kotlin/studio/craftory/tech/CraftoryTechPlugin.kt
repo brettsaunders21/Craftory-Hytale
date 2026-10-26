@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.util.Config
+import com.hypixel.hytale.server.npc.NPCPlugin
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.Crew
 import studio.craftory.core.api.energy.CraftoryEnergyEventsApi
@@ -27,6 +28,7 @@ import studio.craftory.tech.machine.AssemblyViewIndex
 import studio.craftory.tech.machine.BodgeUseInteraction
 import studio.craftory.tech.machine.BoilerState
 import studio.craftory.tech.machine.BuildableMachineCraftGate
+import studio.craftory.tech.machine.BuilderActionOpenTieredBarterShop
 import studio.craftory.tech.machine.BurnerState
 import studio.craftory.tech.machine.BurnerSystem
 import studio.craftory.tech.machine.CanisterPage
@@ -179,6 +181,10 @@ class CraftoryTechPlugin(
     @Suppress("LongMethod")
     override fun setup() {
         val pluginVersion = getManifest().getVersion().toString()
+        NPCPlugin.get().registerCoreComponentType(
+            "CraftoryOpenTieredBarterShop",
+            ::BuilderActionOpenTieredBarterShop,
+        )
         WellRuntimeConfig.current = wellConfig.get()
         ResonatorRuntimeConfig.crystalUses = config.get().resonatorCrystalUses.coerceAtLeast(1)
         WellAfflictionRuntimeConfig.settings = config.get().wellRisk
