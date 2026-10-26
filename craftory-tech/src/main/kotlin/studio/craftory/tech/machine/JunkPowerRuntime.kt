@@ -5,6 +5,7 @@ package studio.craftory.tech.machine
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
 import com.hypixel.hytale.builtin.crafting.interaction.OpenProcessingBenchInteraction
+import com.hypixel.hytale.builtin.crafting.system.BenchSystems
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
@@ -37,6 +38,7 @@ import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBloc
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
@@ -225,6 +227,91 @@ internal class BurnerSystem : EntityTickingSystem<ChunkStore>() {
     }
 }
 
+internal class ScorchOvenGateSystem : EntityTickingSystem<ChunkStore>() {
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(
+            OvenPower.type,
+            Jank.type,
+            ProcessingBenchBlock.getComponentType(),
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
+
+    override fun getDependencies(): Set<Dependency<ChunkStore>> =
+        setOf(
+            SystemDependency(Order.BEFORE, BenchSystems.ProcessingBenchTick::class.java),
+            SystemDependency(Order.BEFORE, EnergySolveSystem::class.java),
+        )
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val power = chunk.getComponent(index, OvenPower.type) ?: return
+        val jank = chunk.getComponent(index, Jank.type) ?: return
+        val bench = chunk.getComponent(index, ProcessingBenchBlock.getComponentType()) ?: return
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val world = store.externalData.world
+        val recipe = bench.recipe
+        val recipeId = recipe?.id
+        val recipeTime = recipe?.let { bench.getRecipeTimeSeconds(1) }
+        val recipeChanged = power.lastRecipeId != recipeId
+        val progressBeforeTick =
+            if (recipeChanged) {
+                bench.inputProgress
+            } else {
+                power.lastInputProgress ?: bench.inputProgress
+            }
+        power.tickStartProgress = progressBeforeTick
+        power.tickRecipeId = recipeId
+        power.tickRecipeTimeSeconds = recipeTime
+        power.recipeChangedBeforeTick = recipeChanged
+
+        val currentGameTime =
+            world.entityStore.store
+                .getResource(WorldTimeResource.getResourceType())
+                .gameTime
+        val previousGameTime = bench.lastTickGameTime
+        val pendingGameElapsedMillis =
+            if (currentGameTime != null && previousGameTime != null && currentGameTime != previousGameTime) {
+                (currentGameTime.toEpochMilli() - previousGameTime.toEpochMilli()).coerceAtLeast(0)
+            } else {
+                0
+            }
+        val gate =
+            OvenFizzAccounting.gate(
+                storedFizz = power.storedFizz,
+                activeArea = CraftoryCore.isAreaActive(store, blockState),
+                stalled = jank.isStalled,
+                pendingGameElapsedMillis = pendingGameElapsedMillis,
+                secondsPerTick = WorldTimeResource.getSecondsPerTick(world),
+            )
+        power.gateStatus = gate.status
+        if (
+            currentGameTime != null &&
+            (gate.status != null || gate.allowedGameElapsedMillis < pendingGameElapsedMillis)
+        ) {
+            bench.setLastTickGameTime(currentGameTime.minusMillis(gate.allowedGameElapsedMillis))
+        }
+    }
+}
+
 internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
         Query.and(
@@ -233,11 +320,15 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
             BodgeSlots.type,
             EnergyMember.type,
             ProcessingBenchBlock.getComponentType(),
+            BenchBlock.getComponentType(),
             BlockModule.BlockStateInfo.getComponentType(),
         )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
-        setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
+        setOf(
+            SystemDependency(Order.AFTER, BenchSystems.ProcessingBenchTick::class.java),
+            SystemDependency(Order.BEFORE, EnergySolveSystem::class.java),
+        )
 
     override fun isParallel(
         systemIndex: Int,
@@ -269,82 +360,66 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         val benchBlock = chunk.getComponent(index, BenchBlock.getComponentType()) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val world = store.externalData.world
-        val tick = world.tick
-        if (!CraftoryCore.isAreaActive(store, blockState)) {
-            MachineClock.pause(power, tick)
-            setBlockState(world, blockState, commandBuffer, "Off")
-            return
-        }
-        if (jank.isStalled) {
-            MachineClock.pause(power, tick)
-            if (bench.isActive()) bench.setActive(false, benchBlock, blockState)
-            setBlockState(world, blockState, commandBuffer, "Off")
-            val position = blockState.worldPosition(commandBuffer) ?: return
-            val id = BlockPos.pack(position.x, position.y, position.z)
-            if (member.demand != 0L) CraftoryCore.energyAccess(world).setDemand(id, 0)
-            return
-        }
-        if (!CraftoryCore.isEnergyTick(store)) return
-        val powerLoss = OvenPowerMath.updatePowerLoss(power.lastDeliveredTick, tick, member.delivered > 0)
-        power.lastDeliveredTick = powerLoss.lastDeliveredTick
-        if (bench.isActive() && powerLoss.shouldStop) {
-            bench.setActive(false, benchBlock, blockState)
-        }
-        setBlockState(world, blockState, commandBuffer, if (bench.isActive()) "On" else "Off")
         val position = Vector3i()
         if (!blockState.fillWorldPos(commandBuffer, position)) return
+        ScorchOvenWindowTargets.update(world, position, benchBlock.windows.keys)
         val id = BlockPos.pack(position.x, position.y, position.z)
-        val chargeStack = bench.fuelContainer.getItemStack(0.toShort())
-        val chargeCount =
-            if (chargeStack?.itemId == CraftoryIds.FIZZ_CHARGE) {
-                chargeStack.quantity
-            } else {
-                0
-            }
-        val fuelSlotAvailable =
-            chargeStack == null || chargeStack.isEmpty || chargeStack.itemId == CraftoryIds.FIZZ_CHARGE
         val energy = CraftoryCore.energyAccess(world)
-        val completedSolveTick = energy.lastSolveTick()
-        val fizzUpdate =
-            OvenFizzAccounting.update(
-                power.accumulatedFizz,
-                power.lastFizzSolveTick,
-                completedSolveTick,
-                member.delivered,
-                hasRecipeInput(bench),
-                chargeCount,
-                fuelSlotAvailable,
-            )
-        val demand = (fizzUpdate.demand * slots.modifiers().energyUse).toLong()
-        if (member.demand != demand) energy.setDemand(id, demand)
-        var dirty = false
-        power.lastFizzSolveTick = fizzUpdate.lastFizzSolveTick
-        if (power.accumulatedFizz != fizzUpdate.accumulatedFizz) {
-            power.accumulatedFizz = fizzUpdate.accumulatedFizz
-            dirty = true
-        }
-        if (fizzUpdate.shouldInsertCharge) {
-            val transaction =
-                bench.fuelContainer.setItemStackForSlot(
-                    0.toShort(),
-                    ItemStack(CraftoryIds.FIZZ_CHARGE, chargeCount + 1),
+        val activeArea = CraftoryCore.isAreaActive(store, blockState)
+        val gateStatus = power.gateStatus
+        val previousStoredFizz = power.storedFizz
+        if (!activeArea || jank.isStalled) {
+            if (member.demand != 0L) energy.setDemand(id, 0)
+        } else {
+            val completedSolveTick = energy.lastSolveTick()
+            val fizzUpdate =
+                OvenFizzAccounting.update(
+                    power.storedFizz,
+                    power.lastFizzSolveTick,
+                    completedSolveTick,
+                    member.delivered,
+                    slots.modifiers().energyUse.toDouble(),
                 )
-            if (transaction.succeeded()) {
-                power.accumulatedFizz -= OvenFizzAccounting.FIZZ_PER_CHARGE
-                dirty = true
-            }
+            if (member.demand != fizzUpdate.demand) energy.setDemand(id, fizzUpdate.demand)
+            power.lastFizzSolveTick = fizzUpdate.lastFizzSolveTick
+            if (fizzUpdate.storedFizz > power.storedFizz) power.receivedFizzFromNetwork = true
+            power.storedFizz = fizzUpdate.storedFizz
         }
-        if (dirty) blockState.markNeedsSaving(commandBuffer)
-    }
-
-    private fun hasRecipeInput(bench: ProcessingBenchBlock): Boolean =
-        bench.recipe != null &&
-            (0 until bench.inputContainer.capacity).any { slot ->
-                bench.inputContainer.getItemStack(slot.toShort())?.isEmpty == false
-            }
-
-    private companion object {
-        const val MAX_CHARGES = OvenFizzAccounting.MAX_CHARGES
+        val currentRecipeId = bench.recipe?.id
+        val currentRecipeTime = bench.recipe?.let { bench.getRecipeTimeSeconds(1) }
+        val recipeChanged =
+            power.recipeChangedBeforeTick ||
+                power.tickRecipeId != currentRecipeId
+        val processing =
+            OvenFizzAccounting.process(
+                storedFizz = power.storedFizz,
+                previousProgress = power.tickStartProgress ?: power.lastInputProgress,
+                currentProgress = bench.inputProgress,
+                previousRecipeTimeSeconds = power.tickRecipeTimeSeconds ?: power.lastRecipeTimeSeconds,
+                recipeChanged = recipeChanged,
+                gateStatus =
+                    gateStatus
+                        ?: if (!activeArea) {
+                            MachineStatus.IDLE
+                        } else if (jank.isStalled) {
+                            MachineStatus.STALLED
+                        } else {
+                            null
+                        },
+            )
+        if (bench.inputProgress != processing.inputProgress) {
+            bench.setInputProgress(processing.inputProgress)
+            bench.sendProgress(processing.inputProgress, benchBlock.windows)
+        }
+        power.storedFizz = processing.storedFizz
+        power.lastInputProgress = processing.inputProgress
+        power.lastRecipeId = currentRecipeId
+        power.lastRecipeTimeSeconds = currentRecipeTime
+        power.status = processing.status
+        power.gateStatus = null
+        power.recipeChangedBeforeTick = false
+        setBlockState(world, blockState, commandBuffer, if (processing.advanced) "On" else "Off")
+        if (power.storedFizz != previousStoredFizz) blockState.markNeedsSaving(commandBuffer)
     }
 }
 

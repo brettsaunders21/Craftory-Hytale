@@ -32,6 +32,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
@@ -70,6 +71,8 @@ import studio.craftory.tech.well.WellSelfTest
 import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
+import java.time.Instant
 import java.util.Random
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -93,9 +96,16 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var scrapRushProbePending: Boolean = false,
         var cleanupTick: Long? = null,
         var powerLossTick: Long? = null,
-        var ovenProgressAtSixSeconds: Float? = null,
-        var ovenInputAtSixSeconds: String? = null,
-        var ovenOutputAtSixSeconds: String? = null,
+        var ovenProgressAtNoPower: Float? = null,
+        var ovenInputAtNoPower: String? = null,
+        var ovenOutputAtNoPower: String? = null,
+        var ovenUnpoweredProbeTick: Long? = null,
+        var ovenGameTimeBeforeJump: Instant? = null,
+        var ovenGameTimeJumpApplied: Boolean = false,
+        var ovenGameTimeRestoreAttempted: Boolean = false,
+        var ovenPoweredProbeTick: Long? = null,
+        var ovenProbeOutputItemId: String? = null,
+        var ovenProbeOutputQuantity: Int = 0,
         var spawnedGritDrops: Int = 0,
         var spawnedGritQuantity: Int = 0,
         var gnasherBaselineQuantity: Int = 0,
@@ -164,6 +174,10 @@ private fun abort(
     reason: String,
 ) {
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+    runCatching { CraftorySelfTest.restoreOvenGameTime(run) }
+        .onFailure { failure ->
+            run.context.sendMessage(Message.raw("selftest: game-time restore failed (${failure.message})"))
+        }
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
     runCatching { run.hurlCleanup?.invoke() }
     runCatching { MobSelfTest.cleanup(run) }
@@ -184,7 +198,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.AFTER, EnergySolveSystem::class.java))
 
-    @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught")
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "TooGenericExceptionCaught")
     override fun tick(
         dt: Float,
         systemIndex: Int,
@@ -218,6 +232,71 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 tickPowerLossPhase(run, store, tick)
             } catch (failure: Exception) {
                 abort(run, "exception (${failure.message})")
+            }
+            return
+        }
+        if (run.phase == 7) {
+            val started = run.ovenUnpoweredProbeTick ?: tick
+            if (tick >= started + 5) {
+                val ref =
+                    BlockModule.getBlockEntity(
+                        run.world,
+                        CraftorySelfTest.OVEN.x,
+                        CraftorySelfTest.OVEN.y,
+                        CraftorySelfTest.OVEN.z,
+                    )
+                val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+                val power = ref?.let { store.getComponent(it, OvenPower.type) }
+                val input = bench?.inputContainer?.getItemStack(0.toShort())
+                val output = bench?.outputContainer?.getItemStack(0.toShort())
+                val producedOutput = output?.takeIf { it.quantity > 0 }
+                val outputUnchanged =
+                    producedOutput?.itemId == run.ovenProbeOutputItemId &&
+                        (producedOutput?.quantity ?: 0) == run.ovenProbeOutputQuantity
+                val preserved =
+                    input?.itemId == "Ore_Copper" &&
+                        input.quantity == 1 &&
+                        outputUnchanged
+                check(
+                    run,
+                    preserved,
+                    "oven preserves input inserted without power",
+                    "input=$input, output=$output baseline=${run.ovenProbeOutputItemId}x${run.ovenProbeOutputQuantity}",
+                )
+                power?.storedFizz = OvenPower.CAPACITY
+                run.ovenPoweredProbeTick = tick
+                run.phase = 8
+            }
+            return
+        }
+        if (run.phase == 8) {
+            val ref =
+                BlockModule.getBlockEntity(
+                    run.world,
+                    CraftorySelfTest.OVEN.x,
+                    CraftorySelfTest.OVEN.y,
+                    CraftorySelfTest.OVEN.z,
+                )
+            val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+            val output = bench?.outputContainer?.getItemStack(0.toShort())
+            val input = bench?.inputContainer?.getItemStack(0.toShort())
+            val producedOutput = output?.takeIf { it.quantity > 0 }
+            val timedOut = tick >= (run.ovenPoweredProbeTick ?: tick) + 400
+            val completed =
+                producedOutput?.itemId == "Ingredient_Bar_Copper" &&
+                    producedOutput.quantity > run.ovenProbeOutputQuantity &&
+                    (input?.itemId != "Ore_Copper" || input.quantity == 0)
+            if (completed || timedOut) {
+                check(
+                    run,
+                    completed,
+                    "oven completes after capacitor is powered",
+                    "input=$input, output=$output baseline=${run.ovenProbeOutputItemId}x${run.ovenProbeOutputQuantity}",
+                )
+                run.anchorDisableTick = tick + 1
+                run.anchorDisableStartedTick = tick + 1
+                run.phase = 5
+                run.cleanupTick = tick + 100
             }
             return
         }
@@ -259,24 +338,43 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         }
     }
 
+    @Suppress("CyclomaticComplexMethod")
     private fun tickPowerLossPhase(
         run: SelfTestRun.Run,
         store: Store<ChunkStore>,
         tick: Long,
     ) {
         val powerLossTick = run.powerLossTick ?: return
-        if (!run.finalReported && tick >= powerLossTick + 120) {
+        if (!run.finalReported && tick >= powerLossTick) {
             if (run.sectionEntityTicking) {
-                captureOvenAfterPowerLoss(run, store)
-            } else {
+                val ref =
+                    BlockModule.getBlockEntity(
+                        run.world,
+                        CraftorySelfTest.OVEN.x,
+                        CraftorySelfTest.OVEN.y,
+                        CraftorySelfTest.OVEN.z,
+                    )
+                val power = ref?.let { store.getComponent(it, OvenPower.type) }
+                if (power?.status == MachineStatus.NO_POWER || tick >= powerLossTick + 400) {
+                    captureOvenAfterPowerLoss(run, store)
+                    check(
+                        run,
+                        power?.status == MachineStatus.NO_POWER,
+                        "oven capacitor reports no power when empty",
+                        "status=${power?.status}, storedFizz=${power?.storedFizz}",
+                    )
+                    run.finalReported = true
+                    run.cleanupTick = tick + 40
+                }
+            } else if (tick >= powerLossTick + 1) {
                 run.context.sendMessage(Message.raw("selftest: SKIP oven power-loss buffer check (NonTicking)"))
+                run.finalReported = true
+                run.cleanupTick = tick + 40
             }
-            run.finalReported = true
-            run.cleanupTick = tick + 20
         } else if (
             run.finalReported &&
             !run.stoppedReported &&
-            tick >= (run.cleanupTick ?: Long.MAX_VALUE) - 12
+            tick >= (run.cleanupTick ?: Long.MAX_VALUE)
         ) {
             if (run.sectionEntityTicking) {
                 checkOvenStopped(run, store)
@@ -284,10 +382,12 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 run.context.sendMessage(Message.raw("selftest: SKIP oven stop-after-power-loss check (NonTicking)"))
             }
             run.stoppedReported = true
-            run.anchorDisableTick = tick + 1
-            run.anchorDisableStartedTick = tick + 1
-            run.phase = 5
-            run.cleanupTick = tick + 100
+            if (run.phase != 7) {
+                run.anchorDisableTick = tick + 1
+                run.anchorDisableStartedTick = tick + 1
+                run.phase = 5
+                run.cleanupTick = tick + 100
+            }
         }
     }
 
@@ -498,34 +598,29 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             run.context.sendMessage(Message.raw("selftest: inspect canister $inspection"))
         }
         if (!run.sectionEntityTicking) {
-            run.context.sendMessage(Message.raw("selftest: SKIP oven solve-path charge and activation (NonTicking)"))
+            run.context.sendMessage(Message.raw("selftest: SKIP oven capacitor and processing (NonTicking)"))
             run.ovenCompletionTickOffset = 48
             run.phase = 2
             return
         }
         val ovenPosition = CraftorySelfTest.OVEN
         val ovenRef = BlockModule.getBlockEntity(run.world, ovenPosition.x, ovenPosition.y, ovenPosition.z)
-        val bench = ovenRef?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
         val power = ovenRef?.let { store.getComponent(it, OvenPower.type) }
         val ovenMember = ovenRef?.let { store.getComponent(it, EnergyMember.type) }
         val energy = CraftoryCore.energyAccess(run.world)
         val burnerNetwork = energy.networkOf(pack(CraftorySelfTest.BURNER))
         val ovenNetwork = energy.networkOf(pack(ovenPosition))
-        val fuel = bench?.fuelContainer?.getItemStack(0.toShort())
-        val chargeAvailable =
-            (fuel != null && fuel.itemId == CraftoryIds.FIZZ_CHARGE && fuel.quantity > 0) ||
-                (bench?.fuelTime ?: 0f) > 0f
+        val chargedFromNetwork = power?.receivedFizzFromNetwork == true
         val solverPathUsed = power?.lastFizzSolveTick?.let { it > run.startTick } == true
         val poweredNetwork = burnerNetwork >= 0 && ovenNetwork == burnerNetwork
-        if (!(chargeAvailable && solverPathUsed && poweredNetwork)) {
+        if (!(chargedFromNetwork && solverPathUsed && poweredNetwork)) {
             check(
                 run,
                 false,
-                "oven solve-path Fizz Charge insertion",
-                "oven charge insertion failed " +
-                    "(fuel=${fuel?.itemId}x${fuel?.quantity}, fuelTime=${bench?.fuelTime}, " +
+                "oven capacitor charges from network",
+                "storedFizz=${power?.storedFizz}, received=${power?.receivedFizzFromNetwork}, " +
                     "lastSolve=${power?.lastFizzSolveTick}, delivered=${ovenMember?.delivered}, " +
-                    "networks=$burnerNetwork/$ovenNetwork)",
+                    "networks=$burnerNetwork/$ovenNetwork",
             )
             run.phase = 2
             return
@@ -533,16 +628,10 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         check(
             run,
             true,
-            "oven solve-path Fizz Charge insertion",
-            "fuel=${fuel?.itemId}x${fuel?.quantity}, fuelTime=${bench?.fuelTime}, " +
+            "oven capacitor charges from network",
+            "storedFizz=${power?.storedFizz}, received=${power?.receivedFizzFromNetwork}, " +
                 "lastSolve=${power?.lastFizzSolveTick}, delivered=${ovenMember?.delivered}, network=$ovenNetwork",
         )
-        val benchBlock = ovenRef?.let { store.getComponent(it, BenchBlock.getComponentType()) }
-        val blockState = ovenRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) }
-        if (bench != null && benchBlock != null && blockState != null) {
-            bench.setActive(true, benchBlock, blockState)
-        }
-        check(run, bench?.isActive() == true, "oven vanilla processing activated", "active=${bench?.isActive()}")
         run.phase = 2
     }
 
@@ -560,9 +649,9 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 run,
                 output?.itemId == "Ingredient_Bar_Copper" && (output?.quantity ?: 0) > 0,
                 "powered oven processes copper",
-                "active=${bench?.isActive()}, input=${input?.itemId}x${input?.quantity}, " +
+                "input=${input?.itemId}x${input?.quantity}, " +
                     "output=${output?.itemId}x${output?.quantity}, " +
-                    "progress=${bench?.inputProgress}, fuelTime=${bench?.fuelTime}",
+                    "progress=${bench?.inputProgress}",
             )
         } else {
             run.context.sendMessage(Message.raw("selftest: SKIP oven copper completion (NonTicking)"))
@@ -704,16 +793,17 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val position = CraftorySelfTest.OVEN
         val ref = BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)
         val bench = ref?.let { store.getComponent(it, ProcessingBenchBlock.getComponentType()) }
+        val power = ref?.let { store.getComponent(it, OvenPower.type) }
         val input = bench?.inputContainer?.getItemStack(0.toShort())
-        run.ovenProgressAtSixSeconds = bench?.inputProgress
-        run.ovenInputAtSixSeconds = stackDescription(input)
-        run.ovenOutputAtSixSeconds = stackDescription(bench?.outputContainer?.getItemStack(0.toShort()))
-        check(
-            run,
-            bench != null && !bench.isActive(),
-            "oven stops within six seconds after power loss",
-            "active=${bench?.isActive()}, fuelTime=${bench?.fuelTime}",
-        )
+        run.ovenProgressAtNoPower = bench?.inputProgress
+        run.ovenInputAtNoPower = stackDescription(input)
+        run.ovenOutputAtNoPower = stackDescription(bench?.outputContainer?.getItemStack(0.toShort()))
+        run.powerLossTick = run.world.tick
+        if (power?.status != MachineStatus.NO_POWER) {
+            run.context.sendMessage(
+                Message.raw("selftest: oven no-power capture status=${power?.status}, storedFizz=${power?.storedFizz}"),
+            )
+        }
     }
 
     private fun checkOvenStopped(
@@ -726,19 +816,58 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         val input = stackDescription(bench?.inputContainer?.getItemStack(0.toShort()))
         val output = stackDescription(bench?.outputContainer?.getItemStack(0.toShort()))
         val progress = bench?.inputProgress
+        val power = ref?.let { store.getComponent(it, OvenPower.type) }
         val stopped =
             bench != null &&
-                !bench.isActive() &&
-                input == run.ovenInputAtSixSeconds &&
-                output == run.ovenOutputAtSixSeconds &&
+                power?.status == MachineStatus.NO_POWER &&
+                input == run.ovenInputAtNoPower &&
+                output == run.ovenOutputAtNoPower &&
                 progress != null &&
-                kotlin.math.abs(progress - (run.ovenProgressAtSixSeconds ?: Float.NaN)) < 0.001f
+                kotlin.math.abs(progress - (run.ovenProgressAtNoPower ?: Float.NaN)) < 0.001f
         check(
             run,
             stopped,
-            "oven stops after six seconds unpowered",
-            "fuelTime=${bench?.fuelTime}, progress=$progress, input=$input, output=$output",
+            "oven freezes after capacitor empties",
+            "status=${power?.status}, storedFizz=${power?.storedFizz}, progress=$progress, " +
+                "input=$input, output=$output",
         )
+        if (bench != null) {
+            val output = bench.outputContainer.getItemStack(0.toShort())?.takeIf { it.quantity > 0 }
+            run.ovenProbeOutputItemId = output?.itemId
+            run.ovenProbeOutputQuantity = output?.quantity ?: 0
+            val inputSet = bench.inputContainer.setItemStackForSlot(0.toShort(), ItemStack("Ore_Copper", 1))
+            check(
+                run,
+                inputSet.succeeded(),
+                "oven unpowered probe inserts input",
+                "result=$inputSet",
+            )
+            run.ovenUnpoweredProbeTick = run.world.tick
+            run.phase = 7
+            val timeResource =
+                run.world.entityStore.store
+                    .getResource(WorldTimeResource.getResourceType())
+            val previousGameTime = timeResource.gameTime
+            if (previousGameTime != null) {
+                val jumpedGameTime = previousGameTime.plus(Duration.ofHours(6))
+                run.ovenGameTimeBeforeJump = previousGameTime
+                timeResource.setGameTime(
+                    jumpedGameTime,
+                    run.world,
+                    run.world.entityStore.store,
+                )
+                val jumpApplied = timeResource.gameTime == jumpedGameTime
+                run.ovenGameTimeJumpApplied = jumpApplied
+                check(
+                    run,
+                    jumpApplied,
+                    "oven unpowered game-time jump",
+                    "before=$previousGameTime jumped=${timeResource.gameTime}",
+                )
+            } else {
+                check(run, false, "oven unpowered game-time jump", "game time unavailable")
+            }
+        }
     }
 
     @Suppress("CyclomaticComplexMethod", "ComplexCondition", "LongMethod")
@@ -995,6 +1124,10 @@ object CraftorySelfTest {
         try {
             reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
         } finally {
+            runCatching { restoreOvenGameTime(run) }
+                .onFailure { failure ->
+                    run.context.sendMessage(Message.raw("selftest: game-time restore failed (${failure.message})"))
+                }
             CraftorySelfTest.releaseTestKeepLoaded(run)
             store.getResource(SelfTestRun.type).active = null
         }
@@ -1008,6 +1141,31 @@ object CraftorySelfTest {
                 TransportSelfTest.start(run.context, run.world)
             }
         }
+    }
+
+    internal fun restoreOvenGameTime(run: SelfTestRun.Run) {
+        val originalGameTime = run.ovenGameTimeBeforeJump ?: return
+        if (!run.ovenGameTimeJumpApplied || run.ovenGameTimeRestoreAttempted) return
+
+        run.ovenGameTimeRestoreAttempted = true
+        val store = run.world.entityStore.store
+        val timeResource = store.getResource(WorldTimeResource.getResourceType())
+        val currentGameTime = timeResource.gameTime
+        if (currentGameTime == null) {
+            check(run, false, "oven game time restored", "before=$originalGameTime current=unavailable")
+            return
+        }
+        val jumpTarget = originalGameTime.plus(Duration.ofHours(6))
+        val elapsedSinceJump = Duration.between(jumpTarget, currentGameTime)
+        val expectedGameTime = originalGameTime.plus(elapsedSinceJump)
+        timeResource.setGameTime(expectedGameTime, run.world, store)
+        check(
+            run,
+            timeResource.gameTime == expectedGameTime,
+            "oven game time restored",
+            "before=$originalGameTime current=$currentGameTime elapsed=$elapsedSinceJump " +
+                "expected=$expectedGameTime actual=${timeResource.gameTime}",
+        )
     }
 
     internal fun retainTestKeepLoaded(
@@ -1342,7 +1500,7 @@ object CraftorySelfTest {
         val bench =
             store.getComponent(ovenRef, ProcessingBenchBlock.getComponentType())
                 ?: error("processing bench missing")
-        check(bench.inputContainer.setItemStackForSlot(0.toShort(), ItemStack("Ore_Copper", 2)).succeeded()) {
+        check(bench.inputContainer.setItemStackForSlot(0.toShort(), ItemStack("Ore_Copper", 20)).succeeded()) {
             "oven copper input setup failed"
         }
 

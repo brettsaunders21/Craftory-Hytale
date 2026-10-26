@@ -77,7 +77,6 @@
     "VariantRotation": "NESW",
     "Bench": {
       "Type": "Processing",
-      "AllowNoInputProcessing": true,
       "Input": [
         {
           "FilterValidIngredients": true
@@ -86,13 +85,6 @@
           "FilterValidIngredients": true
         }
       ],
-      "Fuel": [
-        {
-          "ResourceTypeId": "Craftory_Fizz",
-          "Icon": "Icons/Processing/FuelSlotIcon.png"
-        }
-      ],
-      "FuelDropItemId": "Craftory_Fizz_Charge",
       "LocalOpenSoundEventId": "SFX_Furnace_Bench_Open",
       "LocalCloseSoundEventId": "SFX_Furnace_Bench_Close",
       "CompletedSoundEventId": "SFX_Furnace_Bench_Processing_Complete",

@@ -106,57 +106,9 @@ class JunkPowerMachinesTest {
     }
 
     @Test
-    fun `oven collects surplus fizz and charges whenever fuel space is available`() {
-        val secondCharge =
-            OvenFizzAccounting.update(
-                accumulatedFizz = 90,
-                lastFizzSolveTick = 100,
-                completedSolveTick = 101,
-                deliveredFizz = 30,
-                hasRecipeInput = true,
-                chargeCount = 1,
-                fuelSlotAvailable = true,
-            )
-
-        assertEquals(OvenFizzAccounting.FIZZ_PER_SOLVE_TICK, secondCharge.demand)
-        assertEquals(120, secondCharge.accumulatedFizz)
-        assertEquals(101, secondCharge.lastFizzSolveTick)
-        assertTrue(secondCharge.shouldInsertCharge)
-
-        val surplus =
-            OvenFizzAccounting.update(
-                accumulatedFizz = secondCharge.accumulatedFizz - OvenFizzAccounting.FIZZ_PER_CHARGE,
-                lastFizzSolveTick = secondCharge.lastFizzSolveTick,
-                completedSolveTick = 102,
-                deliveredFizz = 30,
-                hasRecipeInput = true,
-                chargeCount = 2,
-                fuelSlotAvailable = true,
-            )
-
-        assertEquals(0, surplus.demand)
-        assertEquals(30, surplus.accumulatedFizz)
-        assertEquals(102, surplus.lastFizzSolveTick)
-        assertFalse(surplus.shouldInsertCharge)
-    }
-
-    @Test
-    fun `oven keeps full demand while plain fizz slows only the gnasher`() {
+    fun `plain fizz slows only the gnasher`() {
         assertEquals(100, TinkeredSpeed.percent(1))
         assertEquals(50, TinkeredSpeed.percent(0))
-        val oven =
-            OvenFizzAccounting.update(
-                accumulatedFizz = 90,
-                lastFizzSolveTick = 100,
-                completedSolveTick = 101,
-                deliveredFizz = OvenFizzAccounting.FIZZ_PER_SOLVE_TICK,
-                hasRecipeInput = true,
-                chargeCount = 0,
-                fuelSlotAvailable = true,
-            )
-        assertEquals(OvenFizzAccounting.FIZZ_PER_SOLVE_TICK, oven.demand)
-        assertEquals(OvenFizzAccounting.FIZZ_PER_CHARGE, oven.accumulatedFizz)
-        assertTrue(oven.shouldInsertCharge)
 
         val gnasher = GnasherState(lastAutoCrankTick = 0)
         assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))

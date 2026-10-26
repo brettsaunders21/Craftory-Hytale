@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage
 import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
@@ -32,6 +33,8 @@ import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.jank.Jank
+import java.util.UUID
+import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
@@ -112,6 +115,64 @@ class EnergyHudState : Component<EntityStore> {
         lateinit var type: ComponentType<EntityStore, EnergyHudState>
         val CODEC: BuilderCodec<EnergyHudState> =
             BuilderCodec.builder(EnergyHudState::class.java, ::EnergyHudState).build()
+    }
+}
+
+internal object ScorchOvenWindowTargets {
+    private data class Target(
+        val x: Int,
+        val y: Int,
+        val z: Int,
+    )
+
+    private val targets = WeakHashMap<World, MutableMap<UUID, LinkedHashSet<Target>>>()
+
+    @Synchronized
+    fun update(
+        world: World,
+        position: Vector3i,
+        openPlayers: Set<UUID>,
+    ) {
+        val target = Target(position.x, position.y, position.z)
+        val byPlayer = targets.getOrPut(world) { mutableMapOf() }
+        byPlayer.entries.toList().forEach { (playerId, playerTargets) ->
+            if (playerId !in openPlayers) {
+                playerTargets.remove(target)
+                if (playerTargets.isEmpty()) byPlayer.remove(playerId)
+            }
+        }
+        openPlayers.forEach { playerId ->
+            val playerTargets = byPlayer.getOrPut(playerId) { linkedSetOf() }
+            playerTargets.remove(target)
+            playerTargets.add(target)
+        }
+    }
+
+    @Synchronized
+    fun forPlayer(
+        world: World,
+        playerId: UUID,
+        playerPosition: org.joml.Vector3d,
+        isOven: (Vector3i) -> Boolean,
+    ): Vector3i? {
+        val playerTargets = targets[world]?.get(playerId) ?: return null
+        val candidate =
+            playerTargets.toList().asReversed().firstOrNull { target ->
+                val position = Vector3i(target.x, target.y, target.z)
+                val dx = playerPosition.x - target.x
+                val dy = playerPosition.y - target.y
+                val dz = playerPosition.z - target.z
+                dx * dx + dy * dy + dz * dz <= 100.0 && isOven(position)
+            }
+        playerTargets.removeIf { target ->
+            val dx = playerPosition.x - target.x
+            val dy = playerPosition.y - target.y
+            val dz = playerPosition.z - target.z
+            dx * dx + dy * dy + dz * dz > 100.0 ||
+                !isOven(Vector3i(target.x, target.y, target.z))
+        }
+        if (playerTargets.isEmpty()) targets[world]?.remove(playerId)
+        return candidate?.let { Vector3i(it.x, it.y, it.z) }
     }
 }
 
@@ -472,22 +533,28 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                     ?.armor
                     ?.getItemStack(0.toShort())
                     ?.itemId == CraftoryIds.SQUINT_GOGGLES
-            val target =
-                if (goggles) {
-                    TargetUtil.getTargetBlock(chunk.getReferenceTo(index), 8.0, commandBuffer)
-                } else {
-                    null
+            val playerPosition =
+                commandBuffer.getComponent(playerEntity, TransformComponent.getComponentType())?.position
+            val windowTarget =
+                playerPosition?.let { position ->
+                    ScorchOvenWindowTargets.forPlayer(world, playerRef.uuid, position) { oven ->
+                        val ref = BlockModule.getBlockEntity(world, oven.x, oven.y, oven.z)
+                        ref != null && world.chunkStore.store.getComponent(ref, OvenPower.type) != null
+                    }
                 }
+            val target =
+                windowTarget
+                    ?: if (goggles) {
+                        TargetUtil.getTargetBlock(chunk.getReferenceTo(index), 8.0, commandBuffer)
+                    } else {
+                        null
+                    }
             val carrierStability =
                 hudState.carrierStability.takeIf { world.tick <= hudState.carrierStabilityUntilTick }
+            val machineSnapshot = target?.let { snapshotForTarget(world, it, energy) }
             val snapshot =
-                if (goggles) {
-                    val machineSnapshot = target?.let { snapshotForTarget(world, it, energy) }
-                    machineSnapshot?.copy(carrierStability = carrierStability)
-                        ?: carrierStability?.let(::carrierSnapshot)
-                } else {
-                    null
-                }
+                machineSnapshot?.copy(carrierStability = carrierStability.takeIf { goggles })
+                    ?: if (goggles) carrierStability?.let(::carrierSnapshot) else null
             if (snapshot == null) {
                 hudPort.hide(playerRef, player)
                 hudState.lastSnapshot = null
@@ -513,6 +580,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
             carrierStability = stability,
         )
 
+    @Suppress("CyclomaticComplexMethod")
     private fun snapshotForTarget(
         world: World,
         position: Vector3i,
@@ -523,12 +591,13 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
         val memberRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z)
         val member = memberRef?.let { blockStore.getComponent(it, EnergyMember.type) }
         val jank = memberRef?.let { blockStore.getComponent(it, Jank.type) }
+        val ovenPower = memberRef?.let { blockStore.getComponent(it, OvenPower.type) }
         val rattlewheel = memberRef?.let { blockStore.getComponent(it, RattlewheelState.type) }
         val shroomBed = memberRef?.let { blockStore.getComponent(it, ShroomBedState.type) }
         val inNetwork = energy.networkOf(id) >= 0
         if (!inNetwork && jank == null) return null
-        val stored = energy.stored(id)
-        val capacity = energy.capacity(id)
+        val stored = ovenPower?.storedFizz ?: energy.stored(id)
+        val capacity = ovenPower?.let { OvenPower.CAPACITY } ?: energy.capacity(id)
         val gradeRank = energy.networkGrade(id)
         val members = energy.networkMembers(id)
         val supply = energy.networkSupply(id)
@@ -553,7 +622,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
             inNetwork = inNetwork,
             jank = jank?.value?.roundToInt(),
             status =
-                machineStatus(
+                ovenPower?.status ?: machineStatus(
                     jank = jank,
                     rattlewheel =
                         rattlewheel?.let {
