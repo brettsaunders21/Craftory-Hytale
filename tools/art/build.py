@@ -389,7 +389,14 @@ def main() -> None:
             for path in retint.retint(Path(vanilla_ref).expanduser(), COMMON)
         )
     out = HERE / "manifest.txt"
-    out.write_text("\n".join(sorted(set(manifest))) + "\n")
+    preserved = set()
+    if out.exists():
+        preserved = {
+            entry
+            for entry in out.read_text().splitlines()
+            if entry and (RESOURCES / entry).is_file()
+        }
+    out.write_text("\n".join(sorted(set(manifest) | preserved)) + "\n")
     print(f"wrote {len(set(manifest))} files; list in {out.relative_to(HERE.parents[1])}")
 
 

@@ -337,7 +337,6 @@ Common/UI/Custom/Craftory/Hud/Energy/StatusStolen@2x.png
 Common/UI/Custom/Craftory/Hud/Energy/Stored@2x.png
 Common/UI/Custom/Craftory/Hud/Energy/Water@2x.png
 Common/UI/Custom/Craftory/Hud/Energy/Wind@2x.png
-||||||| parent of 191fde8 (fix(art): polish early-tier models, pipes and vents)
 Server/Item/Block/Hitboxes/Craftory/Craftory_Boiler_Tank.json
 Server/Item/Block/Hitboxes/Craftory/Craftory_Boiler_Whistle_Stack.json
 Server/Item/Block/Hitboxes/Craftory/Craftory_Boomshroom_Burner.json
