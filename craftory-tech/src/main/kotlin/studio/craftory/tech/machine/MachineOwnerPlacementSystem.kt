@@ -60,6 +60,8 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.GUTTER_BOILER,
                 CraftoryIds.GASBAG,
                 CraftoryIds.WAKEBELL_ANCHOR,
+                CraftoryIds.WELL_CRADLE,
+                CraftoryIds.RESONATOR,
             )
     }
 }
