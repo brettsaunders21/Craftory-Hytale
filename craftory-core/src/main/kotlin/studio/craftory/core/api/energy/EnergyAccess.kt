@@ -30,6 +30,23 @@ class EnergyAccess internal constructor(
         return energy.stored(pos)
     }
 
+    fun networkStored(
+        pos: Long,
+        minRank: Int,
+    ): Long {
+        assertWorldThread()
+        return energy.networkStored(pos, minRank)
+    }
+
+    fun drawStored(
+        pos: Long,
+        amount: Long,
+        minGradeRank: Int,
+    ): Boolean {
+        assertWorldThread()
+        return energy.drawStored(pos, amount, minGradeRank)
+    }
+
     fun delivered(pos: Long): Long {
         assertWorldThread()
         return energy.delivered(pos)

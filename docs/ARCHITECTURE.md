@@ -109,6 +109,48 @@ machines, commands, UI and debugging to read.
 
    Budget targets get set once we have the first benchmark numbers.
 
+### Hurl transport prototype (Server 0.7.4)
+
+Tech owns one non-serialized capsule per ride and a query-only ride ticker, consuming Core's public
+route wrappers. Each ride holds its own keep-loaded chunk leases and requests `SET_TICKING` sections
+ahead; asynchronous completions check ride lifetime before acquiring leases. Removal releases leases,
+including disconnect/unload cleanup. No capsule is saved across restart.
+
+Core retains tube topology on chunk UNLOAD for the current world session; LOAD is idempotent,
+while real block removal still splits routes and triggers mid-ride ejection. After a restart,
+never-loaded chunks are not indexed until loaded. Energy caches remain loaded-member-only so
+debits never target unloaded storage components. Ride clones share lease state and lifetime flags,
+including pending load callbacks, so cleanup releases each lease once.
+On section LOAD/SPAWN or NonTicking removal, a deferred world-thread reconciliation checks retained nodes against both
+live block entities and serialized block holders after vanilla block registration has finished.
+Missing TubeNodes are removed from that section's index without scanning the world.
+Pending launch activation returns a warming-up result and resumes via `world.execute` when the
+section future completes. Boarding then rechecks rider, permissions, topology, ticking state and
+energy before spawning and debiting; failed activation never consumes energy.
+
+The primary driver is the official `MountedComponent(capsuleRef, Vector3f(), MountController.Minecart)`
+with a `MountedByComponent` passenger list. Capsules copy vanilla minecart spawn's model, persistent-model
+reference and bounding box, plus UUID/NetworkId for tracking, but omit minecart physics and interactions.
+`BlockMount` is for block seating; Minecart is the entity-riding controller. The ride system explicitly runs
+AFTER `MountSystems.HandleMountInput` and overwrites the capsule transform, including while waiting for
+chunks, so client movement cannot change the baked path. Removing MountedComponent invokes vanilla
+`RemoveMounted` passenger cleanup; arrival/ejection then uses `Teleport.createForPlayer`.
+`RideDriver` defaults to `mount`; `teleport` selects the per-tick Teleport fallback. Runtime mount attachment
+failure or loss also falls back to Teleport. Mount camera behavior and smoothness are not live-verified.
+Tech's `hurl.json` config (the same Hytale `withConfig` mechanism used by Core) sets `CostGrade`
+(default `fizz`), `BlocksPerUnit` (16), `EnergyPerUnit` (100), and `Speed` (0.5 blocks/tick).
+The T2 cannon uses `TargetUtil.getTargetBlock(ref, netPredicate, 64, accessor)` along the player's look,
+filtering for Catch Nets so the cannon being used does not intercept its own targeting ray. Other blocks
+do not occlude this prototype targeting ray. The net must also be within 64 blocks of the launch point.
+One Core `HurlArc` is baked per launch,
+and ARC rides sample ahead at quarter-tick intervals to request ticking chunks/sections. The flight timer
+pauses while chunks load, and landing dismounts at the exact target with a fall guard. Catch Nets also
+cancel ordinary player fall damage via a loaded block-section lookup only when fall damage fires.
+Boom Powder consumption and cannon energy cost are intentionally deferred.
+See official Javadocs: `https://docs.hytale.com/api/com/hypixel/hytale/builtin/mounts/MountedComponent`
+and `https://docs.hytale.com/api/com/hypixel/hytale/server/core/modules/entity/teleport/Teleport`.
+Targeting: `https://docs.hytale.com/api/com/hypixel/hytale/server/core/util/TargetUtil`.
+
 ## 6. Expandability design
 
 - **Capabilities, not inheritance.** `EnergyStorage`, `EnergyProducer`, `EnergyConsumer`, `ItemIO`,

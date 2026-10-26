@@ -1,0 +1,20 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Catch_Net.name",
+    "Description": "server.items.Craftory_Catch_Net.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Deco_Hay.png",
+  "Categories": ["Tool.TechnicalBlocks"],
+  "PlayerAnimationsId": "Block",
+  "ItemLevel": 2,
+  "MaxStack": 100,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Cube",
+    "Textures": [{"Weight": 1, "Sides": "BlockTextures/Deco_Hay_Side.png", "UpDown": "BlockTextures/Deco_Hay_Top.png"}],
+    "Gathering": {"Soft": {}},
+    "BlockParticleSetId": "Grass",
+    "BlockSoundSetId": "LeavesGround",
+    "PhysicalMaterialId": "Foliage"
+  }
+}

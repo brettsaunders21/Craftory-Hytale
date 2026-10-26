@@ -8,10 +8,36 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
+import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.engine.energy.EnergyEventSink
 
 class CoreEnergyTest {
+    @Test
+    fun `debited storage writes back dirty state and survives adapter reload`() {
+        val adapter = EnergyRuntimeAdapter()
+        adapter.add(1, MemberSpec(MemberSpec.LINK, 0, 0, 0, 0, 5), longArrayOf())
+        adapter.add(2, MemberSpec(MemberSpec.STORAGE, 100, 100, 100, 0, 5), longArrayOf(1), 50, 1)
+        val member = EnergyMember(stored = 50, storeRank = 1)
+        assertFalse(adapter.graph.drawStored(1, 51, 1))
+        assertFalse(member.updateStored(adapter.graph.stored(2), adapter.graph.storedRank(2)))
+        assertFalse(member.unsaved)
+        assertTrue(adapter.graph.drawStored(1, 20, 1))
+        assertTrue(member.updateStored(adapter.graph.stored(2), adapter.graph.storedRank(2)))
+        assertEquals(30L, member.stored)
+        assertEquals(1, member.storeRank)
+        assertTrue(member.unsaved)
+        assertTrue(member.shouldPersist(0, 100, immediate = true))
+        val saved = adapter.remove(2)
+        assertEquals(member.stored, saved.amount)
+        assertEquals(member.storeRank, saved.rank)
+        adapter.add(2, MemberSpec(MemberSpec.STORAGE, 100, 100, 100, 0, 5), longArrayOf(1), saved.amount, saved.rank)
+        assertEquals(30L, adapter.graph.networkStored(1, 1))
+        assertTrue(adapter.graph.drawStored(1, 30, 1))
+        member.updateStored(adapter.graph.stored(2), adapter.graph.storedRank(2))
+        assertEquals(-1, member.storeRank)
+    }
+
     @Test
     fun `block positions round trip signed coordinates`() {
         listOf(

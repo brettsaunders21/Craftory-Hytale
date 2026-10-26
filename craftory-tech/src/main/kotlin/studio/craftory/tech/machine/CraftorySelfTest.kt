@@ -100,6 +100,8 @@ internal class SelfTestRun : Resource<ChunkStore> {
         val testKeepLoadedChunks: MutableSet<Long> = mutableSetOf(),
         val testTickingSections: MutableSet<Triple<Int, Int, Int>> = mutableSetOf(),
         var anchorStateForTest: AnchorState? = null,
+        var hurlFinished: Boolean = false,
+        var hurlCleanup: (() -> Unit)? = null,
     )
 
     var active: Run? = null
@@ -148,6 +150,7 @@ private fun abort(
 ) {
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
+    runCatching { run.hurlCleanup?.invoke() }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -658,7 +661,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         val disableTick = run.anchorDisableTick ?: return
         if (run.anchorDisabledReported) {
-            if (tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
+            if (run.hurlFinished && tick >= (run.cleanupTick ?: Long.MAX_VALUE)) {
                 CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
                 try {
                     reportCleanup(run, CraftorySelfTest.cleanup(run.world, run.sectionRef))
@@ -796,8 +799,14 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
         run.anchorDisabledReported = true
-        run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
-        run.cleanupTick = tick + 20
+        run.cleanupTick = tick + 400
+        run.world.execute {
+            HurlSelfTest(run).start {
+                run.hurlFinished = true
+                run.cleanupTick = run.world.tick + 20
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+            }
+        }
     }
 
     private fun blockEntityAt(

@@ -76,12 +76,23 @@ import studio.craftory.tech.well.WellKillBirthSystem
 import studio.craftory.tech.well.WellPulseState
 import studio.craftory.tech.well.WellPulseSystem
 import studio.craftory.tech.well.WellRuntimeConfig
+import studio.craftory.tech.transport.HurlConfig
+import studio.craftory.tech.transport.HurlCounters
+import studio.craftory.tech.transport.HurlFallDamageSystem
+import studio.craftory.tech.transport.HurlFallGuard
+import studio.craftory.tech.transport.HurlRide
+import studio.craftory.tech.transport.HurlRideLifecycle
+import studio.craftory.tech.transport.HurlRideSystem
+import studio.craftory.tech.transport.HurlRider
+import studio.craftory.tech.transport.HurlRiderLifecycle
+import studio.craftory.tech.transport.HurlStation
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
 ) : JavaPlugin(init) {
     private val config = withConfig("config", CraftoryTechConfig.CODEC)
     private val wellConfig: Config<WellConfig> = withConfig("wells", WellConfig.CODEC)
+    private val hurlConfig: Config<HurlConfig> = withConfig("hurl", HurlConfig.CODEC)
     private var crewKnowledgeSubscription: AutoCloseable? = null
     private var crewChangedSubscription: AutoCloseable? = null
     private var heartFormedSubscription: AutoCloseable? = null
@@ -122,6 +133,16 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.CONSUMER, 0, 15, 0, 0, 1),
         )
         val chunkRegistry = getChunkStoreRegistry()
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.HURL_STATION_TYPE,
+            MemberSpec(MemberSpec.LINK, 0, 0, 0, 0, 1),
+        )
+        HurlStation.type =
+            chunkRegistry.registerComponent(
+                HurlStation::class.java,
+                CraftoryIds.HURL_STATION_COMPONENT,
+                HurlStation.CODEC,
+            )
         CrankState.type =
             chunkRegistry.registerComponent(
                 CrankState::class.java,
@@ -233,6 +254,14 @@ class CraftoryTechPlugin(
         val entityRegistry = getEntityStoreRegistry()
         LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
         WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)
+        HurlRide.type = entityRegistry.registerComponent(HurlRide::class.java, ::HurlRide)
+        HurlRider.type = entityRegistry.registerComponent(HurlRider::class.java, ::HurlRider)
+        HurlFallGuard.type = entityRegistry.registerComponent(HurlFallGuard::class.java, ::HurlFallGuard)
+        HurlCounters.type = entityRegistry.registerResource(HurlCounters::class.java) { HurlCounters(hurlConfig.get()) }
+        entityRegistry.registerSystem(HurlRideSystem())
+        entityRegistry.registerSystem(HurlRideLifecycle())
+        entityRegistry.registerSystem(HurlRiderLifecycle())
+        entityRegistry.registerSystem(HurlFallDamageSystem())
         EnergyHudState.type =
             entityRegistry.registerComponent(
                 EnergyHudState::class.java,

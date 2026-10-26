@@ -3,12 +3,55 @@ package studio.craftory.engine.energy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.ArrayDeque
 import kotlin.random.Random
 
 class EnergyGraphTest {
+    @Test
+    fun `graded network draw is atomic spans stores and clears depleted rank`() {
+        val graph = EnergyGraph()
+        graph.add(1, spec(role = MemberSpec.LINK), longArrayOf())
+        for (id in 2L..4L) graph.add(id, store(), longArrayOf(1))
+        graph.restoreStored(2, 20, 0)
+        graph.restoreStored(3, 30, 1)
+        graph.restoreStored(4, 40, 2)
+        graph.setStorageEnabled(4, false)
+        assertEquals(70L, graph.networkStored(1, 1))
+        assertFalse(graph.drawStored(1, 71, 1))
+        assertEquals(30L, graph.stored(3))
+        assertEquals(40L, graph.stored(4))
+        assertTrue(graph.drawStored(1, 50, 1))
+        assertEquals(20L, graph.stored(2))
+        assertEquals(0L, graph.stored(3))
+        assertEquals(-1, graph.storedRank(3))
+        assertEquals(20L, graph.stored(4))
+        assertEquals(2, graph.storedRank(4))
+        assertEquals(20L, graph.networkStored(1, 1))
+        assertTrue(graph.drawStored(1, 0, 5))
+        assertFalse(graph.drawStored(999, 0, 0))
+        assertEquals(0L, graph.networkStored(999, 0))
+        assertThrows(IllegalArgumentException::class.java) { graph.drawStored(1, -1, 0) }
+        assertThrows(IllegalArgumentException::class.java) { graph.drawStored(1, 1, -1) }
+    }
+
+    @Test
+    fun `network stored saturates without overflowing and draws stay isolated`() {
+        val graph = EnergyGraph()
+        val huge = spec(role = MemberSpec.STORAGE, capacity = Long.MAX_VALUE)
+        graph.add(1, huge, longArrayOf())
+        graph.add(2, huge, longArrayOf(1))
+        graph.add(3, huge, longArrayOf())
+        for (id in 1L..3L) graph.restoreStored(id, Long.MAX_VALUE, 1)
+        assertEquals(Long.MAX_VALUE, graph.networkStored(1, 1))
+        assertTrue(graph.drawStored(1, Long.MAX_VALUE, 1))
+        assertEquals(setOf(0L, Long.MAX_VALUE), setOf(graph.stored(1), graph.stored(2)))
+        assertEquals(Long.MAX_VALUE, graph.networkStored(1, 1))
+        assertEquals(Long.MAX_VALUE, graph.stored(3))
+    }
+
     @Test
     fun `grade table is contiguous and supports added definitions`() {
         val table =

@@ -1,0 +1,24 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Hurl_Tube.name",
+    "Description": "server.items.Craftory_Hurl_Tube.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Build_Grey_Pipe.png",
+  "Categories": ["Tool.TechnicalBlocks"],
+  "PlayerAnimationsId": "Block",
+  "Quality": "Technical",
+  "MaxStack": 100,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "Opacity": "Transparent",
+    "CustomModel": "Blocks/Structures/Tubes/Dev_Long.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Structures/Tubes/Dev_Textures/Dev_Grey.png", "Weight": 1}],
+    "HitboxType": "Branch",
+    "VariantRotation": "Pipe",
+    "Gathering": {"Breaking": {"GatherType": "Rocks"}},
+    "BlockSoundSetId": "Soft",
+    "PhysicalMaterialId": "Wool",
+    "BlockEntity": {"Components": {"CraftoryTubeNode": {"Kind": "tube"}}}
+  }
+}

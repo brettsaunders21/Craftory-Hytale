@@ -1,0 +1,27 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Hurl_Cannon.name",
+    "Description": "server.items.Craftory_Hurl_Cannon.description"
+  },
+  "Icon": "Icons/ItemsGenerated/Build_Grey_Pipe.png",
+  "Categories": ["Tool.TechnicalBlocks"],
+  "PlayerAnimationsId": "Block",
+  "Quality": "Technical",
+  "ItemLevel": 2,
+  "MaxStack": 100,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "CustomModel": "Blocks/Structures/Tubes/Dev_Long.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Structures/Tubes/Dev_Textures/Dev_Grey.png", "Weight": 1}],
+    "HitboxType": "Branch",
+    "Gathering": {"Breaking": {"GatherType": "Rocks"}},
+    "BlockSoundSetId": "Soft",
+    "PhysicalMaterialId": "Wool",
+    "Interactions": {
+      "Use": {"Interactions": [{"Type": "Craftory_BlockUse"}]},
+      "Secondary": {"Interactions": [{"Type": "Craftory_BlockUse"}]}
+    },
+    "BlockEntity": {"Components": {"CraftoryMachineOwner": {}}}
+  }
+}

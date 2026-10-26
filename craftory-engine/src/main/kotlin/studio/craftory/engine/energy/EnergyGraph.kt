@@ -311,6 +311,53 @@ class EnergyGraph {
         return networkForHandle(handle).storeRank[handleSlots[handle]]
     }
 
+    fun networkStored(
+        id: Long,
+        minRank: Int,
+    ): Long {
+        require(minRank >= 0)
+        val handle = idToHandle.getOrDefault(id, -1)
+        if (handle < 0) return 0L
+        val network = networkForHandle(handle)
+        var total = 0L
+        for (slot in 0 until network.size) {
+            if (eligibleStore(network, slot, minRank)) {
+                total = saturatedAdd(total, network.stored[slot])
+            }
+        }
+        return total
+    }
+
+    /** Explicit debit ignores per-tick output limits and solver activity gates. */
+    fun drawStored(
+        id: Long,
+        amount: Long,
+        minGradeRank: Int,
+    ): Boolean {
+        require(amount >= 0L && minGradeRank >= 0)
+        val handle = idToHandle.getOrDefault(id, -1)
+        if (handle < 0 || networkStored(id, minGradeRank) < amount) return false
+        val network = networkForHandle(handle)
+        var remaining = amount
+        for (slot in 0 until network.size) {
+            if (remaining == 0L) break
+            if (eligibleStore(network, slot, minGradeRank)) {
+                val drawn = min(remaining, network.stored[slot])
+                network.stored[slot] -= drawn
+                remaining -= drawn
+                if (network.stored[slot] == 0L) network.storeRank[slot] = -1
+            }
+        }
+        if (amount > 0L) wake(network)
+        return true
+    }
+
+    private fun eligibleStore(
+        network: Network,
+        slot: Int,
+        minRank: Int,
+    ): Boolean = (network.role[slot] and MemberSpec.STORAGE) != 0 && network.storeRank[slot] >= minRank
+
     fun restoreStored(
         id: Long,
         amount: Long,

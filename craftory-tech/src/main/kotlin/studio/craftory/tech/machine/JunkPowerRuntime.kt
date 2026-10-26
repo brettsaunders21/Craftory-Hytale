@@ -57,6 +57,8 @@ import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.machine.jank.repairWithScraps
 import studio.craftory.tech.notebook.NotebookPage
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.transport.openHurlStation
+import studio.craftory.tech.transport.useHurlCannon
 import java.util.logging.Level
 
 internal class CrankSystem : EntityTickingSystem<ChunkStore>() {
@@ -534,8 +536,20 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         position: Vector3i,
         cooldownHandler: CooldownHandler,
     ) {
+        if (useHurlCannon(world, position, context.entity)) return
         val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
         val store = world.chunkStore.store
+        if (openHurlStation(
+                world,
+                ref,
+                BlockPos.pack(position.x, position.y, position.z),
+                context.entity,
+                commandBuffer,
+                heldItem?.itemId == CraftoryIds.TINKERS_WRENCH,
+            )
+        ) {
+            return
+        }
         val blockState = store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val tick = world.tick
         val jank = store.getComponent(ref, Jank.type)
@@ -731,7 +745,7 @@ private fun stalledMachineMessage(jank: Jank): Message =
     Message.translation(if (jank.stolen) "server.craftory.machine.stolen" else "server.craftory.machine.stalled")
 
 class CraftoryWrenchUseInteraction : SimpleBlockInteraction() {
-    @Suppress("CyclomaticComplexMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun interactWithBlock(
         world: World,
         commandBuffer: CommandBuffer<EntityStore>,
@@ -744,6 +758,17 @@ class CraftoryWrenchUseInteraction : SimpleBlockInteraction() {
         if (heldItem?.itemId != CraftoryIds.TINKERS_WRENCH) return
         val player = commandBuffer.getComponent(context.entity, PlayerRef.getComponentType()) ?: return
         val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
+        if (openHurlStation(
+                world,
+                ref,
+                BlockPos.pack(position.x, position.y, position.z),
+                context.entity,
+                commandBuffer,
+                true,
+            )
+        ) {
+            return
+        }
         val result = MachineActions.useWrench(world, ref, position, player, world.chunkStore.store)
         val message =
             when (result) {
