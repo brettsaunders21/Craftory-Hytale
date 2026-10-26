@@ -47,7 +47,7 @@ internal class WellGuardianCalmSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         }
     }
 
-    private fun tryCalmNear(
+    internal fun tryCalmNear(
         world: com.hypixel.hytale.server.core.universe.world.World,
         store: Store<ChunkStore>,
         position: Vector3d,
@@ -61,7 +61,7 @@ internal class WellGuardianCalmSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         }
     }
 
-    private fun trySpawnGuardian(
+    internal fun trySpawnGuardian(
         world: com.hypixel.hytale.server.core.universe.world.World,
         store: Store<EntityStore>,
         position: BlockPos,

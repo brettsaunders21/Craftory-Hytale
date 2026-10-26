@@ -187,6 +187,14 @@ internal object WellPersistenceSelfTest {
                     if (failure != null) {
                         complete(false, "TETHERED chunk reload failed (${failure.message})")
                     } else {
+                        fixture.stakePositions.forEach { position ->
+                            BlockModule
+                                .getBlockEntity(fixture.world, position.x, position.y, position.z)
+                                ?.let { ref ->
+                                    WellSelfTestExclusions.registerBlock(ref)
+                                    fixture.stakeRefs.add(ref)
+                                }
+                        }
                         verifyReloaded(fixture, complete)
                     }
                 }
@@ -226,10 +234,22 @@ internal object WellPersistenceSelfTest {
             check(restoredStakes.all { it }) {
                 "one or more tether stakes did not persist"
             }
-            cleanupFixture(fixture)
+            cleanupFixture(fixture, sectionRef)
             saveCleanChunk(fixture, complete)
         } catch (failure: IllegalStateException) {
-            complete(false, "TETHERED persistence verification failed (${failure.message})")
+            val detail = "TETHERED persistence verification failed (${failure.message})"
+            val sectionRef =
+                fixture.world.chunkStore.getChunkSectionReferenceAtBlock(
+                    fixture.wellPosition.x,
+                    fixture.wellPosition.y,
+                    fixture.wellPosition.z,
+                )
+            if (sectionRef == null) {
+                complete(false, detail)
+            } else {
+                runCatching { cleanupFixture(fixture, sectionRef) }
+                saveCleanChunk(fixture) { _, cleanupDetail -> complete(false, "$detail; cleanup: $cleanupDetail") }
+            }
         }
     }
 
@@ -246,9 +266,18 @@ internal object WellPersistenceSelfTest {
         return state.wellId == fixture.wellPosition.pack().toString() && !state.leaning
     }
 
-    private fun cleanupFixture(fixture: Fixture) {
+    private fun cleanupFixture(
+        fixture: Fixture,
+        sectionRef: Ref<ChunkStore> = fixture.sectionRef,
+    ) {
         CraftoryCore.wells().remove(fixture.world, fixture.wellPosition)
-        CraftorySelfTest.clear(fixture.world, fixture.sectionRef, fixture.stakePositions)
+        val wellPosition =
+            CraftorySelfTest.TestPosition(
+                fixture.wellPosition.x,
+                fixture.wellPosition.y,
+                fixture.wellPosition.z,
+            )
+        CraftorySelfTest.clear(fixture.world, sectionRef, listOf(wellPosition) + fixture.stakePositions)
         fixture.stakeRefs.forEach(WellSelfTestExclusions::releaseBlock)
         fixture.stakeRefs.clear()
         WellSelfTestExclusions.releaseWell(fixture.wellPosition)

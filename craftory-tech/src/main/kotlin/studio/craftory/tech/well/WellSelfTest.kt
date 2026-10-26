@@ -440,12 +440,38 @@ internal object WellSelfTest {
                 ) ?: error("Guardian-death test Well spawn failed")
             val well =
                 world.chunkStore.store.getComponent(ref, Glimmerwell.type) ?: error("Guardian test Well is missing")
-            calmWellAfterGuardianDeath(well)
-            check(well.state == WellState.DORMANT && well.strength == WellStrength.STEADY) {
-                "guardian death did not calm the Well without reducing strength"
+            val chunkStore = world.chunkStore.store
+            val entityStore = world.entityStore.store
+            val guardians = entityStore.getResource(WellGuardianIndex.type)
+            val guardianId = WellSelfTest.CALMED_POS.pack().toString()
+            var guardian: Ref<EntityStore>? = null
+            WellSelfTestExclusions.releaseWell(WellSelfTest.CALMED_POS)
+            try {
+                WellGuardianCalmSystem().tryCalmNear(
+                    world,
+                    chunkStore,
+                    Vector3d(
+                        WellSelfTest.CALMED_POS.x.toDouble(),
+                        WellSelfTest.CALMED_POS.y.toDouble(),
+                        WellSelfTest.CALMED_POS.z.toDouble(),
+                    ),
+                    guardians,
+                )
+                val spawned = guardians.refsByWellId[guardianId] ?: error("Sparkjaw guardian did not spawn")
+                guardian = spawned
+                check(entityStore.getComponent(spawned, SparkjawGuardian.type)?.wellId == guardianId) {
+                    "Sparkjaw did not retain its Well identity"
+                }
+                calmWellAfterGuardianDeath(well)
+                check(well.state == WellState.DORMANT && well.strength == WellStrength.STEADY) {
+                    "guardian death did not calm the Well without reducing strength"
+                }
+                report("selftest: PASS Sparkjaw spawn and guardian death calm")
+            } finally {
+                WellSelfTestExclusions.registerWell(WellSelfTest.CALMED_POS)
+                guardian?.takeIf { it.isValid }?.let { entityStore.removeEntity(it, RemoveReason.REMOVE) }
+                CraftoryCore.wells().remove(world, WellSelfTest.CALMED_POS)
             }
-            report("selftest: PASS guardian death calms Well without changing strength")
-            CraftoryCore.wells().remove(world, WellSelfTest.CALMED_POS)
         }
 
         fun testStakeLifecycle(
