@@ -1,98 +1,286 @@
 $C = "../../Common.ui";
 
+@TitleStyle = LabelStyle(
+  FontSize: 15,
+  VerticalAlignment: Center,
+  RenderUppercase: true,
+  TextColor: #b4c8c9,
+  FontName: "Secondary",
+  RenderBold: true,
+  LetterSpacing: 0.5
+);
+
+@PageTitleStyle = LabelStyle(
+  FontSize: 25,
+  VerticalAlignment: Center,
+  RenderUppercase: true,
+  TextColor: #b4c8c9,
+  FontName: "Secondary",
+  RenderBold: true,
+  LetterSpacing: 0.5
+);
+
+@BodyStyle = LabelStyle(
+  FontSize: 15,
+  TextColor: #89899f,
+  FontName: "Secondary",
+  Wrap: true
+);
+
 $C.@PageOverlay {
   LayoutMode: Middle;
 
   $C.@DecoratedContainer {
-    Anchor: (Width: 640);
+    Anchor: (Height: 760, Width: 1070);
 
     #Title {
-      $C.@Title #TitleLabel {
-        @Text = "Tinker's Notebook";
+      Group {
+        LayoutMode: Center;
+
+        Label #TitleLabel {
+          Style: (...@TitleStyle, FontName: "Default", LetterSpacing: 0.5);
+          Text: "Tinker's Notebook";
+        }
       }
     }
 
     #Content {
       LayoutMode: Top;
-      Padding: (Full: 16);
+      Padding: (Full: 9);
 
-      Label #Crew {
-        Text: "Crew: Solo";
-        Anchor: (Bottom: 4);
+      Group #TabBar {
+        LayoutMode: Left;
+        Anchor: (Bottom: 8);
+
+        $C.@SecondaryTextButton #PagesTab {
+          Anchor: (Width: 150);
+          Text: "Pages";
+        }
+
+        $C.@SecondaryTextButton #NextStepsTab {
+          Anchor: (Width: 150, Left: 8);
+          Text: "Next Steps";
+        }
+
+        Group {
+          FlexWeight: 1;
+        }
+
+        Label #CrewName {
+          Style: (...@TitleStyle, TextColor: #89899f);
+        }
       }
 
-      Label #Members {
-        Text: "Members: 1";
-        Anchor: (Bottom: 4);
+      Group #PagesView {
+        LayoutMode: Top;
+        FlexWeight: 1;
+
+        Group {
+          LayoutMode: Left;
+          FlexWeight: 1;
+
+          Group #LeftPanel {
+            LayoutMode: Top;
+            FlexWeight: 1;
+            Padding: (Left: 16, Right: 5, Vertical: 10);
+
+            Group #PageHeader {
+              LayoutMode: Left;
+              Anchor: (Bottom: 8);
+
+              Label #PageCount {
+                Style: (...@TitleStyle, TextColor: #89899f);
+              }
+
+              Group {
+                FlexWeight: 1;
+              }
+            }
+
+            Group #NextBanner {
+              Visible: false;
+              Background: (TexturePath: "../../Pages/Memories/Tiles/TileSelected.png", Border: 8);
+              Padding: (Full: 8);
+              Anchor: (Bottom: 8);
+
+              Label #NextText {
+                Style: (...@BodyStyle, TextColor: #b4c8c9);
+              }
+            }
+
+            Group {
+              FlexWeight: 1;
+
+              Group {
+                LayoutMode: TopScrolling;
+                Anchor: (Vertical: 8);
+                ScrollbarStyle: $C.@DefaultScrollbarStyle;
+                FlexWeight: 1;
+
+                Group #IconList {
+                  LayoutMode: LeftCenterWrap;
+                }
+              }
+            }
+          }
+
+          Group #RightPanel {
+            LayoutMode: Top;
+            FlexWeight: 1;
+            Padding: (Right: 16, Left: 5, Vertical: 10);
+
+            Group #PageDetails {
+              Background: (TexturePath: "../../Pages/Memories/ContainerBackgroundSecondary.png", Border: 23);
+              LayoutMode: Top;
+              FlexWeight: 1;
+              Padding: (Horizontal: 20, Vertical: 16);
+
+              Label #PageName {
+                Style: (...@PageTitleStyle, HorizontalAlignment: Center, Wrap: true);
+                Anchor: (Top: 12);
+                Text: "";
+              }
+
+              Group {
+                FlexWeight: 1;
+              }
+
+              AssetImage #PageIcon {
+                Anchor: (Width: 200, Height: 200);
+                FallbackTexturePath: "UI/Custom/Pages/Memories/MissingIcon.png";
+              }
+
+              Label #PageStatusFound {
+                Visible: false;
+                Style: (...@TitleStyle, TextColor: #39f493, HorizontalAlignment: Center);
+                Anchor: (Top: 8);
+                Text: "Found";
+              }
+
+              Label #PageStatusMissing {
+                Visible: false;
+                Style: (...@TitleStyle, TextColor: #89899f, HorizontalAlignment: Center);
+                Anchor: (Top: 8);
+                Text: "Missing";
+              }
+
+              Label #PageUnlocks {
+                Style: (...@BodyStyle, HorizontalAlignment: Center);
+                Padding: (Horizontal: 16, Top: 8);
+                Text: "";
+              }
+
+              Group {
+                FlexWeight: 1;
+              }
+
+              Label #PageSource {
+                Style: (...@TitleStyle, TextColor: #565a68, HorizontalAlignment: Center, Wrap: true, RenderUppercase: false);
+                Anchor: (Bottom: 12);
+                Padding: (Horizontal: 8);
+                Text: "";
+              }
+            }
+          }
+        }
       }
 
-      Label #Progress {
-        Text: "0/8 pages";
-        Anchor: (Bottom: 4);
+      Group #GuideView {
+        Visible: false;
+        LayoutMode: Top;
+        FlexWeight: 1;
+        Padding: (Horizontal: 16, Vertical: 10);
+
+        Label #GuideTitle {
+          Style: (...@TitleStyle, TextColor: #89899f);
+          Anchor: (Bottom: 8);
+          Text: "";
+        }
+
+        Group #GuideNextBanner {
+          Visible: false;
+          Background: (TexturePath: "../../Pages/Memories/Tiles/TileSelected.png", Border: 8);
+          Padding: (Full: 10);
+          Anchor: (Bottom: 10);
+
+          Label #GuideNextText {
+            Style: (...@BodyStyle, TextColor: #b4c8c9);
+          }
+        }
+
+        Group {
+          FlexWeight: 1;
+
+          Group {
+            LayoutMode: TopScrolling;
+            Anchor: (Vertical: 8);
+            ScrollbarStyle: $C.@DefaultScrollbarStyle;
+            FlexWeight: 1;
+
+            Group #StepList {
+              LayoutMode: Top;
+            }
+          }
+        }
       }
 
-      Label #Heart {
-        Text: "Junk Heart not built yet";
-        Anchor: (Bottom: 12);
-      }
+      Group #Footer {
+        Anchor: (Height: 130);
+        LayoutMode: Top;
+        Background: (TexturePath: "../../Pages/Memories/ContainerBackground.png", Border: 23);
+        Padding: (Horizontal: 20, Vertical: 12);
 
-      Group #Page0 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Boomshroom burner"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: machine"; Anchor: (Width: 190); }
-      }
-      Group #Page1 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Squeak-crank"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: machine"; Anchor: (Width: 190); }
-      }
-      Group #Page2 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Fizz canister"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: machine"; Anchor: (Width: 190); }
-      }
-      Group #Page3 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Gutterpipe"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: machine"; Anchor: (Width: 190); }
-      }
-      Group #Page4 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Gnasher pit"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: machine"; Anchor: (Width: 190); }
-      }
-      Group #Page5 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Scorch oven"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: machine"; Anchor: (Width: 190); }
-      }
-      Group #Page6 {
-        LayoutMode: Left;
-        Anchor: (Bottom: 5);
-        Label #Name { Text: "Grizzlecog's delivery"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: receipt"; Anchor: (Width: 190); }
-      }
-      Group #Page7 {
-        LayoutMode: Left;
-        Label #Name { Text: "Scrap Rush"; FlexWeight: 1; }
-        Label #Status { Text: "Missing"; Anchor: (Width: 72); }
-        Label #Source { Text: "Source: admin grant"; Anchor: (Width: 190); }
+        Group {
+          FlexWeight: 1;
+        }
+
+        Group {
+          Background: (TexturePath: "../../Pages/Memories/MemoriesProgress/MemoriesBarBg.png");
+          Anchor: (Height: 22, Width: 1018, Bottom: 12);
+          Padding: (Full: 6);
+
+          ProgressBar #PagesProgressBar {
+            BarTexturePath: "../../Pages/Memories/MemoriesProgress/MemoriesBarFill.png";
+            EffectTexturePath: "../../Pages/Memories/MemoriesProgress/MemoriesBarTipOfTheBar.png";
+            EffectWidth: 114;
+            EffectHeight: 32;
+            EffectOffset: 104;
+          }
+
+          ProgressBar #PagesProgressBarTexture {
+            BarTexturePath: "../../Pages/Memories/MemoriesProgress/MemoriesBarTexture.png";
+          }
+        }
+
+        Group {
+          FlexWeight: 1;
+        }
+
+        Group {
+          LayoutMode: Left;
+
+          Label #TierLabel {
+            Style: (...@TitleStyle, FontName: "Default", RenderBold: true, TextColor: #b4c8c9);
+          }
+
+          Group {
+            FlexWeight: 1;
+          }
+
+          Label #Heart {
+            Style: (...@TitleStyle, FontName: "Default", RenderBold: true, TextColor: #b4c8c9);
+          }
+
+          Group {
+            FlexWeight: 1;
+          }
+
+          $C.@SecondaryTextButton #CloseButton {
+            Anchor: (Width: 150, Height: 38);
+            Text: "Close";
+          }
+        }
       }
     }
   }
 }
-
-$C.@BackButton {}

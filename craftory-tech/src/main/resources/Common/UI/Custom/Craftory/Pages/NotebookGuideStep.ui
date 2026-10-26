@@ -1,0 +1,48 @@
+Group {
+  Anchor: (Height: 82, Bottom: 8);
+
+  Group #DefaultBackground {
+    Background: (TexturePath: "../../Pages/Memories/Tiles/TileDefault.png", Border: 8);
+    Anchor: (Full: 0);
+  }
+
+  Group #SelectedBackground {
+    Visible: false;
+    Background: (TexturePath: "../../Pages/Memories/Tiles/TileSelected.png", Border: 8);
+    Anchor: (Full: 0);
+  }
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Full: 0);
+    Padding: (Horizontal: 14, Vertical: 10);
+
+    AssetImage #StatusIcon {
+      Visible: false;
+      Anchor: (Width: 20, Height: 20, Right: 14);
+    }
+
+    Group #StepCopy {
+      LayoutMode: Top;
+      FlexWeight: 1;
+      Anchor: (Right: 12);
+
+      Label #StepTitle {
+        Style: (FontSize: 15, RenderBold: true, TextColor: #b4c8c9, Wrap: true);
+        Anchor: (Bottom: 4);
+        Text: "";
+      }
+
+      Label #StepHint {
+        Style: (FontSize: 13, TextColor: #89899f, Wrap: true);
+        Text: "";
+      }
+    }
+
+    Label #NextTag {
+      Visible: false;
+      Style: (FontSize: 13, RenderBold: true, TextColor: #39f493, VerticalAlignment: Center);
+      Text: "NEXT";
+    }
+  }
+}
