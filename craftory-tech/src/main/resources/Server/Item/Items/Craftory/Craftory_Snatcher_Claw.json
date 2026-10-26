@@ -17,14 +17,26 @@
     "DrawType": "Model",
     "Opacity": "Transparent",
     "CustomModel": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw.blockymodel",
-    "CustomModelAnimation": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Grab.blockyanim",
-    "Looping": false,
     "CustomModelTexture": [
       {
         "Texture": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Texture.png",
         "Weight": 1
       }
     ],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Texture.png"}]
+        },
+        "Grab": {
+          "CustomModel": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Grab.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Snatcher_Claw/Snatcher_Claw_Texture.png"}],
+          "Looping": false
+        }
+      }
+    },
     "VariantRotation": "NESW",
     "RotationYawPlacementOffset": "TwoSeventy",
     "HitboxType": "Full",
@@ -47,6 +59,7 @@
     "BlockEntity": {
       "Components": {
         "CraftorySnatcherClaw": {},
+        "CraftoryTimedBlockAnimation": {"IdleState": "Off", "AnimatedState": "Grab"},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:snatcher_claw",
           "Stored": 0,

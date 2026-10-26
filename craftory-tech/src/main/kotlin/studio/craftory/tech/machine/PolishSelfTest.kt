@@ -32,6 +32,9 @@ import studio.craftory.core.api.transport.FluidTransport
 import studio.craftory.core.api.transport.ItemPipe
 import studio.craftory.core.api.transport.ItemTransport
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.transport.HURL_CANNON_CHARGE_TICKS
+import studio.craftory.tech.transport.HurlCannonChargeState
+import studio.craftory.tech.transport.beginHurlCannonCharge
 
 internal class PolishSelfTestRun : Resource<ChunkStore> {
     internal class Run(
@@ -55,6 +58,8 @@ internal class PolishSelfTestRun : Resource<ChunkStore> {
         var visitStarted = false
         var visitStartedTick = 0L
         var visitUuid: String? = null
+        var clawGrabObserved = false
+        var clawReverted = false
         var summarySent = false
         var passed = 0
         var failed = 0
@@ -286,6 +291,7 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         run: PolishSelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
+        observeClawAnimation(run, store)
         if (run.world.tick - run.stageStartTick < CLAW_WAIT_TICKS) return
         val claw = PolishSelfTest.CLAW
         val clawRef = BlockModule.getBlockEntity(run.world, claw.x, claw.y, claw.z)
@@ -329,16 +335,33 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                 mask != null &&
                 mask.and(faceBit) != 0 &&
                 delivered + pipeItems > 0 &&
-                sourceItems == 0
+                sourceItems == 0 &&
+                run.clawGrabObserved &&
+                run.clawReverted
         PolishSelfTest.report(
             run,
             "a claw and pipe",
             passed,
             "clawValid=$clawValid claw=$clawPreserved pipeState=$state faceBit=$faceBit " +
-                "delivered=$delivered pipeItems=$pipeItems sourceItems=$sourceItems",
+                "delivered=$delivered pipeItems=$pipeItems sourceItems=$sourceItems " +
+                "grab=${run.clawGrabObserved} reverted=${run.clawReverted}",
         )
         PolishSelfTest.clearFixtures(run, store, PolishSelfTest.clawPositions())
         setupPipeShapes(run, store)
+    }
+
+    private fun observeClawAnimation(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val claw = PolishSelfTest.CLAW
+        val state = PolishSelfTest.stateName(run, claw, CraftoryIds.SNATCHER_CLAW)
+        val ref = BlockModule.getBlockEntity(run.world, claw.x, claw.y, claw.z)
+        val animation = ref?.takeIf { it.isValid }?.let { store.getComponent(it, TimedBlockAnimation.type) }
+        if (state == "Grab") run.clawGrabObserved = true
+        if (run.clawGrabObserved && state == "Off" && run.world.tick >= (animation?.untilTick ?: Long.MAX_VALUE)) {
+            run.clawReverted = true
+        }
     }
 
     private fun setupPipeShapes(
@@ -568,6 +591,28 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
     ) {
         PolishSelfTest.place(run, store, CraftoryIds.GUTTER_BOILER, PolishSelfTest.BOILER, BoilerState.type)
         PolishSelfTest.place(run, store, CraftoryIds.GASBAG, PolishSelfTest.GASBAG, GasbagState.type)
+        PolishSelfTest.place(run, store, CraftoryIds.HURL_CANNON, PolishSelfTest.CANNON, HurlCannonChargeState.type)
+        val cannonStarted =
+            beginHurlCannonCharge(
+                run.world,
+                Vector3i(PolishSelfTest.CANNON.x, PolishSelfTest.CANNON.y, PolishSelfTest.CANNON.z),
+                null,
+                Vector3i(0, 0, 0),
+            )
+        val cannonState = PolishSelfTest.stateName(run, PolishSelfTest.CANNON, CraftoryIds.HURL_CANNON)
+        val cannonRef = PolishSelfTest.controllerAt(run, PolishSelfTest.CANNON) ?: error("cannon block entity missing")
+        val launchTick = store.getComponent(cannonRef, HurlCannonChargeState.type)?.launchTick ?: Long.MIN_VALUE
+        val cannonChargeVisible =
+            cannonStarted &&
+                cannonState == "Charge" &&
+                launchTick > run.world.tick &&
+                launchTick - run.world.tick == HURL_CANNON_CHARGE_TICKS
+        PolishSelfTest.report(
+            run,
+            "g cannon charge before launch",
+            cannonChargeVisible,
+            "state=$cannonState ticksToLaunch=${launchTick - run.world.tick}",
+        )
         val boilerRef = PolishSelfTest.controllerAt(run, PolishSelfTest.BOILER) ?: error("boiler controller missing")
         val boiler = store.getComponent(boilerRef, BoilerState.type) ?: error("boiler state missing")
         GutterBoilerActions.acceptWater(boiler, WATER_SOURCE, GutterBoilerRules.CAPACITY)
@@ -875,6 +920,7 @@ internal object PolishSelfTest {
     val SLOSHTANK = position(10_027, 152, 10_014)
     val BOILER = position(10_028, 150, 10_014)
     val GASBAG = position(10_030, 150, 10_014)
+    val CANNON = position(10_034, 150, 10_014)
     val VISIT_FLOOR = position(ANCHOR.x, ANCHOR.y - 1, ANCHOR.z)
 
     val BANDS =
@@ -987,7 +1033,8 @@ internal object PolishSelfTest {
                     position(GASBAG.x + it.offset.x, GASBAG.y + it.offset.y, GASBAG.z + it.offset.z)
                 }
         return (
-            clawNeighbours + shapePositions + listOf(ANCHOR, CANISTER, SLOSHTANK, VISIT_FLOOR) + multiblockPositions
+            clawNeighbours + shapePositions + listOf(ANCHOR, CANISTER, SLOSHTANK, CANNON, VISIT_FLOOR) +
+                multiblockPositions
         ).distinct()
     }
 

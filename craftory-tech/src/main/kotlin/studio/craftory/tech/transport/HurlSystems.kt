@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.triggerTimedBlockAnimation
 import kotlin.math.floor
 
 internal class HurlRideSystem : EntityTickingSystem<EntityStore>() {
@@ -127,13 +128,12 @@ internal class HurlFallDamageSystem : DamageEventSystem() {
     ): Boolean {
         if (chunk.getComponent(index, Player.getComponentType()) == null) return false
         val position = chunk.getComponent(index, TransformComponent.getComponentType())?.position ?: return false
-        return blockId(
-            store.externalData.world,
-            floor(position.x).toInt(),
-            floor(position.y - 0.1).toInt(),
-            floor(position.z).toInt(),
-        ) ==
-            CraftoryIds.CATCH_NET
+        val x = floor(position.x).toInt()
+        val y = floor(position.y - 0.1).toInt()
+        val z = floor(position.z).toInt()
+        if (blockId(store.externalData.world, x, y, z) != CraftoryIds.CATCH_NET) return false
+        triggerTimedBlockAnimation(store.externalData.world, x, y, z)
+        return true
     }
 }
 

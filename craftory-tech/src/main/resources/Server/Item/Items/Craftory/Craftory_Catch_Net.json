@@ -12,13 +12,31 @@
     "Material": "Solid",
     "DrawType": "Model",
     "CustomModel": "Blocks/Craftory/Catch_Net/Catch_Net.blockymodel",
-    "CustomModelAnimation": "Blocks/Craftory/Catch_Net/Catch_Net_Land.blockyanim",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Catch_Net/Catch_Net_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Catch_Net/Catch_Net.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Catch_Net/Catch_Net_Texture.png"}]
+        },
+        "Land": {
+          "CustomModel": "Blocks/Craftory/Catch_Net/Catch_Net.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Catch_Net/Catch_Net_Land.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Catch_Net/Catch_Net_Texture.png"}],
+          "Looping": false
+        }
+      }
+    },
     "HitboxType": "Full",
     "Gathering": {"Soft": {}},
     "BlockParticleSetId": "Grass",
     "BlockSoundSetId": "LeavesGround",
-    "PhysicalMaterialId": "Foliage"
+    "PhysicalMaterialId": "Foliage",
+    "BlockEntity": {
+      "Components": {
+        "CraftoryTimedBlockAnimation": {"IdleState": "Off", "AnimatedState": "Land"}
+      }
+    }
   },
   "Recipe": {
     "TimeSeconds": 2,

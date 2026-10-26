@@ -13,8 +13,21 @@
     "Material": "Solid",
     "DrawType": "Model",
     "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
-    "CustomModelAnimation": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Charge.blockyanim",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}]
+        },
+        "Charge": {
+          "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Charge.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}],
+          "Looping": false
+        }
+      }
+    },
     "HitboxType": "Branch",
     "Gathering": {"Breaking": {"GatherType": "Rocks"}},
     "BlockSoundSetId": "Soft",
@@ -23,7 +36,13 @@
       "Use": {"Interactions": [{"Type": "Craftory_BlockUse"}]},
       "Secondary": {"Interactions": [{"Type": "Craftory_BlockUse"}]}
     },
-    "BlockEntity": {"Components": {"CraftoryMachineOwner": {}}}
+    "BlockEntity": {
+      "Components": {
+        "CraftoryMachineOwner": {},
+        "CraftoryTimedBlockAnimation": {"IdleState": "Off", "AnimatedState": "Charge"},
+        "CraftoryHurlCannonCharge": {}
+      }
+    }
   },
   "Recipe": {
     "TimeSeconds": 4,

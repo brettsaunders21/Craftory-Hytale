@@ -91,6 +91,8 @@ import studio.craftory.tech.machine.ShroomBedSystem
 import studio.craftory.tech.machine.SloshtankStateSystem
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
+import studio.craftory.tech.machine.TimedBlockAnimation
+import studio.craftory.tech.machine.TimedBlockAnimationSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
 import studio.craftory.tech.machine.TransportSelfTestSystem
 import studio.craftory.tech.machine.jank.BodgeSlots
@@ -99,6 +101,8 @@ import studio.craftory.tech.mob.RiftmothDrainSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
+import studio.craftory.tech.transport.HurlCannonChargeState
+import studio.craftory.tech.transport.HurlCannonChargeSystem
 import studio.craftory.tech.transport.HurlConfig
 import studio.craftory.tech.transport.HurlCounters
 import studio.craftory.tech.transport.HurlFallDamageSystem
@@ -306,6 +310,18 @@ class CraftoryTechPlugin(
                 CraftoryIds.SNATCHER_CLAW_COMPONENT,
                 SnatcherClawState.CODEC,
             )
+        TimedBlockAnimation.type =
+            chunkRegistry.registerComponent(
+                TimedBlockAnimation::class.java,
+                CraftoryIds.TIMED_BLOCK_ANIMATION_COMPONENT,
+                TimedBlockAnimation.CODEC,
+            )
+        HurlCannonChargeState.type =
+            chunkRegistry.registerComponent(
+                HurlCannonChargeState::class.java,
+                CraftoryIds.HURL_CANNON_CHARGE_COMPONENT,
+                HurlCannonChargeState.CODEC,
+            )
         AnchorState.type =
             chunkRegistry.registerComponent(
                 AnchorState::class.java,
@@ -449,6 +465,8 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(CanisterStateSystem())
         chunkRegistry.registerSystem(GasbagSystem())
         chunkRegistry.registerSystem(SnatcherClawSystem())
+        chunkRegistry.registerSystem(TimedBlockAnimationSystem())
+        chunkRegistry.registerSystem(HurlCannonChargeSystem())
         chunkRegistry.registerSystem(AnchorSystem())
         AssemblyViewIndex.type = chunkRegistry.registerResource(AssemblyViewIndex::class.java, ::AssemblyViewIndex)
         chunkRegistry.registerSystem(JunkHeartLifecycle())

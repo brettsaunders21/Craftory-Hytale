@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.util.TargetUtil
 import org.joml.Vector3i
 import studio.craftory.core.api.CraftoryCore
-import studio.craftory.core.api.transport.HurlPoint
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.MachineOwner
 import java.util.function.IntPredicate
@@ -61,41 +60,7 @@ private fun fireCannon(
         player.sendMessage(Message.translation("server.craftory.hurl.no-net"))
         return
     }
-    val result =
-        HurlRides.startArc(
-            world,
-            HurlPoint(position.x + 0.5, position.y + 1.0, position.z + 0.5),
-            HurlPoint(target.x + 0.5, target.y + 1.0, target.z + 0.5),
-            rider,
-            player.uuid,
-        )
-    result.failure?.let {
-        val key =
-            when (it) {
-                HurlStartFailure.ALREADY_RIDING -> {
-                    "already-riding"
-                }
-
-                HurlStartFailure.SPAWN_FAILED -> {
-                    "spawn-failed"
-                }
-
-                HurlStartFailure.PENDING -> {
-                    "warming-up"
-                }
-
-                HurlStartFailure.JAR_CARRIER -> {
-                    "jar-carrier"
-                }
-
-                HurlStartFailure.FORBIDDEN -> {
-                    return player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
-                }
-
-                else -> {
-                    "no-net"
-                }
-            }
-        player.sendMessage(Message.translation("server.craftory.hurl.$key"))
+    if (!beginHurlCannonCharge(world, position, rider, Vector3i(target.x, target.y, target.z))) {
+        player.sendMessage(Message.translation("server.craftory.hurl.spawn-failed"))
     }
 }
