@@ -130,12 +130,15 @@ internal class CrackleCoilSystem : EntityTickingSystem<ChunkStore>() {
         if (!blockState.fillWorldPos(commandBuffer, cursor)) return
         if (!CraftoryCore.isAreaActive(store, blockState)) {
             energy.setDemand(BlockPos.pack(cursor.x, cursor.y, cursor.z), 0)
+            setBlockState(world, blockState, commandBuffer, "Off")
             return
         }
         val production = burningProduction(store, cursor.x, cursor.y - 1, cursor.z)
         val id = BlockPos.pack(cursor.x, cursor.y, cursor.z)
         energy.setDemand(id, ConverterMath.skim(production, 5))
-        energy.setConverterOutput(id, energy.converterInputDelivered(id), DIM_GLIMMER_RANK)
+        val output = energy.converterInputDelivered(id)
+        energy.setConverterOutput(id, output, DIM_GLIMMER_RANK)
+        setBlockState(world, blockState, commandBuffer, if (output > 0) "Active" else "Off")
     }
 
     private fun burningProduction(
@@ -240,6 +243,7 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         archetypeChunkSize: Int,
     ): Boolean = false
 
+    @Suppress("CyclomaticComplexMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -253,6 +257,16 @@ internal class CradleSystem : EntityTickingSystem<ChunkStore>() {
         if (member.typeId != CraftoryIds.WELL_CRADLE_TYPE) return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
         if (!blockState.fillWorldPos(commandBuffer, cursor)) return
+        val well =
+            findWell(store, BlockPos(cursor.x, cursor.y + 1, cursor.z))
+                ?.let { store.getComponent(it, Glimmerwell.type) }
+        val visualState =
+            when {
+                well?.state != WellState.SEATED -> "Empty"
+                state.harmony > 0 -> "Harmony"
+                else -> "Seated"
+            }
+        setBlockState(store.externalData.world, blockState, commandBuffer, visualState)
         val base =
             when (state.seatedStrength) {
                 "FLICKER" -> 4L

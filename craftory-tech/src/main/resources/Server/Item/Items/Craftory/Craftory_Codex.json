@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Codex.name",
     "Description": "server.items.Craftory_Codex.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Console.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Codex.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
   "Quality": "Developer",

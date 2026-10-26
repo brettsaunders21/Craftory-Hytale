@@ -31,7 +31,14 @@
         },
         "On": {
           "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On.blockymodel",
-          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On_Texture.png"}]
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_On_Texture.png"}],
+          "Particles": [
+            {
+              "SystemId": "Goblin_Decorative_Steam",
+              "TargetNodeName": "Steam-Emitter",
+              "Scale": 1
+            }
+          ]
         },
         "Offline": {
           "CustomModel": "Blocks/Craftory/Gutter_Boiler/Gutter_Boiler_Offline.blockymodel",

@@ -16,12 +16,41 @@
     "Opacity": "Transparent",
     "Group": "GoblinLab",
     "HitboxType": "Full",
-    "CustomModel": "Blocks/Craftory/Gasbag/Gasbag.blockymodel",
+    "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
     "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
-    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Texture.png"}],
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}],
     "Interactions": {
       "Use": {
         "Interactions": [{"Type": "Craftory_BlockUse"}]
+      }
+    },
+    "State": {
+      "Definitions": {
+        "Empty": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}]
+        },
+        "Quarter": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Quarter.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Quarter_Texture.png"}]
+        },
+        "Half": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Half.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Half_Texture.png"}]
+        },
+        "ThreeQuarter": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_ThreeQuarter.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_ThreeQuarter_Texture.png"}]
+        },
+        "Full": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Full.blockymodel",
+          "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Full_Texture.png"}]
+        }
       }
     },
     "BlockEntity": {

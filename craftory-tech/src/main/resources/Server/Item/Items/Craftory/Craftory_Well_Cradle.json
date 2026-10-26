@@ -7,16 +7,30 @@
   "PlayerAnimationsId": "Block",
   "Categories": ["Furniture"],
   "Set": "Furniture_Goblin",
-  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Well_Cradle.png",
   "BlockType": {
     "DrawType": "Model",
     "Material": "Solid",
     "Opacity": "Transparent",
     "HitboxType": "Brazier_Goblin",
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
-    "CustomModelTexture": [
-      {"Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png", "Weight": 1}
-    ],
+    "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty_Texture.png"}],
+    "State": {
+      "Definitions": {
+        "Empty": {
+          "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Empty_Texture.png"}]
+        },
+        "Seated": {
+          "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Seated.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Seated_Texture.png"}]
+        },
+        "Harmony": {
+          "CustomModel": "Blocks/Craftory/Well_Cradle/Well_Cradle_Harmony.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Well_Cradle/Well_Cradle_Harmony_Texture.png"}]
+        }
+      }
+    },
     "Interactions": {
       "Use": {"Interactions": [{"Type": "Craftory_CradleUse"}]}
     },

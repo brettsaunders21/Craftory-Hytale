@@ -347,6 +347,14 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
             return
         }
         val position = blockState.worldPosition(commandBuffer) ?: return
+        if (store.externalData.world.tick % STATE_UPDATE_INTERVAL_TICKS == 0L) {
+            val positionId = BlockPos.pack(position.x, position.y, position.z)
+            val energy = CraftoryCore.energyAccess(store.externalData.world)
+            val visualState = FillBand.stateName(FillBand.of(energy.stored(positionId), energy.capacity(positionId)))
+            if (setBlockState(store.externalData.world, blockState, commandBuffer, visualState)) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+        }
         if (!state.leaking && fireAdjacent(store, position.x, position.y, position.z)) {
             state.leaking = true
             blockState.markNeedsSaving(commandBuffer)
@@ -388,6 +396,7 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
 
     companion object {
         const val CAPACITY = 400_000L
+        private const val STATE_UPDATE_INTERVAL_TICKS = 10L
         private val FACES =
             arrayOf(
                 intArrayOf(1, 0, 0),

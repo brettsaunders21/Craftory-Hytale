@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Squawk_Box.name",
     "Description": "server.items.Craftory_Squawk_Box.description"
   },
-  "Icon": "Icons/ItemsGenerated/GoblinLab_Console.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Squawk_Box.png",
   "MaxStack": 16,
   "PlayerAnimationsId": "Item",
   "Quality": "Common",

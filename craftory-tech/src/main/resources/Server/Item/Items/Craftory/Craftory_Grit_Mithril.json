@@ -1,6 +1,6 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Mithril.name" },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Mithril.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Mithril.png",
   "Categories": ["Items.Ingredients"],
   "MaxStack": 100,
   "Recipe": {

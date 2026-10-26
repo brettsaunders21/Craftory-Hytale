@@ -1,6 +1,6 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Gold.name" },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Gold.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Gold.png",
   "Categories": ["Items.Ingredients"],
   "MaxStack": 100,
   "Recipe": {

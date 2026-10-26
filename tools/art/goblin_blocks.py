@@ -226,12 +226,22 @@ def gutter_boiler(lit: bool, offline: bool = False):
             Box("SootBurst", (15, 8, 1), pos=(0, 10, 12), rot=(0, 0, -8), paint=SOOT_RUST),
             Box("BlackenedSeam", (20, 2, 1), pos=(0, 5, 12.2), rot=(0, 0, 4), paint=SOOT_P),
         )
+    if lit and not offline:
+        body.add(Box("Steam-Emitter", pos=(-7, 29, -3)))
     return Model([body]), {}
 
 
-def gasbag():
-    bag = Box("GasbagBelly", (19, 18, 17), pos=(0, 20, 0), rot=(0, 3, -2), paint=leather((0.55, 0.43, 0.29)))
-    bag.add(
+def gasbag(fill: float):
+    scale = 0.68 + fill * 0.38
+    bag = Box("Gasbag")
+    envelope = Box(
+        "Envelope",
+        stretch=(scale, 0.62 + fill * 0.52, scale),
+    )
+    envelope.add(
+        Box("GasbagBelly", (19, 18, 17), pos=(0, 20, 0), rot=(0, 3, -2), paint=leather((0.55, 0.43, 0.29)))
+    )
+    envelope.add(
         Box("BagMiddle", (23, 13, 20), pos=(0, 0, 0), paint=leather((0.51, 0.39, 0.26))),
         Box("Shoulder", (17, 6, 16), pos=(0, 8, 0), rot=(0, 2, -2), paint=leather((0.51, 0.39, 0.26))),
         Box("Crown", (10, 5, 11), pos=(0, 8, 0), rot=(0, -3, 1), paint=leather((0.58, 0.46, 0.32))),
@@ -259,12 +269,165 @@ def gasbag():
         bolt("PatchRivetA", (4, 3, 11), paint=BRASS_P),
         bolt("PatchRivetB", (10, -3, 11), paint=BRASS_P),
     )
-    anim = anim_json(40, {
-        "GaugeNeedle": {"orientation": [
-            (0, (0, 0, -15)), (10, (0, 0, -21)), (20, (0, 0, -12)), (30, (0, 0, -19)), (40, (0, 0, -15))
-        ]},
-    })
+    bag.add(envelope)
+    anim = anim_json(
+        40,
+        {
+            "GaugeNeedle": {
+                "orientation": [
+                    (0, (0, 0, -15)),
+                    (10, (0, 0, -21)),
+                    (20, (0, 0, -12)),
+                    (30, (0, 0, -19)),
+                    (40, (0, 0, -15)),
+                ],
+            },
+        },
+    )
     return Model([bag]), {"Twitch": anim}
+
+
+def hurl_tube():
+    tube = Box("Tube", pos=(0, 16, 0))
+    tube.add(
+        Box("Barrel", (12, 12, 24), paint=CORRUGATED_RUST),
+        Box("Muzzle", (15, 15, 3), pos=(0, 0, 13), paint=BRASS_RIV),
+        Box("Breech", (15, 15, 3), pos=(0, 0, -13), paint=RUSTY),
+        Box("Sight", (3, 4, 9), pos=(0, 8, 0), paint=BRASS_P),
+        lashing("BreechRope", (16, 2, 16), pos=(0, -4, -9)),
+        bolt("MuzzleRivetA", (-5, 5, 14), paint=BRASS_P),
+        bolt("MuzzleRivetB", (5, -5, 14), paint=BRASS_P),
+    )
+    return Model([tube]), {}
+
+
+def hurl_station():
+    stand = Box("Station", pos=(0, 0, 0))
+    stand.add(
+        Box("Foot", (24, 4, 24), pos=(0, 2, 0), paint=CORRUGATED_RUST),
+        Box("Column", (8, 18, 8), pos=(0, 12, 0), paint=DARK_TIN),
+        Box("Cradle", (20, 5, 18), pos=(0, 22, 0), rot=(-12, 0, 0), paint=BRASS_RIV),
+        Box("TubeSeat", (14, 8, 16), pos=(0, 27, 0), rot=(-12, 0, 0), paint=CORRUGATED),
+        Box("LoadingHatch", (11, 8, 2), pos=(0, 27, 10), rot=(-12, 0, 0), paint=RUSTY),
+        Box("Handle", (3, 13, 3), pos=(12, 15, 0), rot=(0, 0, -20), paint=BRASS_P),
+        bolt("FootRivetA", (-8, 4, 8)),
+        bolt("FootRivetB", (8, 4, -8)),
+    )
+    return Model([stand]), {}
+
+
+def hurl_cannon():
+    cannon = Box("Cannon", pos=(0, 8, 0))
+    cannon.add(
+        Box("Carriage", (26, 8, 22), pos=(0, 4, 0), paint=CORRUGATED_RUST),
+        Box("Barrel", (18, 16, 24), pos=(0, 18, 1), rot=(-8, 0, 0), paint=metal(TIN_DARK, rust=0.35, corrugated=True)),
+        Box("Muzzle", (22, 20, 4), pos=(0, 17, 14), rot=(-8, 0, 0), paint=BRASS_RIV),
+        Box("Breech", (21, 18, 4), pos=(0, 20, -12), paint=RUSTY),
+        Box("ChargePiston", (4, 8, 4), pos=(0, 29, -1), paint=BRASS_P),
+        Box("Gauge", (7, 7, 2), pos=(13, 24, 9), paint=glass(FIZZ, 0.8)),
+        bolt("CarriageBoltL", (-10, 6, 5)),
+        bolt("CarriageBoltR", (10, 6, 5)),
+    )
+    anim = anim_json(
+        36,
+        {
+            "ChargePiston": {
+                "position": [(0, (0, 0, 0)), (18, (0, 3, 0)), (36, (0, 0, 0))],
+            },
+            "Gauge": {
+                "orientation": [(0, (0, 0, -20)), (18, (0, 0, 35)), (36, (0, 0, -20))],
+            },
+        },
+    )
+    return Model([cannon]), {"Charge": anim}
+
+
+def catch_net():
+    frame = Box("NetFrame", pos=(0, 14, 0))
+    frame.add(
+        Box("FrameTop", (28, 3, 24), pos=(0, 12, 0), paint=BRASS_RIV),
+        Box("FrameLegL", (3, 24, 3), pos=(-12, 0, 0), paint=RUSTY),
+        Box("FrameLegR", (3, 24, 3), pos=(12, 0, 0), paint=RUSTY),
+        Box("NetMesh", (22, 1, 18), pos=(0, 7, 0), paint=rope()),
+        lashing("NetRopeL", (2, 18, 2), pos=(-8, 0, 0), rot=(0, 0, -15)),
+        lashing("NetRopeR", (2, 18, 2), pos=(8, 0, 0), rot=(0, 0, 15)),
+        bolt("FrameRivetL", (-12, 10, 2)),
+        bolt("FrameRivetR", (12, 10, 2)),
+    )
+    anim = anim_json(
+        24,
+        {
+            "NetMesh": {
+                "shapeStretch": [(0, (1, 1, 1)), (12, (1.1, 0.8, 1.1)), (24, (1, 1, 1))],
+            },
+        },
+    )
+    return Model([frame]), {"Land": anim}
+
+
+def well_cradle(state: str):
+    cradle = Box("Cradle", pos=(0, 0, 0))
+    cradle.add(
+        Box("Base", (26, 5, 26), pos=(0, 2.5, 0), paint=CORRUGATED_RUST),
+        Box("Rim", (22, 4, 22), pos=(0, 7, 0), paint=BRASS_RIV),
+        Box("SupportA", (3, 15, 3), pos=(-9, 14, -9), paint=RUSTY),
+        Box("SupportB", (3, 15, 3), pos=(9, 14, -9), paint=RUSTY),
+        Box("SupportC", (3, 15, 3), pos=(-9, 14, 9), paint=RUSTY),
+        Box("SupportD", (3, 15, 3), pos=(9, 14, 9), paint=RUSTY),
+        Box("Seat", (16, 3, 16), pos=(0, 14, 0), paint=BRASS_P),
+    )
+    if state in ("Seated", "Harmony"):
+        cradle.add(
+            Box("GlimmerCrystal", (7, 11, 7), pos=(0, 23, 0), rot=(10, 20, -8), paint=CYAN_GLOW, shading="fullbright"),
+        )
+    if state == "Harmony":
+        cradle.add(
+            Box("HarmonyRing", (23, 1, 23), pos=(0, 18, 0), paint=CYAN_GLOW, shading="fullbright"),
+        )
+    return Model([cradle]), {}
+
+
+def crackle_coil(active: bool):
+    tower = Box("CoilTower", pos=(0, 0, 0))
+    tower.add(
+        Box("Foot", (22, 4, 22), pos=(0, 2, 0), paint=CORRUGATED_RUST),
+        Box("Mast", (6, 22, 6), pos=(0, 15, 0), paint=metal(TIN_DARK, rust=0.35)),
+        Box("CopperCoil", (15, 4, 15), pos=(0, 10, 0), paint=BRASS_RIV),
+        Box("CopperCoilTop", (15, 4, 15), pos=(0, 20, 0), paint=BRASS_RIV),
+        Box("Cage", (18, 2, 18), pos=(0, 27, 0), paint=RUSTY),
+    )
+    arc = Box("Arc", (1, 21, 1), pos=(0, 22, 0), paint=CYAN_GLOW, shading="fullbright", visible=active)
+    arc.add(
+        Box("ArcBranch", (1, 13, 1), pos=(4, 0, 0), rot=(0, 0, 38), paint=CYAN_GLOW, shading="fullbright"),
+        Box("ArcTip", (1, 8, 1), pos=(-3, -5, 0), rot=(0, 0, -42), paint=CYAN_GLOW, shading="fullbright"),
+    )
+    tower.add(arc)
+    if active:
+        animation = anim_json(
+            24,
+            {
+                "Arc": {
+                    "orientation": [(0, (0, 0, -8)), (12, (0, 0, 8)), (24, (0, 0, -8))],
+                },
+            },
+        )
+        return Model([tower]), {"Arc": animation}
+    return Model([tower]), {}
+
+
+def resonator():
+    frame = Box("Resonator", pos=(0, 0, 0))
+    frame.add(
+        Box("Base", (24, 4, 24), pos=(0, 2, 0), paint=CORRUGATED_RUST),
+        Box("FrameLeft", (4, 24, 4), pos=(-9, 15, 0), paint=DARK_TIN),
+        Box("FrameRight", (4, 24, 4), pos=(9, 15, 0), paint=DARK_TIN),
+        Box("TopBar", (24, 4, 5), pos=(0, 27, 0), paint=BRASS_RIV),
+        Box("BottomBar", (22, 3, 5), pos=(0, 7, 0), paint=RUSTY),
+        Box("Crystal", (9, 14, 7), pos=(0, 17, 0), rot=(5, 15, -8), paint=CYAN_GLOW, shading="fullbright"),
+        bolt("FrameRivetL", (-9, 25, 3)),
+        bolt("FrameRivetR", (9, 25, 3)),
+    )
+    return Model([frame]), {}
 
 
 # ------------------------------------------------------------------ Gutterpipe
@@ -651,9 +814,26 @@ BLOCKS = {
     "Fizz_Canister": (fizz_canister, {}),
     "Sloshtank": (sloshtank, {}),
     "Gutter_Boiler": (gutter_boiler, {"_On": {"lit": True}, "_Off": {"lit": False}, "_Offline": {"lit": False, "offline": True}}),
-    "Gasbag": (gasbag, {"": {}}),
+    "Gasbag": (gasbag, {
+        "_Empty": {"fill": 0.0},
+        "_Quarter": {"fill": 0.25},
+        "_Half": {"fill": 0.5},
+        "_ThreeQuarter": {"fill": 0.75},
+        "_Full": {"fill": 1.0},
+    }),
     "Gutterpipe": (gutterpipe, {f"_C{mask:02d}": {"mask": mask} for mask in range(64)}),
     "Snatcher_Claw": (snatcher_claw, {"": {}}),
+    "Hurl_Tube": (hurl_tube, {"": {}}),
+    "Hurl_Station": (hurl_station, {"": {}}),
+    "Hurl_Cannon": (hurl_cannon, {"": {}}),
+    "Catch_Net": (catch_net, {"": {}}),
+    "Well_Cradle": (well_cradle, {
+        "_Empty": {"state": "Empty"},
+        "_Seated": {"state": "Seated"},
+        "_Harmony": {"state": "Harmony"},
+    }),
+    "Crackle_Coil": (crackle_coil, {"_Off": {"active": False}, "_Active": {"active": True}}),
+    "Resonator": (resonator, {"": {}}),
     "Gnasher_Pit": (gnasher_pit, {"": {}}),
     "Scorch_Oven": (scorch_oven, {"_Off": {"lit": False}, "_On": {"lit": True}}),
     "Wakebell_Anchor": (wakebell_anchor, {"_Off": {"lit": False}, "_On": {"lit": True}}),

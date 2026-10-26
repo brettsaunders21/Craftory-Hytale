@@ -10,7 +10,9 @@ from paint import (
     BRASS, FIZZ, GLIMMER, LEATHER, RUST, SOOT, TIN, TIN_DARK, WOOD, brass, glass, glow, leather, metal,
     plank, rope, soot, solid,
 )
-from goblin_blocks import BRASS_P, CORRUGATED, CORRUGATED_RUST, DARK_TIN, FIZZ_GLOW, ROPE_P, RUSTY, TIN_SHEET
+from goblin_blocks import (
+    BRASS_P, CORRUGATED, CORRUGATED_RUST, CYAN_GLOW, DARK_TIN, FIZZ_GLOW, ROPE_P, RUSTY, TIN_SHEET,
+)
 
 GRIP = leather((0.36, 0.22, 0.13))
 HANDLE = plank(WOOD, horizontal=False)
@@ -147,11 +149,127 @@ def muffler():
     return Model([can], fmt="character")
 
 
+def glimmer_lens():
+    frame = Box("Monocle", (18, 18, 3), pos=(0, 0, 0), paint=brass(rivets=True))
+    frame.add(
+        Box("Lens", (12, 12, 1), pos=(0, 0, 2), paint=glass(GLIMMER, 0.8)),
+        Box("RimTop", (18, 3, 3), pos=(0, 7.5, 0), paint=BRASS_P),
+        Box("RimBottom", (18, 3, 3), pos=(0, -7.5, 0), paint=BRASS_P),
+        Box("RimLeft", (3, 12, 3), pos=(-7.5, 0, 0), paint=BRASS_P),
+        Box("RimRight", (3, 12, 3), pos=(7.5, 0, 0), paint=BRASS_P),
+        Box("Hinge", (4, 4, 4), pos=(10, 3, 0), paint=RUSTY),
+        Box("EarArm", (3, 3, 20), pos=(16, 0, 0), rot=(0, 0, 12), paint=CORRUGATED),
+        Box("Chain", (2, 2, 12), pos=(-11, -8, 0), rot=(0, 0, -35), paint=brass(rivets=False)),
+    )
+    return Model([frame], fmt="character")
+
+
+def gob_jar(filled: bool):
+    jar = Box("Jar", (16, 20, 14), pos=(0, 10, 0), paint=glass(GLIMMER if filled else (0.66, 0.78, 0.72), 0.42))
+    jar.add(
+        Box("JarShoulder", (14, 4, 12), pos=(0, 10, 0), paint=glass(GLIMMER if filled else (0.66, 0.78, 0.72), 0.4)),
+        Box("Neck", (9, 4, 9), pos=(0, 12, 0), paint=glass(GLIMMER if filled else (0.66, 0.78, 0.72), 0.4)),
+        Box("Rim", (12, 2, 12), pos=(0, 15, 0), paint=brass(rivets=True)),
+        Box("Lid", (10, 3, 10), pos=(0, 17, 0), paint=RUSTY),
+        Box("Handle", (2, 12, 2), pos=(-9, 8, 0), paint=brass(rivets=False)),
+        Box("SealRivet", (2, 2, 2), pos=(0, 13, 6), paint=BRASS_P),
+    )
+    if filled:
+        jar.add(
+            Box("CapturedGlimmer", (7, 12, 6), pos=(0, 6, 0), rot=(10, 15, -8), paint=CYAN_GLOW, shading="fullbright"),
+            Box("Swirl", (1, 11, 1), pos=(3, 6, 4), rot=(0, 0, 24), paint=CYAN_GLOW, shading="fullbright"),
+        )
+    return Model([jar], fmt="character")
+
+
+def codex():
+    book = Box("Codex", (20, 24, 5), pos=(0, 12, 0), rot=(0, 0, 4), paint=leather((0.23, 0.31, 0.36)))
+    book.add(
+        Box("Pages", (17, 21, 3), pos=(1, 0, 0), paint=solid((0.85, 0.81, 0.68), noise=0.03)),
+        Box("Spine", (3, 25, 6), pos=(-9, 0, 0), paint=metal(TIN_DARK, rust=0.25)),
+        Box("GlimmerSigil", (8, 8, 1), pos=(1, 2, 3), paint=CYAN_GLOW, shading="fullbright"),
+        Box("CornerA", (4, 4, 2), pos=(-7, 9, 3), paint=BRASS_P),
+        Box("CornerB", (4, 4, 2), pos=(8, -9, 3), paint=BRASS_P),
+        Box("Clasp", (2, 22, 6), pos=(8, 0, 0), paint=brass(rivets=False)),
+    )
+    return Model([book], fmt="character")
+
+
+def paint_daub(color):
+    jar = Box("Daub", (12, 15, 10), pos=(0, 8, 0), rot=(0, 5, -3), paint=solid(color))
+    jar.add(
+        Box("Cap", (14, 3, 12), pos=(0, 8, 0), paint=BRASS_P),
+        Box("DaubMark", (8, 7, 1), pos=(0, -1, 5.4), paint=solid(color)),
+        Box("Rim", (13, 2, 11), pos=(0, -7, 0), paint=RUSTY),
+    )
+    return Model([jar], fmt="character")
+
+
+def glimmer_dust():
+    pile = Box("Dust", (15, 7, 12), pos=(0, 4, 0), rot=(0, 12, 0), paint=CYAN_GLOW, shading="fullbright")
+    pile.add(
+        Box("FlakeA", (5, 4, 4), pos=(-5, 4, 2), rot=(20, 0, 15), paint=glass(GLIMMER, 0.7)),
+        Box("FlakeB", (4, 5, 4), pos=(4, 3, -3), rot=(0, 15, -20), paint=glass(GLIMMER, 0.7)),
+        Box("FlakeC", (3, 3, 3), pos=(0, 5, 5), paint=CYAN_GLOW, shading="fullbright"),
+    )
+    return Model([pile], fmt="character")
+
+
+def spark_shard():
+    shard = Box("SparkShard", (8, 18, 7), pos=(0, 9, 0), rot=(8, 18, -12), paint=CYAN_GLOW, shading="fullbright")
+    shard.add(
+        Box("ShardFacetA", (3, 10, 3), pos=(-4, 3, 1), rot=(0, 0, 25), paint=glass(GLIMMER, 0.7)),
+        Box("ShardFacetB", (3, 8, 3), pos=(4, -3, -1), rot=(0, 0, -20), paint=glass((0.16, 0.65, 0.88), 0.8)),
+    )
+    return Model([shard], fmt="character")
+
+
+def riftmoth_wing():
+    wing = Box("Wing", (22, 18, 1), pos=(0, 9, 0), rot=(0, 0, -8), paint=glass((0.44, 0.62, 0.72), 0.75))
+    wing.add(
+        Box("VeinA", (1, 16, 1), pos=(-7, 0, 1), rot=(0, 0, -22), paint=metal(TIN, rust=0.2)),
+        Box("VeinB", (1, 16, 1), pos=(0, 0, 1), paint=metal(TIN, rust=0.2)),
+        Box("VeinC", (1, 16, 1), pos=(7, 0, 1), rot=(0, 0, 22), paint=metal(TIN, rust=0.2)),
+        Box("WingTip", (7, 4, 1), pos=(5, 8, 1), rot=(0, 0, -20), paint=CYAN_GLOW, shading="fullbright"),
+    )
+    return Model([wing], fmt="character")
+
+
+def grit(color):
+    pile = Box("GritPile", (13, 5, 11), pos=(0, 3, 0), rot=(0, 8, 0), paint=solid(color, noise=0.12))
+    pile.add(
+        Box("GritA", (6, 4, 5), pos=(-5, 3, 2), rot=(0, 10, 0), paint=metal(color, rust=0.18, rivets=False)),
+        Box("GritB", (5, 3, 6), pos=(4, 3, -2), rot=(0, -12, 0), paint=solid(color, noise=0.1)),
+    )
+    return Model([pile], fmt="character")
+
+
 ITEMS = {
     "Tinkers_Wrench": tinkers_wrench,
     "Tinkers_Hammer": tinkers_hammer,
     "Tinkers_Notebook": notebook,
     "Fizz_Charge": fizz_charge,
+    "Glimmer_Lens": glimmer_lens,
+    "Gob_Jar": lambda: gob_jar(False),
+    "Gob_Jar_Filled": lambda: gob_jar(True),
+    "Codex": codex,
+    "Paint_Daub_Blue": lambda: paint_daub((0.19, 0.47, 0.92)),
+    "Paint_Daub_Green": lambda: paint_daub((0.22, 0.72, 0.28)),
+    "Paint_Daub_Red": lambda: paint_daub((0.88, 0.18, 0.16)),
+    "Paint_Daub_Yellow": lambda: paint_daub((0.96, 0.72, 0.12)),
+    "Glimmer_Dust": glimmer_dust,
+    "Spark_Shard": spark_shard,
+    "Riftmoth_Wing": riftmoth_wing,
+    "Grit_Adamantite": lambda: grit((0.55, 0.58, 0.70)),
+    "Grit_Cobalt": lambda: grit((0.26, 0.40, 0.76)),
+    "Grit_Copper": lambda: grit((0.75, 0.38, 0.20)),
+    "Grit_Gold": lambda: grit((0.88, 0.68, 0.20)),
+    "Grit_Iron": lambda: grit((0.58, 0.60, 0.62)),
+    "Grit_Mithril": lambda: grit((0.48, 0.70, 0.82)),
+    "Grit_Onyxium": lambda: grit((0.25, 0.23, 0.33)),
+    "Grit_Prisma": lambda: grit((0.55, 0.30, 0.78)),
+    "Grit_Silver": lambda: grit((0.78, 0.80, 0.84)),
+    "Grit_Thorium": lambda: grit((0.45, 0.62, 0.42)),
     "Boom_Valve": boom_valve,
     "Gutter_Gear": gutter_gear,
     "Scrap_Plating_Bodge": scrap_plating_bodge,

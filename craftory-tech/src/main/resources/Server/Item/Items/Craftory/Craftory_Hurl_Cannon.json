@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Hurl_Cannon.name",
     "Description": "server.items.Craftory_Hurl_Cannon.description"
   },
-  "Icon": "Icons/ItemsGenerated/Build_Grey_Pipe.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Hurl_Cannon.png",
   "Categories": ["Tool.TechnicalBlocks"],
   "PlayerAnimationsId": "Block",
   "Quality": "Technical",
@@ -12,8 +12,9 @@
   "BlockType": {
     "Material": "Solid",
     "DrawType": "Model",
-    "CustomModel": "Blocks/Structures/Tubes/Dev_Long.blockymodel",
-    "CustomModelTexture": [{"Texture": "Blocks/Structures/Tubes/Dev_Textures/Dev_Grey.png", "Weight": 1}],
+    "CustomModel": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon.blockymodel",
+    "CustomModelAnimation": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Charge.blockyanim",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Cannon/Hurl_Cannon_Texture.png"}],
     "HitboxType": "Branch",
     "Gathering": {"Breaking": {"GatherType": "Rocks"}},
     "BlockSoundSetId": "Soft",

@@ -1,6 +1,6 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Adamantite.name" },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Adamantite.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Adamantite.png",
   "Categories": ["Items.Ingredients"],
   "MaxStack": 100,
   "Recipe": {

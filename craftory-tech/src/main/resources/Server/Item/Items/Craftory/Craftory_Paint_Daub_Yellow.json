@@ -3,7 +3,7 @@
     "Name": "server.items.Craftory_Paint_Daub_Yellow.name",
     "Description": "server.items.Craftory_Paint_Daub_Yellow.description"
   },
-  "Icon": "Icons/Items/EditorTools/Paint.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Paint_Daub_Yellow.png",
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
   "Interactions": {

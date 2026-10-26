@@ -76,6 +76,9 @@ def export_blocks(manifest: list[str]) -> None:
         if name == "Gutterpipe":
             for stale_texture in d.glob("Gutterpipe_C??_Texture.png"):
                 stale_texture.unlink()
+        if name == "Gasbag":
+            for stale in (d / "Gasbag.blockymodel", d / "Gasbag_Texture.png"):
+                stale.unlink(missing_ok=True)
         icon_variant = {"Boomshroom_Burner": "_On", "Scorch_Oven": "_On", "Wakebell_Anchor": "_On",
                         "Junk_Heart_Firebox": "_On", "Fizz_Canister": "_Full", "Junk_Heart_Chimney": "_Cap"}
         m, _ = built[icon_variant.get(name, next(iter(built)))]

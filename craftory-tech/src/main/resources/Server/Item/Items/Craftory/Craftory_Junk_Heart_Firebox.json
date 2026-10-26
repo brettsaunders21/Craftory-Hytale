@@ -9,7 +9,7 @@
     "Furniture.Lighting"
   ],
   "Set": "Furniture_Goblin",
-  "Icon": "Icons/ItemsGenerated/Furniture_Goblin_Brazier.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Junk_Heart_Firebox.png",
   "BlockType": {
     "BlockParticleSetId": "Metal",
     "DrawType": "Model",
@@ -43,12 +43,21 @@
       }
     },
     "CustomModelTexture": [
-      {
-        "Texture": "Blocks/Decorative_Sets/Goblin/Brazier_Textures/Brazier_Texture.png",
-        "Weight": 1
-      }
+      {"Texture": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off_Texture.png"}
     ],
-    "CustomModel": "Blocks/Decorative_Sets/Goblin/Brazier.blockymodel",
+    "CustomModel": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off.blockymodel",
+    "State": {
+      "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_Off_Texture.png"}]
+        },
+        "On": {
+          "CustomModel": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_On.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Junk_Heart_Firebox/Junk_Heart_Firebox_On_Texture.png"}]
+        }
+      }
+    },
     "PhysicalMaterialId": "Metal",
     "VariantRotation": "NESW",
     "RotationYawPlacementOffset": "TwoSeventy",

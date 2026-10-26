@@ -165,6 +165,7 @@ internal class JunkHeartSystem : EntityTickingSystem<ChunkStore>() {
         }
         if (!CraftoryCore.isEnergyTick(store)) return
         if (JunkHeartMachine.advanceTo(state, tick, controller.state)) member.unsaved = true
+        setBlockState(world, blockState, commandBuffer, if (state.burning && controller.isFormed) "On" else "Off")
         member.production = JunkHeartMachine.productionPerSolveTick(state, controller.state, controller.quality)
         member.persist(blockState, commandBuffer, tick, HEART_SAVE_INTERVAL_TICKS, immediate = false)
     }

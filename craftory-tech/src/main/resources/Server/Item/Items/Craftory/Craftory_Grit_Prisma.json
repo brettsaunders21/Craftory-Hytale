@@ -1,6 +1,6 @@
 {
   "TranslationProperties": { "Name": "server.items.Craftory_Grit_Prisma.name" },
-  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Prisma.png",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Prisma.png",
   "Categories": ["Items.Ingredients"],
   "MaxStack": 100,
   "Recipe": {

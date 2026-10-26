@@ -140,7 +140,7 @@ def main():
     width = max(cols * (label_w + CELL * 3), icon_cols * icon_cell[0])
     sheet = Image.new("RGBA", (width, 60 + model_h + 40 + icon_h), BG)
     d = ImageDraw.Draw(sheet)
-    d.text((10, 10), "Craftory art pass 1: Goblin era (Tier 1-2). Offline numpy renders, not the Hytale client.",
+    d.text((10, 10), "Craftory art pass 2: Goblin workshop and Spark-era assets. Offline numpy renders.",
            fill=INK)
     d.text((10, 30), "Models: front 3/4, back 3/4, top. Anim rows: 3 frames. Icons: 4x and 1:1 (64px).", fill=INK)
     for i, (label, views, _) in enumerate(rows):
@@ -157,7 +157,8 @@ def main():
         sheet.alpha_composite(big, (x + 8, y + 20))
         sheet.alpha_composite(im, (x + 16 + big.width, y + 20))
         d.text((x + 8, y + 4), name, fill=INK)
-        big.save(out / "renders" / f"icon4x_{name}")
+        big.save(out / "renders" / f"icon4x_{name}.png", format="PNG")
+        im.save(out / "renders" / f"icon1x_{name}.png", format="PNG")
     sheet.save(out / "art_preview.png", optimize=True)
     print(f"{len(rows)} model rows, {len(icons)} icons -> {out / 'art_preview.png'} {sheet.size}")
 
