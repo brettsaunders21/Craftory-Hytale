@@ -62,6 +62,7 @@ object CraftoryIds {
     const val CRACKLE_COIL = "Craftory_Crackle_Coil"
     const val RESONATOR = "Craftory_Resonator"
     const val WELL_CRADLE = "Craftory_Well_Cradle"
+    const val WELLHEAD = "Craftory_Wellhead"
 
     const val CRANK_TYPE = "craftory:crank_a_fizz"
     const val BURNER_TYPE = "craftory:boomshroom_burner"
@@ -78,6 +79,8 @@ object CraftoryIds {
     const val CRACKLE_COIL_TYPE = "craftory:crackle_coil"
     const val RESONATOR_TYPE = "craftory:resonator"
     const val WELL_CRADLE_TYPE = "craftory:well_cradle"
+    const val WELLHEAD_TYPE = "craftory:wellhead"
+    const val WELLHEAD_COMPONENT = "CraftoryWellhead"
     const val JUNK_HEART_TEMPLATE = "craftory:junk_heart"
     const val JUNK_HEART_KNOWLEDGE = "craftory:heart/junk"
     const val JUNK_HEART_COMPONENT = "CraftoryJunkHeart"

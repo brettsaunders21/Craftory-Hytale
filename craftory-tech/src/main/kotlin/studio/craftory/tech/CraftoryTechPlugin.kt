@@ -85,6 +85,8 @@ import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
 import studio.craftory.tech.machine.TransportSelfTestSystem
+import studio.craftory.tech.machine.WellheadState
+import studio.craftory.tech.machine.WellheadSystem
 import studio.craftory.tech.machine.jank.BodgeSlots
 import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.mob.RiftmothDrainSystem
@@ -139,6 +141,9 @@ import studio.craftory.tech.well.WellKillBirthSystem
 import studio.craftory.tech.well.WellPulseState
 import studio.craftory.tech.well.WellPulseSystem
 import studio.craftory.tech.well.WellRuntimeConfig
+import studio.craftory.tech.well.WellheadBreakSystem
+import studio.craftory.tech.well.WellheadDamageSystem
+import studio.craftory.tech.well.WellheadPlacementSystem
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
@@ -191,6 +196,13 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
             EnergyFaces.DOWN,
             EnergyFaces.ALL xor EnergyFaces.DOWN,
+        )
+        CraftoryCore.registerConverterType(
+            CraftoryIds.WELLHEAD_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 40, 0, 0, 1),
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
+            EnergyFaces.ALL xor EnergyFaces.UP xor EnergyFaces.DOWN,
+            EnergyFaces.UP,
         )
         CraftoryCore.registerEnergyType(
             CraftoryIds.WELL_CRADLE_TYPE,
@@ -344,6 +356,12 @@ class CraftoryTechPlugin(
                 CraftoryIds.CRADLE_COMPONENT,
                 CradleState.CODEC,
             )
+        WellheadState.type =
+            chunkRegistry.registerComponent(
+                WellheadState::class.java,
+                CraftoryIds.WELLHEAD_COMPONENT,
+                WellheadState.CODEC,
+            )
         CraftoryCore.registerInspectableComponent(CraftoryIds.JUNK_HEART_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, JunkHeartState.type)
         }
@@ -437,6 +455,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(CrackleCoilSystem())
         chunkRegistry.registerSystem(ResonatorSystem())
         chunkRegistry.registerSystem(CradleSystem())
+        chunkRegistry.registerSystem(WellheadSystem())
         chunkRegistry.registerSystem(FirstSparkSystem())
         chunkRegistry.registerSystem(MultiblockAssemblySystem())
         chunkRegistry.registerSystem(GhostPreviewLifecycle())
@@ -483,6 +502,9 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(JunkPowerKickSystem())
         entityRegistry.registerSystem(CradlePlaceSystem())
         entityRegistry.registerSystem(CradleBreakSystem())
+        entityRegistry.registerSystem(WellheadPlacementSystem())
+        entityRegistry.registerSystem(WellheadBreakSystem())
+        entityRegistry.registerSystem(WellheadDamageSystem())
         entityRegistry.registerSystem(MachineOwnerPlacementSystem())
         entityRegistry.registerSystem(TetherStakePlacementSystem())
         entityRegistry.registerSystem(BuildableMachineCraftGate())
