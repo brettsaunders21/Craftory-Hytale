@@ -109,6 +109,40 @@ internal fun validateUiSelectors(
     return errors
 }
 
+internal fun validateUiTranslationReferences(resourceRoots: List<Path>): List<String> {
+    val languageReferences =
+        resourceRoots
+            .flatMap { regularFiles(it.resolve("Server/Languages/en-US")) }
+            .filter { it.fileName.toString().endsWith(".lang") }
+            .flatMap { path ->
+                val prefix = path.fileName.toString().removeSuffix(".lang") + "."
+                Files
+                    .readAllLines(path)
+                    .mapNotNull { line ->
+                        val key = line.substringBefore('=').trim()
+                        key.takeIf { '=' in line && it.isNotEmpty() }?.let { prefix + it }
+                    }
+            }.toSet()
+    val errors = mutableListOf<String>()
+    resourceRoots
+        .flatMap(::regularFiles)
+        .filter { it.fileName.toString().endsWith(".ui") }
+        .forEach { path ->
+            val source = Files.readString(path)
+            Regex("""%([A-Za-z0-9_.\-]+)""").findAll(source).forEach { match ->
+                val reference = match.groupValues[1]
+                val line = source.take(match.range.first).count { it == '\n' } + 1
+                if (!Regex("^[A-Za-z0-9.]+$").matches(reference)) {
+                    errors += "$path:$line: invalid translation reference '%$reference'"
+                }
+                if (reference !in languageReferences) {
+                    errors += "$path:$line: undeclared translation reference '%$reference'"
+                }
+            }
+        }
+    return errors
+}
+
 private fun selectorLiterals(source: String): List<String> {
     val selectors = mutableListOf<String>()
     Regex(
@@ -146,6 +180,21 @@ class UiSelectorsTest {
                 uiRoot = root.resolve("craftory-tech/src/main/resources/Common/UI/Custom/Craftory"),
                 languageFile = root.resolve("craftory-tech/src/main/resources/Server/Languages/en-US/server.lang"),
             )
+        assertTrue(errors.isEmpty(), errors.joinToString("\n"))
+    }
+
+    @Test
+    fun `all UI translation references are client-parseable and declared`() {
+        val root = repoRoot()
+        val resourceRoots =
+            Files.list(root).use { modules ->
+                modules
+                    .filter { Files.isDirectory(it) && it.fileName.toString().startsWith("craftory-") }
+                    .map { it.resolve("src/main/resources") }
+                    .filter { Files.isDirectory(it) }
+                    .toList()
+            }
+        val errors = validateUiTranslationReferences(resourceRoots)
         assertTrue(errors.isEmpty(), errors.joinToString("\n"))
     }
 
