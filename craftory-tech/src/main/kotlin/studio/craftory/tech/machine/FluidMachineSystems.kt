@@ -22,13 +22,11 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.energy.EnergyMember
 import studio.craftory.core.api.transport.FluidHandler
+import studio.craftory.core.api.transport.FluidTank
 import studio.craftory.core.api.transport.FluidTransport
 
-private val LAVA_IDS =
-    intArrayOf(
-        Fluid.getAssetMap().getIndex("Lava_Source"),
-        Fluid.getAssetMap().getIndex("Lava"),
-    )
+private val LAVA_IDS = setOf("Lava_Source", "Lava")
+private const val TICKS_PER_SECOND = 20L
 
 internal class GutterBoilerSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
@@ -76,62 +74,97 @@ private fun advanceBoiler(
     store: Store<ChunkStore>,
     commandBuffer: CommandBuffer<ChunkStore>,
 ) {
-    if (!CraftoryCore.isAreaActive(store, blockState) || !CraftoryCore.isEnergyTick(store)) {
-        member.production = 0
+    val world = store.externalData.world
+    if (!CraftoryCore.isAreaActive(store, blockState)) {
+        clearBoilerProduction(member)
         return
     }
-    val position = blockState.worldPosition(commandBuffer) ?: return
-    val lavaBelow =
-        hasFluid(
-            store,
+    if (!CraftoryCore.isEnergyTick(store)) return
+    val position = blockState.worldPosition(commandBuffer)
+    if (position == null) {
+        clearBoilerProduction(member)
+        return
+    }
+    val lavaBelow = hasFluid(store, position.x, position.y - 1, position.z, LAVA_IDS)
+    if (world.tick % TICKS_PER_SECOND == 0L) {
+        updateBoilerState(
+            state,
+            blockState,
+            commandBuffer,
+            world,
             position.x,
-            position.y - 1,
+            position.y,
             position.z,
-            LAVA_IDS,
+            lavaBelow,
         )
-    val update =
-        GutterBoilerRules.step(
+    }
+    member.production =
+        GutterBoilerRules.production(
             state.pressure,
             state.water,
             state.fuelTicks > 0,
             lavaBelow,
             state.online,
         )
-    applyBoilerStep(state, update, lavaBelow)
-    member.production = update.production
-    member.productionRank = GutterBoilerSystem.PRESSURISED_RANK
-    val visualState =
-        when {
-            !state.online -> "Offline"
-            update.production > 0 -> "On"
-            else -> "Off"
-        }
-    setBlockState(store.externalData.world, blockState, commandBuffer, visualState)
-    blockState.markNeedsSaving(commandBuffer)
+    member.productionRank = if (member.production > 0) GutterBoilerSystem.PRESSURISED_RANK else 0
 }
 
-private fun applyBoilerStep(
+private fun updateBoilerState(
     state: BoilerState,
-    update: BoilerStep,
+    blockState: BlockModule.BlockStateInfo,
+    commandBuffer: CommandBuffer<ChunkStore>,
+    world: com.hypixel.hytale.server.core.universe.world.World,
+    x: Int,
+    y: Int,
+    z: Int,
     lavaBelow: Boolean,
 ) {
-    state.pressure = update.pressure
-    state.water = update.water
-    if (update.popped) {
-        state.online = false
-        state.fuelTicks = 0
-    } else {
-        consumeBoilerFuel(state, lavaBelow)
-    }
+    val beforePressure = state.pressure
+    val beforeWater = state.water
+    val beforeFuelTicks = state.fuelTicks
+    val beforeOnline = state.online
+    val update = GutterBoilerActions.advance(state, lavaBelow)
+    val stateChanged =
+        hasBoilerStateChanged(beforePressure, beforeWater, beforeFuelTicks, beforeOnline, state)
+    val visualChanged = setBlockState(world, blockState, commandBuffer, boilerVisualState(state, lavaBelow))
+    if (stateChanged || visualChanged) blockState.markNeedsSaving(commandBuffer)
+    if (update.popped) GutterBoilerEffects.pop(world, x, y, z)
 }
 
-private fun consumeBoilerFuel(
+private fun hasBoilerStateChanged(
+    pressure: Int,
+    water: Long,
+    fuelTicks: Long,
+    online: Boolean,
+    state: BoilerState,
+): Boolean {
+    if (pressure != state.pressure) return true
+    if (water != state.water) return true
+    if (fuelTicks != state.fuelTicks) return true
+    return online != state.online
+}
+
+private fun boilerVisualState(
     state: BoilerState,
     lavaBelow: Boolean,
-) {
-    if (state.fuelTicks > 0 && !lavaBelow) {
-        state.fuelTicks = (state.fuelTicks - 20L).coerceAtLeast(0)
+): String =
+    when {
+        !state.online -> "Offline"
+        hasBoilerPressureAndHeat(state, lavaBelow) -> "On"
+        else -> "Off"
     }
+
+private fun hasBoilerPressureAndHeat(
+    state: BoilerState,
+    lavaBelow: Boolean,
+): Boolean {
+    val heatAvailable = state.fuelTicks > 0 || lavaBelow
+    return state.pressure > 0 && state.water > 0 && heatAvailable
+}
+
+private fun clearBoilerProduction(member: EnergyMember) {
+    member.production = 0
+    member.productionRank = 0
 }
 
 private fun hasFluid(
@@ -139,13 +172,63 @@ private fun hasFluid(
     x: Int,
     y: Int,
     z: Int,
-    ids: IntArray,
+    ids: Set<String>,
 ): Boolean {
     val sectionRef =
         store.externalData.world.chunkStore
             .getChunkSectionReferenceAtBlock(x, y, z) ?: return false
     val section = store.getComponent(sectionRef, FluidSection.getComponentType()) ?: return false
-    return section.getFluidId(x, y, z) in ids
+    return section.getFluid(x and 31, y and 31, z and 31)?.id in ids
+}
+
+internal class SloshtankStateSystem : EntityTickingSystem<ChunkStore>() {
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(FluidTank.type, BlockModule.BlockStateInfo.getComponentType())
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        super.tick(dt, chunk, store, commandBuffer)
+    }
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val world = store.externalData.world
+        if (!CraftoryCore.isAreaActive(store, blockState) ||
+            !CraftoryCore.isEnergyTick(store) ||
+            world.tick % TICKS_PER_SECOND != 0L
+        ) {
+            return
+        }
+        val position = blockState.worldPosition(commandBuffer) ?: return
+        val fluid = FluidTransport.of(world)
+        val capacity = fluid.capacity(position.x, position.y, position.z)
+        val amount = fluid.amount(position.x, position.y, position.z)
+        val fill = if (capacity <= 0L) 0 else ((amount * 4 + capacity / 2) / capacity).toInt().coerceIn(0, 4)
+        val state =
+            when (fill) {
+                1 -> "Quarter"
+                2 -> "Half"
+                3 -> "ThreeQuarter"
+                4 -> "Full"
+                else -> "Empty"
+            }
+        if (setBlockState(world, blockState, commandBuffer, state)) blockState.markNeedsSaving(commandBuffer)
+    }
 }
 
 private fun setBlockState(
@@ -153,14 +236,14 @@ private fun setBlockState(
     blockState: BlockModule.BlockStateInfo,
     commandBuffer: CommandBuffer<ChunkStore>,
     state: String,
-) {
+): Boolean {
     val position = Vector3i()
-    if (!blockState.fillWorldPos(commandBuffer, position)) return
+    if (!blockState.fillWorldPos(commandBuffer, position)) return false
     val sectionRef = blockState.sectionRef
-    val section = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType()) ?: return
-    val blockType = BlockType.getAssetMap().getAsset(section.get(position.x, position.y, position.z)) ?: return
-    if (blockType.getState() == null || blockType.getStateForBlock(blockType) == state) return
-    if (blockType.getBlockForState(state) == null) return
+    val section = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType()) ?: return false
+    val blockType = BlockType.getAssetMap().getAsset(section.get(position.x, position.y, position.z)) ?: return false
+    if (blockType.getState() == null || blockType.getStateForBlock(blockType) == state) return false
+    if (blockType.getBlockForState(state) == null) return false
     BlockOperations.setBlockInteractionState(
         world.chunkStore,
         sectionRef,
@@ -171,6 +254,7 @@ private fun setBlockState(
         state,
         false,
     )
+    return true
 }
 
 internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
@@ -203,7 +287,12 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
     ) {
         val state = chunk.getComponent(index, GasbagState.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState) || !CraftoryCore.isEnergyTick(store)) return
+        if (!CraftoryCore.isAreaActive(store, blockState) ||
+            !CraftoryCore.isEnergyTick(store) ||
+            store.externalData.world.tick % TICKS_PER_SECOND != 0L
+        ) {
+            return
+        }
         val position = blockState.worldPosition(commandBuffer) ?: return
         if (!state.leaking && fireAdjacent(store, position.x, position.y, position.z)) {
             state.leaking = true
@@ -238,7 +327,9 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
             store.externalData.world.chunkStore
                 .getChunkSectionReferenceAtBlock(x, y, z) ?: return false
         val section = store.getComponent(sectionRef, FluidSection.getComponentType()) ?: return false
-        val fluid = Fluid.getAssetMap().getAsset(section.getFluidId(x, y, z)) ?: return false
+        val fluidId = section.getFluidId(x and 31, y and 31, z and 31)
+        if (fluidId < 0) return false
+        val fluid = Fluid.getAssetMap().getAsset(fluidId) ?: return false
         return fluid.ticker is FireFluidTicker
     }
 

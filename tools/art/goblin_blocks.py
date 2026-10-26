@@ -176,11 +176,16 @@ def sloshtank(fill: float):
     tank.add(
         Box("Top", (22, 3, 22), pos=(0, 13, 0), paint=RUSTY),
         Box("Bottom", (22, 3, 22), pos=(0, -13, 0), paint=DARK_TIN),
-        Box("WaterGlass", (7, 16, 2), pos=(0, -1, 10.4), paint=glass(FIZZ, fill)),
-        Box("GlassFrameL", (1, 19, 2), pos=(-4, -1, 10.7), paint=BRASS_P),
-        Box("GlassFrameR", (1, 19, 2), pos=(4, -1, 10.7), paint=BRASS_P),
-        Box("NeedleHub", (3, 3, 2), pos=(0, 7, 11), paint=BRASS_P),
-        Box("FloatNeedle", (1, 9, 1), pos=(0, 5, 11.2), rot=(0, 0, (fill - 0.5) * 55), paint=metal(RUST, rust=0.2)),
+        Box("WaterGlass", (8, 19, 2), pos=(-3, -1, 10.4), paint=glass(FIZZ, fill)),
+        Box("GlassFrameL", (1, 22, 2), pos=(-7.5, -1, 10.7), paint=BRASS_P),
+        Box("GlassFrameR", (1, 22, 2), pos=(1.5, -1, 10.7), paint=BRASS_P),
+        Box("GlassFrameTop", (10, 1, 2), pos=(-3, 10, 10.7), paint=RUSTY),
+        Box("GlassFrameBottom", (10, 1, 2), pos=(-3, -12, 10.7), paint=RUSTY),
+        Box("GaugeCase", (10, 10, 2), pos=(6, 8, 10.5), paint=BRASS_RIV),
+        Box("GaugeFace", (7, 7, 1), pos=(6, 8, 11.8), paint=DEAD_GLASS),
+        Box("GaugeNeedle", (1, 6, 1), pos=(6, 8, 12.7), rot=(0, 0, (0.5 - fill) * 90), paint=metal(RUST, rust=0.2)),
+        Box("GaugeHub", (2, 2, 1), pos=(6, 8, 13.2), paint=BRASS_P),
+        Box("Float", (3, 2, 1), pos=(-3, -9 + fill * 16, 11.6), paint=BRASS_P),
         Box("RopeHandle", (2, 8, 2), pos=(-11, 7, 0), paint=ROPE_P),
         lashing("RopeBand", (21, 2, 21), pos=(0, -6, 0), rot=(0, 0, -3)),
         bolt("RivetA", (-7, 10, 10), paint=BRASS_P),
@@ -194,7 +199,13 @@ def gutter_boiler(lit: bool, offline: bool = False):
     glow_paint = DEAD_GLASS if offline or not lit else FIZZ_GLOW
     body = Box("Boiler", (26, 23, 22), pos=(0, 12, 0), rot=(0, 2, -1), paint=metal(TIN_DARK, rust=0.45, corrugated=True))
     body.add(
-        Box("TopPlate", (28, 3, 24), pos=(0, 12, 0), paint=BRASS_RIV),
+        Box(
+            "TopPlate",
+            (28, 3, 24),
+            pos=(0, 12 if not offline else 13, 0),
+            rot=(0, 0 if not offline else -12, 0 if not offline else 15),
+            paint=BRASS_RIV if not offline else SOOT_RUST,
+        ),
         Box("BasePlate", (29, 3, 25), pos=(0, -12, 0), paint=SOOT_RUST),
         Box("PressureGlass", (9, 11, 2), pos=(0, 1, 11.4), paint=glass(FIZZ, 0.9 if lit else 0.2)),
         Box("GaugeFrame", (13, 14, 2), pos=(0, 1, 11.8), paint=BRASS_RIV),
@@ -207,24 +218,53 @@ def gutter_boiler(lit: bool, offline: bool = False):
         Box("FlueLip", (13, 2, 13), pos=(-7, 27, -3), paint=BRASS_RIV),
         lashing("BoilerStrap", (2, 23, 24), pos=(10, 0, 0)),
     )
+    if offline:
+        body.add(
+            Box("BlownLidHinge", (5, 2, 3), pos=(-8, 14, 8), rot=(0, 0, -24), paint=RUSTY),
+            Box("SprungRivet", (3, 2, 1), pos=(11, 9, 11.8), rot=(0, 0, 24), paint=BRASS_P),
+            Box("MissingRivetSocket", (3, 3, 1), pos=(-11, 10, 11.5), paint=SOOT_P),
+            Box("SootBurst", (15, 8, 1), pos=(0, 10, 12), rot=(0, 0, -8), paint=SOOT_RUST),
+            Box("BlackenedSeam", (20, 2, 1), pos=(0, 5, 12.2), rot=(0, 0, 4), paint=SOOT_P),
+        )
     return Model([body]), {}
 
 
 def gasbag():
-    bag = Box("Gasbag", (24, 23, 20), pos=(0, 18, 0), rot=(0, 3, -2), paint=leather((0.39, 0.31, 0.2)))
+    bag = Box("GasbagBelly", (19, 18, 17), pos=(0, 20, 0), rot=(0, 3, -2), paint=leather((0.55, 0.43, 0.29)))
     bag.add(
-        Box("Patch", (10, 8, 2), pos=(7, 0, 10.4), rot=(0, 0, 7), paint=metal(RUST, rust=0.2)),
-        Box("FizzWindow", (7, 10, 1), pos=(-3, 0, 10.7), paint=FIZZ_GLOW, shading="fullbright"),
-        Box("Valve", (5, 6, 5), pos=(0, -12, 0), paint=BRASS_RIV).add(
+        Box("BagMiddle", (23, 13, 20), pos=(0, 0, 0), paint=leather((0.51, 0.39, 0.26))),
+        Box("Shoulder", (17, 6, 16), pos=(0, 10, 0), rot=(0, 2, -2), paint=leather((0.51, 0.39, 0.26))),
+        Box("Crown", (10, 5, 11), pos=(0, 15, 0), rot=(0, -3, 1), paint=leather((0.58, 0.46, 0.32))),
+        Box("TaperedBase", (14, 5, 14), pos=(0, -10, 0), rot=(0, -2, 1), paint=leather((0.52, 0.40, 0.28))),
+        Box("CanvasPatch", (9, 7, 2), pos=(7, -1, 10.5), rot=(0, 0, 8), paint=solid((0.63, 0.48, 0.31))),
+        Box("TinPatch", (6, 6, 1), pos=(-6, 5, 10.7), rot=(0, 0, -8), paint=metal(RUST, rust=0.2)),
+        Box("FizzWindow", (6, 11, 1), pos=(-2, -1, 10.7), paint=glass(FIZZ, 0.72)),
+        Box("WindowRim", (8, 13, 1), pos=(-2, -1, 11), paint=BRASS_RIV),
+        Box("Valve", (5, 7, 5), pos=(0, -11, 0), paint=BRASS_RIV).add(
             Box("ValveWheel", (8, 2, 8), pos=(0, -4, 0), paint=RUSTY),
         ),
-        lashing("RopeBandA", (25, 3, 21), pos=(0, -4, 0), rot=(0, 0, 3)),
-        lashing("RopeBandB", (25, 3, 21), pos=(0, 5, 0), rot=(0, 0, -4)),
-        Box("Harness", (2, 20, 23), pos=(-11, 0, 0), paint=ROPE_P),
+        Box("GaugeCase", (9, 9, 2), pos=(8, 7, 10.5), paint=BRASS_RIV),
+        Box("GaugeFace", (6, 6, 1), pos=(8, 7, 11.8), paint=DEAD_GLASS),
+        Box("GaugeNeedle", (1, 5, 1), pos=(8, 7, 12.6), rot=(0, 0, -15), paint=metal(RUST, rust=0.2)),
+        Box("GaugeHub", (2, 2, 1), pos=(8, 7, 13), paint=BRASS_P),
+        Box("BrassFrame", (20, 2, 18), pos=(0, 1, 0), paint=BRASS_RIV),
+        Box("FrameLegL", (2, 14, 2), pos=(-8, -7, -7), paint=BRASS_P),
+        Box("FrameLegR", (2, 14, 2), pos=(8, -7, -7), paint=BRASS_P),
+        Box("FrameCrossbar", (18, 2, 2), pos=(0, -12, -7), paint=BRASS_P),
+        lashing("NetBelt", (24, 2, 21), pos=(0, -4, 0), rot=(0, 0, 3)),
+        lashing("NetRopeA", (2, 25, 2), pos=(-8, 0, 10), rot=(0, 0, 30)),
+        lashing("NetRopeB", (2, 25, 2), pos=(8, 0, 10), rot=(0, 0, -30)),
+        lashing("NetRopeC", (2, 24, 2), pos=(-8, 0, -10), rot=(0, 0, -30)),
+        lashing("NetRopeD", (2, 24, 2), pos=(8, 0, -10), rot=(0, 0, 30)),
         bolt("PatchRivetA", (4, 3, 11), paint=BRASS_P),
         bolt("PatchRivetB", (10, -3, 11), paint=BRASS_P),
     )
-    return Model([bag]), {}
+    anim = anim_json(40, {
+        "GaugeNeedle": {"orientation": [
+            (0, (0, 0, -15)), (10, (0, 0, -21)), (20, (0, 0, -12)), (30, (0, 0, -19)), (40, (0, 0, -15))
+        ]},
+    })
+    return Model([bag]), {"Twitch": anim}
 
 
 # ------------------------------------------------------------------ Gutterpipe

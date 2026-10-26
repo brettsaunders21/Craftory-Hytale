@@ -484,17 +484,24 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
                 heldItem != null &&
                     heldItem.itemId == CraftoryIds.WATER_WOODEN_BUCKET &&
                     heldItem.quantity == 1
-            val accepted =
-                if (
-                    filledBucket &&
+            val canFit =
+                filledBucket &&
                     transport.capacity(position.x, position.y, position.z) -
                     transport.amount(position.x, position.y, position.z) >= BUCKET_VOLUME
-                ) {
-                    transport.insert(position.x, position.y, position.z, "Water_Source", BUCKET_VOLUME)
-                } else {
-                    0
+            if (canFit && context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)) {
+                val accepted = transport.insert(position.x, position.y, position.z, "Water_Source", BUCKET_VOLUME)
+                if (accepted != BUCKET_VOLUME) {
+                    if (accepted > 0) transport.drain(position.x, position.y, position.z, accepted)
+                    val rolledBack =
+                        context.replaceHeldStack(
+                            ItemStack(CraftoryIds.EMPTY_WOODEN_BUCKET, 1),
+                            CraftoryIds.WATER_WOODEN_BUCKET,
+                        )
+                    check(rolledBack) {
+                        "failed to roll back an incomplete water bucket exchange"
+                    }
+                    return
                 }
-            if (accepted == BUCKET_VOLUME && context.replaceHeldStack(heldItem, CraftoryIds.EMPTY_WOODEN_BUCKET)) {
                 blockState.markNeedsSaving(store)
                 player.sendMessage(Message.raw("Added $BUCKET_VOLUME mB of water."))
             } else {
@@ -526,16 +533,14 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         val boiler = store.getComponent(ref, BoilerState.type)
         if (boiler != null) {
             when {
-                boiler.online && heldItem == null && GutterBoilerRules.vent(boiler.pressure) != null -> {
-                    boiler.pressure = requireNotNull(GutterBoilerRules.vent(boiler.pressure))
+                boiler.online && heldItem == null && GutterBoilerRules.vent(boiler) -> {
                     blockState.markNeedsSaving(store)
+                    GutterBoilerEffects.vent(world, position.x, position.y, position.z)
                     player.sendMessage(Message.raw("Vented boiler; pressure is ${boiler.pressure}."))
                 }
 
                 !boiler.online && heldItem?.itemId == "Ingredient_Scraps" && heldItem.quantity >= 2 -> {
-                    if (context.consumeHeld(2)) {
-                        boiler.online = true
-                        boiler.pressure = 0
+                    if (context.consumeHeld(2) && GutterBoilerRules.rerivet(boiler, 2)) {
                         blockState.markNeedsSaving(store)
                         player.sendMessage(Message.raw("Boiler re-riveted."))
                     }
@@ -569,8 +574,8 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
         }
         val gasbag = store.getComponent(ref, GasbagState.type)
         if (gasbag != null) {
-            if (heldItem?.itemId == CraftoryIds.SCRAP_PLATING && context.consumeHeld()) {
-                GasbagRules.patched(gasbag)
+            val patchRequested = heldItem?.itemId == CraftoryIds.SCRAP_PLATING && gasbag.leaking
+            if (patchRequested && context.consumeHeld() && GasbagRules.patch(gasbag)) {
                 blockState.markNeedsSaving(store)
                 player.sendMessage(Message.raw("Gasbag leak patched."))
             } else {

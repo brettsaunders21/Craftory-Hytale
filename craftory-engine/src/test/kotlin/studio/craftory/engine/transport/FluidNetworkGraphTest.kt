@@ -59,6 +59,24 @@ class FluidNetworkGraphTest {
     }
 
     @Test
+    fun `draining conflicting tanks retries only valid tank connections`() {
+        val graph = FluidNetworkGraph()
+        val lower = pos(10)
+        val upper = pos(10, 1)
+        val side = pos(11)
+        graph.addNode(lower, FluidNodeKind.TANK, FluidNodeRecord(1, 100))
+        graph.addNode(upper, FluidNodeKind.TANK, FluidNodeRecord(2, 100))
+        graph.addNode(side, FluidNodeKind.TANK, FluidNodeRecord(3, 100))
+
+        assertNotEquals(graph.networkOf(lower), graph.networkOf(upper))
+        assertNotEquals(graph.networkOf(lower), graph.networkOf(side))
+        assertEquals(100L, graph.drain(side, 100))
+        assertNotEquals(graph.networkOf(lower), graph.networkOf(side))
+        assertEquals(100L, graph.drain(upper, 100))
+        assertEquals(graph.networkOf(lower), graph.networkOf(upper))
+    }
+
+    @Test
     fun `persisted node record codec round trips`() {
         val record = FluidNodeRecord(7, 249)
 

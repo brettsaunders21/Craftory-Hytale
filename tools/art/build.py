@@ -97,6 +97,28 @@ def export_particles(manifest: list[str]) -> None:
     for name, img in particles.textures().items():
         d.mkdir(parents=True, exist_ok=True)
         img.save(written(manifest, d / f"{name}.png"), optimize=True)
+    server = HERE.parents[1] / "craftory-tech" / "src" / "main" / "resources" / "Server" / "Particles"
+    write_json(
+        {
+            "Shape": "Sphere",
+            "Particle": {"Texture": "Particles/Craftory/Craftory_Steam.png"},
+            "ParticleLifeSpan": {"Min": 0.55, "Max": 0.85},
+            "SpawnRate": {"Min": 10, "Max": 16},
+            "TotalParticles": {"Min": 10, "Max": 16},
+            "MaxConcurrentParticles": 16,
+            "LightInfluence": 0.6,
+        },
+        written(manifest, server / "Craftory_Steam_Spawner.particle"),
+    )
+    write_json(
+        {
+            "Spawners": [{"SpawnerId": "Craftory_Steam_Spawner", "TotalSpawners": 1}],
+            "LifeSpan": 1.0,
+            "CullDistance": 32.0,
+            "BoundingRadius": 4.0,
+        },
+        written(manifest, server / "Craftory_Steam.particlesystem"),
+    )
 
 
 def main() -> None:

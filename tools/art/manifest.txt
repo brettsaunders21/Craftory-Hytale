@@ -18,6 +18,7 @@ Common/Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter.blockymodel
 Common/Blocks/Craftory/Fizz_Canister/Fizz_Canister_ThreeQuarter_Texture.png
 Common/Blocks/Craftory/Gasbag/Gasbag.blockymodel
 Common/Blocks/Craftory/Gasbag/Gasbag_Texture.png
+Common/Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit.blockymodel
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Chomp.blockyanim
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Texture.png
@@ -93,9 +94,12 @@ Common/NPC/Craftory/Grizzlecog/Grizzlecog_Goggles.blockymodel
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Goggles_Texture.png
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Hat.blockymodel
 Common/NPC/Craftory/Grizzlecog/Grizzlecog_Hat_Texture.png
+Common/Particles/Craftory/Craftory_Steam.png
 Common/Particles/Craftory/Fizz_Spark.png
 Common/Particles/Craftory/Glimmer_Mote.png
 Common/Particles/Craftory/Smoke_Black.png
 Common/Particles/Craftory/Smoke_Grey.png
 Common/Particles/Craftory/Smoke_White.png
 Server/Models/Intelligent/Craftory/Craftory_Grizzlecog.json
+Server/Particles/Craftory_Steam.particlesystem
+Server/Particles/Craftory_Steam_Spawner.particle

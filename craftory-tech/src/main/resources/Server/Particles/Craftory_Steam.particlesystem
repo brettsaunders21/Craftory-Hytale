@@ -1,0 +1,11 @@
+{
+  "Spawners": [
+    {
+      "SpawnerId": "Craftory_Steam_Spawner",
+      "TotalSpawners": 1
+    }
+  ],
+  "LifeSpan": 1.0,
+  "CullDistance": 32.0,
+  "BoundingRadius": 4.0
+}

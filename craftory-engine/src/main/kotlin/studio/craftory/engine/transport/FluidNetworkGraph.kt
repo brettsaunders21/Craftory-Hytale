@@ -465,12 +465,13 @@ class FluidNetworkGraph {
             val pos = nodePositions[handle]
             for (face in FACES.indices) {
                 val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
-                if (adjacent < 0) continue
-                val firstNetwork = nodeNetworks[handle]
-                val secondNetwork = nodeNetworks[adjacent]
-                if (firstNetwork != secondNetwork && canMerge(firstNetwork, secondNetwork)) {
-                    mergeNetworks(firstNetwork, secondNetwork)
-                    redistribute(nodeNetworks[handle])
+                if (adjacent >= 0 && canConnect(handle, adjacent)) {
+                    val firstNetwork = nodeNetworks[handle]
+                    val secondNetwork = nodeNetworks[adjacent]
+                    if (firstNetwork != secondNetwork && canMerge(firstNetwork, secondNetwork)) {
+                        mergeNetworks(firstNetwork, secondNetwork)
+                        redistribute(nodeNetworks[handle])
+                    }
                 }
             }
             handle = nodeNext[handle]

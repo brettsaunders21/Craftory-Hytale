@@ -1702,6 +1702,7 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         run.world.chunkStore.store
             .getResource(TransportSelfTestRun.type)
             .active = null
+        FluidSelfTest.start(run.context, run.world)
     }
 
     private fun clearDrops(world: World) {

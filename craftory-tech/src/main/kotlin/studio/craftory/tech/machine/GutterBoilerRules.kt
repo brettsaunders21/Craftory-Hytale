@@ -7,6 +7,12 @@ data class BoilerStep(
     val popped: Boolean,
 )
 
+data class RadialKnockback(
+    val x: Double,
+    val y: Double,
+    val z: Double,
+)
+
 object GutterBoilerRules {
     fun step(
         pressure: Int,
@@ -32,6 +38,55 @@ object GutterBoilerRules {
 
     fun vent(pressure: Int): Int? = if (pressure > VENT_THRESHOLD) (pressure - VENT_DROP).coerceAtLeast(0) else null
 
+    fun vent(state: BoilerState): Boolean {
+        val pressure = vent(state.pressure) ?: return false
+        state.pressure = pressure
+        return true
+    }
+
+    fun rerivet(
+        state: BoilerState,
+        scraps: Int,
+    ): Boolean {
+        if (state.online || scraps < RERIVET_SCRAPS) return false
+        state.online = true
+        state.pressure = 0
+        state.fuelTicks = 0
+        return true
+    }
+
+    fun popKnockback(
+        originX: Double,
+        originZ: Double,
+        targetX: Double,
+        targetZ: Double,
+    ): RadialKnockback {
+        val deltaX = targetX - originX
+        val deltaZ = targetZ - originZ
+        val magnitude = kotlin.math.sqrt(deltaX * deltaX + deltaZ * deltaZ)
+        val directionX = if (magnitude == 0.0) 1.0 else deltaX / magnitude
+        val directionZ = if (magnitude == 0.0) 0.0 else deltaZ / magnitude
+        return RadialKnockback(directionX * KNOCKBACK_FORCE, KNOCKBACK_UPWARD, directionZ * KNOCKBACK_FORCE)
+    }
+
+    fun production(
+        pressure: Int,
+        water: Long,
+        fueled: Boolean,
+        lavaBelow: Boolean,
+        online: Boolean,
+    ): Long {
+        val hasHeatSource = fueled || lavaBelow
+        if (!online || water <= 0 || !hasHeatSource) return 0
+        val normalizedPressure = pressure.coerceIn(0, MAX_PRESSURE)
+        val base = BASE_OUTPUT * normalizedPressure / MAX_PRESSURE
+        return if (normalizedPressure in BOOST_MIN_PRESSURE..BOOST_MAX_PRESSURE) {
+            base * BOOST_PERCENT / 100
+        } else {
+            base
+        }
+    }
+
     const val CAPACITY = 4_000L
     const val WATER_PER_SECOND = 10L
     const val MAX_PRESSURE = 100
@@ -41,4 +96,32 @@ object GutterBoilerRules {
     const val BOOST_MIN_PRESSURE = 80
     const val BOOST_MAX_PRESSURE = 95
     const val BOOST_PERCENT = 125
+    const val RERIVET_SCRAPS = 2
+    const val KNOCKBACK_FORCE = 0.8
+    const val KNOCKBACK_UPWARD = 0.3
+}
+
+object GutterBoilerActions {
+    fun advance(
+        state: BoilerState,
+        lavaBelow: Boolean,
+    ): BoilerStep {
+        val step =
+            GutterBoilerRules.step(
+                state.pressure,
+                state.water,
+                state.fuelTicks > 0,
+                lavaBelow,
+                state.online,
+            )
+        state.pressure = step.pressure
+        state.water = step.water
+        if (step.popped) {
+            state.online = false
+            state.fuelTicks = 0
+        } else if (state.fuelTicks > 0 && !lavaBelow) {
+            state.fuelTicks = (state.fuelTicks - 20L).coerceAtLeast(0)
+        }
+        return step
+    }
 }

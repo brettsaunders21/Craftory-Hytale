@@ -17,6 +17,7 @@
     "Group": "GoblinLab",
     "HitboxType": "GoblinLab_Generator",
     "CustomModel": "Blocks/Craftory/Gasbag/Gasbag.blockymodel",
+    "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Texture.png"}],
     "Interactions": {
       "Use": {

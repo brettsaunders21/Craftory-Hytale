@@ -28,6 +28,8 @@ import studio.craftory.tech.machine.CrankState
 import studio.craftory.tech.machine.CrankSystem
 import studio.craftory.tech.machine.DaubUseInteraction
 import studio.craftory.tech.machine.EnergyHudState
+import studio.craftory.tech.machine.FluidSelfTestRun
+import studio.craftory.tech.machine.FluidSelfTestSystem
 import studio.craftory.tech.machine.GasbagState
 import studio.craftory.tech.machine.GasbagSystem
 import studio.craftory.tech.machine.GnasherState
@@ -43,6 +45,7 @@ import studio.craftory.tech.machine.ReceiptUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
+import studio.craftory.tech.machine.SloshtankStateSystem
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
@@ -172,6 +175,8 @@ class CraftoryTechPlugin(
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
         TransportSelfTestRun.type =
             chunkRegistry.registerResource(TransportSelfTestRun::class.java, ::TransportSelfTestRun)
+        FluidSelfTestRun.type =
+            chunkRegistry.registerResource(FluidSelfTestRun::class.java, ::FluidSelfTestRun)
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -180,11 +185,13 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(GnasherSystem())
         chunkRegistry.registerSystem(ScorchOvenSystem())
         chunkRegistry.registerSystem(GutterBoilerSystem())
+        chunkRegistry.registerSystem(SloshtankStateSystem())
         chunkRegistry.registerSystem(GasbagSystem())
         chunkRegistry.registerSystem(SnatcherClawSystem())
         chunkRegistry.registerSystem(AnchorSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         chunkRegistry.registerSystem(TransportSelfTestSystem())
+        chunkRegistry.registerSystem(FluidSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         EnergyHudState.type =
             entityRegistry.registerComponent(

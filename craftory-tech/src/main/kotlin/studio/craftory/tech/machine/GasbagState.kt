@@ -32,4 +32,10 @@ object GasbagRules {
     fun patched(state: GasbagState) {
         state.leaking = false
     }
+
+    fun patch(state: GasbagState): Boolean {
+        if (!state.leaking) return false
+        patched(state)
+        return true
+    }
 }
