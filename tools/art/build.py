@@ -32,6 +32,9 @@ COMMON = HERE.parents[1] / "craftory-tech" / "src" / "main" / "resources" / "Com
 RESOURCES = COMMON.parent
 ITEM_DIR = RESOURCES / "Server" / "Item" / "Items" / "Craftory"
 HITBOX_DIR = RESOURCES / "Server" / "Item" / "Block" / "Hitboxes" / "Craftory"
+CORE_RESOURCES = HERE.parents[1] / "craftory-core" / "src" / "main" / "resources"
+CORE_ITEM_DIR = CORE_RESOURCES / "Server" / "Item" / "Items" / "Craftory"
+CORE_HITBOX_DIR = CORE_RESOURCES / "Server" / "Item" / "Block" / "Hitboxes" / "Craftory"
 ICON_DIR = COMMON / "Icons" / "ItemsGenerated" / "Craftory"
 ICON_SIZE = 64
 
@@ -240,29 +243,35 @@ def normalize_item_hitbox_ids() -> None:
 
 
 def export_hitboxes(name: str, models: dict[str, tuple[Model, dict]], manifest: list[str]) -> None:
-    item_path = ITEM_DIR / f"Craftory_{name}.json"
-    if not item_path.exists():
-        return
-    item = json.loads(item_path.read_text())
-    if item.get("BlockType", {}).get("DrawType") != "Model":
-        return
+    for item_dir, hitbox_dir, tracked in (
+        (ITEM_DIR, HITBOX_DIR, True),
+        (CORE_ITEM_DIR, CORE_HITBOX_DIR, False),
+    ):
+        item_path = item_dir / f"Craftory_{name}.json"
+        if not item_path.exists():
+            continue
+        item = json.loads(item_path.read_text())
+        if item.get("BlockType", {}).get("DrawType") != "Model":
+            continue
 
-    if name == "Gutterpipe":
-        state_hitboxes = {}
-        for suffix, (model, _) in models.items():
-            state = suffix.removeprefix("_")
-            hitbox_type = f"Craftory_Gutterpipe_{state}"
-            state_hitboxes[state] = hitbox_type
-            path = HITBOX_DIR / "Gutterpipe" / f"Craftory_Gutterpipe_{state}.json"
-            write_json(hitbox_for_models([model]), written(manifest, path))
-        base_hitbox = state_hitboxes["C00"]
-        set_item_hitbox(item_path, name, base_hitbox, state_hitboxes)
-        return
+        if name == "Gutterpipe":
+            state_hitboxes = {}
+            for suffix, (model, _) in models.items():
+                state = suffix.removeprefix("_")
+                hitbox_type = f"Craftory_Gutterpipe_{state}"
+                state_hitboxes[state] = hitbox_type
+                path = hitbox_dir / "Gutterpipe" / f"Craftory_Gutterpipe_{state}.json"
+                output_path = written(manifest, path) if tracked else path
+                write_json(hitbox_for_models([model]), output_path)
+            base_hitbox = state_hitboxes["C00"]
+            set_item_hitbox(item_path, name, base_hitbox, state_hitboxes)
+            continue
 
-    hitbox_type = f"Craftory_{name}"
-    path = HITBOX_DIR / f"Craftory_{name}.json"
-    write_json(hitbox_for_models([model for model, _ in models.values()]), written(manifest, path))
-    set_item_hitbox(item_path, name, hitbox_type)
+        hitbox_type = f"Craftory_{name}"
+        path = hitbox_dir / f"Craftory_{name}.json"
+        output_path = written(manifest, path) if tracked else path
+        write_json(hitbox_for_models([model for model, _ in models.values()]), output_path)
+        set_item_hitbox(item_path, name, hitbox_type)
 
 
 def strip(model_dict: dict) -> str:

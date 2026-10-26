@@ -714,14 +714,30 @@ def glimmerwell_anchor(corrupted: bool):
     glow_paint = solid((0.55, 0.18, 0.72)) if corrupted else CYAN_GLOW
     base_paint = metal((0.30, 0.28, 0.31) if corrupted else TIN_DARK, rust=0.55)
     base = Box("AnchorBase", (26, 4, 26), pos=(0, 2, 0), paint=base_paint)
+    crystal_scale = 1.5
+    base_top = 4.0
+
+    def crystal(name, size, pos, rotation):
+        scaled_size = tuple(value * crystal_scale for value in size)
+        scaled_pos = (
+            pos[0] * crystal_scale,
+            base_top + (pos[1] - base_top) * crystal_scale,
+            pos[2] * crystal_scale,
+        )
+        return Box(
+            name,
+            scaled_size,
+            pos=scaled_pos,
+            rot=rotation,
+            paint=glow_paint,
+            shading="fullbright",
+        )
+
     base.add(
         Box("RuneRing", (13, 2, 13), pos=(0, 5, 0), paint=BRASS_P),
-        Box("WellCrystal", (5, 20, 5), pos=(0, 15, 0), rot=(8, 18, -8), paint=glow_paint,
-            shading="fullbright"),
-        Box("ShardA", (3, 7, 3), pos=(-6, 7, 2), rot=(8, 20, 18), paint=glow_paint,
-            shading="fullbright"),
-        Box("ShardB", (3, 7, 3), pos=(6, 7, -2), rot=(-10, -18, -15), paint=glow_paint,
-            shading="fullbright"),
+        crystal("WellCrystal", (5, 12, 5), (0, 11, 0), (8, 18, -8)),
+        crystal("ShardA", (3, 7, 3), (-6, 7, 2), (8, 20, 18)),
+        crystal("ShardB", (3, 7, 3), (6, 7, -2), (-10, -18, -15)),
         bolt("AnchorBoltA", (-6, 4, 6.2), paint=BRASS_P),
         bolt("AnchorBoltB", (6, 4, -6.2), paint=BRASS_P),
     )
