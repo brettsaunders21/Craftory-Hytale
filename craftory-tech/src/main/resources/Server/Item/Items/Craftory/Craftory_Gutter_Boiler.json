@@ -48,6 +48,12 @@
     },
     "BlockEntity": {
       "Components": {
+        "Craftory_MultiblockController": {
+          "TemplateId": "craftory:gutter_boiler",
+          "Rotation": -1,
+          "State": "ASSEMBLING",
+          "Quality": "NONE"
+        },
         "CraftoryBoilerState": {},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:gutter_boiler",

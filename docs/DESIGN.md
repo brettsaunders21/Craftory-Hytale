@@ -259,7 +259,7 @@ Fizz is fermented Boomshroom gas squeezed through scrap dynamos. It matches vani
 | **Boomshroom Burner** | 1 | Burns shrooms, Mash, Boom Powder or charcoal. It coughs and stalls every few minutes; kick it to restart. A well-timed kick gives +10% for a minute | Tin drum on chicken legs; green smoke ring on each fuel pop |
 | **Rattlewheel** | 1 | 2×2 wheel in flowing water, or sails on high ground. Output from height, flow and wind/storm weather | Mismatched wood-and-tin wheel; planks fly off in gales (cosmetic) |
 | **Sealed Grizzlecog Generator** | 1 (traded) | Works out of the box but builds Jank; patch it with Scrap. Take it apart for the Burner page | Padlocks and "NO TOUCHY" signs |
-| **Gutter Boiler** | 2 | 3×3×4 multi-block. Fuel the firebox, top up water, watch the gauge. Above the red line, pull the vent chain (whistle and steam). Ignore it and it pops (knockback, water dumps, offline until re-riveted). Running near the red line gives bonus output. A firebox on lava needs no fuel | Firebox, drum, chimney, big gauge |
+| **Gutter Boiler** | 2 | 2×2×2 multi-block. Build the tank and whistle stack around the firebox, then kick-start it. Fuel the firebox, top up water, and watch the gauge. Above the red line, pull the vent chain (whistle and steam). Ignore it and it pops (knockback, water dumps, offline until re-riveted). Running near the red line gives bonus output. A firebox on lava needs no fuel | Firebox, riveted tank, brass whistle stack, cyan gauge |
 | **Tar Still** | 2 | Pump in Tar, Poison or Slime. Poison gives the most Fizz but leaves Gunk to dig out | Copper pot still with dripping coils |
 | **Breach Leech** | 2 | Place it during a vanilla Goblin Breach to siphon rift energy into Canisters. Fast Pressurised Fizz, but goblins target it (needs prototype) | Portable scrap leech with a hose into the portal |
 
@@ -307,7 +307,7 @@ Route lower-grade energy *through* a tapped Wellhead and it comes out at the Wel
 |---|---|---|---|
 | **Fizz Canister** | 1 | 0+ | Carried sloshing tank; powers Fizz tools; leaks 1%/min unless corked |
 | **Boomshroom Battery** | 1–2 | 0+ | Stacked jars of glowing mash; a cracked jar leaks |
-| **Gasbag** | 2 | 0+ | Multi-block balloon that physically inflates as it charges. Huge and cheap, but fire or arrows start a leak you patch. A goblin-base landmark |
+| **Gasbag** | 2 | 0+ | 2×2×3 multi-block: scrap frame at the base, patched-canvas envelope above. Build and kick-start it before it charges. Fire or arrows start a leak you patch. A goblin-base landmark |
 | **Glimmer Capacitor** | 3–5 | 1–2 | Crystal in a brass cage; brightens as it fills, arcs when full |
 | **Radiant Reservoir** | 6 | 3 | Floating crystal with rune rings that spin faster as it charges |
 | **Prismatic Reservoir** | 7 | 4 | Rotating prism that splits light across nearby blocks |

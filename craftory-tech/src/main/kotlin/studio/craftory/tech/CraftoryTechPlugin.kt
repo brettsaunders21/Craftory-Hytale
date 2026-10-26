@@ -50,11 +50,13 @@ import studio.craftory.tech.machine.FluidSelfTestRun
 import studio.craftory.tech.machine.FluidSelfTestSystem
 import studio.craftory.tech.machine.GasbagState
 import studio.craftory.tech.machine.GasbagSystem
+import studio.craftory.tech.machine.GasbagTemplate
 import studio.craftory.tech.machine.GhostPreviewLifecycle
 import studio.craftory.tech.machine.GnasherState
 import studio.craftory.tech.machine.GnasherSystem
 import studio.craftory.tech.machine.GrizzlecogVisitSystem
 import studio.craftory.tech.machine.GutterBoilerSystem
+import studio.craftory.tech.machine.GutterBoilerTemplate
 import studio.craftory.tech.machine.GutterpipeStateSystem
 import studio.craftory.tech.machine.JankSystem
 import studio.craftory.tech.machine.JunkHeartKnowledge
@@ -202,6 +204,8 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
         )
         CraftoryCore.multiblocks().register(JunkHeartTemplate.template)
+        CraftoryCore.multiblocks().register(GutterBoilerTemplate.template)
+        CraftoryCore.multiblocks().register(GasbagTemplate.template)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CANISTER_TYPE,
             MemberSpec(MemberSpec.STORAGE, 100_000, 400, 400, 0, 1),

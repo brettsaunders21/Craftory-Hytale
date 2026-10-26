@@ -1,0 +1,32 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Craftory_Gasbag_Frame.name",
+    "Description": "items.Craftory_Gasbag_Frame.description"
+  },
+  "ItemLevel": 11,
+  "PlayerAnimationsId": "Block",
+  "Categories": ["Furniture"],
+  "Set": "Furniture_Goblin",
+  "Quality": "Technical",
+  "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gasbag_Frame.png",
+  "MaxStack": 16,
+  "BlockType": {
+    "Material": "Solid",
+    "DrawType": "Model",
+    "HitboxType": "Full",
+    "CustomModel": "Blocks/Craftory/Gasbag_Frame/Gasbag_Frame.blockymodel",
+    "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag_Frame/Gasbag_Frame_Texture.png"}]
+  },
+  "Recipe": {
+    "TimeSeconds": 3,
+    "KnowledgeRequired": false,
+    "Input": [
+      {"ItemId": "Ingredient_Scraps", "Quantity": 6},
+      {"ItemId": "Ingredient_Bar_Iron", "Quantity": 1}
+    ],
+    "Output": [{"ItemId": "Craftory_Gasbag_Frame"}],
+    "BenchRequirement": [
+      {"Id": "Workbench", "Type": "Crafting", "Categories": ["Workbench_Tinkering"]}
+    ]
+  }
+}

@@ -26,6 +26,10 @@
     },
     "State": {
       "Definitions": {
+        "Off": {
+          "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
+          "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag/Gasbag_Empty_Texture.png"}]
+        },
         "Empty": {
           "CustomModel": "Blocks/Craftory/Gasbag/Gasbag_Empty.blockymodel",
           "CustomModelAnimation": "Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim",
@@ -55,6 +59,12 @@
     },
     "BlockEntity": {
       "Components": {
+        "Craftory_MultiblockController": {
+          "TemplateId": "craftory:gasbag",
+          "Rotation": -1,
+          "State": "ASSEMBLING",
+          "Quality": "NONE"
+        },
         "CraftoryGasbagState": {},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:gasbag",

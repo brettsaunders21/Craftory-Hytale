@@ -1,3 +1,7 @@
+Common/Blocks/Craftory/Boiler_Tank/Boiler_Tank.blockymodel
+Common/Blocks/Craftory/Boiler_Tank/Boiler_Tank_Texture.png
+Common/Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack.blockymodel
+Common/Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack_Texture.png
 Common/Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Flicker.blockyanim
 Common/Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Off.blockymodel
 Common/Blocks/Craftory/Boomshroom_Burner/Boomshroom_Burner_Off_Texture.png
@@ -39,6 +43,10 @@ Common/Blocks/Craftory/Gasbag/Gasbag_Quarter_Texture.png
 Common/Blocks/Craftory/Gasbag/Gasbag_ThreeQuarter.blockymodel
 Common/Blocks/Craftory/Gasbag/Gasbag_ThreeQuarter_Texture.png
 Common/Blocks/Craftory/Gasbag/Gasbag_Twitch.blockyanim
+Common/Blocks/Craftory/Gasbag_Envelope/Gasbag_Envelope.blockymodel
+Common/Blocks/Craftory/Gasbag_Envelope/Gasbag_Envelope_Texture.png
+Common/Blocks/Craftory/Gasbag_Frame/Gasbag_Frame.blockymodel
+Common/Blocks/Craftory/Gasbag_Frame/Gasbag_Frame_Texture.png
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit.blockymodel
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Chomp.blockyanim
 Common/Blocks/Craftory/Gnasher_Pit/Gnasher_Pit_Texture.png
@@ -172,6 +180,8 @@ Common/Blocks/Craftory/Well_Cradle/Well_Cradle_Harmony.blockymodel
 Common/Blocks/Craftory/Well_Cradle/Well_Cradle_Harmony_Texture.png
 Common/Blocks/Craftory/Well_Cradle/Well_Cradle_Seated.blockymodel
 Common/Blocks/Craftory/Well_Cradle/Well_Cradle_Seated_Texture.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Boiler_Tank.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Boiler_Whistle_Stack.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Boom_Valve.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Boomshroom_Burner.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Catch_Net.png
@@ -182,6 +192,8 @@ Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Canister.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Charge.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Fizz_Damper.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gasbag.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Gasbag_Envelope.png
+Common/Icons/ItemsGenerated/Craftory/Craftory_Gasbag_Frame.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Glimmer_Dust.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Glimmer_Lens.png
 Common/Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png

@@ -27,6 +27,10 @@ internal object BuildableMachines {
         mapOf(
             CraftoryIds.GUTTER_BOILER to 2,
             CraftoryIds.GASBAG to 2,
+            CraftoryIds.BOILER_TANK to 2,
+            CraftoryIds.BOILER_WHISTLE_STACK to 2,
+            CraftoryIds.GASBAG_FRAME to 2,
+            CraftoryIds.GASBAG_ENVELOPE to 2,
             CraftoryIds.SNATCHER_CLAW to 2,
             CraftoryIds.HURL_TUBE to 2,
             CraftoryIds.HURL_STATION to 2,

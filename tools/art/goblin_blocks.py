@@ -805,6 +805,62 @@ def tether_stake():
     return Model([post]), {}
 
 
+def boiler_tank():
+    tank = Box("Tank", (24, 25, 22), pos=(0, 13, 0), paint=CORRUGATED_RUST)
+    tank.add(
+        Box("Top", (26, 2, 24), pos=(0, 13, 0), paint=BRASS_RIV),
+        Box("Bottom", (25, 2, 23), pos=(0, -12, 0), paint=DARK_TIN),
+        Box("GaugeFrame", (10, 10, 2), pos=(0, 1, 12), paint=BRASS_RIV),
+        Box("GaugeGlass", (7, 7, 1), pos=(0, 1, 13.5), paint=CYAN_GLOW, shading="fullbright"),
+        Box("GaugeNeedle", (1, 5, 1), pos=(0, 1, 14.5), rot=(0, 0, -20), paint=BRASS_P),
+        Box("SideValve", (4, 4, 4), pos=(13, 3, 0), paint=BRASS_RIV),
+        bolt("RivetA", (-8, 4, 11), 2),
+        bolt("RivetB", (8, 4, 11), 2),
+        bolt("RivetC", (-8, -7, 11), 2),
+        bolt("RivetD", (8, -7, 11), 2),
+    )
+    return Model([tank]), {}
+
+
+def boiler_whistle_stack():
+    stack = Box("Base", (23, 5, 22), pos=(0, 2.5, 0), paint=BRASS_RIV)
+    stack.add(
+        Box("Pipe", (10, 18, 10), pos=(0, 14, 0), paint=BRASS_P),
+        Box("Rim", (16, 3, 16), pos=(0, 23, 0), paint=BRASS_RIV),
+        Box("Whistle", (16, 7, 9), pos=(0, 29, 2), paint=BRASS_RIV),
+        Box("Mouth", (8, 2, 1), pos=(0, 29, 7), paint=SOOT_P),
+        Box("PressureCap", (8, 3, 8), pos=(0, 24, -9), paint=BRASS_P),
+        bolt("RivetA", (-8, 2, 11), 2),
+        bolt("RivetB", (8, 2, 11), 2),
+    )
+    return Model([stack]), {}
+
+
+def gasbag_frame():
+    frame = Box("Base", (28, 3, 28), pos=(0, 1.5, 0), paint=CORRUGATED_RUST)
+    for x in (-12, 12):
+        for z in (-12, 12):
+            frame.add(Box(f"Post{x}_{z}", (3, 27, 3), pos=(x, 14, z), paint=BRASS_RIV))
+            frame.add(bolt(f"Foot{x}_{z}", (x, 2, z), 2))
+    frame.add(
+        Box("CrossbarX", (26, 3, 3), pos=(0, 25, 0), paint=BRASS_P),
+        Box("CrossbarZ", (3, 3, 26), pos=(0, 25, 0), paint=BRASS_P),
+    )
+    return Model([frame]), {}
+
+
+def gasbag_envelope():
+    envelope = Box("Canvas", (27, 28, 27), pos=(0, 15, 0), rot=(0, 0, 2), paint=leather((0.54, 0.43, 0.30)))
+    envelope.add(
+        Box("PatchA", (10, 8, 1), pos=(-7, 3, 14), rot=(0, 0, -8), paint=plank((0.67, 0.49, 0.32))),
+        Box("PatchB", (7, 9, 1), pos=(7, -5, 14), rot=(0, 0, 12), paint=leather((0.36, 0.30, 0.24))),
+        Box("Seam", (2, 25, 1), pos=(0, 0, 14.5), paint=ROPE_P),
+        bolt("GrommetA", (-11, 0, 14), 2, BRASS_P),
+        bolt("GrommetB", (11, 0, 14), 2, BRASS_P),
+    )
+    return Model([envelope]), {}
+
+
 BLOCKS = {
     # name: (builder, kwargs-variants)
     "Crank_A_Fizz": (crank_a_fizz, {"": {}}),
@@ -843,4 +899,8 @@ BLOCKS = {
     "Storm_Vane": (storm_vane, {"_Off": {"on": False}, "_On": {"on": True}}),
     "Fizz_Damper": (fizz_damper, {"_Off": {"on": False}, "_On": {"on": True}}),
     "Tether_Stake": (tether_stake, {"": {}}),
+    "Boiler_Tank": (boiler_tank, {"": {}}),
+    "Boiler_Whistle_Stack": (boiler_whistle_stack, {"": {}}),
+    "Gasbag_Frame": (gasbag_frame, {"": {}}),
+    "Gasbag_Envelope": (gasbag_envelope, {"": {}}),
 }

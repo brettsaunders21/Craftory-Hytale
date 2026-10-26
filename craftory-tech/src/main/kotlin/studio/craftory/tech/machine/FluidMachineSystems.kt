@@ -21,6 +21,8 @@ import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.multiblock.MultiblockState
 import studio.craftory.core.api.transport.FluidHandler
 import studio.craftory.core.api.transport.FluidTank
 import studio.craftory.core.api.transport.FluidTransport
@@ -31,7 +33,12 @@ private const val TICKS_PER_SECOND = 20L
 
 internal class GutterBoilerSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(BoilerState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            BoilerState.type,
+            MultiblockController.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
@@ -58,8 +65,20 @@ internal class GutterBoilerSystem : EntityTickingSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val state = chunk.getComponent(index, BoilerState.type) ?: return
+        val controller = chunk.getComponent(index, MultiblockController.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState)) {
+            clearBoilerProduction(member)
+            return
+        }
+        if (controller.state != MultiblockState.FORMED) {
+            clearBoilerProduction(member)
+            if (setBlockState(store.externalData.world, blockState, commandBuffer, "Off")) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+            return
+        }
         advanceBoiler(state, member, blockState, store, commandBuffer)
     }
 
@@ -312,7 +331,12 @@ internal fun setBlockState(
 
 internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =
-        Query.and(GasbagState.type, EnergyMember.type, BlockModule.BlockStateInfo.getComponentType())
+        Query.and(
+            GasbagState.type,
+            MultiblockController.type,
+            EnergyMember.type,
+            BlockModule.BlockStateInfo.getComponentType(),
+        )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
         setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
@@ -331,6 +355,7 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
         super.tick(dt, chunk, store, commandBuffer)
     }
 
+    @Suppress("CyclomaticComplexMethod")
     override fun tick(
         dt: Float,
         index: Int,
@@ -339,9 +364,18 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
         val state = chunk.getComponent(index, GasbagState.type) ?: return
+        val controller = chunk.getComponent(index, MultiblockController.type) ?: return
+        val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
-        if (!CraftoryCore.isAreaActive(store, blockState) ||
-            !CraftoryCore.isEnergyTick(store) ||
+        if (!CraftoryCore.isAreaActive(store, blockState)) return
+        if (controller.state != MultiblockState.FORMED) {
+            member.production = 0
+            if (setBlockState(store.externalData.world, blockState, commandBuffer, "Off")) {
+                blockState.markNeedsSaving(commandBuffer)
+            }
+            return
+        }
+        if (!CraftoryCore.isEnergyTick(store) ||
             store.externalData.world.tick % TICKS_PER_SECOND != 0L
         ) {
             return

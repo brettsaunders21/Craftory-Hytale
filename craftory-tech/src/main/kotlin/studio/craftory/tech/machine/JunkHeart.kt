@@ -84,6 +84,51 @@ internal object JunkHeartTemplate {
         TemplatePart(offset, setOf(CraftoryIds.SCRAP_PLATING), CraftoryIds.SCRAP_PLATING)
 }
 
+internal object GutterBoilerTemplate {
+    val template: MultiblockTemplate =
+        MultiblockTemplate(
+            CraftoryIds.GUTTER_BOILER_TEMPLATE,
+            buildList {
+                listOf(BlockPos(1, 0, 0), BlockPos(0, 0, 1), BlockPos(1, 0, 1)).forEach {
+                    add(part(it, CraftoryIds.SCRAP_PLATING))
+                }
+                listOf(BlockPos(0, 1, 0), BlockPos(1, 1, 0), BlockPos(0, 1, 1)).forEach {
+                    add(part(it, CraftoryIds.BOILER_TANK))
+                }
+                add(part(BlockPos(1, 1, 1), CraftoryIds.BOILER_WHISTLE_STACK))
+            },
+        )
+
+    private fun part(
+        offset: BlockPos,
+        itemId: String,
+    ) = TemplatePart(offset, setOf(itemId), itemId)
+}
+
+internal object GasbagTemplate {
+    val template: MultiblockTemplate =
+        MultiblockTemplate(
+            CraftoryIds.GASBAG_TEMPLATE,
+            buildList {
+                listOf(BlockPos(1, 0, 0), BlockPos(0, 0, 1), BlockPos(1, 0, 1)).forEach {
+                    add(part(it, CraftoryIds.GASBAG_FRAME))
+                }
+                for (y in 1..2) {
+                    for (x in 0..1) {
+                        for (z in 0..1) {
+                            add(part(BlockPos(x, y, z), CraftoryIds.GASBAG_ENVELOPE))
+                        }
+                    }
+                }
+            },
+        )
+
+    private fun part(
+        offset: BlockPos,
+        itemId: String,
+    ) = TemplatePart(offset, setOf(itemId), itemId)
+}
+
 internal object JunkHeartMachine {
     private val fuels = JunkPowerFuels.definitions.associate { it.itemId to it.burnTicks.toLong() }
 

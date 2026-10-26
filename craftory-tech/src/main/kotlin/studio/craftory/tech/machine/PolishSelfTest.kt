@@ -22,6 +22,9 @@ import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.energy.EnergyMember
+import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.multiblock.MultiblockState
+import studio.craftory.core.api.multiblock.MultiblockTemplate
 import studio.craftory.core.api.transport.FluidTank
 import studio.craftory.core.api.transport.FluidTransport
 import studio.craftory.core.api.transport.ItemPipe
@@ -60,7 +63,7 @@ internal class PolishSelfTestRun : Resource<ChunkStore> {
     }
 }
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
     @Suppress("CyclomaticComplexMethod", "TooGenericExceptionCaught")
     override fun tick(
@@ -91,8 +94,12 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                 4 -> checkCornerTransfer(run)
                 5 -> tickCanisterBands(run)
                 6 -> tickSloshtankBands(run)
-                7 -> cleanup(run, store)
-                8 -> pollCleanup(run, store)
+                7 -> setupMultiblocks(run, store)
+                8 -> checkUnformedBoilerAndAssemble(run, store)
+                9 -> checkFormedBoilerAndDamage(run, store)
+                10 -> checkDamagedController(run, store)
+                11 -> cleanup(run, store)
+                12 -> pollCleanup(run, store)
             }
         } catch (failure: Exception) {
             val detail = failure.message ?: failure::class.simpleName.orEmpty()
@@ -101,7 +108,7 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
                 run.loading = false
             } else {
                 PolishSelfTest.fail(run, "runner", detail)
-                run.stage = 7
+                run.stage = 11
                 run.stageStartTick = run.world.tick
             }
         }
@@ -517,7 +524,117 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         PolishSelfTest.clearTestArea(run, store)
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.previousAnchorMaxChargeMinutes)
         run.cleanupStartTick = run.world.tick
+        run.stage = 12
+    }
+
+    private fun setupMultiblocks(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        PolishSelfTest.place(run, store, CraftoryIds.GUTTER_BOILER, PolishSelfTest.BOILER, BoilerState.type)
+        PolishSelfTest.place(run, store, CraftoryIds.GASBAG, PolishSelfTest.GASBAG, GasbagState.type)
+        val boilerRef = PolishSelfTest.controllerAt(run, PolishSelfTest.BOILER) ?: error("boiler controller missing")
+        val boiler = store.getComponent(boilerRef, BoilerState.type) ?: error("boiler state missing")
+        GutterBoilerActions.acceptWater(boiler, WATER_SOURCE, GutterBoilerRules.CAPACITY)
+        GutterBoilerActions.addFuel(boiler, CraftoryIds.FIZZ_CHARGE)
+        run.stageStartTick = run.world.tick
         run.stage = 8
+    }
+
+    private fun checkUnformedBoilerAndAssemble(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        if (run.world.tick - run.stageStartTick < MULTIBLOCK_WAIT_TICKS) return
+        val boilerRef = PolishSelfTest.controllerAt(run, PolishSelfTest.BOILER) ?: error("boiler controller missing")
+        val boiler = store.getComponent(boilerRef, BoilerState.type) ?: error("boiler state missing")
+        val controller = store.getComponent(boilerRef, MultiblockController.type) ?: error("boiler multiblock missing")
+        val member = store.getComponent(boilerRef, EnergyMember.type) ?: error("boiler energy member missing")
+        val state = PolishSelfTest.stateName(run, PolishSelfTest.BOILER, CraftoryIds.GUTTER_BOILER)
+        val passed =
+            controller.state != MultiblockState.FORMED &&
+                boiler.pressure == 0 &&
+                member.production == 0L &&
+                state == "Off"
+        PolishSelfTest.report(
+            run,
+            "f unformed boiler idle",
+            passed,
+            "structure=${controller.state} pressure=${boiler.pressure} production=${member.production} state=$state",
+        )
+        val gasbagRef = PolishSelfTest.controllerAt(run, PolishSelfTest.GASBAG) ?: error("gasbag controller missing")
+        val boilerFormed = assembleAndKick(run, store, boilerRef, GutterBoilerTemplate.template)
+        val gasbagFormed = assembleAndKick(run, store, gasbagRef, GasbagTemplate.template)
+        PolishSelfTest.report(
+            run,
+            "f boiler/gasbag formed",
+            boilerFormed && gasbagFormed,
+            "boiler=$boilerFormed gasbag=$gasbagFormed",
+        )
+        run.stageStartTick = run.world.tick
+        run.stage = 9
+    }
+
+    private fun checkFormedBoilerAndDamage(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        if (run.world.tick - run.stageStartTick < MULTIBLOCK_WAIT_TICKS) return
+        val boilerRef = PolishSelfTest.controllerAt(run, PolishSelfTest.BOILER) ?: error("boiler controller missing")
+        val gasbagRef = PolishSelfTest.controllerAt(run, PolishSelfTest.GASBAG) ?: error("gasbag controller missing")
+        val boilerState = store.getComponent(boilerRef, BoilerState.type) ?: error("boiler state missing")
+        val boilerController =
+            store.getComponent(boilerRef, MultiblockController.type) ?: error("boiler multiblock missing")
+        val gasbagController =
+            store.getComponent(gasbagRef, MultiblockController.type) ?: error("gasbag multiblock missing")
+        val boilerFormed = boilerController.state == MultiblockState.FORMED
+        val gasbagFormed = gasbagController.state == MultiblockState.FORMED
+        val pressureBuilt = boilerState.pressure > 0
+        PolishSelfTest.report(
+            run,
+            "f formed boiler pressure",
+            boilerFormed && gasbagFormed && pressureBuilt,
+            "boiler=${boilerController.state} gasbag=${gasbagController.state} pressure=${boilerState.pressure}",
+        )
+        val part =
+            GutterBoilerTemplate.template.parts
+                .first()
+                .offset
+        val broken =
+            PolishSelfTest.position(
+                PolishSelfTest.BOILER.x + part.x,
+                PolishSelfTest.BOILER.y + part.y,
+                PolishSelfTest.BOILER.z + part.z,
+            )
+        PolishSelfTest.clearFixtures(run, store, listOf(broken))
+        CraftoryCore.multiblocks().recheck(store, boilerRef)
+        run.stage = 10
+    }
+
+    private fun checkDamagedController(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ) {
+        val boilerRef = PolishSelfTest.controllerAt(run, PolishSelfTest.BOILER) ?: error("boiler controller missing")
+        val controller = store.getComponent(boilerRef, MultiblockController.type) ?: error("boiler multiblock missing")
+        val passed = controller.state != MultiblockState.FORMED && controller.state == MultiblockState.DAMAGED
+        PolishSelfTest.report(run, "f damaged boiler recheck", passed, "structure=${controller.state}")
+        cleanup(run, store)
+    }
+
+    private fun assembleAndKick(
+        run: PolishSelfTestRun.Run,
+        store: Store<ChunkStore>,
+        controllerRef: Ref<ChunkStore>,
+        template: MultiblockTemplate,
+    ): Boolean {
+        repeat(template.parts.size) {
+            JunkHeartActions.hammer(run.world, store, controllerRef, take = { true }, refund = {})
+        }
+        val controller = store.getComponent(controllerRef, MultiblockController.type) ?: return false
+        if (controller.state != MultiblockState.READY_TO_START) return false
+        val kickTick = controller.readySinceTick + (run.world.tps.toDouble() * 1.5).toLong()
+        return JunkHeartActions.kick(run.world, store, controllerRef, kickTick, mayOperate = true) is KickResult.Formed
     }
 
     private fun pollCleanup(
@@ -578,6 +695,7 @@ internal class PolishSelfTestSystem : TickingSystem<ChunkStore>() {
         private const val ITEM_WAIT_TICKS = 80L
         private const val BAND_TIMEOUT_TICKS = 30L
         private const val CLEANUP_TIMEOUT_TICKS = 60L
+        private const val MULTIBLOCK_WAIT_TICKS = 40L
     }
 }
 
@@ -616,6 +734,8 @@ internal object PolishSelfTest {
     val CLAW = position(10_023, 152, 10_012)
     val CANISTER = position(10_024, 152, 10_014)
     val SLOSHTANK = position(10_027, 152, 10_014)
+    val BOILER = position(10_028, 150, 10_018)
+    val GASBAG = position(10_030, 150, 10_018)
 
     val BANDS =
         listOf(
@@ -689,7 +809,15 @@ internal object PolishSelfTest {
                 listOf(shape.center) + shape.arms +
                     listOf(position(shape.center.x, shape.center.y, shape.center.z + 2))
             }
-        return (clawNeighbours + shapePositions + listOf(ANCHOR, CANISTER, SLOSHTANK)).distinct()
+        val multiblockPositions =
+            listOf(BOILER, GASBAG) +
+                GutterBoilerTemplate.template.parts.map {
+                    position(BOILER.x + it.offset.x, BOILER.y + it.offset.y, BOILER.z + it.offset.z)
+                } +
+                GasbagTemplate.template.parts.map {
+                    position(GASBAG.x + it.offset.x, GASBAG.y + it.offset.y, GASBAG.z + it.offset.z)
+                }
+        return (clawNeighbours + shapePositions + listOf(ANCHOR, CANISTER, SLOSHTANK) + multiblockPositions).distinct()
     }
 
     fun clawPositions(): List<CraftorySelfTest.TestPosition> =
@@ -713,6 +841,11 @@ internal object PolishSelfTest {
         y: Int,
         z: Int,
     ) = CraftorySelfTest.TestPosition(x, y, z)
+
+    fun controllerAt(
+        run: PolishSelfTestRun.Run,
+        position: CraftorySelfTest.TestPosition,
+    ) = BlockModule.getBlockEntity(run.world, position.x, position.y, position.z)?.takeIf { it.isValid }
 
     fun offset(
         position: CraftorySelfTest.TestPosition,
@@ -848,7 +981,7 @@ internal object PolishSelfTest {
     private const val DISPLAY_MIN_Z = 10_002
     private const val DISPLAY_MAX_X = 10_031
     private const val DISPLAY_MAX_Y = 154
-    private const val DISPLAY_MAX_Z = 10_014
+    private const val DISPLAY_MAX_Z = 10_020
 
     fun report(
         run: PolishSelfTestRun.Run,
