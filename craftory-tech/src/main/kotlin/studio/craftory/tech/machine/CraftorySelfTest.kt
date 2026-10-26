@@ -63,6 +63,7 @@ import studio.craftory.tech.machine.jank.repairWithScraps
 import studio.craftory.tech.machine.jank.rollFizzle
 import studio.craftory.tech.machine.jank.step
 import studio.craftory.tech.notebook.NotebookPages
+import studio.craftory.tech.well.CarrierAcceptanceSelfTest
 import studio.craftory.tech.well.WellPersistenceSelfTest
 import studio.craftory.tech.well.WellSelfTest
 import studio.craftory.tech.well.WellSelfTestFixtures
@@ -184,6 +185,10 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         systemIndex: Int,
         store: Store<ChunkStore>,
     ) {
+        val world = store.externalData.world
+        world.execute {
+            CarrierAcceptanceSelfTest.tick(world, world.entityStore.store)
+        }
         val run = store.getResource(SelfTestRun.type).active ?: return
         val tick = run.world.tick
         CraftorySelfTest.keepTestSectionsTicking(run, store)
@@ -1218,12 +1223,7 @@ object CraftorySelfTest {
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions(world))
             clear(world, drySectionRef, listOf(RATTLEWHEEL_DRY))
-            val senderRef = context.senderAsPlayerRef()
-            val testPlayer =
-                senderRef?.let {
-                    world.entityStore.store.getComponent(it, PlayerRef.getComponentType())
-                }
-            WellSelfTest.run(world, { context.sendMessage(Message.raw(it)) }, testPlayer)
+            WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
                 place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)
@@ -1451,13 +1451,18 @@ object CraftorySelfTest {
                 Fluid.EMPTY
             }
         val level = if (present) 8.toByte() else 0.toByte()
-        return section.setFluid(
+        section.setFluid(
             RATTLEWHEEL_WATER.x and 31,
             RATTLEWHEEL_WATER.y and 31,
             RATTLEWHEEL_WATER.z and 31,
             fluid,
             level,
         )
+        val fluidX = RATTLEWHEEL_WATER.x and 31
+        val fluidY = RATTLEWHEEL_WATER.y and 31
+        val fluidZ = RATTLEWHEEL_WATER.z and 31
+        return section.getFluid(fluidX, fluidY, fluidZ)?.id == fluid.id &&
+            section.getFluidLevel(fluidX, fluidY, fluidZ) == level
     }
 
     private fun checkDryRattlewheel(

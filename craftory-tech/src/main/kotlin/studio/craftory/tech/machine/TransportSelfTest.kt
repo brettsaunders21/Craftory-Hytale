@@ -46,6 +46,7 @@ import studio.craftory.core.api.transport.ItemPipeTransitRecord
 import studio.craftory.core.api.transport.ItemTransport
 import studio.craftory.core.api.transport.TransportColour
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.well.CarrierAcceptanceSelfTest
 import java.util.function.BiConsumer
 
 internal class TransportSelfTestRun : Resource<ChunkStore> {
@@ -1702,6 +1703,11 @@ internal class TransportSelfTestSystem : TickingSystem<ChunkStore>() {
         run.world.chunkStore.store
             .getResource(TransportSelfTestRun.type)
             .active = null
+        run.world.execute {
+            CarrierAcceptanceSelfTest.start(run.world) {
+                run.context.sendMessage(Message.raw(it))
+            }
+        }
     }
 
     private fun clearDrops(world: World) {

@@ -131,10 +131,9 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
                 processPlayer(ref, playerRef, transform.position, store, world, tick)
             }
         }
-        CarrierAcceptanceSelfTest.tick(world, store)
     }
 
-    private fun processPlayer(
+    internal fun processPlayer(
         ref: Ref<EntityStore>,
         playerRef: PlayerRef,
         position: Vector3d,
@@ -175,7 +174,7 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
                     LOGGER.warning("Gob-Jar burst Well spawn failed; retaining jar at stability 1 for retry")
                 }
             }
-            if (nextStability.toInt() != stability.toInt()) {
+            if (nextStability != stability) {
                 inventory.setItemStackForSlot(slot, item.withMetadata(GobJarMetadata.STABILITY, nextStability))
             }
             lowestStability = minOf(lowestStability, nextStability)

@@ -95,6 +95,12 @@ class WellLogicTest {
         val ember = JarCarrierRules.drainForSecond(50.0, Temperament.EMBER, WeatherKind.STORM)
         assertEquals(49.8, spark, 0.0001)
         assertEquals(49.7, ember, 0.0001)
+
+        var stability = 100.0
+        repeat(10) {
+            stability = JarCarrierRules.drainForSecond(stability, Temperament.SPARK, WeatherKind.CLEAR)
+        }
+        assertEquals(98.0, stability, 1e-6)
     }
 
     @Test

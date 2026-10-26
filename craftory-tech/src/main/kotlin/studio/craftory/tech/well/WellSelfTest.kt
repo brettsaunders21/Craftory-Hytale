@@ -45,6 +45,26 @@ internal typealias BlockEntityRef = Ref<ChunkStore>
 
 private typealias WellSelfTestReport = (String) -> Unit
 
+private fun cleanupLegacyCarrierBurstArtifacts(world: World): Pair<Int, Int> {
+    val wells =
+        CraftoryCore
+            .wells()
+            .wellsNear(world.chunkStore.store, WellSelfTest.CAUGHT_POS, 64)
+            .filter { it.pos.x == WellSelfTest.CAUGHT_POS.x && it.pos.z == WellSelfTest.CAUGHT_POS.z }
+    val guardians = world.entityStore.store.getResource(WellGuardianIndex.type)
+    var removedWells = 0
+    var removedGuardians = 0
+    wells.forEach { near ->
+        val guardian = guardians.refsByWellId.remove(near.pos.pack().toString())
+        if (guardian != null && guardian.isValid) {
+            world.entityStore.store.removeEntity(guardian, RemoveReason.REMOVE)
+            removedGuardians++
+        }
+        if (CraftoryCore.wells().remove(world, near.pos)) removedWells++
+    }
+    return removedWells to removedGuardians
+}
+
 internal object WellSelfTest {
     internal val CAUGHT_POS = BlockPos(10_030, 148, 10_010)
     internal val FORCED_POS = BlockPos(10_029, 148, 10_010)
@@ -57,7 +77,6 @@ internal object WellSelfTest {
     fun run(
         world: World,
         report: WellSelfTestReport,
-        testPlayer: PlayerRef? = null,
     ) {
         val tempDir = Files.createTempDirectory("craftory-well-selftest")
         listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS, STAKED_POS, SMOTHERED_POS, CALMED_POS)
@@ -72,11 +91,18 @@ internal object WellSelfTest {
             Helpers.testCarrierReload(world, report)
             testDamperSmothering(world, report)
             Helpers.testGuardianDeath(world, report)
-            Helpers.testStakeLifecycle(world, tempDir, report, testPlayer)
+            Helpers.testStakeLifecycle(world, tempDir, report, WellSelfTestPlayer.createDetached())
             testHurlRefusal(world, report)
-            val remaining = CraftoryCore.wells().wellsNear(world.chunkStore.store, CAUGHT_POS, 64).size
-            check(remaining == 0) { "well cleanup left $remaining indexed wells within radius 64" }
-            report("selftest: cleanup (wells=$remaining)")
+            val staleCarrierArtifacts = cleanupLegacyCarrierBurstArtifacts(world)
+            val remaining = CraftoryCore.wells().wellsNear(world.chunkStore.store, CAUGHT_POS, 64)
+            check(remaining.isEmpty()) {
+                "well cleanup left ${remaining.size} indexed wells within radius 64: ${remaining.map { it.pos }}"
+            }
+            report(
+                "selftest: cleanup (legacyCarrierWells=${staleCarrierArtifacts.first}, " +
+                    "legacyCarrierGuardians=${staleCarrierArtifacts.second})",
+            )
+            report("selftest: cleanup (wells=${remaining.size})")
         } finally {
             CraftoryCore.wells().remove(world, CAUGHT_POS)
             CraftoryCore.wells().remove(world, FORCED_POS)
@@ -102,7 +128,6 @@ internal object WellSelfTest {
                     "wellPositions=${exclusions.third}, guardians=$guardians)",
             )
         }
-        CarrierAcceptanceSelfTest.start(world, testPlayer, report)
     }
 
     private fun testJarAndScan(
@@ -111,6 +136,7 @@ internal object WellSelfTest {
         report: (String) -> Unit,
     ) {
         val store = world.chunkStore.store
+        val wellsBefore = CraftoryCore.wells().count(store)
         val spawned =
             CraftoryCore.wells().spawn(
                 world,
@@ -119,7 +145,9 @@ internal object WellSelfTest {
                 WellStrength.FLICKER,
                 WellState.WILD,
             ) ?: error("well spawn failed")
-        check(CraftoryCore.wells().count(store) > 0) { "well index did not register spawn" }
+        check(CraftoryCore.wells().count(store) == wellsBefore + 1) {
+            "well index did not register spawn (before=$wellsBefore after=${CraftoryCore.wells().count(store)})"
+        }
         check(ScanScoring.score(100, listOf(100, 100, 100), 40, 8).perfect) { "perfect score failed" }
         check(!ScanScoring.score(100, listOf(110, 125, 135), 40, 8).perfect) { "sloppy score failed" }
         report("selftest: PASS well spawn/index and scan scores")
@@ -157,7 +185,10 @@ internal object WellSelfTest {
             check(filled.getFromMetadataOrNull(GobJarMetadata.TASTE) == "Ingredient_Scraps") {
                 "filled jar taste metadata missing"
             }
-            check(CraftoryCore.wells().count(store) == 0) { "jarred well remained indexed" }
+            val wellsAfterCatch = CraftoryCore.wells().count(store)
+            check(wellsAfterCatch == wellsBefore) {
+                "jarred well remained indexed (before=$wellsBefore after=$wellsAfterCatch)"
+            }
             report("selftest: PASS Flicker jar metadata, knowledge, and Insight")
         } finally {
             crews.close()
@@ -482,7 +513,7 @@ internal object WellSelfTest {
             world: World,
             tempDir: Path,
             report: WellSelfTestReport,
-            hammerPlayer: PlayerRef?,
+            hammerPlayer: PlayerRef,
         ) {
             val wellRef =
                 CraftoryCore.wells().spawn(
@@ -552,33 +583,29 @@ internal object WellSelfTest {
             refs: List<Ref<ChunkStore>>,
             store: Store<ChunkStore>,
             report: WellSelfTestReport,
-            hammerPlayer: PlayerRef?,
+            hammerPlayer: PlayerRef,
         ) {
             check(refs.all { store.getComponent(it, TetherStakeState.type)?.leaning == true }) {
                 "uneven stake gaps did not mark all stakes leaning"
             }
             check(well.state == WellState.DORMANT) { "leaning stakes tethered the Well" }
             val firstStake = positions.first()
-            if (hammerPlayer == null) {
-                report("selftest: FAIL foreign stake hammer test requires a player sender")
-            } else {
-                crews.crewOf(hammerPlayer.uuid)
-                val foreignHammerStraightened =
-                    straightenTetherStake(
-                        world,
-                        Vector3i(firstStake.x, firstStake.y, firstStake.z),
-                        hammerPlayer,
-                        crews,
-                        hasOverride = false,
-                    )
-                check(!foreignHammerStraightened) {
-                    "foreign crew straightened a leaning stake"
-                }
-                check(store.getComponent(refs.first(), TetherStakeState.type)?.leaning == true) {
-                    "foreign hammer changed the leaning stake"
-                }
-                report("selftest: PASS foreign crew hammer leaves stake leaning")
+            crews.crewOf(hammerPlayer.uuid)
+            val foreignHammerStraightened =
+                straightenTetherStake(
+                    world,
+                    Vector3i(firstStake.x, firstStake.y, firstStake.z),
+                    hammerPlayer,
+                    crews,
+                    hasOverride = false,
+                )
+            check(!foreignHammerStraightened) {
+                "foreign crew straightened a leaning stake"
             }
+            check(store.getComponent(refs.first(), TetherStakeState.type)?.leaning == true) {
+                "foreign hammer changed the leaning stake"
+            }
+            report("selftest: PASS foreign crew hammer leaves stake leaning")
             straightenTestStakes(world, positions, playerUuid, crews)
             val ownerCrew = createStakeOwnerCrew(crews, playerUuid)
             checkStakeClaim(well, ownerCrew.id, wellRef, playerUuid, crews, store)
