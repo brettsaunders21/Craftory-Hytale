@@ -75,6 +75,7 @@ private fun fireCannon(
                 HurlStartFailure.ALREADY_RIDING -> "already-riding"
                 HurlStartFailure.SPAWN_FAILED -> "spawn-failed"
                 HurlStartFailure.PENDING -> "warming-up"
+                HurlStartFailure.FORBIDDEN -> "jar-carrier"
                 else -> "no-net"
             }
         player.sendMessage(Message.translation("server.craftory.hurl.$key"))

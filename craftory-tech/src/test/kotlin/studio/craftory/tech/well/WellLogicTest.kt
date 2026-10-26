@@ -116,6 +116,16 @@ class WellLogicTest {
     }
 
     @Test
+    fun `jar capture requires three presses inside the timing window`() {
+        assertTrue(WellCaptureRules.capturePressIntervalValid(4))
+        assertTrue(WellCaptureRules.capturePressIntervalValid(40))
+        assertFalse(WellCaptureRules.capturePressIntervalValid(3))
+        assertFalse(WellCaptureRules.capturePressIntervalValid(41))
+        assertFalse(WellCaptureRules.captureComplete(2))
+        assertTrue(WellCaptureRules.captureComplete(3))
+    }
+
+    @Test
     fun `stability drains for time damage and disliked weather and stops at zero`() {
         assertEquals(87.0, WellCaptureRules.stabilityAfter(100.0, 10.0, 1, 10.0))
         assertEquals(0.0, WellCaptureRules.stabilityAfter(5.0, 60.0, 2, 30.0))

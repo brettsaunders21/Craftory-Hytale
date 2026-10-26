@@ -1,0 +1,11 @@
+Group {
+  Anchor: (Top: 24, Right: 24, Width: 320);
+  LayoutMode: Top;
+  Background: #000000(0.55);
+  Padding: (Full: 10);
+
+  Label #Stability {
+    Text: "Gob-Jar stability: 100%";
+    Style: (FontSize: 16, RenderBold: true);
+  }
+}

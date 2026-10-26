@@ -47,6 +47,7 @@ object CraftoryIds {
     const val GLIMMER_LENS = "Craftory_Glimmer_Lens"
     const val GOB_JAR = "Craftory_Gob_Jar"
     const val GOB_JAR_FILLED = "Craftory_Gob_Jar_Filled"
+    const val JAR_STABILITY_HUD = "Craftory_Jar_Stability_Hud"
     const val CODEX = "Craftory_Codex"
     const val STORM_VANE = "Craftory_Storm_Vane"
     const val FIZZ_DAMPER = "Craftory_Fizz_Damper"
@@ -55,8 +56,6 @@ object CraftoryIds {
     const val FIZZ_DAMPER_COMPONENT = "CraftoryFizzDamper"
     const val TETHER_STAKE_COMPONENT = "CraftoryTetherStake"
     const val FIZZ_DAMPER_TYPE = "craftory:fizz_damper"
-    const val STAKE_HAMMER_USE_INTERACTION = "Craftory_StakeHammerUse"
-
     const val CRANK_TYPE = "craftory:crank_a_fizz"
     const val BURNER_TYPE = "craftory:boomshroom_burner"
     const val RATTLEWHEEL_TYPE = "craftory:rattlewheel"

@@ -89,6 +89,10 @@ object WellCaptureRules {
             stakeCount >= requiredStakeCount(strength) &&
             leaningCount == 0
 
+    fun capturePressIntervalValid(tickDelta: Long): Boolean = tickDelta in 4L..40L
+
+    fun captureComplete(pressCount: Int): Boolean = pressCount >= 3
+
     fun stabilityAfter(
         stability: Double,
         elapsedSeconds: Double,

@@ -88,15 +88,30 @@ import studio.craftory.tech.transport.HurlStation
 import studio.craftory.tech.well.CodexPageUi
 import studio.craftory.tech.well.CodexUseInteraction
 import studio.craftory.tech.well.FizzDamperState
+import studio.craftory.tech.well.FizzDamperSystem
 import studio.craftory.tech.well.GobJarUseInteraction
+import studio.craftory.tech.well.JarCarrier
+import studio.craftory.tech.well.JarCarrierDamageSystem
+import studio.craftory.tech.well.JarCarrierDropSystem
+import studio.craftory.tech.well.JarCarrierSeatLifecycle
+import studio.craftory.tech.well.JarCarrierSystem
 import studio.craftory.tech.well.LensScanState
 import studio.craftory.tech.well.LensScanSystem
 import studio.craftory.tech.well.LensUseInteraction
+import studio.craftory.tech.well.SparkjawGuardian
 import studio.craftory.tech.well.StormVaneState
+import studio.craftory.tech.well.StormVaneSystem
+import studio.craftory.tech.well.TetherStakeLifecycle
+import studio.craftory.tech.well.TetherStakePlacementSystem
 import studio.craftory.tech.well.TetherStakeState
 import studio.craftory.tech.well.WellBirthState
 import studio.craftory.tech.well.WellBirthSystem
+import studio.craftory.tech.well.WellCaptureState
 import studio.craftory.tech.well.WellConfig
+import studio.craftory.tech.well.WellGuardianCalmSystem
+import studio.craftory.tech.well.WellGuardianDeathSystem
+import studio.craftory.tech.well.WellGuardianIndex
+import studio.craftory.tech.well.WellGuardianLifecycle
 import studio.craftory.tech.well.WellKillBirthSystem
 import studio.craftory.tech.well.WellPulseState
 import studio.craftory.tech.well.WellPulseSystem
@@ -337,11 +352,28 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(JunkHeartSystem())
         chunkRegistry.registerSystem(MultiblockAssemblySystem())
         chunkRegistry.registerSystem(GhostPreviewLifecycle())
+        chunkRegistry.registerSystem(StormVaneSystem())
+        chunkRegistry.registerSystem(FizzDamperSystem())
+        chunkRegistry.registerSystem(TetherStakeLifecycle())
         chunkRegistry.registerSystem(SelfTestSystem())
         chunkRegistry.registerSystem(TransportSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
         WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)
+        WellCaptureState.type = entityRegistry.registerResource(WellCaptureState::class.java, ::WellCaptureState)
+        WellGuardianIndex.type = entityRegistry.registerResource(WellGuardianIndex::class.java, ::WellGuardianIndex)
+        SparkjawGuardian.type =
+            entityRegistry.registerComponent(
+                SparkjawGuardian::class.java,
+                "CraftorySparkjawGuardian",
+                SparkjawGuardian.CODEC,
+            )
+        JarCarrier.type =
+            entityRegistry.registerComponent(
+                JarCarrier::class.java,
+                "CraftoryJarCarrier",
+                JarCarrier.CODEC,
+            )
         HurlRide.type = entityRegistry.registerComponent(HurlRide::class.java, ::HurlRide)
         HurlRider.type = entityRegistry.registerComponent(HurlRider::class.java, ::HurlRider)
         HurlFallGuard.type = entityRegistry.registerComponent(HurlFallGuard::class.java, ::HurlFallGuard)
@@ -360,9 +392,17 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(CanisterPageRefreshSystem())
         entityRegistry.registerSystem(JunkPowerKickSystem())
         entityRegistry.registerSystem(MachineOwnerPlacementSystem())
+        entityRegistry.registerSystem(TetherStakePlacementSystem())
         entityRegistry.registerSystem(BuildableMachineCraftGate())
         entityRegistry.registerSystem(LensScanSystem(wellConfig))
         entityRegistry.registerSystem(WellPulseSystem(wellConfig))
+        entityRegistry.registerSystem(WellGuardianCalmSystem())
+        entityRegistry.registerSystem(WellGuardianLifecycle())
+        entityRegistry.registerSystem(WellGuardianDeathSystem())
+        entityRegistry.registerSystem(JarCarrierSystem())
+        entityRegistry.registerSystem(JarCarrierDamageSystem())
+        entityRegistry.registerSystem(JarCarrierDropSystem())
+        entityRegistry.registerSystem(JarCarrierSeatLifecycle())
         entityRegistry.registerSystem(WellBirthSystem(wellConfig))
         entityRegistry.registerSystem(WellKillBirthSystem(wellConfig))
         entityRegistry.registerSystem(RiftmothDrainSystem())

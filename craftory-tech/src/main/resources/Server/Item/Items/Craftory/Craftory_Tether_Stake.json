@@ -22,11 +22,6 @@
     "Opacity": "Transparent",
     "CustomModel": "Blocks/Craftory/Tether_Stake/Tether_Stake.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Tether_Stake/Tether_Stake_Texture.png", "Weight": 1}],
-    "Interactions": {
-      "Use": {
-        "Interactions": [{"Type": "Craftory_StakeHammerUse"}]
-      }
-    },
     "Support": {"Down": [{"FaceType": "Full"}]},
     "BlockEntity": {"Components": {"CraftoryTetherStake": {"Lean": false, "WellId": ""}}}
   }

@@ -41,12 +41,17 @@ class StormVaneState(
 class FizzDamperState(
     var visualOn: Boolean = false,
     var lastFoamTick: Long = Long.MIN_VALUE,
+    var lastSmotherTick: Long = Long.MIN_VALUE,
 ) : Component<ChunkStore>,
     Inspectable {
-    override fun clone(): Component<ChunkStore> = FizzDamperState(visualOn, lastFoamTick)
+    override fun clone(): Component<ChunkStore> = FizzDamperState(visualOn, lastFoamTick, lastSmotherTick)
 
     override fun describe(): List<Pair<String, String>> =
-        listOf("visualOn" to visualOn.toString(), "lastFoamTick" to lastFoamTick.toString())
+        listOf(
+            "visualOn" to visualOn.toString(),
+            "lastFoamTick" to lastFoamTick.toString(),
+            "lastSmotherTick" to lastSmotherTick.toString(),
+        )
 
     companion object {
         lateinit var type: ComponentType<ChunkStore, FizzDamperState>
@@ -63,6 +68,11 @@ class FizzDamperState(
                     KeyedCodec("LastFoamTick", Codec.LONG),
                     { state, value -> state.lastFoamTick = value },
                     { it.lastFoamTick },
+                ).add()
+                .append(
+                    KeyedCodec("LastSmotherTick", Codec.LONG),
+                    { state, value -> state.lastSmotherTick = value },
+                    { it.lastSmotherTick },
                 ).add()
                 .build()
     }
