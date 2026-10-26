@@ -3,10 +3,13 @@ package studio.craftory.tech.well
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
@@ -132,6 +135,7 @@ internal object WellPersistenceSelfTest {
     private fun saveAndUnload(
         fixture: Fixture,
         complete: (Boolean, String) -> Unit,
+        attempt: Int = 0,
     ) {
         val grid = fixture.world.chunkStore
         val chunkRef = grid.getChunkReference(fixture.chunkIndex)?.takeIf { it.isValid }
@@ -139,6 +143,15 @@ internal object WellPersistenceSelfTest {
         if (chunkRef == null || worldChunk == null) {
             cleanupFixture(fixture)
             complete(false, "TETHERED chunk was not available to save")
+            return
+        }
+        if (worldChunk.isSaving) {
+            if (attempt < 100) {
+                scheduleReloadRetry(fixture.world) { saveAndUnload(fixture, complete, attempt + 1) }
+            } else {
+                cleanupFixture(fixture)
+                complete(false, "TETHERED chunk remained busy saving")
+            }
             return
         }
         try {
@@ -220,6 +233,13 @@ internal object WellPersistenceSelfTest {
                     fixture.wellPosition.z,
                 ) ?: error("reloaded test section is missing")
             val store = world.chunkStore.store
+            val blockId =
+                store
+                    .getComponent(sectionRef, BlockSection.getComponentType())
+                    ?.get(fixture.wellPosition.x and 31, fixture.wellPosition.y and 31, fixture.wellPosition.z and 31)
+            val blockType = blockId?.let { BlockType.getAssetMap().getAsset(it) }
+            val blockName = blockType?.id
+            val componentDeclared = blockType?.let { BlockEntity.declaresComponent(it, Glimmerwell.type) }
             val wellRef =
                 BlockModule.getBlockEntity(
                     world,
@@ -238,6 +258,8 @@ internal object WellPersistenceSelfTest {
                     wellRef?.let { store.getComponent(it, BlockModule.BlockStateInfo.getComponentType()) != null }
                 "reloaded Well was not indexed " +
                     "(attempts=$attempt, blockEntityValid=${wellRef?.isValid}, blockState=$hasBlockState, " +
+                    "block=$blockName, componentDeclared=$componentDeclared, " +
+                    "${describePersistedWellHolder(store, sectionRef, fixture.wellPosition)}, " +
                     "indexCount=${CraftoryCore.wells().count(store)})"
             }
             checkRestoredState(fixture, world, store, indexedWell.well)
