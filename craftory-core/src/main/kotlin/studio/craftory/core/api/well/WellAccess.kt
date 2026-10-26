@@ -232,7 +232,7 @@ internal fun WellAccess.fireWellRemoved(
     removedListeners.forEach { listener ->
         try {
             listener(event)
-        } catch (exception: IllegalStateException) {
+        } catch (exception: RuntimeException) {
             Logger
                 .getLogger(WellAccess::class.java.name)
                 .log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
