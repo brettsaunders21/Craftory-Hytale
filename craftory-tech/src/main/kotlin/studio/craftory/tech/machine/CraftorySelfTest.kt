@@ -2770,6 +2770,7 @@ object CraftorySelfTest {
             JunkHeartTemplate.template.hammerOrder.map {
                 TestPosition(HEART.x + it.offset.x, HEART.y + it.offset.y, HEART.z + it.offset.z)
             }
+
     private val SCRAP_RUSH_TEST = TestPosition(10_024, 148, 10_004)
     private const val SCRAP_RUSH_SPAWN_COUNT = 3
 

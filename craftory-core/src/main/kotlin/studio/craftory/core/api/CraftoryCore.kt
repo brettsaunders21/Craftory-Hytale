@@ -17,8 +17,8 @@ import studio.craftory.core.api.energy.GradeTable
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.core.api.multiblock.GhostMode
 import studio.craftory.core.api.multiblock.MultiblockRegistry
-import studio.craftory.core.api.well.WellAccess
 import studio.craftory.core.api.transport.TubeAccess
+import studio.craftory.core.api.well.WellAccess
 import studio.craftory.core.energy.AnchorCoverageIndex
 import studio.craftory.core.energy.EnergyClock
 import studio.craftory.core.energy.EnergyWorld
