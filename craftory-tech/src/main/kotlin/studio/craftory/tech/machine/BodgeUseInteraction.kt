@@ -47,7 +47,11 @@ class BodgeUseInteraction : SimpleBlockInteraction() {
         val blockRef = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return
         val store = world.chunkStore.store
         val slots = store.getComponent(blockRef, BodgeSlots.type) ?: return
-        if (store.getComponent(blockRef, EnergyMember.type) == null) return
+        if (store.getComponent(blockRef, EnergyMember.type) == null &&
+            store.getComponent(blockRef, ShroomBedState.type) == null
+        ) {
+            return
+        }
         val owner = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
         if (!MachineActions.mayUseWrench(owner, player.uuid, player, CraftoryCore.crewService())) {
             player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))

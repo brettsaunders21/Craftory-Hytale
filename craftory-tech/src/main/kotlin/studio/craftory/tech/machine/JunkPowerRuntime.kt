@@ -603,6 +603,19 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
             commandBuffer.getComponent(context.entity, PlayerRef.getComponentType())?.sendMessage(Message.raw(message))
             return
         }
+        val shroomBed = store.getComponent(ref, ShroomBedState.type)
+        if (shroomBed != null && heldItem == null) {
+            if (player == null) return
+            val owner = store.getComponent(ref, MachineOwner.type)?.placerUuid
+            if (owner == null || owner !in CraftoryCore.crewService().crewOf(player.uuid).members) {
+                player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+                return
+            }
+            val harvested = ShroomBedActions.harvest(world, shroomBed, blockState, store)
+            val key = if (harvested > 0) "server.craftory.shroom_bed.harvested" else "server.craftory.shroom_bed.empty"
+            player.sendMessage(Message.translation(key).param("count", harvested))
+            return
+        }
         val member = store.getComponent(ref, EnergyMember.type) ?: return
         val heart = store.getComponent(ref, JunkHeartState.type)
         val heartController = store.getComponent(ref, studio.craftory.core.api.multiblock.MultiblockController.type)
@@ -915,6 +928,50 @@ internal object MachineActions {
         store: Store<ChunkStore>,
         bypassOwnership: Boolean = false,
     ): WrenchActionResult {
+        val member = store.getComponent(blockRef, EnergyMember.type)
+        if (member == null) {
+            val shroomBed = store.getComponent(blockRef, ShroomBedState.type) ?: return WrenchActionResult.NotMachine
+            return packGenerator(
+                world,
+                blockRef,
+                position,
+                playerUuid,
+                playerRef,
+                crews,
+                store,
+                CraftoryIds.SHROOM_BED,
+                shroomBed,
+                bypassOwnership,
+            )
+        }
+        if (member.typeId == CraftoryIds.RATTLEWHEEL_TYPE) {
+            val itemId = machineItemId(member.typeId) ?: return WrenchActionResult.NotMachine
+            return packGenerator(
+                world,
+                blockRef,
+                position,
+                playerUuid,
+                playerRef,
+                crews,
+                store,
+                itemId,
+                null,
+                bypassOwnership,
+            )
+        }
+        return usePageMachineWrench(world, blockRef, position, playerUuid, playerRef, crews, store, bypassOwnership)
+    }
+
+    private fun usePageMachineWrench(
+        world: World,
+        blockRef: Ref<ChunkStore>,
+        position: Vector3i,
+        playerUuid: java.util.UUID,
+        playerRef: PlayerRef?,
+        crews: CrewService,
+        store: Store<ChunkStore>,
+        bypassOwnership: Boolean,
+    ): WrenchActionResult {
         val member = store.getComponent(blockRef, EnergyMember.type) ?: return WrenchActionResult.NotMachine
         val page = NotebookPages.forMachineType(member.typeId) ?: return WrenchActionResult.NotMachine
         val itemId = machineItemId(member.typeId) ?: return WrenchActionResult.NotMachine
@@ -945,6 +1002,37 @@ internal object MachineActions {
         val scrapsDropped = spawnDrops(world, position, dropHolders, null, playerRef)
         val pageGranted = crews.grantKnowledge(playerUuid, page.id)
         return WrenchActionResult.Learned("server.items.$itemId.name", page, scrapsDropped, pageGranted, burnTimeLost)
+    }
+
+    private fun packGenerator(
+        world: World,
+        blockRef: Ref<ChunkStore>,
+        position: Vector3i,
+        playerUuid: java.util.UUID,
+        playerRef: PlayerRef?,
+        crews: CrewService,
+        store: Store<ChunkStore>,
+        itemId: String,
+        shroomBed: ShroomBedState?,
+        bypassOwnership: Boolean,
+    ): WrenchActionResult {
+        val ownerUuid = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
+        if (!bypassOwnership && !mayUseWrench(ownerUuid, playerUuid, playerRef, crews)) {
+            return WrenchActionResult.ForeignCrew
+        }
+        if (shroomBed?.stored?.let { it > 0 } == true) return WrenchActionResult.HasContents
+        val blockState =
+            store.getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType())
+                ?: return WrenchActionResult.NotMachine
+        val blockType = BlockType.fromString(itemId) ?: return WrenchActionResult.NotMachine
+        val dropHolders =
+            createWrenchDropHolders(world, position, blockRef, itemId, hasPage = true, store = store)
+                ?: return WrenchActionResult.RemovalFailed
+        if (!removeWrenchedBlock(world, blockState, blockType, position, playerRef)) {
+            return WrenchActionResult.RemovalFailed
+        }
+        val itemDropped = spawnDrops(world, position, dropHolders, itemId, playerRef)
+        return WrenchActionResult.Packed("server.items.$itemId.name", itemDropped, burnTimeLost = false)
     }
 
     internal fun mayUseWrench(
@@ -1051,6 +1139,7 @@ internal object MachineActions {
             CraftoryIds.PIPE_TYPE -> CraftoryIds.PIPE
             CraftoryIds.GNASHER_TYPE -> CraftoryIds.GNASHER_PIT
             CraftoryIds.OVEN_TYPE -> CraftoryIds.SCORCH_OVEN
+            CraftoryIds.RATTLEWHEEL_TYPE -> CraftoryIds.RATTLEWHEEL
             else -> null
         }
 

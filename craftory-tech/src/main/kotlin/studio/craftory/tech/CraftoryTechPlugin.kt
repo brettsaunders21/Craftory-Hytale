@@ -55,12 +55,16 @@ import studio.craftory.tech.machine.MachineOwner
 import studio.craftory.tech.machine.MachineOwnerPlacementSystem
 import studio.craftory.tech.machine.MultiblockAssemblySystem
 import studio.craftory.tech.machine.OvenPower
+import studio.craftory.tech.machine.RattlewheelState
+import studio.craftory.tech.machine.RattlewheelSystem
 import studio.craftory.tech.machine.ReceiptUseInteraction
 import studio.craftory.tech.machine.ScorchOvenSystem
 import studio.craftory.tech.machine.ScrapRushRaid
 import studio.craftory.tech.machine.ScrapRushSystem
 import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
+import studio.craftory.tech.machine.ShroomBedState
+import studio.craftory.tech.machine.ShroomBedSystem
 import studio.craftory.tech.machine.jank.BodgeSlots
 import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.machine.SnatcherClawState
@@ -124,6 +128,10 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
         )
         CraftoryCore.registerEnergyType(
+            CraftoryIds.RATTLEWHEEL_TYPE,
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
+        )
+        CraftoryCore.registerEnergyType(
             CraftoryIds.JUNK_HEART_TYPE,
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
         )
@@ -170,6 +178,18 @@ class CraftoryTechPlugin(
                 BurnerState::class.java,
                 CraftoryIds.BURNER_COMPONENT,
                 BurnerState.CODEC,
+            )
+        RattlewheelState.type =
+            chunkRegistry.registerComponent(
+                RattlewheelState::class.java,
+                CraftoryIds.RATTLEWHEEL_COMPONENT,
+                RattlewheelState.CODEC,
+            )
+        ShroomBedState.type =
+            chunkRegistry.registerComponent(
+                ShroomBedState::class.java,
+                CraftoryIds.SHROOM_BED_COMPONENT,
+                ShroomBedState.CODEC,
             )
         GnasherState.type =
             chunkRegistry.registerComponent(
@@ -237,6 +257,12 @@ class CraftoryTechPlugin(
         CraftoryCore.registerInspectableComponent(CraftoryIds.BURNER_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, BurnerState.type)
         }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.RATTLEWHEEL_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, RattlewheelState.type)
+        }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.SHROOM_BED_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, ShroomBedState.type)
+        }
         CraftoryCore.registerInspectableComponent(CraftoryIds.GNASHER_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, GnasherState.type)
         }
@@ -264,6 +290,8 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(AnchorLifecycle())
         chunkRegistry.registerSystem(CrankSystem())
         chunkRegistry.registerSystem(BurnerSystem())
+        chunkRegistry.registerSystem(RattlewheelSystem())
+        chunkRegistry.registerSystem(ShroomBedSystem())
         chunkRegistry.registerSystem(GnasherSystem())
         chunkRegistry.registerSystem(ScorchOvenSystem())
         chunkRegistry.registerSystem(JankSystem())

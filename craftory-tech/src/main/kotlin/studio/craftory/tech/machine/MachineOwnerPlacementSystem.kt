@@ -54,6 +54,8 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.GNASHER_PIT,
                 CraftoryIds.SCORCH_OVEN,
                 CraftoryIds.JUNK_HEART,
+                CraftoryIds.RATTLEWHEEL,
+                CraftoryIds.SHROOM_BED,
             )
     }
 }

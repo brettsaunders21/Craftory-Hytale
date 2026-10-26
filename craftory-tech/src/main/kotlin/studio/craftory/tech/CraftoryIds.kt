@@ -3,6 +3,9 @@ package studio.craftory.tech
 object CraftoryIds {
     const val CRANK = "Craftory_Crank_A_Fizz"
     const val BURNER = "Craftory_Boomshroom_Burner"
+    const val RATTLEWHEEL = "Craftory_Rattlewheel"
+    const val SHROOM_BED = "Craftory_Shroom_Bed"
+    const val BOOMSHROOM_FUEL = "Plant_Crop_Mushroom_Boomshroom_Small"
     const val CANISTER = "Craftory_Fizz_Canister"
     const val PIPE = "Craftory_Gutterpipe"
     const val HURL_TUBE = "Craftory_Hurl_Tube"
@@ -48,6 +51,10 @@ object CraftoryIds {
 
     const val CRANK_TYPE = "craftory:crank_a_fizz"
     const val BURNER_TYPE = "craftory:boomshroom_burner"
+    const val RATTLEWHEEL_TYPE = "craftory:rattlewheel"
+    const val SHROOM_BED_TYPE = "craftory:shroom_bed"
+    const val RATTLEWHEEL_COMPONENT = "CraftoryRattlewheel"
+    const val SHROOM_BED_COMPONENT = "CraftoryShroomBed"
     const val CANISTER_TYPE = "craftory:fizz_canister"
     const val PIPE_TYPE = "craftory:gutterpipe"
     const val SNATCHER_CLAW_TYPE = "craftory:snatcher_claw"
