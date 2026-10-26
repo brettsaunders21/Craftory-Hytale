@@ -11,8 +11,6 @@ class BuildableMachinesTest {
         assertEquals(null, BuildableMachines.missingTier(CraftoryIds.HURL_TUBE, 2))
         assertEquals(3, BuildableMachines.missingTier(CraftoryIds.TETHER_STAKE, 2))
         assertEquals(null, BuildableMachines.missingTier(CraftoryIds.TETHER_STAKE, 3))
-        assertEquals(3, BuildableMachines.missingTier(CraftoryIds.GLIMMER_LENS, 2))
-        assertEquals(3, BuildableMachines.missingTier(CraftoryIds.CODEX, 2))
         assertEquals(null, BuildableMachines.missingTier(CraftoryIds.SLOSHTANK, 1))
     }
 }

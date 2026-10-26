@@ -35,8 +35,6 @@ internal object BuildableMachines {
             CraftoryIds.CRACKLE_COIL to 3,
             CraftoryIds.RESONATOR to 3,
             CraftoryIds.WELL_CRADLE to 3,
-            CraftoryIds.GLIMMER_LENS to 3,
-            CraftoryIds.CODEX to 3,
         )
 
     private val machineTypeByItem =
