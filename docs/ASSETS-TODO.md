@@ -2,6 +2,8 @@
 
 ## Completed
 
+Mob role variants and their vanilla asset IDs are based on the 0.7.4 Assets.zip.
+
 - `Craftory_Crank_A_Fizz`: Goblin lab tinkering bench model, texture, and idle animation.
 - `Craftory_Boomshroom_Burner`: Goblin brazier model, off/on textures, fire animation, particles, and light.
 - `Craftory_Fizz_Canister`: Goblin boomshroom generator model and texture.
@@ -57,3 +59,8 @@ python3 tools/art/preview.py <out_dir> ~/.gradle/caches/hytale-assets/release-0.
 - **PR #9/#10 wiring:** see [ASSETS-WIRING.md](ASSETS-WIRING.md).
 - **Grizzlecog body:** the model still uses the vanilla Klops body texture and tunic.
 - **In-client visual verification:** appearance remains client-unverified because the previews come from an offline renderer.
+- `Craftory_Glimmer_Wisp`: variant of `Template_Birds_Passive`, using the `Bat` appearance and `SFX_Bat_Alerted`, `SFX_Bat_Hurt`, and `SFX_Bat_Death`; create a distinct floating light-mote rig, glow/tint, wing animation, and sound set.
+- `Craftory_Sparkjaw`: variant of `Template_Predator`, using the `Crocodile` reptile appearance and `SFX_Crocodile_Alerted`, `SFX_Crocodile_Hurt`, and `SFX_Crocodile_Death`; create a crystal-backed guardian rig, crystal materials, attack animation, and sounds.
+- `Craftory_Riftmoth`: variant of `Template_Void_Spawn_Entombed`, using the `Spawn_Void` appearance and `SFX_Spawn_Void_Alerted`, `SFX_Spawn_Void_Run`, `SFX_Spawn_Void_Hurt`, and `SFX_Spawn_Void_Death`; create a flying void-moth rig, wing animation, void materials, and sound set.
+- `Craftory_Goblin_Poacher`: variant of `Template_Goblin_Lobber`, using its goblin rig, `Goblin_Lobber` appearance, pre-existing goggles/backpack attachments, and `SFX_Goblin_Lobber_VO_*` sounds; create poacher-specific rig and sounds. The existing appearance already supplies attachments, so no custom model attachment or tint override is applied.
+- `Craftory_Glimmer_Dust`, `Craftory_Spark_Shard`, and `Craftory_Riftmoth_Wing`: reuse the copper-bar ingredient icon; create distinct Craftory ingredient icons and models.

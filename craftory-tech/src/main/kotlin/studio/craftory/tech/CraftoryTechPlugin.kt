@@ -15,6 +15,7 @@ import studio.craftory.core.api.energy.MachineEnergyCondition
 import studio.craftory.core.api.energy.MachineEnergyConditionListener
 import studio.craftory.core.api.energy.MemberSpec
 import studio.craftory.core.api.multiblock.MultiblockController
+import studio.craftory.core.api.mob.CraftoryMobs
 import studio.craftory.tech.command.ScrapRushCommand
 import studio.craftory.tech.command.SummonCommand
 import studio.craftory.tech.machine.AnchorLifecycle
@@ -66,6 +67,7 @@ import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
 import studio.craftory.tech.machine.TransportSelfTestSystem
+import studio.craftory.tech.mob.RiftmothDrainSystem
 import studio.craftory.tech.notebook.NotebookPageUi
 import studio.craftory.tech.notebook.NotebookPages
 import studio.craftory.tech.notebook.NotebookTierProgression
@@ -109,6 +111,10 @@ class CraftoryTechPlugin(
         val pluginVersion = getManifest().getVersion().toString()
         WellRuntimeConfig.current = wellConfig.get()
         CraftoryCore.registerModule("CraftoryTech", pluginVersion)
+        CraftoryMobs.registerRoleAlias("glimmer_wisp", CraftoryIds.GLIMMER_WISP)
+        CraftoryMobs.registerRoleAlias("sparkjaw", CraftoryIds.SPARKJAW)
+        CraftoryMobs.registerRoleAlias("riftmoth", CraftoryIds.RIFTMOTH)
+        CraftoryMobs.registerRoleAlias("goblin_poacher", CraftoryIds.GOBLIN_POACHER)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CRANK_TYPE,
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
@@ -297,6 +303,7 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(WellPulseSystem(wellConfig))
         entityRegistry.registerSystem(WellBirthSystem(wellConfig))
         entityRegistry.registerSystem(WellKillBirthSystem(wellConfig))
+        entityRegistry.registerSystem(RiftmothDrainSystem())
         OpenCustomUIInteraction.registerBlockEntityCustomPage(
             this,
             CanisterPage::class.java,

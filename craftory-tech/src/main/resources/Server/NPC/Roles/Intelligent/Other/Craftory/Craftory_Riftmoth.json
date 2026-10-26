@@ -1,0 +1,22 @@
+{
+  "Type": "Variant",
+  "Reference": "Template_Void_Spawn_Entombed",
+  "Modify": {
+    "Appearance": "Spawn_Void",
+    "DropList": "Drop_Craftory_Riftmoth",
+    "AttitudeGroup": "Void",
+    "DefaultPlayerAttitude": "Neutral",
+    "MaxHealth": 90,
+    "ViewRange": 12,
+    "ViewRangeCombat": 12,
+    "NameTranslationKey": {
+      "Compute": "NameTranslationKey"
+    }
+  },
+  "Parameters": {
+    "NameTranslationKey": {
+      "Value": "server.npcRoles.Craftory_Riftmoth.name",
+      "Description": "Translation key for NPC name display"
+    }
+  }
+}

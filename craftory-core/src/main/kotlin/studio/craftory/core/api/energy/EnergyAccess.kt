@@ -47,6 +47,14 @@ class EnergyAccess internal constructor(
         return energy.drawStored(pos, amount, minGradeRank)
     }
 
+    fun requestDebit(
+        pos: Long,
+        amount: Long,
+    ): Long {
+        assertWorldThread()
+        return energy.requestDebit(pos, amount)
+    }
+
     fun delivered(pos: Long): Long {
         assertWorldThread()
         return energy.delivered(pos)

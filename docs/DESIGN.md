@@ -231,6 +231,8 @@ All mobs are NPC roles (`Server/NPC/Roles`), built as variants of vanilla templa
 | **Junk Elemental** (MVP) | Wellborn (Clank), T2+ | Walking heap of scrap and pipes with a broken Boomshroom tank for a heart | Smashes machines; goblins nearby fight it | Spawns at Clank Wells, including the one your loud base grew. Drops bodge parts |
 | **Goblin Poacher + Slurp Walker** (MVP) | Goblin, T2–5 | Goggled goblin with a backpack jar and siphon hose; the Walker is a wobbly two-legged scrap rig with a giant glass tank | Steals jars, siphons Wells (a visible beam fills the tank); break the tank to stop it | Main source of loose Flickers. Camps hold Notebook pages |
 | **Riftmoth** (MVP) | Void, T3+ | Moth with torn ink wings and a glowing proboscis, flies in figure-eights | Ignores players unless hit; drains Wells with a purple thread | Main cause of Corruption |
+
+The Poacher drops an empty Gob-Jar (`Craftory_Gob_Jar`) that can catch Flickers and Wells. The filled Gob-Jar remains the metadata-bearing capture item, not a generic Poacher drop.
 | **Void Mite** | Void, T3+ | Little purple ticks | Latch onto *machines* and drain stored energy | The Void Bleed pest (§10.3) |
 | **Hollowmaw** | Void, T6 | Floating mouth-orb with orbiting teeth (Void Eye rig); a starfield inside its jaw | Pulls players in, spits Void Larvae; shielded while Riftmoths live | Kill it to stop a Corrupted Well turning Void-touched |
 | **Shardling** | Wild construct, T5 | Knee-high crystal-and-scrap golem that glows like a lantern | Neutral; piles loose items near Wells | Tame one with a Flicker for the Tinkling body blueprint |

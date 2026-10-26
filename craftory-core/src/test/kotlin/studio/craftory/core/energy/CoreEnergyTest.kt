@@ -128,6 +128,28 @@ class CoreEnergyTest {
     }
 
     @Test
+    fun `debit clamps to stored energy and survives a solve`() {
+        val adapter = EnergyRuntimeAdapter()
+        val storage = MemberSpec(MemberSpec.STORAGE, 100, 100, 100, 0, 5)
+        adapter.add(51, storage, longArrayOf(), stored = 35, storeRank = 2)
+        adapter.add(52, MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 0, 5), longArrayOf())
+
+        assertEquals(0, adapter.requestDebit(52, 10))
+        assertEquals(0, adapter.requestDebit(999, 10))
+        assertEquals(0, adapter.requestDebit(51, 0))
+        assertEquals(13, adapter.requestDebit(51, 13))
+        assertEquals(22, adapter.graph.stored(51))
+        assertEquals(2, adapter.graph.storedRank(51))
+
+        adapter.tick(EnergyEventSink.NONE)
+        assertEquals(22, adapter.graph.stored(51))
+        assertEquals(2, adapter.graph.storedRank(51))
+        assertEquals(22, adapter.requestDebit(51, 100))
+        assertEquals(0, adapter.graph.stored(51))
+        assertEquals(-1, adapter.graph.storedRank(51))
+    }
+
+    @Test
     fun `event sink queues and drains events`() {
         val observed = mutableListOf<studio.craftory.core.energy.CraftoryEnergyEvent>()
         val subscription = CraftoryEnergyEvents.subscribe(observed::add)

@@ -1,0 +1,35 @@
+{
+  "Type": "Variant",
+  "Reference": "Template_Goblin_Lobber",
+  "Modify": {
+    "Appearance": "Goblin_Lobber",
+    "DropList": "Drop_Craftory_Goblin_Poacher",
+    "MaxHealth": 80,
+    "ViewRange": 8,
+    "ViewSector": 160,
+    "HearingRange": 8,
+    "MaxSpeed": 3,
+    "AlertedRange": 8,
+    "LeashDistance": 12,
+    "LeashMinPlayerDistance": 1,
+    "LeashTimer": [
+      1,
+      1
+    ],
+    "HardLeashDistance": 12,
+    "IsMemory": true,
+    "MemoriesCategory": "Goblin",
+    "MemoriesNameOverride": "Goblin_Poacher",
+    "Attack": "Root_NPC_Goblin_Lobber_Attack",
+    "AttackDistance": 8,
+    "NameTranslationKey": {
+      "Compute": "NameTranslationKey"
+    }
+  },
+  "Parameters": {
+    "NameTranslationKey": {
+      "Value": "server.npcRoles.Craftory_Goblin_Poacher.name",
+      "Description": "Translation key for NPC name display"
+    }
+  }
+}

@@ -105,6 +105,7 @@ internal class SelfTestRun : Resource<ChunkStore> {
         var anchorStateForTest: AnchorState? = null,
         var hurlFinished: Boolean = false,
         var hurlCleanup: (() -> Unit)? = null,
+        var mobSelfTest: MobSelfTest.State? = null,
     )
 
     var active: Run? = null
@@ -154,6 +155,7 @@ private fun abort(
     CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
     runCatching { CraftorySelfTest.releaseTestKeepLoaded(run) }
     runCatching { run.hurlCleanup?.invoke() }
+    runCatching { MobSelfTest.cleanup(run) }
     runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
         .onSuccess { reportCleanup(run, it) }
         .onFailure { failure ->
@@ -211,6 +213,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             }
             return
         }
+        if (run.phase == 6) return
         try {
             tickSelfTestPhase(run, store, tick)
         } catch (failure: Exception) {
@@ -782,7 +785,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 )
             }
             check(run, rejected, "max 0 rejects Anchor charging")
-            finishAnchorDisable(run, tick)
+            finishAnchorDisable(run)
             return
         }
         if (CraftoryCore.isAreaActive(store, crankBlock)) {
@@ -808,7 +811,7 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
         }
         check(run, rejected, "max 0 rejects Anchor charging")
-        finishAnchorDisable(run, tick)
+        finishAnchorDisable(run)
     }
 
     @Suppress("ComplexCondition")
@@ -856,20 +859,22 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
         run.anchorDisableTick = tick + 20
     }
 
-    private fun finishAnchorDisable(
-        run: SelfTestRun.Run,
-        tick: Long,
-    ) {
+    private fun finishAnchorDisable(run: SelfTestRun.Run) {
         CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
-        run.anchorDisabledReported = true
-        run.cleanupTick = tick + 400
-        run.world.execute {
-            HurlSelfTest(run).start {
-                run.hurlFinished = true
-                run.cleanupTick = run.world.tick + 20
-                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+        runCatching { CraftorySelfTest.cleanup(run.world, run.sectionRef) }
+            .onSuccess { result ->
+                if (result.liveDrops > 0) {
+                    run.context.sendMessage(
+                        Message.raw("selftest: cleared main Gnasher drops before mob test (${result.liveDrops})"),
+                    )
+                }
+            }.onFailure { failure ->
+                run.context.sendMessage(Message.raw("selftest: main fixture cleanup failed (${failure.message})"))
             }
-        }
+        CraftorySelfTest.releaseTestKeepLoaded(run)
+        run.anchorDisabledReported = true
+        run.phase = 6
+        MobSelfTest.start(run)
     }
 
     private fun blockEntityAt(
@@ -928,6 +933,44 @@ object CraftorySelfTest {
             "Craftory_Squint_Goggles",
             "Craftory_Tinkers_Wrench",
         )
+
+    internal fun detachCanisterProducers(
+        world: World,
+        sectionRef: Ref<ChunkStore>,
+        sources: List<TestPosition> = (listOf(BURNER, CRANK) + pipePositions()).distinct(),
+    ) {
+        sources.forEach { position ->
+            BlockOperations.setBlock(
+                world.chunkStore,
+                sectionRef,
+                position.x,
+                position.y,
+                position.z,
+                BlockType.EMPTY_ID,
+                BlockType.EMPTY,
+                0,
+                0,
+                SetBlockSettings.NO_DROP_ITEMS,
+            )
+        }
+    }
+
+    internal fun finishAfterMobTest(run: SelfTestRun.Run) {
+        CraftoryCore.setAnchorMaxChargeMinutesInMemory(run.anchorMaxChargeBeforeTest)
+        runCatching { cleanup(run.world, run.sectionRef) }
+            .onSuccess { reportCleanup(run, it) }
+            .onFailure { failure ->
+                run.context.sendMessage(Message.raw("selftest: cleanup failed (${failure.message})"))
+            }
+        releaseTestKeepLoaded(run)
+        run.world.execute {
+            HurlSelfTest(run).start {
+                run.hurlFinished = true
+                run.cleanupTick = run.world.tick + 20
+                run.context.sendMessage(Message.raw("selftest: ${run.passed} passed, ${run.failed} failed"))
+            }
+        }
+    }
 
     internal fun retainTestKeepLoaded(
         run: SelfTestRun.Run,
@@ -1177,12 +1220,13 @@ object CraftorySelfTest {
         }
     }
 
-    private fun fuelAndKickBurner(
+    internal fun fuelAndKickBurner(
         world: World,
         store: Store<ChunkStore>,
+        position: TestPosition = BURNER,
     ) {
         val burnerRef =
-            BlockModule.getBlockEntity(world, BURNER.x, BURNER.y, BURNER.z)
+            BlockModule.getBlockEntity(world, position.x, position.y, position.z)
                 ?: error("burner entity missing")
         val burner = store.getComponent(burnerRef, BurnerState.type) ?: error("burner component missing")
         val member = store.getComponent(burnerRef, EnergyMember.type) ?: error("burner energy component missing")
@@ -1951,7 +1995,7 @@ object CraftorySelfTest {
         )
     }
 
-    private fun place(
+    internal fun place(
         world: World,
         store: Store<ChunkStore>,
         sectionRef: Ref<ChunkStore>,
@@ -1996,7 +2040,7 @@ object CraftorySelfTest {
         }
     }
 
-    private fun clear(
+    internal fun clear(
         world: World,
         sectionRef: Ref<ChunkStore>,
         positions: List<TestPosition>,

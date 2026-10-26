@@ -1,0 +1,6 @@
+{
+  "TranslationProperties": { "Name": "server.items.Craftory_Riftmoth_Wing.name" },
+  "Icon": "Icons/ItemsGenerated/Ingredient_Bar_Copper.png",
+  "Categories": ["Items.Ingredients"],
+  "MaxStack": 100
+}

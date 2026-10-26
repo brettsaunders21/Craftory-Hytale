@@ -106,6 +106,26 @@ internal class EnergyRuntimeAdapter {
         node.storageEnabled = enabled
     }
 
+    fun requestDebit(
+        id: Long,
+        amount: Long,
+    ): Long {
+        if (amount <= 0) return 0
+        val node = nodes[id] ?: return 0
+        if ((node.spec.role and MemberSpec.STORAGE) == 0) return 0
+        val stored = graph.stored(id)
+        val removed = minOf(stored, amount)
+        if (removed <= 0) return 0
+        val remaining = stored - removed
+        val rank = if (remaining == 0L) -1 else graph.storedRank(id)
+        graph.restoreStored(id, remaining, rank)
+        node.stored = remaining
+        node.storeRank = rank
+        node.lastSolveStored = remaining
+        node.lastSolveStoreRank = rank
+        return removed
+    }
+
     fun tick(sink: EnergyEventSink) {
         nodes.forEach { (id, node) ->
             node.lastSolveNetworkId = graph.networkOf(id)
