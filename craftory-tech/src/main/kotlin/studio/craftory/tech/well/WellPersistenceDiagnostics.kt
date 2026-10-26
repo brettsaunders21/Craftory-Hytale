@@ -19,5 +19,7 @@ internal fun describePersistedWellHolder(
             .getComponent(sectionRef, BlockComponentSection.getComponentType())
             ?.getBlockHolder(index)
             ?.getComponent(Glimmerwell.type)
-    return "holderWell=${well != null}, holderState=${well?.state}, holderClaim=${well?.claimCrewId}"
+    val nonTicking = store.getComponent(sectionRef, ChunkStore.REGISTRY.getNonTickingComponentType()) != null
+    return "holderWell=${well != null}, holderState=${well?.state}, " +
+        "holderClaim=${well?.claimCrewId}, sectionNonTicking=$nonTicking"
 }
