@@ -204,6 +204,20 @@ class WellAccess internal constructor() {
         }
     }
 
+    internal fun fireWellRemoved(
+        world: World,
+        pos: BlockPos,
+    ) {
+        val event = WellRemovalEvent(world, pos)
+        removedListeners.forEach { listener ->
+            try {
+                listener(event)
+            } catch (exception: RuntimeException) {
+                LOGGER.log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
+            }
+        }
+    }
+
     companion object {
         const val ANCHOR_BLOCK_ID = "Craftory_Glimmerwell_Anchor"
         private const val NORMAL_STATE = "Normal"
@@ -221,22 +235,6 @@ class WellAccess internal constructor() {
                 Temperament.CLANK -> "Ingredient_Scraps"
                 Temperament.HOLLOW -> "Plant_Crop_Mushroom_Glowing_Purple"
             }
-    }
-}
-
-internal fun WellAccess.fireWellRemoved(
-    world: World,
-    pos: BlockPos,
-) {
-    val event = WellRemovalEvent(world, pos)
-    removedListeners.forEach { listener ->
-        try {
-            listener(event)
-        } catch (exception: RuntimeException) {
-            Logger
-                .getLogger(WellAccess::class.java.name)
-                .log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
-        }
     }
 }
 
