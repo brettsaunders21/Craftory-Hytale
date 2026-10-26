@@ -1,9 +1,9 @@
 package studio.craftory.tech.well
 
-import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
-import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.CraftorySelfTest
