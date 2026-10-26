@@ -1,7 +1,14 @@
 {
-  "TranslationProperties": { "Name": "server.items.Craftory_Riftmoth_Wing.name" },
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Riftmoth_Wing.name"
+  },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Riftmoth_Wing.png",
-  "Categories": ["Craftory.Materials"],
+  "Categories": [
+    "Craftory.Materials"
+  ],
   "Quality": "Uncommon",
-  "MaxStack": 100
+  "MaxStack": 100,
+  "Model": "Items/Craftory/Riftmoth_Wing/Riftmoth_Wing.blockymodel",
+  "Texture": "Items/Craftory/Riftmoth_Wing/Riftmoth_Wing_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

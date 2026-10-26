@@ -1,13 +1,35 @@
 {
-  "TranslationProperties": { "Name": "server.items.Craftory_Grit_Adamantite.name" },
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Grit_Adamantite.name"
+  },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Adamantite.png",
-  "Categories": ["Craftory.Materials"],
+  "Categories": [
+    "Craftory.Materials"
+  ],
   "Quality": "Common",
   "MaxStack": 100,
   "Recipe": {
-    "Input": [{ "ItemId": "Craftory_Grit_Adamantite", "Quantity": 1 }],
-    "BenchRequirement": [{ "Type": "Processing", "Id": "Furnace" }],
-    "Output": [{ "ItemId": "Ingredient_Bar_Adamantite", "Quantity": 1 }],
+    "Input": [
+      {
+        "ItemId": "Craftory_Grit_Adamantite",
+        "Quantity": 1
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Processing",
+        "Id": "Furnace"
+      }
+    ],
+    "Output": [
+      {
+        "ItemId": "Ingredient_Bar_Adamantite",
+        "Quantity": 1
+      }
+    ],
     "TimeSeconds": 6
-  }
+  },
+  "Model": "Items/Craftory/Grit/Grit_Pile.blockymodel",
+  "Texture": "Items/Craftory/Grit/Grit_Adamantite_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

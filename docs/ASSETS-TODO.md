@@ -25,8 +25,12 @@ Regenerate generated assets with `python3 tools/art/build.py`. Preview models wi
   Claw and Net hold for 10 ticks; Cannon uses a 5-tick (0.25-second) pre-launch charge.
 - Vanilla-derived Craftory textures are generated for Glimmer Wisp, Sparkjaw, Riftmoth, Goblin
   Poacher and Vessa. Boiler running audio uses the verified liquid-bubbling steam-bursts event.
+- All 29 non-block Craftory items have held models and textures. Grit piles, Paint Daubs and Gob-Jars
+  each share a model across their texture variants; Notebook and Codex reuse the vanilla Book model
+  with Craftory textures. Notebook, Codex and Grizzlecog's Receipt also open from Secondary.
 
 ## Remaining
 
-- Tier 1–3 appearance work is complete; client verification remains for every appearance.
+- Tier 1–3 appearance work is complete; client verification remains for every appearance, including
+  the new held item models.
 - Storm Hunt part 2-owned items remain excluded from this work.

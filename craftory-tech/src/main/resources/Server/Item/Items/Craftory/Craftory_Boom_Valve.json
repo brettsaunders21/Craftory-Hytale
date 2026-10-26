@@ -16,5 +16,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Boom_Valve/Boom_Valve.blockymodel",
+  "Texture": "Items/Craftory/Boom_Valve/Boom_Valve_Texture.png"
 }

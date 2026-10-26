@@ -16,5 +16,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Squawk_Box/Squawk_Box.blockymodel",
+  "Texture": "Items/Craftory/Squawk_Box/Squawk_Box_Texture.png"
 }

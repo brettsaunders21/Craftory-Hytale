@@ -15,6 +15,15 @@
           "Type": "Craftory_CodexUse"
         }
       ]
+    },
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Craftory_CodexUse"
+        }
+      ]
     }
-  }
+  },
+  "Model": "Items/Weapons/Spellbook/Book.blockymodel",
+  "Texture": "Items/Craftory/Codex/Codex_Texture.png"
 }

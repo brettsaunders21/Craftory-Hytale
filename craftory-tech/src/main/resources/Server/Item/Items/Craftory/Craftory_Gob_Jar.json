@@ -16,5 +16,7 @@
         }
       ]
     }
-  }
+  },
+  "Model": "Items/Craftory/Gob_Jar/Gob_Jar.blockymodel",
+  "Texture": "Items/Craftory/Gob_Jar/Gob_Jar_Empty_Texture.png"
 }

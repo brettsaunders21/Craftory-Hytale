@@ -1,13 +1,35 @@
 {
-  "TranslationProperties": { "Name": "server.items.Craftory_Grit_Copper.name" },
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Grit_Copper.name"
+  },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Grit_Copper.png",
-  "Categories": ["Craftory.Materials"],
+  "Categories": [
+    "Craftory.Materials"
+  ],
   "Quality": "Common",
   "MaxStack": 100,
   "Recipe": {
-    "Input": [{ "ItemId": "Craftory_Grit_Copper", "Quantity": 1 }],
-    "BenchRequirement": [{ "Type": "Processing", "Id": "Furnace" }],
-    "Output": [{ "ItemId": "Ingredient_Bar_Copper", "Quantity": 1 }],
+    "Input": [
+      {
+        "ItemId": "Craftory_Grit_Copper",
+        "Quantity": 1
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Processing",
+        "Id": "Furnace"
+      }
+    ],
+    "Output": [
+      {
+        "ItemId": "Ingredient_Bar_Copper",
+        "Quantity": 1
+      }
+    ],
     "TimeSeconds": 6
-  }
+  },
+  "Model": "Items/Craftory/Grit/Grit_Pile.blockymodel",
+  "Texture": "Items/Craftory/Grit/Grit_Copper_Texture.png",
+  "PlayerAnimationsId": "Item"
 }

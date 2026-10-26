@@ -19,6 +19,7 @@ from hyart import Model, model_json, pack, paint, write_json, write_model  # noq
 import goblin_blocks as gb  # noqa: E402
 import goblin_items as gi  # noqa: E402
 import grizzlecog  # noqa: E402
+import hand_items  # noqa: E402
 import particles  # noqa: E402
 from render import render  # noqa: E402
 
@@ -126,6 +127,7 @@ def main() -> None:
     manifest: list[str] = []
     export_blocks(manifest)
     export_items(manifest)
+    hand_items.export(COMMON, COMMON.parent, manifest, build, written)
     export_particles(manifest)
     export_beams(manifest)
     export_trails(manifest)

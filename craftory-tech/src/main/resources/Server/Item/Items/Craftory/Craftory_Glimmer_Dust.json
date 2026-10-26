@@ -1,7 +1,14 @@
 {
-  "TranslationProperties": { "Name": "server.items.Craftory_Glimmer_Dust.name" },
+  "TranslationProperties": {
+    "Name": "server.items.Craftory_Glimmer_Dust.name"
+  },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Glimmer_Dust.png",
-  "Categories": ["Craftory.Materials"],
+  "Categories": [
+    "Craftory.Materials"
+  ],
   "Quality": "Common",
-  "MaxStack": 100
+  "MaxStack": 100,
+  "Model": "Items/Craftory/Glimmer_Dust/Glimmer_Dust.blockymodel",
+  "Texture": "Items/Craftory/Glimmer_Dust/Glimmer_Dust_Texture.png",
+  "PlayerAnimationsId": "Item"
 }
