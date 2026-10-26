@@ -5,7 +5,7 @@
       "name": "Canister",
       "position": {
         "x": 0.0,
-        "y": 8.87719,
+        "y": 9.47368,
         "z": 0.0
       },
       "orientation": {
@@ -28,16 +28,16 @@
         },
         "settings": {
           "size": {
-            "x": 24.0,
-            "y": 17.0,
-            "z": 22.0
+            "x": 27.69231,
+            "y": 17.89474,
+            "z": 25.38462
           },
           "isPiece": false
         },
         "textureLayout": {
           "top": {
             "offset": {
-              "x": 52,
+              "x": 60,
               "y": 0
             },
             "mirror": {
@@ -48,7 +48,7 @@
           },
           "bottom": {
             "offset": {
-              "x": 76,
+              "x": 88,
               "y": 0
             },
             "mirror": {
@@ -59,8 +59,8 @@
           },
           "front": {
             "offset": {
-              "x": 100,
-              "y": 0
+              "x": 0,
+              "y": 30
             },
             "mirror": {
               "x": false,
@@ -70,8 +70,8 @@
           },
           "back": {
             "offset": {
-              "x": 0,
-              "y": 26
+              "x": 28,
+              "y": 30
             },
             "mirror": {
               "x": false,
@@ -81,8 +81,8 @@
           },
           "left": {
             "offset": {
-              "x": 24,
-              "y": 26
+              "x": 56,
+              "y": 30
             },
             "mirror": {
               "x": false,
@@ -92,8 +92,8 @@
           },
           "right": {
             "offset": {
-              "x": 46,
-              "y": 26
+              "x": 81,
+              "y": 30
             },
             "mirror": {
               "x": false,
@@ -113,7 +113,7 @@
           "name": "Footplate",
           "position": {
             "x": 0.0,
-            "y": -6.87719,
+            "y": -7.36842,
             "z": 0.0
           },
           "orientation": {
@@ -136,9 +136,9 @@
             },
             "settings": {
               "size": {
-                "x": 26.0,
-                "y": 4.0,
-                "z": 26.0
+                "x": 30.0,
+                "y": 4.21053,
+                "z": 30.0
               },
               "isPiece": false
             },
@@ -156,7 +156,7 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 26,
+                  "x": 30,
                   "y": 0
                 },
                 "mirror": {
@@ -167,8 +167,8 @@
               },
               "front": {
                 "offset": {
-                  "x": 94,
-                  "y": 55
+                  "x": 0,
+                  "y": 92
                 },
                 "mirror": {
                   "x": false,
@@ -178,8 +178,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 0,
-                  "y": 67
+                  "x": 30,
+                  "y": 92
                 },
                 "mirror": {
                   "x": false,
@@ -189,8 +189,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 26,
-                  "y": 67
+                  "x": 60,
+                  "y": 92
                 },
                 "mirror": {
                   "x": false,
@@ -200,8 +200,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 52,
-                  "y": 67
+                  "x": 90,
+                  "y": 92
                 },
                 "mirror": {
                   "x": false,
@@ -221,7 +221,7 @@
           "name": "Rim",
           "position": {
             "x": 0.0,
-            "y": 7.85965,
+            "y": 8.42105,
             "z": 0.0
           },
           "orientation": {
@@ -244,17 +244,17 @@
             },
             "settings": {
               "size": {
-                "x": 20.0,
-                "y": 2.0,
-                "z": 16.0
+                "x": 23.07692,
+                "y": 2.10526,
+                "z": 18.46154
               },
               "isPiece": false
             },
             "textureLayout": {
               "top": {
                 "offset": {
-                  "x": 68,
-                  "y": 26
+                  "x": 0,
+                  "y": 48
                 },
                 "mirror": {
                   "x": false,
@@ -264,8 +264,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 88,
-                  "y": 26
+                  "x": 23,
+                  "y": 48
                 },
                 "mirror": {
                   "x": false,
@@ -275,8 +275,8 @@
               },
               "front": {
                 "offset": {
-                  "x": 102,
-                  "y": 67
+                  "x": 14,
+                  "y": 100
                 },
                 "mirror": {
                   "x": false,
@@ -286,8 +286,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 0,
-                  "y": 71
+                  "x": 37,
+                  "y": 100
                 },
                 "mirror": {
                   "x": false,
@@ -297,8 +297,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 100,
-                  "y": 71
+                  "x": 46,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -308,8 +308,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 0,
-                  "y": 73
+                  "x": 64,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -330,7 +330,7 @@
           "position": {
             "x": 0.0,
             "y": 0.0,
-            "z": 8.07692
+            "z": 8.65385
           },
           "orientation": {
             "x": 0.0,
@@ -352,9 +352,9 @@
             },
             "settings": {
               "size": {
-                "x": 8.0,
-                "y": 8.0,
-                "z": 1.0
+                "x": 9.23077,
+                "y": 8.42105,
+                "z": 1.15385
               },
               "isPiece": false
             },
@@ -362,7 +362,7 @@
               "front": {
                 "offset": {
                   "x": 24,
-                  "y": 55
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -372,8 +372,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 32,
-                  "y": 55
+                  "x": 33,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -383,8 +383,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 40,
-                  "y": 55
+                  "x": 42,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -394,8 +394,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 41,
-                  "y": 55
+                  "x": 43,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -405,8 +405,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 0,
-                  "y": 75
+                  "x": 98,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -416,8 +416,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 8,
-                  "y": 75
+                  "x": 107,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -437,7 +437,7 @@
           "name": "Nozzle",
           "position": {
             "x": 0.0,
-            "y": 12.77193,
+            "y": 13.68421,
             "z": 0.0
           },
           "orientation": {
@@ -460,17 +460,17 @@
             },
             "settings": {
               "size": {
-                "x": 6.0,
-                "y": 4.0,
-                "z": 6.0
+                "x": 6.92308,
+                "y": 4.21053,
+                "z": 6.92308
               },
               "isPiece": false
             },
             "textureLayout": {
               "top": {
                 "offset": {
-                  "x": 42,
-                  "y": 55
+                  "x": 44,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -480,8 +480,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 48,
-                  "y": 55
+                  "x": 51,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -491,8 +491,8 @@
               },
               "front": {
                 "offset": {
-                  "x": 78,
-                  "y": 67
+                  "x": 112,
+                  "y": 96
                 },
                 "mirror": {
                   "x": false,
@@ -502,8 +502,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 84,
-                  "y": 67
+                  "x": 119,
+                  "y": 96
                 },
                 "mirror": {
                   "x": false,
@@ -513,8 +513,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 90,
-                  "y": 67
+                  "x": 0,
+                  "y": 100
                 },
                 "mirror": {
                   "x": false,
@@ -524,8 +524,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 96,
-                  "y": 67
+                  "x": 7,
+                  "y": 100
                 },
                 "mirror": {
                   "x": false,
@@ -545,7 +545,7 @@
           "name": "Foam",
           "position": {
             "x": 0.0,
-            "y": 16.70175,
+            "y": 17.89474,
             "z": 0.0
           },
           "orientation": {
@@ -568,17 +568,17 @@
             },
             "settings": {
               "size": {
-                "x": 10.0,
-                "y": 5.0,
-                "z": 10.0
+                "x": 11.53846,
+                "y": 5.26316,
+                "z": 11.53846
               },
               "isPiece": false
             },
             "textureLayout": {
               "top": {
                 "offset": {
-                  "x": 4,
-                  "y": 55
+                  "x": 0,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -588,8 +588,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 14,
-                  "y": 55
+                  "x": 12,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -599,8 +599,8 @@
               },
               "front": {
                 "offset": {
-                  "x": 54,
-                  "y": 55
+                  "x": 58,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -610,8 +610,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 64,
-                  "y": 55
+                  "x": 70,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -621,8 +621,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 74,
-                  "y": 55
+                  "x": 82,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -632,8 +632,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 84,
-                  "y": 55
+                  "x": 94,
+                  "y": 80
                 },
                 "mirror": {
                   "x": false,
@@ -653,8 +653,8 @@
           "name": "Strap",
           "position": {
             "x": 0.0,
-            "y": 1.96491,
-            "z": 10.23077
+            "y": 2.10526,
+            "z": 10.96154
           },
           "orientation": {
             "x": 0.0,
@@ -676,17 +676,17 @@
             },
             "settings": {
               "size": {
-                "x": 20.0,
-                "y": 2.0,
-                "z": 2.0
+                "x": 23.07692,
+                "y": 2.10526,
+                "z": 2.30769
               },
               "isPiece": false
             },
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 20,
-                  "y": 71
+                  "x": 60,
+                  "y": 100
                 },
                 "mirror": {
                   "x": false,
@@ -696,8 +696,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 40,
-                  "y": 71
+                  "x": 83,
+                  "y": 100
                 },
                 "mirror": {
                   "x": false,
@@ -707,8 +707,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 60,
-                  "y": 71
+                  "x": 0,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -718,8 +718,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 80,
-                  "y": 71
+                  "x": 23,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -729,8 +729,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 112,
-                  "y": 73
+                  "x": 82,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -740,8 +740,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 114,
-                  "y": 73
+                  "x": 84,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -760,9 +760,9 @@
           "id": "8",
           "name": "BoltA",
           "position": {
-            "x": -7.53846,
+            "x": -8.07692,
             "y": 0.0,
-            "z": 8.61538
+            "z": 9.23077
           },
           "orientation": {
             "x": 0.0,
@@ -784,17 +784,17 @@
             },
             "settings": {
               "size": {
-                "x": 2.0,
-                "y": 2.0,
-                "z": 1.0
+                "x": 2.30769,
+                "y": 2.10526,
+                "z": 1.15385
               },
               "isPiece": false
             },
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 116,
-                  "y": 73
+                  "x": 86,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -804,8 +804,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 118,
-                  "y": 73
+                  "x": 88,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -815,8 +815,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 124,
-                  "y": 73
+                  "x": 94,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -826,8 +826,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 125,
-                  "y": 73
+                  "x": 95,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -837,8 +837,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 16,
-                  "y": 75
+                  "x": 116,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -848,8 +848,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 18,
-                  "y": 75
+                  "x": 118,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -868,9 +868,9 @@
           "id": "9",
           "name": "BoltB",
           "position": {
-            "x": 7.53846,
+            "x": 8.07692,
             "y": 0.0,
-            "z": 8.61538
+            "z": 9.23077
           },
           "orientation": {
             "x": 0.0,
@@ -892,17 +892,17 @@
             },
             "settings": {
               "size": {
-                "x": 2.0,
-                "y": 2.0,
-                "z": 1.0
+                "x": 2.30769,
+                "y": 2.10526,
+                "z": 1.15385
               },
               "isPiece": false
             },
             "textureLayout": {
               "front": {
                 "offset": {
-                  "x": 120,
-                  "y": 73
+                  "x": 90,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -912,8 +912,8 @@
               },
               "back": {
                 "offset": {
-                  "x": 122,
-                  "y": 73
+                  "x": 92,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -923,8 +923,8 @@
               },
               "left": {
                 "offset": {
-                  "x": 126,
-                  "y": 73
+                  "x": 96,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -934,8 +934,8 @@
               },
               "right": {
                 "offset": {
-                  "x": 127,
-                  "y": 73
+                  "x": 97,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -945,8 +945,8 @@
               },
               "top": {
                 "offset": {
-                  "x": 20,
-                  "y": 75
+                  "x": 120,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -956,8 +956,8 @@
               },
               "bottom": {
                 "offset": {
-                  "x": 22,
-                  "y": 75
+                  "x": 122,
+                  "y": 104
                 },
                 "mirror": {
                   "x": false,
@@ -977,7 +977,7 @@
           "name": "Steam-Emitter",
           "position": {
             "x": 0.0,
-            "y": 19.64912,
+            "y": 21.05263,
             "z": 0.0
           },
           "orientation": {
@@ -1014,7 +1014,7 @@
       "id": "11",
       "name": "PipeFlangex-16160",
       "position": {
-        "x": -15.0,
+        "x": -14.0,
         "y": 16.0,
         "z": 0.0
       },
@@ -1038,17 +1038,17 @@
         },
         "settings": {
           "size": {
-            "x": 2.0,
-            "y": 12.0,
-            "z": 12.0
+            "x": 4.0,
+            "y": 14.0,
+            "z": 14.0
           },
           "isPiece": false
         },
         "textureLayout": {
           "left": {
             "offset": {
-              "x": 108,
-              "y": 26
+              "x": 46,
+              "y": 48
             },
             "mirror": {
               "x": false,
@@ -1058,8 +1058,8 @@
           },
           "right": {
             "offset": {
-              "x": 0,
-              "y": 43
+              "x": 60,
+              "y": 48
             },
             "mirror": {
               "x": false,
@@ -1069,8 +1069,8 @@
           },
           "front": {
             "offset": {
-              "x": 108,
-              "y": 43
+              "x": 70,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1080,8 +1080,8 @@
           },
           "back": {
             "offset": {
-              "x": 110,
-              "y": 43
+              "x": 74,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1091,8 +1091,8 @@
           },
           "top": {
             "offset": {
-              "x": 112,
-              "y": 43
+              "x": 78,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1102,8 +1102,8 @@
           },
           "bottom": {
             "offset": {
-              "x": 114,
-              "y": 43
+              "x": 82,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1122,7 +1122,7 @@
       "id": "12",
       "name": "PipeFlangex16160",
       "position": {
-        "x": 15.0,
+        "x": 14.0,
         "y": 16.0,
         "z": 0.0
       },
@@ -1146,17 +1146,17 @@
         },
         "settings": {
           "size": {
-            "x": 2.0,
-            "y": 12.0,
-            "z": 12.0
+            "x": 4.0,
+            "y": 14.0,
+            "z": 14.0
           },
           "isPiece": false
         },
         "textureLayout": {
           "left": {
             "offset": {
-              "x": 12,
-              "y": 43
+              "x": 74,
+              "y": 48
             },
             "mirror": {
               "x": false,
@@ -1166,8 +1166,8 @@
           },
           "right": {
             "offset": {
-              "x": 24,
-              "y": 43
+              "x": 88,
+              "y": 48
             },
             "mirror": {
               "x": false,
@@ -1177,8 +1177,8 @@
           },
           "front": {
             "offset": {
-              "x": 116,
-              "y": 43
+              "x": 86,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1188,8 +1188,8 @@
           },
           "back": {
             "offset": {
-              "x": 118,
-              "y": 43
+              "x": 90,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1199,8 +1199,8 @@
           },
           "top": {
             "offset": {
-              "x": 120,
-              "y": 43
+              "x": 94,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1210,8 +1210,8 @@
           },
           "bottom": {
             "offset": {
-              "x": 122,
-              "y": 43
+              "x": 98,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1232,7 +1232,7 @@
       "position": {
         "x": 0.0,
         "y": 16.0,
-        "z": -15.0
+        "z": -14.0
       },
       "orientation": {
         "x": 0.0,
@@ -1254,17 +1254,17 @@
         },
         "settings": {
           "size": {
-            "x": 12.0,
-            "y": 12.0,
-            "z": 2.0
+            "x": 14.0,
+            "y": 14.0,
+            "z": 4.0
           },
           "isPiece": false
         },
         "textureLayout": {
           "front": {
             "offset": {
-              "x": 36,
-              "y": 43
+              "x": 102,
+              "y": 48
             },
             "mirror": {
               "x": false,
@@ -1274,8 +1274,8 @@
           },
           "back": {
             "offset": {
-              "x": 48,
-              "y": 43
+              "x": 0,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1285,8 +1285,8 @@
           },
           "left": {
             "offset": {
-              "x": 124,
-              "y": 43
+              "x": 102,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1296,8 +1296,8 @@
           },
           "right": {
             "offset": {
-              "x": 126,
-              "y": 43
+              "x": 106,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1307,8 +1307,8 @@
           },
           "top": {
             "offset": {
-              "x": 16,
-              "y": 73
+              "x": 0,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1318,8 +1318,8 @@
           },
           "bottom": {
             "offset": {
-              "x": 28,
-              "y": 73
+              "x": 14,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1340,7 +1340,7 @@
       "position": {
         "x": 0.0,
         "y": 16.0,
-        "z": 15.0
+        "z": 14.0
       },
       "orientation": {
         "x": 0.0,
@@ -1362,17 +1362,17 @@
         },
         "settings": {
           "size": {
-            "x": 12.0,
-            "y": 12.0,
-            "z": 2.0
+            "x": 14.0,
+            "y": 14.0,
+            "z": 4.0
           },
           "isPiece": false
         },
         "textureLayout": {
           "front": {
             "offset": {
-              "x": 60,
-              "y": 43
+              "x": 14,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1382,8 +1382,8 @@
           },
           "back": {
             "offset": {
-              "x": 72,
-              "y": 43
+              "x": 28,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1393,8 +1393,8 @@
           },
           "left": {
             "offset": {
-              "x": 0,
-              "y": 55
+              "x": 110,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1404,8 +1404,8 @@
           },
           "right": {
             "offset": {
-              "x": 2,
-              "y": 55
+              "x": 114,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1415,8 +1415,8 @@
           },
           "top": {
             "offset": {
-              "x": 40,
-              "y": 73
+              "x": 28,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1426,8 +1426,8 @@
           },
           "bottom": {
             "offset": {
-              "x": 52,
-              "y": 73
+              "x": 42,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1447,7 +1447,7 @@
       "name": "PipeFlangey0320",
       "position": {
         "x": 0.0,
-        "y": 31.0,
+        "y": 30.0,
         "z": 0.0
       },
       "orientation": {
@@ -1470,17 +1470,17 @@
         },
         "settings": {
           "size": {
-            "x": 12.0,
-            "y": 2.0,
-            "z": 12.0
+            "x": 14.0,
+            "y": 4.0,
+            "z": 14.0
           },
           "isPiece": false
         },
         "textureLayout": {
           "top": {
             "offset": {
-              "x": 84,
-              "y": 43
+              "x": 42,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1490,8 +1490,8 @@
           },
           "bottom": {
             "offset": {
-              "x": 96,
-              "y": 43
+              "x": 56,
+              "y": 66
             },
             "mirror": {
               "x": false,
@@ -1501,8 +1501,8 @@
           },
           "front": {
             "offset": {
-              "x": 64,
-              "y": 73
+              "x": 56,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1512,8 +1512,8 @@
           },
           "back": {
             "offset": {
-              "x": 76,
-              "y": 73
+              "x": 70,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1523,8 +1523,8 @@
           },
           "left": {
             "offset": {
-              "x": 88,
-              "y": 73
+              "x": 84,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1534,8 +1534,8 @@
           },
           "right": {
             "offset": {
-              "x": 100,
-              "y": 73
+              "x": 98,
+              "y": 96
             },
             "mirror": {
               "x": false,
@@ -1549,6 +1549,152 @@
         "doubleSided": false,
         "shadingMode": "standard"
       }
+    },
+    {
+      "id": "16",
+      "name": "StructuralLinks",
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "orientation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "w": 1.0
+      },
+      "shape": {
+        "type": "none",
+        "offset": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "stretch": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "settings": {
+          "isPiece": false
+        },
+        "textureLayout": {},
+        "unwrapMode": "custom",
+        "visible": true,
+        "doubleSided": false,
+        "shadingMode": "standard"
+      },
+      "children": [
+        {
+          "id": "17",
+          "name": "StructuralLink0",
+          "position": {
+            "x": 0.0,
+            "y": 20.52632,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "box",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "size": {
+                "x": 1.0,
+                "y": 5.26316,
+                "z": 1.0
+              },
+              "isPiece": false
+            },
+            "textureLayout": {
+              "front": {
+                "offset": {
+                  "x": 106,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "back": {
+                "offset": {
+                  "x": 107,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "left": {
+                "offset": {
+                  "x": 108,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "right": {
+                "offset": {
+                  "x": 109,
+                  "y": 80
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "top": {
+                "offset": {
+                  "x": 124,
+                  "y": 104
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              },
+              "bottom": {
+                "offset": {
+                  "x": 125,
+                  "y": 104
+                },
+                "mirror": {
+                  "x": false,
+                  "y": false
+                },
+                "angle": 0
+              }
+            },
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        }
+      ]
     }
   ],
   "format": "prop",

@@ -54,7 +54,7 @@ private val machineFootprints =
         "Crackle_Coil" to BlockFootprint(1, 2, 1),
         "Resonator" to BlockFootprint(1, 1, 1),
         "Gnasher_Pit" to BlockFootprint(2, 1, 1),
-        "Scorch_Oven" to BlockFootprint(2, 2, 1),
+        "Scorch_Oven" to BlockFootprint(2, 2, 2),
         "Rattlewheel" to BlockFootprint(1, 2, 1),
         "Shroom_Bed" to BlockFootprint(2, 1, 1),
         "Boomshroom_Burner" to BlockFootprint(1, 2, 1),
@@ -68,6 +68,13 @@ private val machineFootprints =
     )
 
 internal object BlockModelGeometry {
+    internal data class OrientedBox(
+        val name: String,
+        val center: DoubleArray,
+        val rotation: Array<DoubleArray>,
+        val halfSize: DoubleArray,
+    )
+
     private data class Face(
         val box: Int,
         val node: String,
@@ -87,6 +94,121 @@ internal object BlockModelGeometry {
             DoubleArray(3) { axis -> points.minOf { it[axis] } },
             DoubleArray(3) { axis -> points.maxOf { it[axis] } },
         )
+    }
+
+    fun boxes(model: JsonObject): List<OrientedBox> {
+        val boxes = mutableListOf<OrientedBox>()
+
+        fun collect(
+            node: JsonObject,
+            rotation: Array<DoubleArray>,
+            translation: DoubleArray,
+            parentOffset: DoubleArray,
+        ) {
+            val worldRotation = multiply(rotation, quaternionMatrix(node.getAsJsonObject("orientation")))
+            val worldTranslation =
+                add(translation, multiply(rotation, add(parentOffset, vector(node.getAsJsonObject("position")))))
+            val shape = node.getAsJsonObject("shape")
+            val offset = vector(shape.getAsJsonObject("offset"))
+            if (shape.get("visible").asBoolean && shape.get("type").asString == "box") {
+                val size = vector(shape.getAsJsonObject("settings").getAsJsonObject("size"))
+                val stretch = vector(shape.getAsJsonObject("stretch"))
+                boxes +=
+                    OrientedBox(
+                        node.get("name").asString,
+                        add(worldTranslation, multiply(worldRotation, offset)),
+                        worldRotation,
+                        DoubleArray(3) { size[it] * stretch[it] / 2 },
+                    )
+            }
+            node.getAsJsonArray("children")?.forEach {
+                collect(it.asJsonObject, worldRotation, worldTranslation, offset)
+            }
+        }
+
+        model.getAsJsonArray("nodes").forEach { collect(it.asJsonObject, identity(), DoubleArray(3), DoubleArray(3)) }
+        return boxes
+    }
+
+    fun bounds(boxes: List<OrientedBox>): ModelBounds {
+        val points =
+            boxes.flatMap { box ->
+                listOf(-1.0, 1.0).flatMap { x ->
+                    listOf(-1.0, 1.0).flatMap { y ->
+                        listOf(-1.0, 1.0).map { z ->
+                            add(
+                                box.center,
+                                multiply(
+                                    box.rotation,
+                                    doubleArrayOf(x * box.halfSize[0], y * box.halfSize[1], z * box.halfSize[2]),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        require(points.isNotEmpty()) { "model has no visible boxes" }
+        return ModelBounds(
+            DoubleArray(3) { axis -> points.minOf { it[axis] } },
+            DoubleArray(3) { axis -> points.maxOf { it[axis] } },
+        )
+    }
+
+    fun connectedComponents(boxes: List<OrientedBox>): List<List<String>> {
+        val unseen = boxes.indices.toMutableSet()
+        val components = mutableListOf<List<String>>()
+        while (unseen.isNotEmpty()) {
+            val pending = mutableListOf(unseen.first())
+            unseen.remove(pending.first())
+            val component = mutableListOf<String>()
+            while (pending.isNotEmpty()) {
+                val current = boxes[pending.removeAt(pending.lastIndex)]
+                component += current.name
+                val adjacent = unseen.filter { touchesOrOverlaps(current, boxes[it]) }
+                pending += adjacent
+                unseen.removeAll(adjacent.toSet())
+            }
+            components += component
+        }
+        return components
+    }
+
+    private fun touchesOrOverlaps(
+        first: OrientedBox,
+        second: OrientedBox,
+    ): Boolean {
+        val firstAxes = Array(3) { axis -> DoubleArray(3) { row -> first.rotation[row][axis] } }
+        val secondAxes = Array(3) { axis -> DoubleArray(3) { row -> second.rotation[row][axis] } }
+        val rotation = Array(3) { i -> DoubleArray(3) { j -> dot(firstAxes[i], secondAxes[j]) } }
+        val absRotation = Array(3) { i -> DoubleArray(3) { j -> abs(rotation[i][j]) + 1e-8 } }
+        val distance = DoubleArray(3) { axis -> dot(subtract(second.center, first.center), firstAxes[axis]) }
+        val epsilon = 0.05
+
+        for (i in 0..2) {
+            val secondRadius = (0..2).sumOf { second.halfSize[it] * absRotation[i][it] }
+            if (abs(distance[i]) > first.halfSize[i] + secondRadius + epsilon) return false
+        }
+        for (j in 0..2) {
+            val firstRadius = (0..2).sumOf { first.halfSize[it] * absRotation[it][j] }
+            val projectedDistance = abs((0..2).sumOf { distance[it] * rotation[it][j] })
+            if (projectedDistance > second.halfSize[j] + firstRadius + epsilon) return false
+        }
+        for (i in 0..2) {
+            for (j in 0..2) {
+                val axisA = (i + 1) % 3
+                val axisB = (i + 2) % 3
+                val firstRadius =
+                    first.halfSize[axisA] * absRotation[axisB][j] +
+                        first.halfSize[axisB] * absRotation[axisA][j]
+                val secondRadius =
+                    second.halfSize[(j + 1) % 3] * absRotation[i][(j + 2) % 3] +
+                        second.halfSize[(j + 2) % 3] * absRotation[i][(j + 1) % 3]
+                val projectedDistance =
+                    abs(distance[axisB] * rotation[axisA][j] - distance[axisA] * rotation[axisB][j])
+                if (projectedDistance > firstRadius + secondRadius + epsilon) return false
+            }
+        }
+        return true
     }
 
     fun coplanarSameNormalOverlaps(model: JsonObject): List<String> {
@@ -217,7 +339,10 @@ internal object BlockModelGeometry {
             add(translation, multiply(rotation, add(parentOffset, vector(node.getAsJsonObject("position")))))
         val shape = node.getAsJsonObject("shape")
         val offset = vector(shape.getAsJsonObject("offset"))
-        if (shape.get("visible").asBoolean && shape.get("type").asString == "box") {
+        if (shape.get("visible").asBoolean &&
+            shape.get("type").asString == "box" &&
+            !node.get("name").asString.startsWith("StructuralLink")
+        ) {
             val size = vector(shape.getAsJsonObject("settings").getAsJsonObject("size"))
             val stretch = vector(shape.getAsJsonObject("stretch"))
             val half = DoubleArray(3) { size[it] * stretch[it] / 2 }
@@ -385,6 +510,11 @@ internal object BlockModelGeometry {
         b: DoubleArray,
     ): DoubleArray = DoubleArray(3) { a[it] + b[it] }
 
+    private fun subtract(
+        a: DoubleArray,
+        b: DoubleArray,
+    ): DoubleArray = DoubleArray(3) { a[it] - b[it] }
+
     private fun multiply(
         matrix: Array<DoubleArray>,
         value: DoubleArray,
@@ -398,6 +528,51 @@ internal object BlockModelGeometry {
 }
 
 internal class BlockModelLintTest {
+    @Test
+    fun machineModelsHaveConnectedCubesAndBodiesFillTheirFootprints() {
+        val modelDirectory = common.resolve("Blocks/Craftory")
+        val failures = mutableListOf<String>()
+        val models =
+            Files.walk(modelDirectory).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".blockymodel") }.toList()
+            }
+        assertTrue(models.isNotEmpty(), "no Craftory block models found")
+
+        machineFootprints.forEach { (name, footprint) ->
+            val machineModels =
+                models.filter {
+                    it.fileName.toString().startsWith("${name}_") ||
+                        it.fileName.toString() == "$name.blockymodel"
+                }
+            assertTrue(machineModels.isNotEmpty(), "no models found for $name")
+            machineModels.forEach { path ->
+                val boxes = BlockModelGeometry.boxes(parse(path))
+                val components = BlockModelGeometry.connectedComponents(boxes)
+                if (components.size != 1) {
+                    failures +=
+                        "$path has disconnected cube groups: ${components.joinToString(" | ") { it.joinToString() }}"
+                }
+
+                val body =
+                    boxes.filterNot {
+                        it.name.startsWith("PipeFlange") || it.name.startsWith("StructuralLink")
+                    }
+                val bounds = BlockModelGeometry.bounds(body)
+                val requiredAxes = if (footprint.height == 2) listOf(0, 1, 2) else listOf(0, 2)
+                val expected = doubleArrayOf(footprint.width * 32.0, footprint.height * 32.0, footprint.depth * 32.0)
+                requiredAxes.forEach { axis ->
+                    val extent = bounds.max[axis] - bounds.min[axis]
+                    if (extent + 0.01 < expected[axis] * 0.9) {
+                        failures +=
+                            "$path body covers only $extent units on ${listOf("X", "Y", "Z")[axis]}; " +
+                            "expected at least ${expected[axis] * 0.9} excluding pipe flanges"
+                    }
+                }
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
     private val techResources = requireNotNull(resourceRoot("craftory-tech"))
     private val common = techResources.resolve("Common")
     private val items = techResources.resolve("Server/Item/Items/Craftory")

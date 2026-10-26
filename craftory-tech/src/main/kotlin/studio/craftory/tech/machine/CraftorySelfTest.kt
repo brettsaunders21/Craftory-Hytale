@@ -519,8 +519,6 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
                 null
             }
         val cells = BlockFootprints.cells(blockType, rotation, x, y, z)
-        val expectedWidth = if (rotation % 2 == 0) 2 else 1
-        val expectedDepth = if (rotation % 2 == 0) 1 else 2
         val actualRotation =
             store
                 .getComponent(run.sectionRef, BlockSection.getComponentType())
@@ -529,9 +527,10 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             placed &&
                 blockEntity != null &&
                 actualRotation == rotation &&
-                cells.size == 4 &&
-                cells.map { it.x }.distinct().size == expectedWidth &&
-                cells.map { it.z }.distinct().size == expectedDepth &&
+                cells.size == 8 &&
+                cells.toSet().size == 8 &&
+                cells.map { it.x }.distinct().size == 2 &&
+                cells.map { it.z }.distinct().size == 2 &&
                 cells.map { it.y }.distinct().size == 2
         val details =
             "$rotation:placed=$placed entity=${blockEntity != null} rotation=$actualRotation " +
@@ -3817,7 +3816,7 @@ object CraftorySelfTest {
                     CHAIN_SHROOM_BED,
                 ) +
                 ovenFillerPipePositions() +
-                footprintCells(OVEN, 2, 2) +
+                footprintCells(OVEN, 2, 2, 2) +
                 footprintCells(GNASHER, 2, 1) +
                 footprintCells(SHROOM_BED, 2, 1) +
                 footprintCells(WRENCH_TAKE_APART, 2, 1) +
@@ -3832,11 +3831,14 @@ object CraftorySelfTest {
         origin: TestPosition,
         width: Int,
         height: Int,
+        depth: Int = 1,
     ): List<TestPosition> =
         buildList {
             for (x in 0 until width) {
                 for (y in 0 until height) {
-                    if (x != 0 || y != 0) add(TestPosition(origin.x + x, origin.y + y, origin.z))
+                    for (z in 0 until depth) {
+                        if (x != 0 || y != 0 || z != 0) add(TestPosition(origin.x + x, origin.y + y, origin.z + z))
+                    }
                 }
             }
         }

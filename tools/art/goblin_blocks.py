@@ -598,29 +598,33 @@ def gnasher_pit():
 
 
 def scorch_oven(lit: bool):
-    oven = Box("Oven", (24, 22, 22), pos=(0, 11, 0), paint=SOOT_RUST)
-    oven.add(
-        Box("Door", (12, 10, 2), pos=(-2, -1, 11.2), rot=(0, 0, -3), paint=BRASS_RIV).add(
-            Box("DoorSlot", (8, 2, 1), pos=(0, 2, 1), paint=EMBER_GLOW if lit else DEAD_EMBER,
-                shading="fullbright" if lit else "standard"),
-            Box("DoorLatch", (2, 3, 2), pos=(5.2, -1, 1.2), paint=DARK_TIN),
+    firebox = Box("Firebox", (58, 44, 58), pos=(0, 22, 0), paint=SOOT_RUST)
+    firebox.add(
+        Box("Ashpan", (48, 4, 56), pos=(0, -19, 0), paint=DARK_TIN),
+        Box("LowerBand", (60, 4, 60), pos=(0, -15, 0), paint=CORRUGATED_RUST),
+        Box("DoorFrame", (36, 30, 4), pos=(0, 0, 29), rot=(0, 0, -1), paint=BRASS_RIV).add(
+            Box("DoorInset", (28, 22, 1), pos=(0, 0, 2), paint=SOOT_P),
+            Box(
+                "DoorSlot",
+                (22, 12, 1),
+                pos=(0, 1, 2.3),
+                paint=EMBER_GLOW if lit else DEAD_EMBER,
+                shading="fullbright" if lit else "standard",
+            ),
+            Box("DoorLatch", (3, 6, 3), pos=(17, -2, 1), paint=DARK_TIN),
         ),
-        Box("Ashpan", (14, 3, 3), pos=(-2, -8.8, 11), paint=DARK_TIN),
-        Box("RoofSheet", (26, 2, 24), pos=(0, 11.5, 0), rot=(0, 0, 3), paint=CORRUGATED_RUST),
-        Box("SidePatchL", (1, 10, 12), pos=(-12.4, 2, 1), rot=(5, 0, 0), paint=CORRUGATED),
-        Box("SidePatchR", (1, 8, 8), pos=(12.4, -4, -3), rot=(-4, 0, 0), paint=metal(RUST, rust=0.3)),
-        Box("Thermo", (3, 6, 1), pos=(8, 4, 11.3), paint=glass(EMBER if lit else (0.3, 0.3, 0.3), 0.7 if lit else 0.2)),
-        lashing("RopeBand", (25, 2, 23), pos=(0, 6, 0), rot=(0, 0, -2)),
-        Box("Chimney", (6, 14, 6), pos=(0, 18, 0), paint=SOOT_P).add(
-            Box("ChimneyCap", (9, 2, 9), pos=(0, 7.5, 0), rot=(0, 15, 6), paint=RUSTY),
+        Box("AshDoor", (30, 8, 3), pos=(0, -15, 29), paint=RUSTY),
+        Box("Hood", (62, 10, 62), pos=(0, 24, 0), paint=CORRUGATED_RUST),
+        Box("HoodRib", (60, 3, 60), pos=(0, 30.5, 0), paint=RUSTY),
+        Box("RoofPlate", (58, 4, 58), pos=(0, 40, 0), paint=SOOT_RUST),
+        Box("Thermo", (8, 12, 2), pos=(0, 0, 29), paint=glass(EMBER if lit else (0.3, 0.3, 0.3), 0.7 if lit else 0.2)),
+        Box("Chimney", (18, 22, 18), pos=(0, 32, 0), paint=SOOT_P).add(
+            Box("ChimneyBand", (22, 3, 22), pos=(0, 8, 0), paint=BRASS_RIV),
+            Box("ChimneyCap", (24, 3, 24), pos=(0, 10, 0), paint=RUSTY),
+            Box("Smoke-Emitter", pos=(0, 12, 0)),
         ),
-        Box("Smoke-Emitter", pos=(0, 27, 0)),
-        Box("Foot0", (4, 2, 4), pos=(-9, -9.5, -8), paint=DARK_TIN),
-        Box("Foot1", (4, 3, 4), pos=(9, -8.5, -8), paint=DARK_TIN),
-        Box("Foot2", (4, 2, 4), pos=(-9, -9.5, 8), paint=DARK_TIN),
-        Box("Foot3", (4, 2, 4), pos=(9, -9.5, 8), paint=DARK_TIN),
     )
-    return Model([oven]), {}
+    return Model([firebox]), {}
 
 
 # ------------------------------------------------------------------ Wakebell Anchor

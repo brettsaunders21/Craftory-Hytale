@@ -46,7 +46,7 @@ MACHINE_FOOTPRINTS = {
     "Crackle_Coil": (1, 2, 1),
     "Resonator": (1, 1, 1),
     "Gnasher_Pit": (2, 1, 1),
-    "Scorch_Oven": (2, 2, 1),
+    "Scorch_Oven": (2, 2, 2),
     "Rattlewheel": (1, 2, 1),
     "Shroom_Bed": (2, 1, 1),
     "Boomshroom_Burner": (1, 2, 1),
@@ -120,11 +120,12 @@ def model_bounds(model: Model) -> tuple[np.ndarray, np.ndarray]:
 def size_machine_model(name: str, model: Model) -> None:
     width, height, depth = MACHINE_FOOTPRINTS[name]
     lower, upper = model_bounds(model)
-    scale = np.asarray((32 * width - 4, 32 * height - 4, 32 * depth - 4)) / (upper - lower)
+    scale = np.asarray((32 * width - 2, 32 * height - 2, 32 * depth - 2)) / (upper - lower)
 
     def scale_node(node) -> None:
         node.pos = tuple(np.asarray(node.pos) * scale)
         node.offset = tuple(np.asarray(node.offset) * scale)
+        node.size = tuple(np.asarray(node.size) * scale)
         for child in node.children:
             scale_node(child)
 
@@ -140,14 +141,37 @@ def size_machine_model(name: str, model: Model) -> None:
 
 def add_pipe_ports(name: str, model: Model) -> None:
     width, height, depth = MACHINE_FOOTPRINTS[name]
+    flange_depth = 4
+    flange_width = 14
 
     def port(face: str, x: float, y: float, z: float, boundary: float, sign: int) -> None:
         if face == "x":
-            model.roots.append(Box(f"PipeFlange{face}{x}{y}{z}", (2, 12, 12), pos=(boundary - sign, y, z), paint=gb.BRASS_RIV))
+            model.roots.append(
+                Box(
+                    f"PipeFlange{face}{x}{y}{z}",
+                    (flange_depth, flange_width, flange_width),
+                    pos=(boundary - sign * flange_depth / 2, y, z),
+                    paint=gb.BRASS_RIV,
+                ),
+            )
         elif face == "z":
-            model.roots.append(Box(f"PipeFlange{face}{x}{y}{z}", (12, 12, 2), pos=(x, y, boundary - sign), paint=gb.BRASS_RIV))
+            model.roots.append(
+                Box(
+                    f"PipeFlange{face}{x}{y}{z}",
+                    (flange_width, flange_width, flange_depth),
+                    pos=(x, y, boundary - sign * flange_depth / 2),
+                    paint=gb.BRASS_RIV,
+                ),
+            )
         else:
-            model.roots.append(Box(f"PipeFlange{face}{x}{y}{z}", (12, 2, 12), pos=(x, boundary - sign, z), paint=gb.BRASS_RIV))
+            model.roots.append(
+                Box(
+                    f"PipeFlange{face}{x}{y}{z}",
+                    (flange_width, flange_depth, flange_width),
+                    pos=(x, boundary - sign * flange_depth / 2, z),
+                    paint=gb.BRASS_RIV,
+                ),
+            )
 
     for y_cell in range(height):
         y = y_cell * 32 + 16
@@ -165,6 +189,96 @@ def add_pipe_ports(name: str, model: Model) -> None:
             x = x_cell * 32
             z = z_cell * 32
             port("y", x, height * 32, z, height * 32, 1)
+
+
+def connect_machine_geometry(model: Model) -> None:
+    boxes = []
+
+    def visit(node, rotation, translation, parent_offset):
+        world_rotation = rotation @ quat_matrix(quat_from_euler(*node.rot))
+        world_translation = translation + rotation @ (parent_offset + np.asarray(node.pos))
+        if node.visible and node.has_shape and not node.quad:
+            center = world_translation + world_rotation @ np.asarray(node.offset)
+            half = np.asarray(node.size) * np.asarray(node.stretch) / 2
+            boxes.append((node, center, world_rotation, half))
+        for child in node.children:
+            visit(child, world_rotation, world_translation, np.asarray(node.offset))
+
+    for root in model.roots:
+        visit(root, np.eye(3), np.zeros(3), np.zeros(3))
+
+    def touches(first, second):
+        _, first_center, first_rotation, first_half = first
+        _, second_center, second_rotation, second_half = second
+        displacement = second_center - first_center
+        axes = [first_rotation[:, axis] for axis in range(3)]
+        axes.extend(second_rotation[:, axis] for axis in range(3))
+        axes.extend(
+            np.cross(first_rotation[:, first_axis], second_rotation[:, second_axis])
+            for first_axis in range(3)
+            for second_axis in range(3)
+        )
+        for axis in axes:
+            magnitude = np.linalg.norm(axis)
+            if magnitude < 1e-8:
+                continue
+            axis /= magnitude
+            first_radius = sum(first_half[i] * abs(np.dot(axis, first_rotation[:, i])) for i in range(3))
+            second_radius = sum(second_half[i] * abs(np.dot(axis, second_rotation[:, i])) for i in range(3))
+            if abs(np.dot(displacement, axis)) > first_radius + second_radius + 0.05:
+                return False
+        return True
+
+    parent = list(range(len(boxes)))
+
+    def find(index):
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    for first in range(len(boxes)):
+        for second in range(first + 1, len(boxes)):
+            if touches(boxes[first], boxes[second]):
+                parent[find(second)] = find(first)
+
+    components: dict[int, list[int]] = {}
+    for index in range(len(boxes)):
+        components.setdefault(find(index), []).append(index)
+    if len(components) < 2:
+        return
+
+    groups = sorted(
+        components.values(),
+        key=lambda group: sum(float(np.prod(boxes[index][3] * 2)) for index in group),
+        reverse=True,
+    )
+    anchor = groups[0]
+
+    def rod_rotation(direction):
+        direction = direction / np.linalg.norm(direction)
+        x = math.degrees(math.asin(float(np.clip(direction[2], -1, 1))))
+        z = math.degrees(math.atan2(-direction[0], direction[1]))
+        return (x, 0.0, z)
+
+    links = []
+    for link_index, group in enumerate(groups[1:]):
+        first, second = min(
+            ((boxes[a], boxes[b]) for a in anchor for b in group),
+            key=lambda pair: float(np.linalg.norm(pair[1][1] - pair[0][1])),
+        )
+        direction = second[1] - first[1]
+        distance = float(np.linalg.norm(direction))
+        links.append(
+            Box(
+                f"StructuralLink{link_index}",
+                size=(1.0, distance, 1.0),
+                pos=tuple((first[1] + second[1]) / 2),
+                rot=rod_rotation(direction),
+                paint=gb.DARK_TIN,
+            )
+        )
+    model.roots.append(Box("StructuralLinks", children=links))
 
 
 def validate_block_models(name: str, models: dict[str, tuple[Model, dict]]) -> None:
@@ -203,7 +317,7 @@ def validate_block_models(name: str, models: dict[str, tuple[Model, dict]]) -> N
                     for sz in (-1, 1)
                 ]
                 bottom = min(point[1] for point in points)
-                if bottom <= 0.01:
+                if bottom <= 0.01 and not node.name.startswith("StructuralLink"):
                     if abs(bottom) > 0.01:
                         raise ValueError(f"{label} base {node.name} does not sit at y=0: {bottom:.3f}")
                     if not np.allclose(world_rotation, np.eye(3), atol=1e-5):
@@ -387,6 +501,7 @@ def export_blocks(manifest: list[str]) -> None:
             for model, _ in raw.values():
                 size_machine_model(name, model)
                 add_pipe_ports(name, model)
+                connect_machine_geometry(model)
         validate_block_models(name, raw)
         if name == "Gutterpipe":
             master = build(gb.gutterpipe_master(), name)
