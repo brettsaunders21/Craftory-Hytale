@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.Resource
 import com.hypixel.hytale.component.ResourceType
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
-import com.hypixel.hytale.server.core.asset.type.fluid.Fluid
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
@@ -221,7 +220,7 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
                 .getChunkSectionReferenceAtBlock(sourceX, sourceY, sourceZ)
                 ?: return false
         val section = currentStore.getComponent(sectionRef, FluidSection.getComponentType()) ?: return false
-        if (section.getFluidId(sourceX, sourceY, sourceZ) != WATER_SOURCE_INDEX) return false
+        if (section.getFluid(sourceX, sourceY, sourceZ)?.id != WATER_SOURCE) return false
         graph.insert(pos, intern(WATER_SOURCE), SOURCE_PULL_AMOUNT)
         return true
     }
@@ -353,7 +352,6 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         private const val SOURCE_PULL_AMOUNT = 50L
         private const val HANDLER_TRANSFER_AMOUNT = 50L
         private const val WATER_SOURCE = "Water_Source"
-        private val WATER_SOURCE_INDEX: Int = Fluid.getAssetMap().getIndex(WATER_SOURCE)
         private val FACES =
             arrayOf(
                 intArrayOf(1, 0, 0),

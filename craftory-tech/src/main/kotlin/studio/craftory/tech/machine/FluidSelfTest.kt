@@ -27,6 +27,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection
 import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
@@ -113,7 +114,13 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
             }
             if (run.world.tick - run.startTick >= FluidSelfTestCases.MAX_RUNTIME_TICKS) {
                 run.testTicking = false
-                FluidSelfTestState.fail(run, "F${run.stage}", "selftest timed out")
+                val caseNumber = (run.stage + 1).coerceAtMost(9)
+                FluidSelfTestState.fail(
+                    run,
+                    "MAX_RUNTIME",
+                    "after ${run.world.tick - run.startTick} ticks while waiting for F$caseNumber; " +
+                        FluidSelfTestCases.timeoutDetail(run, store),
+                )
                 FluidSelfTestCleanup.cleanup(run, store)
                 return
             }
@@ -122,6 +129,7 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
                 if (!run.loading) FluidSelfTestCases.loadAndPlace(run)
                 return
             }
+            val stage = run.stage
             when (run.stage) {
                 0 -> FluidSelfTestCases.tickF1(run)
                 1 -> FluidSelfTestCases.tickF2(run)
@@ -132,6 +140,25 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
                 6 -> FluidSelfTestCases.tickF7(run)
                 7 -> FluidSelfTestCases.tickF8(run, store)
                 else -> FluidSelfTestCleanup.cleanup(run, store)
+            }
+            if (run.stage == stage && stage in 0..7 &&
+                FluidSelfTestState.elapsed(run) > fluidSelfTestTimeoutTicks(stage)
+            ) {
+                FluidSelfTestState.fail(
+                    run,
+                    "F${stage + 1}",
+                    FluidSelfTestCases.timeoutDetail(run, store),
+                )
+                if (stage == 6) {
+                    val chunkIndex =
+                        ChunkUtil.indexChunk(
+                            FluidSelfTestCases.BASE.x shr 5,
+                            FluidSelfTestCases.BASE.z shr 5,
+                        )
+                    FluidSelfTestReload.releaseSaveHold(run, chunkIndex)
+                    run.testTicking = true
+                }
+                FluidSelfTestState.next(run)
             }
         } catch (failure: IllegalStateException) {
             handleFailure(run, store, failure)
@@ -279,7 +306,7 @@ internal object FluidSelfTestCases {
             FluidSelfTestState.pass(run, "F1 pipe to Sloshtank source fill")
             FluidSelfTestState.next(run)
         } else if (FluidSelfTestState.elapsed(run) > CASE_TIMEOUT_TICKS) {
-            FluidSelfTestState.fail(run, "F1", "tank stayed empty beside Water_Source")
+            FluidSelfTestState.fail(run, "F1", timeoutDetail(run, run.world.chunkStore.store))
             FluidSelfTestState.next(run)
         }
     }
@@ -292,7 +319,7 @@ internal object FluidSelfTestCases {
             FluidSelfTestState.pass(run, "F2 stacked tanks merge; horizontal tank stays separate")
             FluidSelfTestState.next(run)
         } else if (FluidSelfTestState.elapsed(run) > CASE_TIMEOUT_TICKS) {
-            FluidSelfTestState.fail(run, "F2", "stacked=$stacked side=$side")
+            FluidSelfTestState.fail(run, "F2", timeoutDetail(run, run.world.chunkStore.store))
             FluidSelfTestState.next(run)
         }
     }
@@ -341,12 +368,7 @@ internal object FluidSelfTestCases {
             FluidSelfTestState.pass(run, "F3 Pressurised rank 1 and 20/40 tick Gnasher pulses")
             FluidSelfTestState.next(run)
         } else if (tick - run.stageStartTick > F3_TIMEOUT_TICKS) {
-            FluidSelfTestState.fail(
-                run,
-                "F3",
-                "production=${boilerMember.production}/${boilerMember.productionRank} " +
-                    "pulseIntervals=${run.highPulseInterval}/${run.lowPulseInterval}",
-            )
+            FluidSelfTestState.fail(run, "F3", timeoutDetail(run, store))
             FluidSelfTestState.next(run)
         }
     }
@@ -370,7 +392,7 @@ internal object FluidSelfTestCases {
         val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER)
         if (boilerRef == null) {
             if (FluidSelfTestState.elapsed(run) > CASE_TIMEOUT_TICKS) {
-                FluidSelfTestState.fail(run, "F5", "boiler block entity disappeared during pop")
+                FluidSelfTestState.fail(run, "F5", timeoutDetail(run, run.world.chunkStore.store))
                 FluidSelfTestState.next(run)
             }
             return
@@ -407,7 +429,7 @@ internal object FluidSelfTestCases {
             }
             FluidSelfTestState.next(run)
         } else if (FluidSelfTestState.elapsed(run) > CASE_TIMEOUT_TICKS) {
-            FluidSelfTestState.fail(run, "F5", "boiler did not pop")
+            FluidSelfTestState.fail(run, "F5", timeoutDetail(run, store))
             FluidSelfTestState.next(run)
         }
     }
@@ -421,7 +443,7 @@ internal object FluidSelfTestCases {
         val stored = energy.stored(pos)
         if (stored < GasbagRules.leakAmount(GASBAG_CAPACITY)) {
             if (FluidSelfTestState.elapsed(run) > F3_TIMEOUT_TICKS) {
-                FluidSelfTestState.fail(run, "F6", "gasbag did not charge from its Burner network ($stored)")
+                FluidSelfTestState.fail(run, "F6", timeoutDetail(run, store))
                 FluidSelfTestState.next(run)
             }
             return
@@ -458,7 +480,7 @@ internal object FluidSelfTestCases {
                 run.gasbagPatched = true
             }
         } else if (FluidSelfTestState.elapsed(run) > F3_TIMEOUT_TICKS) {
-            FluidSelfTestState.fail(run, "F6", "leak did not drain at 1%/s (before=${run.leakAmount}, now=$stored)")
+            FluidSelfTestState.fail(run, "F6", timeoutDetail(run, store))
             FluidSelfTestState.next(run)
         }
     }
@@ -477,7 +499,7 @@ internal object FluidSelfTestCases {
         if (!store.getArchetype(sectionRef).contains(nonTicking)) {
             run.testTicking = false
             if (FluidSelfTestState.elapsed(run) > SECTION_TIMEOUT_TICKS) {
-                FluidSelfTestState.fail(run, "F8", "test section did not become NonTicking")
+                FluidSelfTestState.fail(run, "F8", timeoutDetail(run, store))
                 FluidSelfTestState.next(run)
             }
             return
@@ -505,7 +527,7 @@ internal object FluidSelfTestCases {
                 FluidSelfTestState.fail(
                     run,
                     "F8",
-                    "tank changed in NonTicking area ${run.frozenAmount}->$amount",
+                    timeoutDetail(run, store) + " tank changed ${run.frozenAmount}->$amount",
                 )
             }
             FluidSelfTestState.next(run)
@@ -556,7 +578,138 @@ internal object FluidSelfTestCases {
     val GASBAG_BURNER = Position(BASE.x + 17, BASE.y, BASE.z)
     val GASBAG_PIPE = Position(BASE.x + 18, BASE.y, BASE.z)
     val GASBAG = Position(BASE.x + 19, BASE.y, BASE.z)
+
+    fun timeoutDetail(
+        run: FluidSelfTestRun.Run,
+        store: Store<ChunkStore>,
+    ): String {
+        val fluid = FluidTransport.of(run.world)
+        val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER)
+        val boiler = boilerRef?.let { store.getComponent(it, BoilerState.type) }
+        val boilerMember = boilerRef?.let { store.getComponent(it, EnergyMember.type) }
+        val gasbagPosition = BlockPos.pack(GASBAG.x, GASBAG.y, GASBAG.z)
+        val gasbagStored = CraftoryCore.energyAccess(run.world).stored(gasbagPosition)
+        val gasbagRef = FluidSelfTestSetup.blockEntity(run.world, GASBAG)
+        val gasbag = gasbagRef?.let { store.getComponent(it, GasbagState.type) }
+        val elapsed = FluidSelfTestState.elapsed(run)
+        val details =
+            when (run.stage) {
+                0 -> {
+                    val sectionRef =
+                        run.world.chunkStore.getChunkSectionReferenceAtBlock(SOURCE.x, SOURCE.y, SOURCE.z)
+                    val blockSection = sectionRef?.let { store.getComponent(it, BlockSection.getComponentType()) }
+                    val fluidSection = sectionRef?.let { store.getComponent(it, FluidSection.getComponentType()) }
+                    val blockIndex = blockSection?.get(SOURCE.x, SOURCE.y, SOURCE.z)
+                    val blockId =
+                        blockIndex?.let { BlockType.getAssetMap().getAsset(it)?.id ?: "index=$it" }
+                            ?: "missing"
+                    val sourceFluid = fluidSection?.getFluid(SOURCE.x, SOURCE.y, SOURCE.z)
+                    val sourceFluidIndex = fluidSection?.getFluidId(SOURCE.x, SOURCE.y, SOURCE.z) ?: -1
+                    val sourceFluidId =
+                        sourceFluid?.id
+                            ?: if (sourceFluidIndex >= 0) {
+                                Fluid.getAssetMap().getAsset(sourceFluidIndex)?.id ?: "index=$sourceFluidIndex"
+                            } else {
+                                "none"
+                            }
+                    val sourceLevel = fluidSection?.getFluidLevel(SOURCE.x, SOURCE.y, SOURCE.z) ?: 0
+                    val pipeRef = FluidSelfTestSetup.blockEntity(run.world, F1_PIPE)
+                    val pipeState =
+                        pipeRef?.let {
+                            store.getComponent(it, BlockModule.BlockStateInfo.getComponentType())
+                        }
+                    val pipeActive = pipeState?.let { CraftoryCore.isAreaActive(store, it) } ?: false
+                    val pipeNeighbours =
+                        listOf(
+                            fluid.isNode(F1_PIPE.x + 1, F1_PIPE.y, F1_PIPE.z),
+                            fluid.isNode(F1_PIPE.x - 1, F1_PIPE.y, F1_PIPE.z),
+                            fluid.isNode(F1_PIPE.x, F1_PIPE.y + 1, F1_PIPE.z),
+                            fluid.isNode(F1_PIPE.x, F1_PIPE.y - 1, F1_PIPE.z),
+                            fluid.isNode(F1_PIPE.x, F1_PIPE.y, F1_PIPE.z + 1),
+                            fluid.isNode(F1_PIPE.x, F1_PIPE.y, F1_PIPE.z - 1),
+                        ).count { it }
+                    "waiting for source pull into tank; sourceBlock=$blockId " +
+                        "sourceFluid=$sourceFluidId(index=$sourceFluidIndex) level=$sourceLevel " +
+                        "pipeActive=$pipeActive pipeNeighbours=$pipeNeighbours " +
+                        "pipeAmount=${fluid.amount(F1_PIPE.x, F1_PIPE.y, F1_PIPE.z)} " +
+                        "tankAmount=${fluid.amount(F1_TANK.x, F1_TANK.y, F1_TANK.z)}"
+                }
+
+                1 -> {
+                    val positions = listOf(F2_BOTTOM, F2_TOP, F2_SIDE)
+                    val values =
+                        positions.joinToString { position ->
+                            "${position.x},${position.y},${position.z}:" +
+                                "node=${fluid.isNode(position.x, position.y, position.z)}," +
+                                "capacity=${fluid.capacity(position.x, position.y, position.z)}," +
+                                "amount=${fluid.amount(position.x, position.y, position.z)}," +
+                                "fluid=${fluid.fluid(position.x, position.y, position.z)}"
+                        }
+                    "waiting for vertical capacity 16000 and horizontal capacity 8000; nodes=[$values]"
+                }
+
+                2 -> {
+                    "waiting for rank-1 boiler production and 20/40 tick pulses; " +
+                        "boilerPresent=${boiler != null} pressure=${boiler?.pressure} online=${boiler?.online} " +
+                        "water=${boiler?.water} fuelTicks=${boiler?.fuelTicks} " +
+                        "production=${boilerMember?.production} rank=${boilerMember?.productionRank} " +
+                        "stored=${boilerMember?.stored} " +
+                        "pulses=${run.highPulseInterval}/${run.lowPulseInterval} " +
+                        "last=${run.highPulseTick}/${run.lowPulseTick}"
+                }
+
+                3 -> {
+                    "waiting for vent to reduce pressure to 57; pressure=${boiler?.pressure} " +
+                        "online=${boiler?.online} water=${boiler?.water} fuelTicks=${boiler?.fuelTicks}"
+                }
+
+                4 -> {
+                    "waiting for pop then re-rivet; online=${boiler?.online} pressure=${boiler?.pressure} " +
+                        "water=${boiler?.water} fuelTicks=${boiler?.fuelTicks} " +
+                        "blockEntityPresent=${boilerRef != null} scraps=2"
+                }
+
+                5 -> {
+                    "waiting for gasbag charge/leak/patch; stored=$gasbagStored capacity=$GASBAG_CAPACITY " +
+                        "leaking=${gasbag?.leaking} patched=${run.gasbagPatched} baseline=${run.leakAmount}"
+                }
+
+                6 -> {
+                    "waiting for real chunk unload/reload; started=${run.reloadStarted} saving=${run.reloadSaving} " +
+                        "saved=${run.reloadSaved} requested=${run.reloadRequested} complete=${run.reloadComplete} " +
+                        "failure=${run.reloadFailure} tank=${fluid.amount(F1_TANK.x, F1_TANK.y, F1_TANK.z)}/" +
+                        "${fluid.capacity(F1_TANK.x, F1_TANK.y, F1_TANK.z)} expected=${run.frozenAmount}"
+                }
+
+                7 -> {
+                    val sectionRef =
+                        run.world.chunkStore.getChunkSectionReferenceAtBlock(BASE.x, BASE.y, BASE.z)
+                    val sectionValid = sectionRef?.isValid == true
+                    val nonTicking =
+                        sectionRef?.takeIf { it.isValid }?.let {
+                            store.getArchetype(it).contains(ChunkStore.REGISTRY.getNonTickingComponentType())
+                        } ?: false
+                    "waiting for NonTicking freeze; sectionValid=$sectionValid nonTicking=$nonTicking " +
+                        "tank=${fluid.amount(F1_TANK.x, F1_TANK.y, F1_TANK.z)}/" +
+                        "${fluid.capacity(F1_TANK.x, F1_TANK.y, F1_TANK.z)} expected=${run.frozenAmount}"
+                }
+
+                else -> {
+                    FluidSelfTestCleanup.timeoutDetail(run)
+                }
+            }
+        return "$details elapsed=$elapsed ticks"
+    }
 }
+
+private fun fluidSelfTestTimeoutTicks(stage: Int): Long =
+    when (stage) {
+        0, 1, 3, 4 -> FluidSelfTestCases.CASE_TIMEOUT_TICKS
+        2, 5 -> FluidSelfTestCases.F3_TIMEOUT_TICKS
+        6 -> FluidSelfTestCases.RELOAD_TIMEOUT_TICKS
+        7 -> FluidSelfTestCases.SECTION_TIMEOUT_TICKS
+        else -> FluidSelfTestCases.CLEANUP_TIMEOUT_TICKS
+    }
 
 internal object FluidSelfTestReload {
     fun tick(run: FluidSelfTestRun.Run) {
@@ -575,8 +728,9 @@ internal object FluidSelfTestReload {
         if (run.reloadSaved && !run.reloadRequested) requestReload(run, chunkIndex)
         if (run.reloadComplete) verifyFluid(run, chunkIndex)
         if (!run.reloadComplete && FluidSelfTestState.elapsed(run) > FluidSelfTestCases.RELOAD_TIMEOUT_TICKS) {
-            FluidSelfTestState.fail(run, "F7", "fluid chunk unload/reload timed out")
+            FluidSelfTestState.fail(run, "F7", FluidSelfTestCases.timeoutDetail(run, run.world.chunkStore.store))
             releaseSaveHold(run, chunkIndex)
+            run.testTicking = true
             FluidSelfTestState.next(run)
         }
     }
@@ -763,13 +917,24 @@ internal object FluidSelfTestCleanup {
             FluidSelfTestState.fail(
                 run,
                 "F9",
-                "fluidNodes=$remainingFluidNodes energyMembers=$remainingEnergyMembers " +
-                    "keepLoaded=${run.keepLoadedCount} drops=$drops",
+                timeoutDetail(run),
             )
             run.context.sendMessage(Message.raw("selftest: fluids ${run.passed} passed, ${run.failed} failed"))
             run.cleanupComplete = true
             store.getResource(FluidSelfTestRun.type).active = null
         }
+    }
+
+    fun timeoutDetail(run: FluidSelfTestRun.Run): String {
+        val fluid = FluidTransport.of(run.world)
+        val remainingFluidNodes = run.blocks.count { fluid.isNode(it.x, it.y, it.z) }
+        val energy = CraftoryCore.energyAccess(run.world)
+        val remainingEnergyMembers =
+            run.blocks.count { energy.networkMembers(BlockPos.pack(it.x, it.y, it.z)) > 0 }
+        val drops = FluidSelfTestDrops.countDrops(run.world)
+        return "waiting for graph/energy/keep-loaded/drop cleanup; fluidNodes=$remainingFluidNodes " +
+            "energyMembers=$remainingEnergyMembers keepLoaded=${run.keepLoadedCount} drops=$drops " +
+            "cleanupStarted=${run.blocksCleared}"
     }
 }
 

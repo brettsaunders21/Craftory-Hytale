@@ -2,7 +2,6 @@ package studio.craftory.tech.machine
 
 import com.hypixel.hytale.builtin.crafting.component.BenchBlock
 import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock
-import com.hypixel.hytale.builtin.crafting.system.BenchSystems
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
@@ -197,10 +196,7 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         )
 
     override fun getDependencies(): Set<Dependency<ChunkStore>> =
-        setOf(
-            SystemDependency(Order.BEFORE, EnergySolveSystem::class.java),
-            SystemDependency(Order.BEFORE, BenchSystems.ProcessingBenchTick::class.java),
-        )
+        setOf(SystemDependency(Order.BEFORE, EnergySolveSystem::class.java))
 
     override fun isParallel(
         systemIndex: Int,
@@ -234,13 +230,6 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         if (!CraftoryCore.isAreaActive(store, blockState)) {
             MachineClock.pause(power, tick)
             return
-        }
-        val progressAdjustment = TinkeredSpeed.progressAdjustment(dt, member.deliveredRank)
-        val hasFizzCharge = bench.fuelContainer.getItemStack(0.toShort())?.itemId == CraftoryIds.FIZZ_CHARGE
-        if (progressAdjustment > 0f && bench.isActive() && hasRecipeInput(bench)) {
-            if (bench.fuelTime > 0f || hasFizzCharge) {
-                bench.inputProgress -= progressAdjustment
-            }
         }
         if (!CraftoryCore.isEnergyTick(store)) return
         val powerLoss = OvenPowerMath.updatePowerLoss(power.lastDeliveredTick, tick, member.delivered > 0)

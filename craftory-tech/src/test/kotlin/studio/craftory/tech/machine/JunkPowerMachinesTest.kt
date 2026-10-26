@@ -139,7 +139,7 @@ class JunkPowerMachinesTest {
     }
 
     @Test
-    fun `plain fizz preserves oven demand while slowing processing`() {
+    fun `oven keeps full demand while plain fizz slows only the gnasher`() {
         assertEquals(100, TinkeredSpeed.percent(1))
         assertEquals(50, TinkeredSpeed.percent(0))
         val oven =
@@ -155,8 +155,6 @@ class JunkPowerMachinesTest {
         assertEquals(OvenFizzAccounting.FIZZ_PER_SOLVE_TICK, oven.demand)
         assertEquals(OvenFizzAccounting.FIZZ_PER_CHARGE, oven.accumulatedFizz)
         assertTrue(oven.shouldInsertCharge)
-        assertEquals(0.5f, TinkeredSpeed.progressAdjustment(1f, 0))
-        assertEquals(0f, TinkeredSpeed.progressAdjustment(1f, 1))
 
         val gnasher = GnasherState(lastAutoCrankTick = 0)
         assertTrue(GnasherMachine.deposit(gnasher, "Ore_Copper"))
