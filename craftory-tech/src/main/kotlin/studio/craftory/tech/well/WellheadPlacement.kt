@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.EntityEventSystem
 import com.hypixel.hytale.server.core.Message
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent
@@ -81,6 +82,8 @@ internal class WellheadPlacementSystem :
         val store = world.chunkStore.store
         val state = store.getComponent(ref, WellheadState.type) ?: return
         state.wellPosition = wellPosition.pack()
+        state.wellBirthTick = liveWell.birthTick
+        state.wellTemperament = liveWell.temperament.name
         state.harmony = CradleSystem.harmonyAt(store, position, liveWell.taste)
         state.lastHarmonyTick = world.tick
         store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
@@ -108,7 +111,7 @@ internal class WellheadBreakSystem : EntityEventSystem<EntityStore, BreakBlockEv
         commandBuffer: CommandBuffer<EntityStore>,
         event: BreakBlockEvent,
     ) {
-        if (event.isCancelled || event.blockType.id != CraftoryIds.WELLHEAD) return
+        if (event.isCancelled || !isWellheadBlockOrState(event.blockType.id)) return
         val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
         val position = event.targetBlock
         val world = store.externalData.world
@@ -118,7 +121,16 @@ internal class WellheadBreakSystem : EntityEventSystem<EntityStore, BreakBlockEv
             player.sendMessage(Message.translation("server.craftory.wellhead.foreign-crew"))
             return
         }
-        if (wellPosition != null) CraftoryCore.wells().setState(world, wellPosition, WellState.TETHERED)
+        if (wellPosition != null) {
+            val well =
+                CraftoryCore
+                    .wells()
+                    .wellsNear(world.chunkStore.store, wellPosition, 0)
+                    .firstOrNull()
+                    ?.well
+            val state = well?.let { TetherStakeRules.afterWellheadBreak(it.state) }
+            if (state != null) CraftoryCore.wells().setState(world, wellPosition, state)
+        }
     }
 }
 
@@ -133,7 +145,7 @@ internal class WellheadDamageSystem :
         commandBuffer: CommandBuffer<EntityStore>,
         event: DamageBlockEvent,
     ) {
-        if (event.isCancelled || event.blockType.id != CraftoryIds.WELLHEAD) return
+        if (event.isCancelled || !isWellheadBlockOrState(event.blockType.id)) return
         val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
         val position = event.targetBlock
         if (!mayOperate(
@@ -147,6 +159,17 @@ internal class WellheadDamageSystem :
         }
     }
 }
+
+private fun isWellheadBlockOrState(blockId: String): Boolean {
+    val wellheadType = BlockType.fromString(CraftoryIds.WELLHEAD) ?: return false
+    return matchesBlockOrState(blockId, wellheadType.id) { wellheadType.getStateForBlock(it) != null }
+}
+
+internal fun matchesBlockOrState(
+    blockId: String,
+    baseTypeId: String,
+    isStateVariant: (String) -> Boolean,
+): Boolean = blockId == baseTypeId || isStateVariant(blockId)
 
 private fun wellPosition(
     world: World,

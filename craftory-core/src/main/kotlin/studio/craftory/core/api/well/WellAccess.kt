@@ -1,3 +1,5 @@
+@file:Suppress("TooGenericExceptionCaught")
+
 package studio.craftory.core.api.well
 
 import com.hypixel.hytale.component.Ref
@@ -28,7 +30,6 @@ data class WellRemovalEvent(
     val pos: BlockPos,
 )
 
-@Suppress("TooGenericExceptionCaught")
 class WellAccess internal constructor() {
     private val bornListeners = CopyOnWriteArrayList<(WellEvent) -> Unit>()
     internal val removedListeners = CopyOnWriteArrayList<(WellRemovalEvent) -> Unit>()
@@ -232,7 +233,7 @@ internal fun WellAccess.fireWellRemoved(
     removedListeners.forEach { listener ->
         try {
             listener(event)
-        } catch (exception: IllegalStateException) {
+        } catch (exception: RuntimeException) {
             Logger
                 .getLogger(WellAccess::class.java.name)
                 .log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)

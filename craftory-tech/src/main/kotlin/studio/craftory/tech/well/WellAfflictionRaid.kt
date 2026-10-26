@@ -48,6 +48,7 @@ internal fun processRaid(
     position: BlockPos,
     well: Glimmerwell,
     affliction: WellAffliction,
+    ownerCrewOnline: Boolean,
 ) {
     if (affliction.raidNpcIds.isEmpty()) return
     if (affliction.walkerId.isEmpty()) {
@@ -57,22 +58,41 @@ internal fun processRaid(
         }
         return
     }
-    val uuid = runCatching { java.util.UUID.fromString(affliction.walkerId) }.getOrNull() ?: return
-    val walkerRef = world.entityStore.getRefFromUUID(uuid) ?: return
+    val uuid = runCatching { java.util.UUID.fromString(affliction.walkerId) }.getOrNull()
+    if (uuid == null) {
+        cleanupMissingRaid(world, position, affliction)
+        return
+    }
+    val walkerRef = world.entityStore.getRefFromUUID(uuid)
+    if (walkerRef == null) {
+        cleanupMissingRaid(world, position, affliction)
+        return
+    }
     if (!walkerRef.isValid ||
         world.entityStore.store.getComponent(walkerRef, DeathComponent.getComponentType()) != null
     ) {
+        cleanupMissingRaid(world, position, affliction)
         return
     }
-    val transform = world.entityStore.store.getComponent(walkerRef, TransformComponent.getComponentType()) ?: return
+    val transform = world.entityStore.store.getComponent(walkerRef, TransformComponent.getComponentType())
+    if (transform == null) {
+        cleanupMissingRaid(world, position, affliction)
+        return
+    }
     val distance = transform.position.distanceSquared(position.x + 0.5, position.y + 0.5, position.z + 0.5)
     if (distance > SIPHON_DISTANCE_SQUARED) {
         clearSiphonBeam(world, uuid)
         return
     }
-    refreshSiphonBeam(world, position, uuid)
     val key = WellKey(world.worldConfig.uuid, position.pack())
-    val elapsed = siphonSeconds.merge(key, 1, Int::plus) ?: 1
+    val previousElapsed = siphonSeconds[key] ?: 0
+    val elapsed = SiphonProgressRules.nextElapsedSeconds(previousElapsed, ownerCrewOnline)
+    if (elapsed == previousElapsed) {
+        clearSiphonBeam(world, uuid)
+        return
+    }
+    refreshSiphonBeam(world, position, uuid)
+    siphonSeconds[key] = elapsed
     if (elapsed >= WellAfflictionRuntimeConfig.settings.siphonSeconds) {
         val nextStrength = WellAfflictionRules.strengthAfterSiphon(well.strength)
         if (CraftoryCore.wells().setStrength(world, position, nextStrength)) {
@@ -82,6 +102,22 @@ internal fun processRaid(
         despawnFollowers(world, affliction.raidNpcIds)
         clearRaid(world, position, affliction)
     }
+}
+
+private fun cleanupMissingRaid(
+    world: World,
+    position: BlockPos,
+    affliction: WellAffliction,
+) {
+    despawnFollowers(world, affliction.raidNpcIds)
+    clearRaid(world, position, affliction)
+}
+
+internal object SiphonProgressRules {
+    fun nextElapsedSeconds(
+        currentSeconds: Int,
+        ownerCrewOnline: Boolean,
+    ): Int = if (ownerCrewOnline) currentSeconds + 1 else currentSeconds
 }
 
 private fun synchronizeCradleStrength(

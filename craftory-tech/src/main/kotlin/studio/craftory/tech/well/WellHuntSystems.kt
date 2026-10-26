@@ -312,11 +312,20 @@ internal class TetherStakeLifecycle : RefSystem<ChunkStore>() {
                 .wellsNear(store, position, 0)
                 .firstOrNull()
                 ?: return
-        if (wellRef.well.state == WellState.TETHERED) {
-            wellRef.well.state = WellState.DORMANT
-            markWellNeedsSaving(store, position)
-        }
+        val reconciledState = TetherStakeRules.afterStakeRemoval(wellRef.well.state) ?: return
+        wellRef.well.state = reconciledState
+        markWellNeedsSaving(store, position)
     }
+}
+
+internal object TetherStakeRules {
+    fun afterStakeRemoval(state: WellState): WellState? =
+        when (state) {
+            WellState.TETHERED, WellState.TAPPED -> WellState.DORMANT
+            else -> null
+        }
+
+    fun afterWellheadBreak(state: WellState): WellState? = if (state == WellState.TAPPED) WellState.TETHERED else null
 }
 
 internal class TetherStakeBeamSystem : EntityTickingSystem<ChunkStore>() {
