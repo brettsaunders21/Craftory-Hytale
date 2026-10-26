@@ -59,46 +59,46 @@ class WellLogicTest {
 
     @Test
     fun `storm vane bonus raises steady chance to a capped maximum`() {
-        assertEquals(0.15, WellCaptureRules.stormSteadyChance(0))
-        assertEquals(0.25, WellCaptureRules.stormSteadyChance(1))
-        assertEquals(0.55, WellCaptureRules.stormSteadyChance(4))
-        assertEquals(0.55, WellCaptureRules.stormSteadyChance(20))
-        assertEquals(WellStrength.STEADY, WellCaptureRules.stormStrength(0, 0.14))
-        assertEquals(WellStrength.FLICKER, WellCaptureRules.stormStrength(0, 0.15))
-        assertEquals(WellStrength.STEADY, WellCaptureRules.stormStrength(20, 0.54))
+        assertEquals(0.15, StormHuntRules.stormSteadyChance(0))
+        assertEquals(0.25, StormHuntRules.stormSteadyChance(1))
+        assertEquals(0.55, StormHuntRules.stormSteadyChance(4))
+        assertEquals(0.55, StormHuntRules.stormSteadyChance(20))
+        assertEquals(WellStrength.STEADY, StormHuntRules.stormStrength(0, 0.14))
+        assertEquals(WellStrength.FLICKER, StormHuntRules.stormStrength(0, 0.15))
+        assertEquals(WellStrength.STEADY, StormHuntRules.stormStrength(20, 0.54))
     }
 
     @Test
     fun `strong wild well budget is scoped to 512 block regions`() {
-        assertEquals(0 to 0, WellCaptureRules.regionOf(511, 511))
-        assertEquals(1 to 1, WellCaptureRules.regionOf(512, 512))
-        assertEquals(-1 to -1, WellCaptureRules.regionOf(-1, -1))
-        assertTrue(WellCaptureRules.canSpawnStrongWell(0, 1))
-        assertFalse(WellCaptureRules.canSpawnStrongWell(1, 1))
+        assertEquals(0 to 0, StormHuntRules.regionOf(511, 511))
+        assertEquals(1 to 1, StormHuntRules.regionOf(512, 512))
+        assertEquals(-1 to -1, StormHuntRules.regionOf(-1, -1))
+        assertTrue(StormHuntRules.canSpawnStrongWell(0, 1))
+        assertFalse(StormHuntRules.canSpawnStrongWell(1, 1))
     }
 
     @Test
     fun `weather dislikes match the temperament table`() {
-        assertTrue(WellCaptureRules.dislikesWeather(Temperament.SPARK, WeatherKind.RAIN))
-        assertFalse(WellCaptureRules.dislikesWeather(Temperament.SPARK, WeatherKind.STORM))
-        assertTrue(WellCaptureRules.dislikesWeather(Temperament.EMBER, WeatherKind.RAIN))
-        assertTrue(WellCaptureRules.dislikesWeather(Temperament.EMBER, WeatherKind.STORM))
+        assertTrue(StormHuntRules.dislikesWeather(Temperament.SPARK, WeatherKind.RAIN))
+        assertFalse(StormHuntRules.dislikesWeather(Temperament.SPARK, WeatherKind.STORM))
+        assertTrue(StormHuntRules.dislikesWeather(Temperament.EMBER, WeatherKind.RAIN))
+        assertTrue(StormHuntRules.dislikesWeather(Temperament.EMBER, WeatherKind.STORM))
         Temperament.entries.filterNot { it == Temperament.SPARK || it == Temperament.EMBER }.forEach {
-            assertFalse(WellCaptureRules.dislikesWeather(it, WeatherKind.RAIN))
-            assertFalse(WellCaptureRules.dislikesWeather(it, WeatherKind.STORM))
+            assertFalse(StormHuntRules.dislikesWeather(it, WeatherKind.RAIN))
+            assertFalse(StormHuntRules.dislikesWeather(it, WeatherKind.STORM))
         }
-        assertEquals(WeatherKind.STORM, WellCaptureRules.weatherKind("Weather_Thunderstorm"))
-        assertEquals(WeatherKind.RAIN, WellCaptureRules.weatherKind("Weather_Rain"))
-        assertEquals(WeatherKind.CLEAR, WellCaptureRules.weatherKind("Weather_Clear"))
-        assertEquals(WeatherKind.OTHER, WellCaptureRules.weatherKind("Blood_Moon"))
+        assertEquals(WeatherKind.STORM, StormHuntRules.weatherKind("Weather_Thunderstorm"))
+        assertEquals(WeatherKind.RAIN, StormHuntRules.weatherKind("Weather_Rain"))
+        assertEquals(WeatherKind.CLEAR, StormHuntRules.weatherKind("Weather_Clear"))
+        assertEquals(WeatherKind.OTHER, StormHuntRules.weatherKind("Blood_Moon"))
     }
 
     @Test
     fun `stake spacing identifies gaps outside forty degrees`() {
-        assertEquals(emptySet<Int>(), WellCaptureRules.stakeSpread(listOf(0.0, 120.0, 240.0)))
-        assertEquals(setOf(0, 1, 2), WellCaptureRules.stakeSpread(listOf(0.0, 40.0, 180.0)))
+        assertEquals(emptySet<Int>(), TetherRules.stakeSpread(listOf(0.0, 120.0, 240.0)))
+        assertEquals(setOf(0, 1, 2), TetherRules.stakeSpread(listOf(0.0, 40.0, 180.0)))
         assertTrue(
-            WellCaptureRules.tetherComplete(
+            TetherRules.tetherComplete(
                 studio.craftory.core.api.well.WellState.DORMANT,
                 WellStrength.FLICKER,
                 3,
@@ -106,7 +106,7 @@ class WellLogicTest {
             ),
         )
         assertFalse(
-            WellCaptureRules.tetherComplete(
+            TetherRules.tetherComplete(
                 studio.craftory.core.api.well.WellState.WILD,
                 WellStrength.STEADY,
                 3,
@@ -117,30 +117,30 @@ class WellLogicTest {
 
     @Test
     fun `jar capture requires three presses inside the timing window`() {
-        assertTrue(WellCaptureRules.capturePressIntervalValid(4))
-        assertTrue(WellCaptureRules.capturePressIntervalValid(40))
-        assertFalse(WellCaptureRules.capturePressIntervalValid(3))
-        assertFalse(WellCaptureRules.capturePressIntervalValid(41))
-        assertFalse(WellCaptureRules.captureComplete(2))
-        assertTrue(WellCaptureRules.captureComplete(3))
+        assertTrue(TetherRules.capturePressIntervalValid(4))
+        assertTrue(TetherRules.capturePressIntervalValid(40))
+        assertFalse(TetherRules.capturePressIntervalValid(3))
+        assertFalse(TetherRules.capturePressIntervalValid(41))
+        assertFalse(TetherRules.captureComplete(2))
+        assertTrue(TetherRules.captureComplete(3))
     }
 
     @Test
     fun `stability drains for time damage and disliked weather and stops at zero`() {
-        assertEquals(87.0, WellCaptureRules.stabilityAfter(100.0, 10.0, 1, 10.0))
-        assertEquals(0.0, WellCaptureRules.stabilityAfter(5.0, 60.0, 2, 30.0))
+        assertEquals(87.0, JarCarrierRules.stabilityAfter(100.0, 10.0, 1, 10.0))
+        assertEquals(0.0, JarCarrierRules.stabilityAfter(5.0, 60.0, 2, 30.0))
     }
 
     @Test
     fun `zero ambush chance disables the roll`() {
-        assertFalse(WellCaptureRules.ambushRoll(0.0, Random(1)))
-        assertTrue(WellCaptureRules.ambushRoll(1.0, Random(1)))
+        assertFalse(JarCarrierRules.ambushRoll(0.0, Random(1)))
+        assertTrue(JarCarrierRules.ambushRoll(1.0, Random(1)))
     }
 
     @Test
     fun `carrier bursts only when stability reaches zero`() {
-        assertFalse(WellCaptureRules.shouldBurst(0.01))
-        assertTrue(WellCaptureRules.shouldBurst(0.0))
-        assertTrue(WellCaptureRules.shouldBurst(-1.0))
+        assertFalse(JarCarrierRules.shouldBurst(0.01))
+        assertTrue(JarCarrierRules.shouldBurst(0.0))
+        assertTrue(JarCarrierRules.shouldBurst(-1.0))
     }
 }

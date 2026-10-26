@@ -41,6 +41,26 @@ import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.random.Random
 
+private fun spawnStormStrikeEffects(
+    world: World,
+    strike: BlockPos,
+) {
+    val store = world.entityStore.store
+    val position = Vector3d(strike.x + 0.5, strike.y + 1.0, strike.z + 0.5)
+    ParticleUtil.spawnParticleEffect("Lightning", position, store)
+    val soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Global_Weather_Thunder")
+    if (soundIndex > 0) {
+        SoundUtil.playSoundEvent3d(
+            soundIndex,
+            SoundCategory.SFX,
+            position.x,
+            position.y,
+            position.z,
+            store,
+        )
+    }
+}
+
 object WellBirths {
     fun forceStormcall(
         world: World,
@@ -49,7 +69,15 @@ object WellBirths {
     ): Ref<ChunkStore>? {
         world.debugAssertInTickingThread()
         val strength = WellBirthRules(random).flickerStrength()
-        return CraftoryCore.wells().spawn(world, playerOrPos, Temperament.SPARK, strength, WellState.WILD)
+        val spawned = CraftoryCore.wells().spawn(world, playerOrPos, Temperament.SPARK, strength, WellState.WILD)
+        if (spawned != null) {
+            world.chunkStore.store
+                .getResource(WellBirthState.type)
+                .stormCrackles[playerOrPos.pack()] =
+                world.tick + 30L * 20L
+            spawnStormStrikeEffects(world, playerOrPos)
+        }
+        return spawned
     }
 
     internal fun spawnStormcall(
@@ -118,7 +146,6 @@ object WellBirths {
     }
 }
 
-@Suppress("TooManyFunctions")
 internal class WellBirthSystem(
     private val config: Config<WellConfig>,
 ) : DelayedEntitySystem<EntityStore>(1.0f) {
@@ -198,9 +225,9 @@ internal class WellBirthSystem(
         val chancePassed = rules.stormcall(settings.stormcallChance)
         state.lastStormcallByPlayer[player.uuid] = now
         if (!chancePassed) return
-        val strength = WellCaptureRules.rollStormStrength(stormVanesWithin(world, playerPos, 64), Random)
+        val strength = StormHuntRules.rollStormStrength(stormVanesWithin(world, playerPos, 64), Random)
         if (strength != WellStrength.FLICKER &&
-            !WellCaptureRules.canSpawnStrongWell(
+            !StormHuntRules.canSpawnStrongWell(
                 strongWildWellsInRegion(world, playerPos),
                 settings.strongWildWellRegionBudget,
             )
@@ -249,7 +276,7 @@ internal class WellBirthSystem(
         world: World,
         position: BlockPos,
     ): Int {
-        val region = WellCaptureRules.regionOf(position.x, position.z)
+        val region = StormHuntRules.regionOf(position.x, position.z)
         val center = BlockPos(region.first * 512 + 256, position.y, region.second * 512 + 256)
         return CraftoryCore
             .wells()
@@ -257,7 +284,7 @@ internal class WellBirthSystem(
             .count {
                 it.well.strength != WellStrength.FLICKER &&
                     it.well.state == WellState.WILD &&
-                    WellCaptureRules.regionOf(it.pos.x, it.pos.z) == region
+                    StormHuntRules.regionOf(it.pos.x, it.pos.z) == region
             }
     }
 
@@ -276,7 +303,6 @@ internal class WellBirthSystem(
         return WellBirths.findSurface(world, player.x, player.z, player.y)
     }
 
-    @Suppress("NestedBlockDepth")
     private fun stormVanesWithin(
         world: World,
         position: BlockPos,
@@ -290,24 +316,8 @@ internal class WellBirthSystem(
             for (z in position.z - radius..position.z + radius) {
                 val dx = x - position.x
                 val dz = z - position.z
-                if (dx * dx + dz * dz <= radiusSquared) {
-                    val heightmap =
-                        world.chunkStore.getChunkComponent(
-                            ChunkUtil.indexChunkFromBlock(x, z),
-                            HeightmapColumn.getComponentType(),
-                        )
-                    if (heightmap != null) {
-                        val y = heightmap.getCollisionHeight(x and 31, z and 31)
-                        if (
-                            y != HeightmapColumn.NO_HEIGHT &&
-                            (
-                                WellBirths.blockIndexAt(world, x, y, z) == vaneIndex ||
-                                    WellBirths.blockIndexAt(world, x, y + 1, z) == vaneIndex
-                            )
-                        ) {
-                            count++
-                        }
-                    }
+                if (dx * dx + dz * dz <= radiusSquared && hasVaneAtSurface(world, x, z, vaneIndex)) {
+                    count++
                 }
             }
         }
@@ -320,19 +330,7 @@ internal class WellBirthSystem(
         playerPosition: Vector3d,
         store: ComponentAccessor<EntityStore>,
     ) {
-        val position = Vector3d(strike.x + 0.5, strike.y + 1.0, strike.z + 0.5)
-        ParticleUtil.spawnParticleEffect("Lightning", position, store)
-        val soundIndex = SoundEvent.getAssetMap().getIndex("SFX_Global_Weather_Thunder")
-        if (soundIndex > 0) {
-            SoundUtil.playSoundEvent3d(
-                soundIndex,
-                SoundCategory.SFX,
-                position.x,
-                position.y,
-                position.z,
-                store,
-            )
-        }
+        spawnStormStrikeEffects(store.externalData.world, strike)
         pulseEffects(player, playerPosition, store)
     }
 
@@ -358,32 +356,42 @@ internal class WellBirthSystem(
         }
     }
 
-    private fun noStrongWellInRegion(
-        world: World,
-        position: BlockPos,
-    ): Boolean =
-        CraftoryCore
-            .wells()
-            .wellsNear(world.chunkStore.store, position, 512)
-            .none { it.well.strength != WellStrength.FLICKER && it.well.state == WellState.WILD }
-
-    private fun pulseEffects(
-        player: PlayerRef,
-        position: Vector3d,
-        store: ComponentAccessor<EntityStore>,
-    ) {
-        ParticleUtil.spawnParticleEffect("Impact_Spark", position, store)
-        SoundUtil.playSoundEvent2dToPlayer(
-            player,
-            "SFX_Interact",
-            SoundCategory.SFX,
-        )
-    }
-
     private fun regionId(
         x: Int,
         z: Int,
     ): Long = (x.toLong() shl 32) or (z.toLong() and 0xffffffffL)
+}
+
+private fun hasVaneAtSurface(
+    world: World,
+    x: Int,
+    z: Int,
+    vaneIndex: Int,
+): Boolean {
+    val heightmap =
+        world.chunkStore.getChunkComponent(
+            ChunkUtil.indexChunkFromBlock(x, z),
+            HeightmapColumn.getComponentType(),
+        ) ?: return false
+    val y = heightmap.getCollisionHeight(x and 31, z and 31)
+    return y != HeightmapColumn.NO_HEIGHT &&
+        (
+            WellBirths.blockIndexAt(world, x, y, z) == vaneIndex ||
+                WellBirths.blockIndexAt(world, x, y + 1, z) == vaneIndex
+        )
+}
+
+private fun pulseEffects(
+    player: PlayerRef,
+    position: Vector3d,
+    store: ComponentAccessor<EntityStore>,
+) {
+    ParticleUtil.spawnParticleEffect("Impact_Spark", position, store)
+    SoundUtil.playSoundEvent2dToPlayer(
+        player,
+        "SFX_Interact",
+        SoundCategory.SFX,
+    )
 }
 
 internal class WellKillBirthSystem(

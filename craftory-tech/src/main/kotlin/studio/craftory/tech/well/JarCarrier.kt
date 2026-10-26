@@ -14,10 +14,10 @@ import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.EntityEventSystem
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
+import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather
 import com.hypixel.hytale.server.core.entity.entities.Player
-import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent
 import com.hypixel.hytale.server.core.inventory.InventoryComponent
@@ -26,12 +26,13 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity
-import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.section.EnvironmentSection
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.hypixel.hytale.server.core.util.NotificationUtil
+import com.hypixel.hytale.server.npc.entities.NPCEntity
 import org.joml.Vector3d
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
@@ -40,9 +41,12 @@ import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.EnergyHudState
 import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+private const val READOUT_INTERVAL_TICKS = 100L
 
 class JarCarrier(
     var stability: Double = 100.0,
@@ -115,18 +119,6 @@ class JarCarrier(
     }
 }
 
-internal class JarStabilityHud(
-    playerRef: PlayerRef,
-) : CustomUIHud(playerRef, CraftoryIds.JAR_STABILITY_HUD, 10) {
-    override fun build(commandBuilder: UICommandBuilder) {
-        commandBuilder.append("Craftory/Hud/JarStabilityHud.ui")
-    }
-
-    fun render(stability: Int) {
-        update(false, UICommandBuilder().set("#Stability.Text", "Gob-Jar stability: $stability%"))
-    }
-}
-
 internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
     override fun getQuery(): Query<EntityStore> =
         Query.and(PlayerRef.getComponentType(), TransformComponent.getComponentType())
@@ -142,6 +134,7 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         val tick = world.tick
         for (index in 0 until chunk.size()) {
             val ref = chunk.getReferenceTo(index)
+            if (WellSelfTestExclusions.isEntity(ref)) continue
             val playerRef = chunk.getComponent(index, PlayerRef.getComponentType())
             val transform = chunk.getComponent(index, TransformComponent.getComponentType())
             if (playerRef != null && transform != null) {
@@ -215,9 +208,9 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         carrier.lastTick = tick
         drainStability(carrier, world, position, elapsed)
         applySlowdown(playerRef, ref, store, carrier)
-        updateAmbush(world, position, carrier, tick)
+        updateAmbush(world, position, playerRef, carrier, tick)
         updateReadout(playerRef, position, carrier, store, tick)
-        if (WellCaptureRules.shouldBurst(carrier.stability)) {
+        if (JarCarrierRules.shouldBurst(carrier.stability)) {
             burst(ref, playerRef, position, store, world, inventory, jarSlot, carrier)
         }
     }
@@ -230,19 +223,20 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
     ) {
         val temperament = Temperament.entries.firstOrNull { it.id == carrier.temperamentId } ?: Temperament.SPARK
         val weatherSeconds = if (dislikedWeather(world, position, temperament)) elapsed else 0.0
-        carrier.stability = WellCaptureRules.stabilityAfter(carrier.stability, elapsed, 0, weatherSeconds)
+        carrier.stability = JarCarrierRules.stabilityAfter(carrier.stability, elapsed, 0, weatherSeconds)
     }
 
     private fun updateAmbush(
         world: World,
         position: Vector3d,
+        playerRef: PlayerRef,
         carrier: JarCarrier,
         tick: Long,
     ) {
         if (tick < carrier.nextAmbushTick) return
         carrier.nextAmbushTick = tick + AMBUSH_INTERVAL_TICKS
-        if (WellCaptureRules.ambushRoll(WellRuntimeConfig.current.jarAmbushChance, Random)) {
-            spawnPoachers(world, position)
+        if (JarCarrierRules.ambushRoll(WellRuntimeConfig.current.jarAmbushChance, Random)) {
+            playerRef.reference?.let { spawnPoachers(world, position, it) }
         }
     }
 
@@ -290,7 +284,6 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
 
     companion object {
         private const val AMBUSH_INTERVAL_TICKS = 1200L
-        private const val READOUT_INTERVAL_TICKS = 200L
     }
 }
 
@@ -316,7 +309,7 @@ private fun dislikedWeather(
             .getAsset(weatherIndex)
             ?.id
             .orEmpty()
-    return WellCaptureRules.dislikesWeather(temperament, WellCaptureRules.weatherKind(id))
+    return StormHuntRules.dislikesWeather(temperament, StormHuntRules.weatherKind(id))
 }
 
 private fun applySlowdown(
@@ -366,24 +359,32 @@ private fun showReadout(
     val crewId = crews.crewOf(carrierRef.uuid).id
     val worldUuid = store.externalData.world.worldConfig.uuid
     Universe.get().getPlayers().forEach { playerRef ->
+        if (playerRef.worldUuid != worldUuid) return@forEach
         val dx = playerRef.transform.position.x - position.x
         val dy = playerRef.transform.position.y - position.y
         val dz = playerRef.transform.position.z - position.z
         val eligible =
-            playerRef.worldUuid == worldUuid &&
-                dx * dx + dy * dy + dz * dz <= CREW_READOUT_RADIUS_SQUARED &&
+            dx * dx + dy * dy + dz * dz <= CREW_READOUT_RADIUS_SQUARED &&
                 (playerRef.uuid == carrierRef.uuid || crews.crewOf(playerRef.uuid).id == crewId)
+        if (playerRef.uuid == carrierRef.uuid) {
+            NotificationUtil.sendNotification(
+                playerRef.packetHandler,
+                Message.raw("Gob-Jar stability: ${carrier.stability.toInt()}%"),
+                NotificationStyle.Default,
+            )
+            return@forEach
+        }
         val entity = playerRef.reference ?: return@forEach
         val player = store.getComponent(entity, Player.getComponentType()) ?: return@forEach
-        if (eligible) {
-            val hud =
-                player.hudManager.getCustomHud(CraftoryIds.JAR_STABILITY_HUD) as? JarStabilityHud
-                    ?: JarStabilityHud(playerRef).also {
-                        player.hudManager.addCustomHud(playerRef, it)
-                    }
-            hud.render(carrier.stability.toInt())
-        } else {
-            player.hudManager.removeCustomHud(playerRef, CraftoryIds.JAR_STABILITY_HUD)
+        val goggles =
+            player.inventory
+                ?.armor
+                ?.getItemStack(0.toShort())
+                ?.itemId == CraftoryIds.SQUINT_GOGGLES
+        if (eligible && goggles) {
+            val readout = store.getComponent(entity, EnergyHudState.type) ?: return@forEach
+            readout.carrierStability = carrier.stability.toInt()
+            readout.carrierStabilityUntilTick = store.externalData.world.tick + READOUT_INTERVAL_TICKS
         }
     }
 }
@@ -391,6 +392,7 @@ private fun showReadout(
 private fun spawnPoachers(
     world: World,
     position: Vector3d,
+    targetRef: Ref<EntityStore>,
 ) {
     repeat(2) {
         val angle = Random.nextDouble() * Math.PI * 2.0
@@ -401,12 +403,16 @@ private fun spawnPoachers(
                 position.y,
                 position.z + kotlin.math.sin(angle) * distance,
             )
-        CraftoryMobs.spawn(
-            world,
-            CraftoryIds.GOBLIN_POACHER,
-            target,
-            BlockPos(floor(position.x).toInt(), floor(position.y).toInt(), floor(position.z).toInt()),
-        )
+        val poacher =
+            CraftoryMobs.spawn(
+                world,
+                CraftoryIds.GOBLIN_POACHER,
+                target,
+                BlockPos(floor(position.x).toInt(), floor(position.y).toInt(), floor(position.z).toInt()),
+            ) ?: return@repeat
+        world.entityStore.store
+            .getComponent(poacher, NPCEntity.getComponentType()!!)
+            ?.onFlockSetTarget("LockedTarget", targetRef)
     }
 }
 

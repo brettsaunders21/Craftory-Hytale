@@ -101,6 +101,7 @@ import studio.craftory.tech.well.LensUseInteraction
 import studio.craftory.tech.well.SparkjawGuardian
 import studio.craftory.tech.well.StormVaneState
 import studio.craftory.tech.well.StormVaneSystem
+import studio.craftory.tech.well.TetherStakeBeamSystem
 import studio.craftory.tech.well.TetherStakeLifecycle
 import studio.craftory.tech.well.TetherStakePlacementSystem
 import studio.craftory.tech.well.TetherStakeState
@@ -355,6 +356,7 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(StormVaneSystem())
         chunkRegistry.registerSystem(FizzDamperSystem())
         chunkRegistry.registerSystem(TetherStakeLifecycle())
+        chunkRegistry.registerSystem(TetherStakeBeamSystem())
         chunkRegistry.registerSystem(SelfTestSystem())
         chunkRegistry.registerSystem(TransportSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()

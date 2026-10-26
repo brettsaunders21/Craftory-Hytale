@@ -13,8 +13,7 @@ enum class WeatherKind {
     OTHER,
 }
 
-@Suppress("TooManyFunctions")
-object WellCaptureRules {
+object StormHuntRules {
     fun weatherKind(weatherId: String): WeatherKind {
         val id = weatherId.lowercase()
         return when {
@@ -56,7 +55,9 @@ object WellCaptureRules {
         existingStrongWells: Int,
         budget: Int,
     ): Boolean = existingStrongWells < budget.coerceAtLeast(0)
+}
 
+object TetherRules {
     fun requiredStakeCount(strength: WellStrength): Int =
         when (strength) {
             WellStrength.FLICKER, WellStrength.STEADY -> 3
@@ -92,7 +93,9 @@ object WellCaptureRules {
     fun capturePressIntervalValid(tickDelta: Long): Boolean = tickDelta in 4L..40L
 
     fun captureComplete(pressCount: Int): Boolean = pressCount >= 3
+}
 
+object JarCarrierRules {
     fun stabilityAfter(
         stability: Double,
         elapsedSeconds: Double,

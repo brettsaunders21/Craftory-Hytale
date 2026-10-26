@@ -136,14 +136,14 @@ class GobJarUseInteraction : SimpleInteraction() {
             playerRef.sendMessage(Message.translation("server.craftory.jar.capture-press").param("press", 1))
             return false
         }
-        if (!WellCaptureRules.capturePressIntervalValid(tick - current.lastPressTick)) {
+        if (!TetherRules.capturePressIntervalValid(tick - current.lastPressTick)) {
             state.progressByPlayer.remove(playerRef.uuid)
             resetStakeAndKnockBack(world, wellRef, playerRef, wellId)
             playerRef.sendMessage(Message.translation("server.craftory.jar.capture-missed"))
             return false
         }
         val pressCount = current.pressCount + 1
-        if (!WellCaptureRules.captureComplete(pressCount)) {
+        if (!TetherRules.captureComplete(pressCount)) {
             state.progressByPlayer[playerRef.uuid] = CaptureProgress(wellId, pressCount, tick)
             playerRef.sendMessage(
                 Message.translation("server.craftory.jar.capture-press").param("press", pressCount),

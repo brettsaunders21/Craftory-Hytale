@@ -26,6 +26,7 @@ internal object WellSelfTest {
         report: (String) -> Unit,
     ) {
         val tempDir = Files.createTempDirectory("craftory-well-selftest")
+        listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS).forEach(WellSelfTestExclusions::registerWell)
         try {
             testJarAndScan(world, tempDir, report)
             testEmptyBlockRemoval(world, report)
@@ -39,6 +40,7 @@ internal object WellSelfTest {
             CraftoryCore.wells().remove(world, BLOCK_REMOVED_POS)
             Files.deleteIfExists(tempDir.resolve("crews.json"))
             Files.deleteIfExists(tempDir)
+            listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS).forEach(WellSelfTestExclusions::releaseWell)
         }
     }
 
@@ -117,8 +119,18 @@ internal object WellSelfTest {
         world: World,
         report: (String) -> Unit,
     ) {
-        check(WellBirths.forceStormcall(world, FORCED_POS, Random(7)) != null) { "forced Stormcall failed" }
-        report("selftest: PASS forced Stormcall")
+        val ref = WellBirths.forceStormcall(world, FORCED_POS, Random(7)) ?: error("forced Stormcall failed")
+        val well = world.chunkStore.store.getComponent(ref, Glimmerwell.type) ?: error("forced well state is missing")
+        check(
+            well.temperament == Temperament.SPARK && well.state == WellState.WILD,
+        ) { "forced Stormcall did not create a Wild Spark Well" }
+        val expectedExpiry = world.tick + 30L * 20L
+        check(
+            world.chunkStore.store
+                .getResource(WellBirthState.type)
+                .stormCrackles[FORCED_POS.pack()] == expectedExpiry,
+        ) { "forced Stormcall did not start 30-second crackle tracking" }
+        report("selftest: PASS forced Stormcall birth, fake strike, and crackle")
         CraftoryCore.wells().remove(world, FORCED_POS)
     }
 

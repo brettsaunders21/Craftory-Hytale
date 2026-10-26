@@ -59,6 +59,7 @@ internal class StormVaneSystem : EntityTickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
+        if (WellSelfTestExclusions.isBlock(chunk.getReferenceTo(index))) return
         val state = chunk.getComponent(index, StormVaneState.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
         val world = store.externalData.world
@@ -75,7 +76,7 @@ internal class StormVaneSystem : EntityTickingSystem<ChunkStore>() {
                 .getAsset(resource.getEffectiveWeatherIndex(environment))
                 ?.id
                 .orEmpty()
-        val on = WellCaptureRules.weatherKind(weatherId) == WeatherKind.STORM
+        val on = StormHuntRules.weatherKind(weatherId) == WeatherKind.STORM
         if (state.visualOn == on) return
         state.visualOn = on
         blockState.markNeedsSaving(commandBuffer)
@@ -117,6 +118,7 @@ internal class FizzDamperSystem : EntityTickingSystem<ChunkStore>() {
         store: Store<ChunkStore>,
         commandBuffer: CommandBuffer<ChunkStore>,
     ) {
+        if (WellSelfTestExclusions.isBlock(chunk.getReferenceTo(index))) return
         val state = chunk.getComponent(index, FizzDamperState.type) ?: return
         val member = chunk.getComponent(index, EnergyMember.type) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
@@ -312,6 +314,48 @@ internal class TetherStakeLifecycle : RefSystem<ChunkStore>() {
     }
 }
 
+internal class TetherStakeBeamSystem : EntityTickingSystem<ChunkStore>() {
+    private val position = Vector3i()
+
+    override fun getQuery(): Query<ChunkStore> =
+        Query.and(TetherStakeState.type, BlockModule.BlockStateInfo.getComponentType())
+
+    override fun isParallel(
+        systemIndex: Int,
+        archetypeChunkSize: Int,
+    ): Boolean = false
+
+    override fun tick(
+        dt: Float,
+        index: Int,
+        chunk: ArchetypeChunk<ChunkStore>,
+        store: Store<ChunkStore>,
+        commandBuffer: CommandBuffer<ChunkStore>,
+    ) {
+        if (WellSelfTestExclusions.isBlock(chunk.getReferenceTo(index))) return
+        val world = store.externalData.world
+        if (world.tick % BEAM_REFRESH_TICKS != 0L) return
+        val state = chunk.getComponent(index, TetherStakeState.type) ?: return
+        if (state.leaning) return
+        val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        if (!CraftoryCore.isAreaActive(store, blockState) || !blockState.fillWorldPos(commandBuffer, position)) return
+        val packed = state.wellId.toLongOrNull() ?: return
+        val wellPosition = BlockPos.unpack(packed)
+        val well =
+            CraftoryCore
+                .wells()
+                .wellsNear(store, wellPosition, 0)
+                .firstOrNull()
+                ?.well ?: return
+        if (well.state != WellState.TETHERED) return
+        spawnTetherBeam(world, wellPosition, BlockPos(position.x, position.y, position.z))
+    }
+
+    companion object {
+        private const val BEAM_REFRESH_TICKS = 20L
+    }
+}
+
 internal fun straightenTetherStake(
     world: World,
     position: Vector3i,
@@ -351,13 +395,13 @@ private fun recomputeStakeRing(
         stakeRefs.map { (_, _, pos) ->
             Math.toDegrees(atan2((pos.z - wellPosition.z).toDouble(), (pos.x - wellPosition.x).toDouble()))
         }
-    val leaning = WellCaptureRules.stakeSpread(angles)
+    val leaning = TetherRules.stakeSpread(angles)
     stakeRefs.forEachIndexed { index, (ref, state, _) ->
         state.leaning = index in leaning
         store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
     }
     val leaningCount = stakeRefs.count { it.second.leaning }
-    if (!WellCaptureRules.tetherComplete(well.state, well.strength, stakeRefs.size, leaningCount)) return
+    if (!TetherRules.tetherComplete(well.state, well.strength, stakeRefs.size, leaningCount)) return
     val claimant =
         runCatching { CraftoryCore.crewService().crewOf(placer).id }.getOrNull() ?: return
     well.state = WellState.TETHERED

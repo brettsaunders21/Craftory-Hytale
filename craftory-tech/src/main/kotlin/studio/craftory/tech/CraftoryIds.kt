@@ -47,7 +47,6 @@ object CraftoryIds {
     const val GLIMMER_LENS = "Craftory_Glimmer_Lens"
     const val GOB_JAR = "Craftory_Gob_Jar"
     const val GOB_JAR_FILLED = "Craftory_Gob_Jar_Filled"
-    const val JAR_STABILITY_HUD = "Craftory_Jar_Stability_Hud"
     const val CODEX = "Craftory_Codex"
     const val STORM_VANE = "Craftory_Storm_Vane"
     const val FIZZ_DAMPER = "Craftory_Fizz_Damper"

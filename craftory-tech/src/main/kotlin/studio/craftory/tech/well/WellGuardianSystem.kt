@@ -68,6 +68,7 @@ internal class WellGuardianCalmSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         well: Glimmerwell,
         guardians: WellGuardianIndex,
     ) {
+        if (WellSelfTestExclusions.isWell(position)) return
         if (well.state != WellState.WILD || well.temperament != Temperament.SPARK ||
             well.strength != WellStrength.STEADY
         ) {

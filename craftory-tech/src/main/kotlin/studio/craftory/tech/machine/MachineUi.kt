@@ -43,12 +43,20 @@ data class EnergyHudSnapshot(
     val demand: Long,
     val jank: Int? = null,
     val status: String? = null,
+    val carrierStability: Int? = null,
 )
 
 class EnergyHudState : Component<EntityStore> {
     var lastSnapshot: EnergyHudSnapshot? = null
+    var carrierStability: Int? = null
+    var carrierStabilityUntilTick: Long = 0
 
-    override fun clone(): Component<EntityStore> = EnergyHudState().also { it.lastSnapshot = lastSnapshot }
+    override fun clone(): Component<EntityStore> =
+        EnergyHudState().also {
+            it.lastSnapshot = lastSnapshot
+            it.carrierStability = carrierStability
+            it.carrierStabilityUntilTick = carrierStabilityUntilTick
+        }
 
     companion object {
         lateinit var type: ComponentType<EntityStore, EnergyHudState>
@@ -114,7 +122,8 @@ private class CraftoryEnergyHud(
                 .set("#Members.Text", "Members: ${snapshot.members}")
                 .set("#Flow.Text", "Net flow: ${snapshot.flow} Fizz/t")
                 .set("#Jank.Text", snapshot.jank?.let { "Jank: $it%" }.orEmpty())
-                .set("#Status.Text", snapshot.status.orEmpty()),
+                .set("#Status.Text", snapshot.status.orEmpty())
+                .set("#JarStability.Text", snapshot.carrierStability?.let { "Gob-Jar stability: $it%" }.orEmpty()),
         )
     }
 }
@@ -152,12 +161,16 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                 } else {
                     null
                 }
-            if (target == null) {
-                hudPort.hide(playerRef, player)
-                hudState.lastSnapshot = null
-                continue
-            }
-            val snapshot = snapshotForTarget(world, target, energy)
+            val carrierStability =
+                hudState.carrierStability.takeIf { world.tick <= hudState.carrierStabilityUntilTick }
+            val snapshot =
+                if (goggles) {
+                    val machineSnapshot = target?.let { snapshotForTarget(world, it, energy) }
+                    machineSnapshot?.copy(carrierStability = carrierStability)
+                        ?: carrierStability?.let(::carrierSnapshot)
+                } else {
+                    null
+                }
             if (snapshot == null) {
                 hudPort.hide(playerRef, player)
                 hudState.lastSnapshot = null
@@ -169,6 +182,19 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
             }
         }
     }
+
+    private fun carrierSnapshot(stability: Int) =
+        EnergyHudSnapshot(
+            "Jar carrier",
+            0,
+            0,
+            "—",
+            0,
+            0,
+            0,
+            0,
+            carrierStability = stability,
+        )
 
     private fun snapshotForTarget(
         world: World,
