@@ -82,11 +82,44 @@ class CoreEnergyTest {
     }
 
     @Test
+    fun `converter removal ownership cannot remove another converter output`() {
+        val converterA = BlockPos.pack(19, 0, -7)
+        val converterB = BlockPos.pack(19, -2048, -7)
+        val outputA = EnergyMemberIds.converterOutput(converterA)
+        assertEquals(converterB, outputA)
+        assertFalse(EnergyMemberIds.ownsConverterOutput(false, converterA, converterB))
+        assertFalse(EnergyMemberIds.ownsConverterOutput(true, converterA, converterB))
+        assertTrue(EnergyMemberIds.ownsConverterOutput(true, converterA, converterA))
+    }
+
+    @Test
     fun `energy type registry rejects duplicates`() {
         val spec = MemberSpec(MemberSpec.PRODUCER, 0, 0, 10, 0, 5)
         val id = "test:core_energy_duplicate"
         assertEquals(id, CraftoryCore.registerEnergyType(id, spec).id)
         assertThrows(IllegalStateException::class.java) { CraftoryCore.registerEnergyType(id, spec) }
+    }
+
+    @Test
+    fun `energy registry rejects cross type collisions without partial writes`() {
+        val producer = MemberSpec(MemberSpec.PRODUCER, 0, 0, 100, 0, 5)
+        val consumer = MemberSpec(MemberSpec.CONSUMER, 0, 100, 0, 0, 5)
+        val energyId = "test:core_energy_cross_collision"
+        val energyType = CraftoryCore.registerEnergyType(energyId, producer)
+        assertThrows(IllegalStateException::class.java) {
+            CraftoryCore.registerConverterType(energyId, consumer, producer, EnergyFaces.ALL, EnergyFaces.ALL)
+        }
+        assertEquals(energyType, CraftoryCore.energyType(energyId))
+        assertEquals(null, CraftoryCore.converterType(energyId))
+
+        val converterId = "test:core_converter_cross_collision"
+        val converter =
+            CraftoryCore.registerConverterType(converterId, consumer, producer, EnergyFaces.ALL, EnergyFaces.ALL)
+        assertThrows(IllegalStateException::class.java) {
+            CraftoryCore.registerEnergyType(converterId, producer)
+        }
+        assertEquals(converter, CraftoryCore.converterType(converterId))
+        assertEquals(converterId, CraftoryCore.energyType(converterId)?.id)
     }
 
     @Test

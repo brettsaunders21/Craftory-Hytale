@@ -25,6 +25,7 @@ internal class EnergyWorld : Resource<ChunkStore> {
         val converterOutput: Boolean = false,
         var outputAmount: Long = 0,
         var outputRank: Int = 0,
+        val ownerInputId: Long,
     )
 
     private val runtime = EnergyRuntimeAdapter()
@@ -83,12 +84,24 @@ internal class EnergyWorld : Resource<ChunkStore> {
         if (!EnergyMemberIds.allowConverterOutput(outputId in nodes)) {
             warnCollision("output:$outputId", "converter output refused because id $outputId is occupied")
         } else {
-            addNode(outputId, type.output, outputNeighbours, member, ref, 0, -1, converterOutput = true)
+            addNode(
+                outputId,
+                type.output,
+                outputNeighbours,
+                member,
+                ref,
+                0,
+                -1,
+                converterOutput = true,
+                ownerInputId = inputId,
+            )
         }
         member.networkId = runtime.graph.networkOf(inputId)
     }
 
     fun converterOutputId(inputId: Long): Long = EnergyMemberIds.converterOutput(inputId)
+
+    fun converterOutputNetwork(inputId: Long): Int = runtime.graph.networkOf(converterOutputId(inputId))
 
     fun contains(id: Long): Boolean = id in nodes
 
@@ -122,8 +135,16 @@ internal class EnergyWorld : Resource<ChunkStore> {
         accessor: com.hypixel.hytale.component.ComponentAccessor<ChunkStore>,
     ) {
         val outputId = converterOutputId(inputId)
-        if (nodes[outputId]?.converterOutput == true) removeNode(outputId)
-        removeMember(inputId, member, blockState, reason, accessor)
+        nodes[outputId]?.let { node ->
+            if (EnergyMemberIds.ownsConverterOutput(node.converterOutput, node.ownerInputId, inputId)) {
+                removeNode(outputId)
+            }
+        }
+        nodes[inputId]?.let { node ->
+            if (!node.converterOutput && node.ownerInputId == inputId) {
+                removeMember(inputId, member, blockState, reason, accessor)
+            }
+        }
     }
 
     fun member(id: Long): EnergyMember? = nodes[id]?.ref?.let { ref -> store?.getComponent(ref, EnergyMember.type) }
@@ -284,11 +305,12 @@ internal class EnergyWorld : Resource<ChunkStore> {
         stored: Long,
         storeRank: Int,
         converterOutput: Boolean = false,
+        ownerInputId: Long = id,
     ) {
         if (id in nodes) return
         val connected = neighbours.filter(nodes::containsKey).toLongArray()
         runtime.add(id, spec, connected, stored, storeRank)
-        nodes[id] = Node(ref, spec, converterOutput, stored, storeRank)
+        nodes[id] = Node(ref, spec, converterOutput, stored, storeRank, ownerInputId)
         if (!converterOutput) member.networkId = runtime.graph.networkOf(id)
     }
 

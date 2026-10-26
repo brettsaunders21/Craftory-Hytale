@@ -76,6 +76,11 @@ class EnergyAccess internal constructor(
         return energy.networkOf(pos)
     }
 
+    fun converterOutputNetwork(pos: Long): Int {
+        assertWorldThread()
+        return energy.converterOutputNetwork(pos)
+    }
+
     fun networkMembers(pos: Long): Int {
         assertWorldThread()
         return energy.diagnostics(pos)?.members ?: 0

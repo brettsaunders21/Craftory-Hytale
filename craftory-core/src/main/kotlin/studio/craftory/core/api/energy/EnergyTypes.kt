@@ -75,4 +75,10 @@ internal object EnergyMemberIds {
     fun allowPhysicalNode(existingConverterOutput: Boolean): Boolean = !existingConverterOutput
 
     fun allowConverterOutput(outputIdTaken: Boolean): Boolean = !outputIdTaken
+
+    fun ownsConverterOutput(
+        nodeConverterOutput: Boolean,
+        nodeOwnerInputId: Long,
+        inputId: Long,
+    ): Boolean = nodeConverterOutput && nodeOwnerInputId == inputId
 }
