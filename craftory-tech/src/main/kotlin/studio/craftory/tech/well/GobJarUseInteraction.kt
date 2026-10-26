@@ -63,7 +63,14 @@ class GobJarUseInteraction : SimpleInteraction() {
             return
         }
         val crews = CraftoryCore.crewService()
-        val result = JarActions.checkCatch(ref, playerRef.uuid, crews, world.chunkStore.store)
+        val result =
+            JarActions.checkCatch(
+                ref,
+                playerRef.uuid,
+                crews,
+                world.chunkStore.store,
+                position.pack().toString(),
+            )
         handleCatchResult(result, world, position, ref, playerRef, crews, container, slot, originalStack)
     }
 
@@ -112,6 +119,10 @@ class GobJarUseInteraction : SimpleInteraction() {
 
             JarCatchResult.TierLocked -> {
                 playerRef.sendMessage(Message.translation("server.craftory.tier.locked"))
+            }
+
+            JarCatchResult.ForeignCrew -> {
+                playerRef.sendMessage(Message.translation("server.craftory.jar.foreign-crew"))
             }
 
             is JarCatchResult.Caught -> {

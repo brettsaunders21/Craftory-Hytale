@@ -10,6 +10,7 @@ import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.CrewService
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.Temperament
+import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
 import java.util.UUID
@@ -21,10 +22,13 @@ sealed interface JarCatchResult {
 
     data object TierLocked : JarCatchResult
 
+    data object ForeignCrew : JarCatchResult
+
     data class Caught(
         val temperament: Temperament,
         val strength: WellStrength,
         val taste: String,
+        val wellId: String,
     ) : JarCatchResult
 }
 
@@ -36,20 +40,26 @@ object JarActions {
             .withMetadata(GobJarMetadata.TEMPERAMENT, caught.temperament.id)
             .withMetadata(GobJarMetadata.STRENGTH, caught.strength.name)
             .withMetadata(GobJarMetadata.TASTE, caught.taste)
+            .withMetadata(GobJarMetadata.WELL_ID, caught.wellId)
+            .withMetadata(GobJarMetadata.STABILITY, 100.0)
 
     fun checkCatch(
         ref: Ref<ChunkStore>,
         playerUuid: UUID,
         crews: CrewService,
         store: ComponentAccessor<ChunkStore>,
+        wellId: String = ref.index.toString(),
     ): JarCatchResult {
         val well = store.getComponent(ref, Glimmerwell.type) ?: return JarCatchResult.NotWell
-        if (well.strength != WellStrength.FLICKER) return JarCatchResult.TooBig
+        if (well.state != WellState.TETHERED) return JarCatchResult.NotWell
+        if (well.strength != WellStrength.FLICKER && well.strength != WellStrength.STEADY) return JarCatchResult.TooBig
         val crew = crews.crewOf(playerUuid)
         if (crew.tier < 2) return JarCatchResult.TierLocked
-        return JarCatchResult.Caught(well.temperament, well.strength, well.taste)
+        if (well.claimCrewId != crew.id) return JarCatchResult.ForeignCrew
+        return JarCatchResult.Caught(well.temperament, well.strength, well.taste, wellId)
     }
 
+    @Suppress("ComplexCondition")
     fun commitCatch(
         world: World,
         ref: Ref<ChunkStore>,
@@ -59,10 +69,20 @@ object JarActions {
         crews: CrewService,
     ): Boolean {
         val well = world.chunkStore.store.getComponent(ref, Glimmerwell.type) ?: return false
-        if (well.temperament != caught.temperament || well.strength != caught.strength || well.taste != caught.taste) {
+        if (
+            well.state != WellState.TETHERED ||
+            well.claimCrewId != crews.crewOf(playerUuid).id ||
+            well.temperament != caught.temperament ||
+            well.strength != caught.strength ||
+            well.taste != caught.taste
+        ) {
             return false
         }
-        if (!CraftoryCore.wells().remove(world, pos)) return false
+        well.state = WellState.JARRED
+        if (!CraftoryCore.wells().remove(world, pos)) {
+            well.state = WellState.TETHERED
+            return false
+        }
         val crew = crews.crewOf(playerUuid)
         crews.addInsight(crew.id, caught.temperament, 15)
         crews.grantKnowledge(playerUuid, FIRST_FLICKER_ID)
