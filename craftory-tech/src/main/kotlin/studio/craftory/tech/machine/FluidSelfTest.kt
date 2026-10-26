@@ -173,10 +173,16 @@ internal class FluidSelfTestSystem : TickingSystem<ChunkStore>() {
         failure: RuntimeException,
     ) {
         run.testTicking = false
+        val machineDetails =
+            if (run.stage in 2..5) {
+                "; ${fluidSelfTestMachineComponentDetails(run, store)}"
+            } else {
+                ""
+            }
         FluidSelfTestState.fail(
             run,
             "F${run.stage}",
-            failure.message ?: failure.javaClass.simpleName,
+            (failure.message ?: failure.javaClass.simpleName) + machineDetails,
         )
         FluidSelfTestCleanup.cleanup(run, store)
     }
@@ -328,39 +334,54 @@ internal object FluidSelfTestCases {
         run: FluidSelfTestRun.Run,
         store: Store<ChunkStore>,
     ) {
-        val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER) ?: return
-        val boiler = store.getComponent(boilerRef, BoilerState.type) ?: return
-        val boilerMember = store.getComponent(boilerRef, EnergyMember.type) ?: return
-        val pressurisedRef = FluidSelfTestSetup.blockEntity(run.world, PRESSURISED_GNASHER) ?: return
-        val plainRef = FluidSelfTestSetup.blockEntity(run.world, PLAIN_GNASHER) ?: return
-        val pressurisedState = store.getComponent(pressurisedRef, GnasherState.type) ?: return
-        val plainState = store.getComponent(plainRef, GnasherState.type) ?: return
+        val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER)
+        val boilerState = boilerRef?.let { store.getComponent(it, BoilerState.type) }
+        val boilerMember = boilerRef?.let { store.getComponent(it, EnergyMember.type) }
+        val pressurisedRef = FluidSelfTestSetup.blockEntity(run.world, PRESSURISED_GNASHER)
+        val plainRef = FluidSelfTestSetup.blockEntity(run.world, PLAIN_GNASHER)
+        val pressurisedState = pressurisedRef?.let { store.getComponent(it, GnasherState.type) }
+        val plainState = plainRef?.let { store.getComponent(it, GnasherState.type) }
+        val missing =
+            buildList {
+                if (boilerRef == null) add("BoilerBlockEntity")
+                if (boilerState == null) add("BoilerState")
+                if (boilerMember == null) add("EnergyMember")
+                if (pressurisedRef == null) add("PressurisedGnasherBlockEntity")
+                if (pressurisedState == null) add("PressurisedGnasherState")
+                if (plainRef == null) add("PlainGnasherBlockEntity")
+                if (plainState == null) add("PlainGnasherState")
+            }
+        if (waitForFluidSelfTestComponents(run, store, "F3", F3_TIMEOUT_TICKS, missing)) return
+        val boiler = checkNotNull(boilerState)
+        val activeBoilerMember = checkNotNull(boilerMember)
+        val activePressurisedState = checkNotNull(pressurisedState)
+        val activePlainState = checkNotNull(plainState)
         if (!run.f3Setup) {
             boiler.pressure = 85
             boiler.water = GutterBoilerRules.CAPACITY
             boiler.fuelTicks = 1_000
-            pressurisedState.oreQueue = GritTable.encodeOreQueue(listOf("Ore_Iron_Stone"))
-            plainState.oreQueue = GritTable.encodeOreQueue(listOf("Ore_Iron_Stone"))
+            activePressurisedState.oreQueue = GritTable.encodeOreQueue(listOf("Ore_Iron_Stone"))
+            activePlainState.oreQueue = GritTable.encodeOreQueue(listOf("Ore_Iron_Stone"))
             FluidSelfTestSetup.addBurnerFuel(run, store, BURNER)
             FluidSelfTestSetup.addBurnerFuel(run, store, GASBAG_BURNER)
             run.f3Setup = true
         }
         val tick = run.world.tick
-        if (pressurisedState.lastAutoCrankTick != run.highPulseTick) {
+        if (activePressurisedState.lastAutoCrankTick != run.highPulseTick) {
             if (run.highPulseTick != Long.MIN_VALUE) {
-                run.highPulseInterval = pressurisedState.lastAutoCrankTick - run.highPulseTick
+                run.highPulseInterval = activePressurisedState.lastAutoCrankTick - run.highPulseTick
             }
-            run.highPulseTick = pressurisedState.lastAutoCrankTick
+            run.highPulseTick = activePressurisedState.lastAutoCrankTick
         }
-        if (plainState.lastAutoCrankTick != run.lowPulseTick) {
+        if (activePlainState.lastAutoCrankTick != run.lowPulseTick) {
             if (run.lowPulseTick != Long.MIN_VALUE) {
-                run.lowPulseInterval = plainState.lastAutoCrankTick - run.lowPulseTick
+                run.lowPulseInterval = activePlainState.lastAutoCrankTick - run.lowPulseTick
             }
-            run.lowPulseTick = plainState.lastAutoCrankTick
+            run.lowPulseTick = activePlainState.lastAutoCrankTick
         }
-        val boilerRank = boilerMember.productionRank
+        val boilerRank = activeBoilerMember.productionRank
         val productionReady =
-            boilerRank == GutterBoilerSystem.PRESSURISED_RANK && boilerMember.production > 0
+            boilerRank == GutterBoilerSystem.PRESSURISED_RANK && activeBoilerMember.production > 0
         val pulseIntervalsReady =
             run.highPulseInterval == GnasherMachine.AUTO_PULSE_INTERVAL_TICKS &&
                 run.lowPulseInterval == GnasherMachine.AUTO_PULSE_INTERVAL_TICKS * 2
@@ -374,31 +395,41 @@ internal object FluidSelfTestCases {
     }
 
     fun tickF4(run: FluidSelfTestRun.Run) {
-        val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER) ?: return
-        val boiler =
-            run.world.chunkStore.store
-                .getComponent(boilerRef, BoilerState.type) ?: return
+        val store = run.world.chunkStore.store
+        val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER)
+        val boilerState = boilerRef?.let { store.getComponent(it, BoilerState.type) }
+        val missing =
+            buildList {
+                if (boilerRef == null) add("BoilerBlockEntity")
+                if (boilerState == null) add("BoilerState")
+            }
+        if (waitForFluidSelfTestComponents(run, store, "F4", CASE_TIMEOUT_TICKS, missing)) return
+        val boiler = checkNotNull(boilerState)
         boiler.pressure = 97
         val vented = GutterBoilerRules.vent(boiler)
         if (vented && boiler.pressure == 57) {
             FluidSelfTestState.pass(run, "F4 shared vent path drops 97 to 57")
         } else {
-            FluidSelfTestState.fail(run, "F4", "vented=$vented pressure=${boiler.pressure}")
+            FluidSelfTestState.fail(
+                run,
+                "F4",
+                "vented=$vented pressure=${boiler.pressure}; ${fluidSelfTestMachineComponentDetails(run, store)}",
+            )
         }
         FluidSelfTestState.next(run)
     }
 
     fun tickF5(run: FluidSelfTestRun.Run) {
         val boilerRef = FluidSelfTestSetup.blockEntity(run.world, BOILER)
-        if (boilerRef == null) {
-            if (FluidSelfTestState.elapsed(run) > CASE_TIMEOUT_TICKS) {
-                FluidSelfTestState.fail(run, "F5", timeoutDetail(run, run.world.chunkStore.store))
-                FluidSelfTestState.next(run)
-            }
-            return
-        }
         val store = run.world.chunkStore.store
-        val boiler = store.getComponent(boilerRef, BoilerState.type) ?: return
+        val boilerState = boilerRef?.let { store.getComponent(it, BoilerState.type) }
+        val missing =
+            buildList {
+                if (boilerRef == null) add("BoilerBlockEntity")
+                if (boilerState == null) add("BoilerState")
+            }
+        if (waitForFluidSelfTestComponents(run, store, "F5", CASE_TIMEOUT_TICKS, missing)) return
+        val boiler = checkNotNull(boilerState)
         if (!run.f5Setup) {
             boiler.pressure = 99
             boiler.water = GutterBoilerRules.CAPACITY
@@ -417,14 +448,19 @@ internal object FluidSelfTestCases {
                 if (reriveted && boiler.online) {
                     FluidSelfTestState.pass(run, "F5 pop stays in place and two scraps re-rivet")
                 } else {
-                    FluidSelfTestState.fail(run, "F5", "shared re-rivet failed")
+                    FluidSelfTestState.fail(
+                        run,
+                        "F5",
+                        "shared re-rivet failed; ${fluidSelfTestMachineComponentDetails(run, store)}",
+                    )
                 }
             } else {
                 FluidSelfTestState.fail(
                     run,
                     "F5",
                     "offline=${!boiler.online} pressure=${boiler.pressure} " +
-                        "water=${boiler.water} blockUnchanged=$boilerBlockUnchanged",
+                        "water=${boiler.water} blockUnchanged=$boilerBlockUnchanged; " +
+                        fluidSelfTestMachineComponentDetails(run, store),
                 )
             }
             FluidSelfTestState.next(run)
@@ -435,9 +471,18 @@ internal object FluidSelfTestCases {
     }
 
     fun tickF6(run: FluidSelfTestRun.Run) {
-        val ref = FluidSelfTestSetup.blockEntity(run.world, GASBAG) ?: return
+        val ref = FluidSelfTestSetup.blockEntity(run.world, GASBAG)
         val store = run.world.chunkStore.store
-        val state = store.getComponent(ref, GasbagState.type) ?: return
+        val gasbagState = ref?.let { store.getComponent(it, GasbagState.type) }
+        val energyMember = ref?.let { store.getComponent(it, EnergyMember.type) }
+        val missing =
+            buildList {
+                if (ref == null) add("GasbagBlockEntity")
+                if (gasbagState == null) add("GasbagState")
+                if (energyMember == null) add("EnergyMember")
+            }
+        if (waitForFluidSelfTestComponents(run, store, "F6", F3_TIMEOUT_TICKS, missing)) return
+        val state = checkNotNull(gasbagState)
         val energy = CraftoryCore.energyAccess(run.world)
         val pos = BlockPos.pack(GASBAG.x, GASBAG.y, GASBAG.z)
         val stored = energy.stored(pos)
@@ -463,7 +508,8 @@ internal object FluidSelfTestCases {
                     FluidSelfTestState.fail(
                         run,
                         "F6",
-                        "stored amount changed after patch ${run.leakAmount}->$stoppedAmount",
+                        "stored amount changed after patch ${run.leakAmount}->$stoppedAmount; " +
+                            fluidSelfTestMachineComponentDetails(run, store),
                     )
                 }
                 FluidSelfTestState.next(run)
@@ -472,7 +518,12 @@ internal object FluidSelfTestCases {
             run.leakAmount - stored >= GasbagRules.leakAmount(GASBAG_CAPACITY)
         ) {
             if (!GasbagRules.patch(state)) {
-                FluidSelfTestState.fail(run, "F6", "shared patch helper did not stop leakage")
+                FluidSelfTestState.fail(
+                    run,
+                    "F6",
+                    "shared patch helper did not stop leakage; " +
+                        fluidSelfTestMachineComponentDetails(run, store),
+                )
             } else {
                 val patchedAmount = energy.stored(pos)
                 run.stageStartTick = run.world.tick
@@ -698,8 +749,68 @@ internal object FluidSelfTestCases {
                     FluidSelfTestCleanup.timeoutDetail(run)
                 }
             }
-        return "$details elapsed=$elapsed ticks"
+        val machineComponents =
+            if (run.stage in 2..5) {
+                " ${fluidSelfTestMachineComponentDetails(run, store)}"
+            } else {
+                ""
+            }
+        return "$details$machineComponents elapsed=$elapsed ticks"
     }
+}
+
+private fun fluidSelfTestMachineComponentDetails(
+    run: FluidSelfTestRun.Run,
+    store: Store<ChunkStore>,
+): String =
+    "boiler{${fluidSelfTestBlockComponentDetails(run, store, FluidSelfTestCases.BOILER)}} " +
+        "gasbag{${fluidSelfTestBlockComponentDetails(run, store, FluidSelfTestCases.GASBAG)}}"
+
+private fun fluidSelfTestBlockComponentDetails(
+    run: FluidSelfTestRun.Run,
+    store: Store<ChunkStore>,
+    position: Position,
+): String {
+    val sectionRef =
+        run.world.chunkStore
+            .getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+            ?.takeIf { it.isValid }
+    val blockSection = sectionRef?.let { store.getComponent(it, BlockSection.getComponentType()) }
+    val blockIndex = blockSection?.get(position.x, position.y, position.z)
+    val blockId =
+        blockIndex?.let { BlockType.getAssetMap().getAsset(it)?.id ?: "index=$it" }
+            ?: "missing"
+    val blockEntityRef = FluidSelfTestSetup.blockEntity(run.world, position)
+    val boilerStatePresent =
+        blockEntityRef?.let { store.getComponent(it, BoilerState.type) } != null
+    val gasbagStatePresent =
+        blockEntityRef?.let { store.getComponent(it, GasbagState.type) } != null
+    val energyMemberPresent =
+        blockEntityRef?.let { store.getComponent(it, EnergyMember.type) } != null
+    val machineOwnerPresent =
+        blockEntityRef?.let { store.getComponent(it, MachineOwner.type) } != null
+    return "pos=${position.x},${position.y},${position.z} blockId=$blockId " +
+        "blockEntityPresent=${blockEntityRef != null} BoilerState=$boilerStatePresent " +
+        "GasbagState=$gasbagStatePresent EnergyMember=$energyMemberPresent MachineOwner=$machineOwnerPresent"
+}
+
+private fun waitForFluidSelfTestComponents(
+    run: FluidSelfTestRun.Run,
+    store: Store<ChunkStore>,
+    caseName: String,
+    timeoutTicks: Long,
+    missing: List<String>,
+): Boolean {
+    if (missing.isEmpty()) return false
+    if (FluidSelfTestState.elapsed(run) > timeoutTicks) {
+        FluidSelfTestState.fail(
+            run,
+            caseName,
+            "missing=${missing.joinToString()} ${FluidSelfTestCases.timeoutDetail(run, store)}",
+        )
+        FluidSelfTestState.next(run)
+    }
+    return true
 }
 
 private fun fluidSelfTestTimeoutTicks(stage: Int): Long =

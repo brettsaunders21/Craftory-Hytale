@@ -41,7 +41,7 @@
     },
     "BlockEntity": {
       "Components": {
-        "Craftory_BoilerState": {},
+        "CraftoryBoilerState": {},
         "Craftory_EnergyMember": {
           "TypeId": "craftory:gutter_boiler",
           "Stored": 0,
