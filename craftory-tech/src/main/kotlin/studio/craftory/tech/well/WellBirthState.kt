@@ -10,8 +10,15 @@ internal class WellBirthState : Resource<ChunkStore> {
     val lastStormcallByRegion = HashMap<Long, Long>()
     val lastFlickerByPlayer = HashMap<UUID, Long>()
     val lastStormcallByPlayer = HashMap<UUID, Long>()
+    val stormCrackles = HashMap<Long, Long>()
 
-    override fun clone(): Resource<ChunkStore> = WellBirthState()
+    override fun clone(): Resource<ChunkStore> =
+        WellBirthState().also { copy ->
+            copy.lastStormcallByRegion.putAll(lastStormcallByRegion)
+            copy.lastFlickerByPlayer.putAll(lastFlickerByPlayer)
+            copy.lastStormcallByPlayer.putAll(lastStormcallByPlayer)
+            copy.stormCrackles.putAll(stormCrackles)
+        }
 
     companion object {
         lateinit var type: ResourceType<ChunkStore, WellBirthState>

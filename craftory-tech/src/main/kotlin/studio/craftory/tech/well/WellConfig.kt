@@ -14,6 +14,8 @@ data class WellConfig(
     var scanWindowTicks: Int = 8,
     var scanTimeoutTicks: Int = 600,
     var pulseRadius: Int = 32,
+    var strongWildWellRegionBudget: Int = 1,
+    var jarAmbushChance: Double = 0.15,
 ) {
     companion object {
         val CODEC: BuilderCodec<WellConfig> =
@@ -63,6 +65,16 @@ data class WellConfig(
                     KeyedCodec("PulseRadius", Codec.INTEGER),
                     { config, value -> config.pulseRadius = value },
                     { it.pulseRadius },
+                ).add()
+                .append(
+                    KeyedCodec("StrongWildWellRegionBudget", Codec.INTEGER),
+                    { config, value -> config.strongWildWellRegionBudget = value },
+                    { it.strongWildWellRegionBudget },
+                ).add()
+                .append(
+                    KeyedCodec("JarAmbushChance", Codec.DOUBLE),
+                    { config, value -> config.jarAmbushChance = value },
+                    { it.jarAmbushChance },
                 ).add()
                 .build()
     }

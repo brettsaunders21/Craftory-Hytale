@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.crew.CrewService
+import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
@@ -65,6 +66,9 @@ internal object WellSelfTest {
         try {
             val crew = crews.crewOf(player)
             crews.setTier(crew.id, 2)
+            val well = store.getComponent(spawned, Glimmerwell.type) ?: error("spawned well is missing")
+            well.state = WellState.TETHERED
+            well.claimCrewId = crew.id
             val result = JarActions.checkCatch(spawned, player, crews, store)
             check(result is JarCatchResult.Caught) { "Flicker catch failed: $result" }
             check(JarActions.commitCatch(world, spawned, CAUGHT_POS, player, result, crews)) {

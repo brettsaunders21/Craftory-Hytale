@@ -87,10 +87,13 @@ import studio.craftory.tech.transport.HurlRiderLifecycle
 import studio.craftory.tech.transport.HurlStation
 import studio.craftory.tech.well.CodexPageUi
 import studio.craftory.tech.well.CodexUseInteraction
+import studio.craftory.tech.well.FizzDamperState
 import studio.craftory.tech.well.GobJarUseInteraction
 import studio.craftory.tech.well.LensScanState
 import studio.craftory.tech.well.LensScanSystem
 import studio.craftory.tech.well.LensUseInteraction
+import studio.craftory.tech.well.StormVaneState
+import studio.craftory.tech.well.TetherStakeState
 import studio.craftory.tech.well.WellBirthState
 import studio.craftory.tech.well.WellBirthSystem
 import studio.craftory.tech.well.WellConfig
@@ -155,6 +158,10 @@ class CraftoryTechPlugin(
         CraftoryCore.registerEnergyType(
             CraftoryIds.SNATCHER_CLAW_TYPE,
             MemberSpec(MemberSpec.CONSUMER, 0, 4, 0, 0, 1),
+        )
+        CraftoryCore.registerEnergyType(
+            CraftoryIds.FIZZ_DAMPER_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 2, 0, 0, 1),
         )
         val chunkRegistry = getChunkStoreRegistry()
         CraftoryCore.registerEnergyType(
@@ -221,6 +228,24 @@ class CraftoryTechPlugin(
                 CraftoryIds.MACHINE_OWNER_COMPONENT,
                 MachineOwner.CODEC,
             )
+        StormVaneState.type =
+            chunkRegistry.registerComponent(
+                StormVaneState::class.java,
+                CraftoryIds.STORM_VANE_COMPONENT,
+                StormVaneState.CODEC,
+            )
+        FizzDamperState.type =
+            chunkRegistry.registerComponent(
+                FizzDamperState::class.java,
+                CraftoryIds.FIZZ_DAMPER_COMPONENT,
+                FizzDamperState.CODEC,
+            )
+        TetherStakeState.type =
+            chunkRegistry.registerComponent(
+                TetherStakeState::class.java,
+                CraftoryIds.TETHER_STAKE_COMPONENT,
+                TetherStakeState.CODEC,
+            )
         JunkHeartState.type =
             chunkRegistry.registerComponent(
                 JunkHeartState::class.java,
@@ -280,6 +305,15 @@ class CraftoryTechPlugin(
         }
         CraftoryCore.registerInspectableComponent(CraftoryIds.SCRAP_RUSH_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, ScrapRushRaid.type)
+        }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.STORM_VANE_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, StormVaneState.type)
+        }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.FIZZ_DAMPER_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, FizzDamperState.type)
+        }
+        CraftoryCore.registerInspectableComponent(CraftoryIds.TETHER_STAKE_COMPONENT) { accessor, ref ->
+            accessor.getComponent(ref, TetherStakeState.type)
         }
         SelfTestRun.type = chunkRegistry.registerResource(SelfTestRun::class.java, ::SelfTestRun)
         WellBirthState.type = chunkRegistry.registerResource(WellBirthState::class.java, ::WellBirthState)
