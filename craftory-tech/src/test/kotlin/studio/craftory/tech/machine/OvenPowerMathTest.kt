@@ -2,7 +2,6 @@ package studio.craftory.tech.machine
 
 import org.bson.BsonDocument
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -75,28 +74,55 @@ class OvenPowerMathTest {
     }
 
     @Test
-    fun `gate freezes below minimum tick fizz before recipe completion`() {
-        val gate = OvenFizzAccounting.gate(5, true, false, 2.9f, 3f)
-        val processing =
-            OvenFizzAccounting.process(
-                storedFizz = 5,
-                previousProgress = 2.75f,
-                currentProgress = 2.9f,
-                previousRecipeTimeSeconds = 3f,
-                frozenProgress = gate.progress,
-                gateStatus = gate.status,
-            )
-        assertEquals(MachineStatus.NO_POWER, gate.status)
-        assertEquals(2.75f, gate.progress)
-        assertEquals(2.75f, processing.inputProgress)
-        assertEquals(MachineStatus.NO_POWER, processing.status)
+    fun `gate budgets no elapsed time when inactive stalled or empty`() {
+        val inactive = OvenFizzAccounting.gate(5, false, false, 10_000, 1.0)
+        val stalled = OvenFizzAccounting.gate(5, true, true, 10_000, 1.0)
+        val empty = OvenFizzAccounting.gate(0, true, false, 10_000, 1.0)
+        val unaffordable = OvenFizzAccounting.gate(1, true, false, 10_000, 0.05)
+
+        assertEquals(0L, inactive.allowedGameElapsedMillis)
+        assertEquals(MachineStatus.IDLE, inactive.status)
+        assertEquals(0L, stalled.allowedGameElapsedMillis)
+        assertEquals(MachineStatus.STALLED, stalled.status)
+        assertEquals(0L, empty.allowedGameElapsedMillis)
+        assertEquals(MachineStatus.NO_POWER, empty.status)
+        assertEquals(0L, unaffordable.allowedGameElapsedMillis)
+        assertEquals(MachineStatus.NO_POWER, unaffordable.status)
     }
 
     @Test
-    fun `gate clamp stays below completion guard`() {
-        val gate = OvenFizzAccounting.gate(0, true, false, 4f, 4f)
-        assertEquals(3.75f, gate.progress)
-        assertTrue(gate.progress < 4f - OvenFizzAccounting.COMPLETION_GUARD_SECONDS + 0.0001f)
+    fun `gate caps elapsed time to the affordable balance`() {
+        val gate = OvenFizzAccounting.gate(30, true, false, 10_000, 0.05)
+
+        assertEquals(25L, gate.allowedGameElapsedMillis)
+        assertEquals(0.5f, gate.effectiveDtSeconds)
+        assertEquals(null, gate.status)
+    }
+
+    @Test
+    fun `gate caps a huge time jump to the affordable balance`() {
+        val gate = OvenFizzAccounting.gate(6, true, false, 3_600_000, 0.05)
+
+        assertEquals(5L, gate.allowedGameElapsedMillis)
+        assertEquals(0.1f, gate.effectiveDtSeconds, 0.0001f)
+    }
+
+    @Test
+    fun `short recipe does not complete while unpowered`() {
+        val gate = OvenFizzAccounting.gate(0, true, false, 10_000, 1.0)
+        val processing =
+            OvenFizzAccounting.process(
+                storedFizz = 0,
+                previousProgress = 0.099f,
+                currentProgress = 0.099f,
+                previousRecipeTimeSeconds = 0.1f,
+                gateStatus = gate.status,
+            )
+
+        assertEquals(MachineStatus.NO_POWER, gate.status)
+        assertEquals(0L, gate.allowedGameElapsedMillis)
+        assertEquals(0.099f, processing.inputProgress)
+        assertEquals(MachineStatus.NO_POWER, processing.status)
     }
 
     @Test

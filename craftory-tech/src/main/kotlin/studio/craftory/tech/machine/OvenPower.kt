@@ -8,6 +8,7 @@ import com.hypixel.hytale.component.ComponentType
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import studio.craftory.core.api.Inspectable
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.min
 
 class OvenPower(
@@ -29,7 +30,6 @@ class OvenPower(
     internal var tickRecipeId: String? = null
     internal var tickRecipeTimeSeconds: Float? = null
     internal var recipeChangedBeforeTick: Boolean = false
-    internal var frozenProgress: Float? = null
     internal var gateStatus: MachineStatus? = null
 
     override fun clone(): Component<ChunkStore> =
@@ -43,7 +43,6 @@ class OvenPower(
             it.tickRecipeId = tickRecipeId
             it.tickRecipeTimeSeconds = tickRecipeTimeSeconds
             it.recipeChangedBeforeTick = recipeChangedBeforeTick
-            it.frozenProgress = frozenProgress
             it.gateStatus = gateStatus
         }
 
@@ -86,7 +85,8 @@ internal data class OvenProcessingUpdate(
 }
 
 internal data class OvenGateUpdate(
-    val progress: Float,
+    val allowedGameElapsedMillis: Long,
+    val effectiveDtSeconds: Float,
     val status: MachineStatus?,
 )
 
@@ -122,31 +122,91 @@ internal object OvenFizzAccounting {
         storedFizz: Long,
         activeArea: Boolean,
         stalled: Boolean,
-        progress: Float,
-        recipeTimeSeconds: Float?,
+        pendingGameElapsedMillis: Long,
+        secondsPerTick: Double,
     ): OvenGateUpdate {
+        val allowedGameElapsedMillis =
+            affordableGameElapsedMillis(
+                storedFizz,
+                activeArea,
+                stalled,
+                pendingGameElapsedMillis,
+                secondsPerTick,
+            )
         val status =
-            when {
-                !activeArea -> MachineStatus.IDLE
-                stalled -> MachineStatus.STALLED
-                storedFizz < MIN_TICK_FIZZ -> MachineStatus.NO_POWER
-                else -> null
-            }
-        val recipeLimit =
-            recipeTimeSeconds
-                ?.takeIf { it.isFinite() }
-                ?.minus(COMPLETION_GUARD_SECONDS)
-                ?.coerceAtLeast(0f)
+            gateStatus(
+                storedFizz,
+                activeArea,
+                stalled,
+                pendingGameElapsedMillis,
+                allowedGameElapsedMillis,
+            )
         return OvenGateUpdate(
-            progress =
-                if (status != null && recipeLimit != null) {
-                    min(progress.coerceAtLeast(0f), recipeLimit)
-                } else {
-                    progress.coerceAtLeast(0f)
-                },
+            allowedGameElapsedMillis = allowedGameElapsedMillis,
+            effectiveDtSeconds = effectiveDtSeconds(allowedGameElapsedMillis, secondsPerTick),
             status = status,
         )
     }
+
+    private fun gateStatus(
+        storedFizz: Long,
+        activeArea: Boolean,
+        stalled: Boolean,
+        pendingGameElapsedMillis: Long,
+        allowedGameElapsedMillis: Long,
+    ): MachineStatus? =
+        when {
+            !activeArea -> MachineStatus.IDLE
+            stalled -> MachineStatus.STALLED
+            storedFizz <= 0 -> MachineStatus.NO_POWER
+            pendingGameElapsedMillis > 0 && allowedGameElapsedMillis == 0L -> MachineStatus.NO_POWER
+            else -> null
+        }
+
+    private fun affordableGameElapsedMillis(
+        storedFizz: Long,
+        activeArea: Boolean,
+        stalled: Boolean,
+        pendingGameElapsedMillis: Long,
+        secondsPerTick: Double,
+    ): Long {
+        if (!activeArea || stalled || storedFizz <= 0) {
+            return 0
+        }
+        if (!secondsPerTick.isFinite() || secondsPerTick <= 0.0) {
+            return 0
+        }
+        val affordableMillis =
+            floor((storedFizz.toDouble() / FIZZ_PER_PROCESS_SECOND) * secondsPerTick * 1000.0)
+                .toLong()
+                .coerceAtLeast(0)
+        var allowedMillis = min(pendingGameElapsedMillis.coerceAtLeast(0), affordableMillis)
+        while (
+            allowedMillis > 0 &&
+            requiredFizz(allowedMillis, secondsPerTick) > storedFizz
+        ) {
+            allowedMillis -= 1
+        }
+        return allowedMillis
+    }
+
+    private fun effectiveDtSeconds(
+        gameElapsedMillis: Long,
+        secondsPerTick: Double,
+    ): Float =
+        if (secondsPerTick.isFinite() && secondsPerTick > 0.0) {
+            ((gameElapsedMillis.toFloat() / 1000f).toDouble() / secondsPerTick).toFloat()
+        } else {
+            0f
+        }
+
+    private fun requiredFizz(
+        gameElapsedMillis: Long,
+        secondsPerTick: Double,
+    ): Long =
+        ceil(effectiveDtSeconds(gameElapsedMillis, secondsPerTick).toDouble() * FIZZ_PER_PROCESS_SECOND - COST_EPSILON)
+            .toLong()
+            .coerceAtLeast(0)
 
     @Suppress("CyclomaticComplexMethod")
     fun process(
@@ -155,27 +215,16 @@ internal object OvenFizzAccounting {
         currentProgress: Float,
         previousRecipeTimeSeconds: Float?,
         recipeChanged: Boolean = false,
-        currentRecipeTimeSeconds: Float? = previousRecipeTimeSeconds,
-        frozenProgress: Float? = null,
         gateStatus: MachineStatus? = null,
     ): OvenProcessingUpdate {
         val stored = storedFizz.coerceIn(0, OvenPower.CAPACITY)
-        if (gateStatus != null) {
-            val safeProgress =
-                if (recipeChanged) {
-                    currentRecipeTimeSeconds
-                        ?.takeIf { it.isFinite() }
-                        ?.minus(COMPLETION_GUARD_SECONDS)
-                        ?.coerceAtLeast(0f)
-                        ?.let { min(currentProgress.coerceAtLeast(0f), it) }
-                        ?: currentProgress.coerceAtLeast(0f)
-                } else {
-                    frozenProgress ?: previousProgress ?: currentProgress
-                }
-            return OvenProcessingUpdate(stored, safeProgress.coerceAtLeast(0f), 0f, gateStatus)
-        }
         if (previousProgress == null || !previousProgress.isFinite() || !currentProgress.isFinite()) {
-            return OvenProcessingUpdate(stored, currentProgress.coerceAtLeast(0f), 0f, MachineStatus.IDLE)
+            return OvenProcessingUpdate(
+                stored,
+                currentProgress.coerceAtLeast(0f),
+                0f,
+                gateStatus ?: MachineStatus.IDLE,
+            )
         }
 
         val startProgress = if (recipeChanged) 0f else previousProgress
@@ -195,7 +244,12 @@ internal object OvenFizzAccounting {
                 recipeTime - startProgress + currentProgress
             }
         if (delta <= 0f) {
-            return OvenProcessingUpdate(stored, currentProgress.coerceAtLeast(0f), 0f, MachineStatus.IDLE)
+            return OvenProcessingUpdate(
+                stored,
+                currentProgress.coerceAtLeast(0f),
+                0f,
+                gateStatus ?: MachineStatus.IDLE,
+            )
         }
 
         val cost = delta.toDouble() * FIZZ_PER_PROCESS_SECOND
@@ -210,8 +264,6 @@ internal object OvenFizzAccounting {
 
     const val FIZZ_PER_SOLVE_TICK = 30L
     const val FIZZ_PER_PROCESS_SECOND = 60L
-    const val MIN_TICK_FIZZ = 6L
-    const val COMPLETION_GUARD_SECONDS = 0.25f
 
     private const val COST_EPSILON = 1e-4
 }

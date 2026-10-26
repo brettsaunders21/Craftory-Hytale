@@ -38,6 +38,7 @@ import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBloc
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.SoundUtil
@@ -266,6 +267,7 @@ internal class ScorchOvenGateSystem : EntityTickingSystem<ChunkStore>() {
         val jank = chunk.getComponent(index, Jank.type) ?: return
         val bench = chunk.getComponent(index, ProcessingBenchBlock.getComponentType()) ?: return
         val blockState = chunk.getComponent(index, BlockModule.BlockStateInfo.getComponentType()) ?: return
+        val world = store.externalData.world
         val recipe = bench.recipe
         val recipeId = recipe?.id
         val recipeTime = recipe?.let { bench.getRecipeTimeSeconds(1) }
@@ -281,20 +283,31 @@ internal class ScorchOvenGateSystem : EntityTickingSystem<ChunkStore>() {
         power.tickRecipeTimeSeconds = recipeTime
         power.recipeChangedBeforeTick = recipeChanged
 
+        val currentGameTime =
+            world.entityStore.store
+                .getResource(WorldTimeResource.getResourceType())
+                .gameTime
+        val previousGameTime = bench.lastTickGameTime
+        val pendingGameElapsedMillis =
+            if (currentGameTime != null && previousGameTime != null && currentGameTime != previousGameTime) {
+                (currentGameTime.toEpochMilli() - previousGameTime.toEpochMilli()).coerceAtLeast(0)
+            } else {
+                0
+            }
         val gate =
             OvenFizzAccounting.gate(
                 storedFizz = power.storedFizz,
                 activeArea = CraftoryCore.isAreaActive(store, blockState),
                 stalled = jank.isStalled,
-                progress = bench.inputProgress,
-                recipeTimeSeconds = recipeTime,
+                pendingGameElapsedMillis = pendingGameElapsedMillis,
+                secondsPerTick = WorldTimeResource.getSecondsPerTick(world),
             )
         power.gateStatus = gate.status
-        power.frozenProgress = gate.progress.takeIf { gate.status != null }
-        if (gate.status != null && bench.inputProgress != gate.progress) {
-            bench.setInputProgress(gate.progress)
-            val benchBlock = chunk.getComponent(index, BenchBlock.getComponentType()) ?: return
-            bench.sendProgress(gate.progress, benchBlock.windows)
+        if (
+            currentGameTime != null &&
+            (gate.status != null || gate.allowedGameElapsedMillis < pendingGameElapsedMillis)
+        ) {
+            bench.setLastTickGameTime(currentGameTime.minusMillis(gate.allowedGameElapsedMillis))
         }
     }
 }
@@ -384,8 +397,6 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
                 currentProgress = bench.inputProgress,
                 previousRecipeTimeSeconds = power.tickRecipeTimeSeconds ?: power.lastRecipeTimeSeconds,
                 recipeChanged = recipeChanged,
-                currentRecipeTimeSeconds = currentRecipeTime,
-                frozenProgress = power.frozenProgress,
                 gateStatus =
                     gateStatus
                         ?: if (!activeArea) {
@@ -406,7 +417,6 @@ internal class ScorchOvenSystem : EntityTickingSystem<ChunkStore>() {
         power.lastRecipeTimeSeconds = currentRecipeTime
         power.status = processing.status
         power.gateStatus = null
-        power.frozenProgress = null
         power.recipeChangedBeforeTick = false
         setBlockState(world, blockState, commandBuffer, if (processing.advanced) "On" else "Off")
         if (power.storedFizz != previousStoredFizz) blockState.markNeedsSaving(commandBuffer)

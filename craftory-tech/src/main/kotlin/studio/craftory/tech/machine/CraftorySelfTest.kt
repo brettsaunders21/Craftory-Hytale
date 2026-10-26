@@ -32,6 +32,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
@@ -70,6 +71,7 @@ import studio.craftory.tech.well.WellSelfTest
 import studio.craftory.tech.well.WellSelfTestFixtures
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util.Random
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -834,6 +836,25 @@ internal class SelfTestSystem : TickingSystem<ChunkStore>() {
             )
             run.ovenUnpoweredProbeTick = run.world.tick
             run.phase = 7
+            val timeResource =
+                run.world.entityStore.store
+                    .getResource(WorldTimeResource.getResourceType())
+            val previousGameTime = timeResource.gameTime
+            if (previousGameTime != null) {
+                timeResource.setGameTime(
+                    previousGameTime.plus(Duration.ofHours(6)),
+                    run.world,
+                    run.world.entityStore.store,
+                )
+                check(
+                    run,
+                    timeResource.gameTime == previousGameTime.plus(Duration.ofHours(6)),
+                    "oven unpowered game-time jump",
+                    "gameTime=${timeResource.gameTime}",
+                )
+            } else {
+                check(run, false, "oven unpowered game-time jump", "game time unavailable")
+            }
         }
     }
 
