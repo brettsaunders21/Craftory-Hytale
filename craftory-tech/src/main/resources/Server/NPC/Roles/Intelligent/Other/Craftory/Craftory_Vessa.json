@@ -5,6 +5,7 @@
   "DefaultNPCAttitude": "Ignore",
   "DefaultPlayerAttitude": "Neutral",
   "Appearance": "Craftory_Vessa",
+  "NameTranslationKey": "server.npcRoles.Craftory_Vessa.name",
   "MaxHealth": 70,
   "DisableDamageGroups": ["Self"],
   "MotionControllerList": [

@@ -42,6 +42,7 @@ items.Craftory_Grit_Silver.name = Silver Grit
 items.Craftory_Grit_Thorium.name = Thorium Grit
 barter.craftory_grizzlecog.title = Grizzlecog's junk
 npcRoles.Craftory_Grizzlecog.name = Grizzlecog
+npcRoles.Craftory_Vessa.name = Vessa Lanternwright
 items.Craftory_Boom_Valve.name = Boom Valve
 items.Craftory_Boom_Valve.description = Makes a powered machine faster, but increases Jank.
 items.Craftory_Gutter_Gear.name = Gutter Gear

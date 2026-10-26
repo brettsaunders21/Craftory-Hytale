@@ -12,6 +12,8 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem
 import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.protocol.SoundCategory
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset
+import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil
@@ -80,7 +82,7 @@ internal object FirstSpark {
         val blockTypes = BlockType.getAssetMap()
         IntArray(CraftoryIds.CRYSTAL_TRIGGER_BLOCKS.size) { index ->
             blockTypes.getIndex(CraftoryIds.CRYSTAL_TRIGGER_BLOCKS[index])
-        }
+        }.filter { it != Int.MIN_VALUE }.toIntArray()
     }
     private val pendingVessaSpawns = FirstSparkPendingSpawns()
 
@@ -132,18 +134,20 @@ internal object FirstSpark {
             try {
                 if (!shouldContinue()) return@execute
                 if (action == FirstSparkRules.Action.GRANT_AND_SPAWN) {
-                    repeat(6) { index ->
-                        val amount = (index + 1) / 7.0
-                        arcPosition.set(
-                            nearest.first.x + 0.5 + (machineX - nearest.first.x) * amount,
-                            nearest.first.y + 0.5 + (machineY - nearest.first.y) * amount,
-                            nearest.first.z + 0.5 + (machineZ - nearest.first.z) * amount,
-                        )
-                        ParticleUtil.spawnParticleEffect(
-                            CraftoryIds.SPARK_PARTICLE,
-                            arcPosition,
-                            world.entityStore.store,
-                        )
+                    if (ParticleSystem.getAssetMap().getAsset(CraftoryIds.SPARK_PARTICLE) != null) {
+                        repeat(6) { index ->
+                            val amount = (index + 1) / 7.0
+                            arcPosition.set(
+                                nearest.first.x + 0.5 + (machineX - nearest.first.x) * amount,
+                                nearest.first.y + 0.5 + (machineY - nearest.first.y) * amount,
+                                nearest.first.z + 0.5 + (machineZ - nearest.first.z) * amount,
+                            )
+                            ParticleUtil.spawnParticleEffect(
+                                CraftoryIds.SPARK_PARTICLE,
+                                arcPosition,
+                                world.entityStore.store,
+                            )
+                        }
                     }
                     val soundIndex = SoundEvent.getAssetMap().getIndex(CraftoryIds.SPARK_SOUND)
                     if (soundIndex != Int.MIN_VALUE) {
@@ -230,12 +234,19 @@ internal object VessaSpawner {
         x: Int,
         y: Int,
         z: Int,
-    ): Any? =
-        NPCPlugin.get().spawnNPC(
+    ): Any? {
+        val npcPlugin = NPCPlugin.get()
+        if (npcPlugin.getIndex(CraftoryIds.VESSA_ROLE) == Int.MIN_VALUE ||
+            ModelAsset.getAssetMap().getAsset(CraftoryIds.VESSA_ROLE) == null
+        ) {
+            return null
+        }
+        return npcPlugin.spawnNPC(
             store,
             CraftoryIds.VESSA_ROLE,
             null,
             Vector3d(x + 0.5, y + 0.5, z + 0.5),
             Rotation3f.IDENTITY,
         )
+    }
 }

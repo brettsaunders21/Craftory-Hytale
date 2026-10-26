@@ -53,7 +53,7 @@ object CraftoryIds {
     const val HAMMER_USE_INTERACTION = "Craftory_HammerUse"
     const val GHOST_PARTICLE = "Dust_Sparkles_Fine"
     const val CHIMNEY_SMOKE_PARTICLE = "Dungeon_Goblin_Smoke_Pipe_Small"
-    const val SPARK_PARTICLE = "Ability_ChainHook_Sparks"
+    const val SPARK_PARTICLE = "Goblin_Decorative_Sparks_Burst"
     const val HAMMER_SOUND = "SFX_Metal_Hit"
     const val SPARK_SOUND = "SFX_Crystal_Hit"
     const val FIZZ_RESOURCE_TYPE = "Craftory_Fizz"

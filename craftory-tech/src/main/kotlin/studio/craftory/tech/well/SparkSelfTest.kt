@@ -84,6 +84,7 @@ internal class SparkSelfTest(
     private var energyTicks = 0
     private var harmonyRechecked = false
     private var resonatorSawOutput = false
+    private var firstSparkCrystalAvailable = false
     private var vessaRef: Ref<EntityStore>? = null
     private var completion: (() -> Unit)? = null
 
@@ -93,10 +94,7 @@ internal class SparkSelfTest(
         run.sparkCleanup = ::cleanup
         run.sparkTest = this
         try {
-            if (!checkSparkVanillaIds()) {
-                finish()
-                return
-            }
+            checkSparkVanillaIds()
             ensureEmpty()
             fixturesStarted = true
             runLiveChecks()
@@ -173,15 +171,17 @@ internal class SparkSelfTest(
             "conversions=${resonatorState?.conversions}, clouded=${resonatorState?.clouded}, " +
                 "output=${energy.networkSupply(resonatorOutputId)}",
         )
-        check(
-            vessaRef?.isValid == true &&
-                crews.hasKnowledge(sparkOwner, CraftoryIds.VESSA_MET_KNOWLEDGE) &&
-                vessaRef
-                    ?.let { world.entityStore.store.getComponent(it, TransformComponent.getComponentType()) }
-                    ?.position
-                    ?.y == sparkBurner.y + 1.5,
-            "First Spark spawns Vessa and grants meeting knowledge",
-        )
+        if (firstSparkCrystalAvailable) {
+            check(
+                vessaRef?.isValid == true &&
+                    crews.hasKnowledge(sparkOwner, CraftoryIds.VESSA_MET_KNOWLEDGE) &&
+                    vessaRef
+                        ?.let { world.entityStore.store.getComponent(it, TransformComponent.getComponentType()) }
+                        ?.position
+                        ?.y == sparkBurner.y + 1.5,
+                "First Spark spawns Vessa and grants meeting knowledge",
+            )
+        }
         finish()
     }
 
@@ -294,7 +294,12 @@ internal class SparkSelfTest(
             ResonatorState.type,
         )
         CraftorySelfTest.place(world, store, run.sectionRef, section, CraftoryIds.BURNER, sparkBurner, BurnerState.type)
-        placePlain(CraftoryIds.CRYSTAL_CYAN_BLOCK, cyanCrystal)
+        firstSparkCrystalAvailable = BlockType.fromString(CraftoryIds.CRYSTAL_CYAN_BLOCK) != null
+        if (firstSparkCrystalAvailable) {
+            placePlain(CraftoryIds.CRYSTAL_CYAN_BLOCK, cyanCrystal)
+        } else {
+            report("SKIP First Spark trigger check (missing block ${CraftoryIds.CRYSTAL_CYAN_BLOCK})")
+        }
         prepareBurner(coilBurner)
         prepareBurner(resonatorBurner)
         prepareBurner(sparkBurner, sparkOwner)
@@ -308,29 +313,31 @@ internal class SparkSelfTest(
         val sparkCrew = crews.crewOf(sparkOwner)
         crews.setTier(sparkCrew.id, 2)
         val machineRef = entityAt(sparkBurner) ?: error("First Spark Burner missing")
-        val triggered =
-            FirstSpark.tryTrigger(
-                world,
-                store,
-                machineRef,
-                Vector3i(sparkBurner.x, sparkBurner.y, sparkBurner.z),
-                crews,
-                shouldContinue = { !cleaned },
-            ) { vessaRef = it }
-        val triggeredAgain =
-            FirstSpark.tryTrigger(
-                world,
-                store,
-                machineRef,
-                Vector3i(sparkBurner.x, sparkBurner.y, sparkBurner.z),
-                crews,
+        if (firstSparkCrystalAvailable) {
+            val triggered =
+                FirstSpark.tryTrigger(
+                    world,
+                    store,
+                    machineRef,
+                    Vector3i(sparkBurner.x, sparkBurner.y, sparkBurner.z),
+                    crews,
+                    shouldContinue = { !cleaned },
+                ) { vessaRef = it }
+            val triggeredAgain =
+                FirstSpark.tryTrigger(
+                    world,
+                    store,
+                    machineRef,
+                    Vector3i(sparkBurner.x, sparkBurner.y, sparkBurner.z),
+                    crews,
+                )
+            check(
+                triggered && !triggeredAgain && crews.hasKnowledge(sparkOwner, CraftoryIds.FIRST_SPARK_KNOWLEDGE),
+                "First Spark grants crew knowledge once",
+                "first=$triggered, second=$triggeredAgain",
             )
+        }
         store.getComponent(machineRef, MachineOwner.type)?.placerUuid = null
-        check(
-            triggered && !triggeredAgain && crews.hasKnowledge(sparkOwner, CraftoryIds.FIRST_SPARK_KNOWLEDGE),
-            "First Spark grants crew knowledge once",
-            "first=$triggered, second=$triggeredAgain",
-        )
     }
 
     private fun prepareBurner(
@@ -388,7 +395,7 @@ internal class SparkSelfTest(
         check(sparkOverlap == null) { "First Spark radius overlaps existing fixture at $sparkOverlap" }
     }
 
-    private fun checkSparkVanillaIds(): Boolean {
+    private fun checkSparkVanillaIds() {
         val missing = mutableListOf<String>()
         val blockAssets = BlockType.getAssetMap()
         CraftoryIds.CRYSTAL_TRIGGER_BLOCKS.forEach { id ->
@@ -413,7 +420,6 @@ internal class SparkSelfTest(
         }
         val passed = missing.isEmpty()
         check(passed, "Spark vanilla ids resolve", if (passed) "" else "missing=${missing.joinToString()}")
-        return passed
     }
 
     private fun withinSection(

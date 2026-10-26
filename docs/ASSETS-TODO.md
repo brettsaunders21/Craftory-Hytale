@@ -47,7 +47,7 @@ python3 tools/art/preview.py <out_dir> ~/.gradle/caches/hytale-assets/release-0.
 - High-Jank grey smoke: `Deployables/Healing_Totem/Totem_Heal_Smoke`.
 - Jank rattle/fizzle sound: `SFX_GoblinLab_Broken_Device`.
 - `Craftory_Glimmerwell_Anchor`: replace the invisible, non-solid discovery placeholder with a Glimmerwell model, temperament-tinted glow, and pulse/mote effects.
-- Glimmerwell discovery effects use the vanilla `Ability_ChainHook_Sparks` particle and `SFX_Crystal_Hit` sound as placeholders; replace with authored pulse and resonance assets.
+- Glimmerwell discovery effects use the vanilla `Goblin_Decorative_Sparks_Burst` particle and `SFX_Crystal_Hit` sound as placeholders; replace with authored pulse and resonance assets.
 - **Gutterpipe connected shapes:** patterned rule sets such as vanilla `MetalSimplePipe` map each shape to a separate block ID. Gutterpipe is also an energy block entity, so connected shapes need per-shape block IDs and network support. Only the straight, end-capped form ships for now.
 - **Fizz Canister fill-state switching:** the item defines Empty, Quarter, Half, ThreeQuarter, and Full model states, but there is no canister ticking system to switch among them.
 - **Scorch Oven On state:** only the Off model is wired; the On art is unused.
