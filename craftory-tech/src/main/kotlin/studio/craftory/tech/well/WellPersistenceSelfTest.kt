@@ -3,12 +3,14 @@ package studio.craftory.tech.well
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
+import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.modules.block.BlockEntity
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection
 import com.hypixel.hytale.server.core.universe.world.events.ecs.ChunkSaveEvent
@@ -30,13 +32,17 @@ internal object WellPersistenceSelfTest {
     private val CLAIM_CREW_ID = UUID.fromString("00000000-0000-0000-0000-000000000002")
     private const val PLACER_UUID = "00000000-0000-0000-0000-000000000001"
 
-    private data class Fixture(
+    internal data class Fixture(
         val world: World,
         val wellPosition: BlockPos,
         val sectionRef: Ref<ChunkStore>,
         val stakePositions: List<CraftorySelfTest.TestPosition>,
         val chunkIndex: Long,
         val stakeRefs: MutableList<Ref<ChunkStore>>,
+        val expectedState: WellState = WellState.TETHERED,
+        val expectedStrength: WellStrength = WellStrength.FLICKER,
+        val expectedClaimCrew: UUID? = CLAIM_CREW_ID,
+        val extraBlockPositions: List<CraftorySelfTest.TestPosition> = emptyList(),
     )
 
     fun run(
@@ -50,7 +56,26 @@ internal object WellPersistenceSelfTest {
                 complete(false, "TETHERED fixture setup failed (${failure.message})")
                 return
             }
-        saveAndUnload(fixture, complete)
+        saveAndUnload(fixture, { tetheredPassed, tetheredDetail ->
+            if (!tetheredPassed) {
+                complete(false, tetheredDetail)
+            } else {
+                val smothered =
+                    runCatching { prepareSmotheredReloadFixture(world) }
+                        .getOrElse { failure ->
+                            complete(false, "smothered Well fixture setup failed (${failure.message})")
+                            null
+                        }
+                if (smothered != null) {
+                    saveAndUnload(smothered, { smotheredPassed, smotheredDetail ->
+                        complete(
+                            smotheredPassed,
+                            "$tetheredDetail; $smotheredDetail",
+                        )
+                    })
+                }
+            }
+        })
     }
 
     private fun prepare(world: World): Fixture {
@@ -291,8 +316,12 @@ internal object WellPersistenceSelfTest {
         store: Store<ChunkStore>,
         well: Glimmerwell,
     ) {
-        check(well.state == WellState.TETHERED && well.claimCrewId == CLAIM_CREW_ID) {
-            "reloaded Well lost its TETHERED state or crew claim"
+        check(
+            well.state == fixture.expectedState &&
+                well.strength == fixture.expectedStrength &&
+                well.claimCrewId == fixture.expectedClaimCrew,
+        ) {
+            "reloaded Well lost its ${fixture.expectedState} state, strength band, or crew claim"
         }
         check(fixture.stakePositions.all { position -> isRestoredStake(fixture, world, store, position) }) {
             "one or more tether stakes did not persist"
@@ -323,8 +352,17 @@ internal object WellPersistenceSelfTest {
                 fixture.wellPosition.y,
                 fixture.wellPosition.z,
             )
-        CraftorySelfTest.clear(fixture.world, sectionRef, listOf(wellPosition) + fixture.stakePositions)
-        fixture.stakeRefs.forEach(WellSelfTestExclusions::releaseBlock)
+        val extraRefs =
+            fixture.extraBlockPositions.mapNotNull { position ->
+                BlockModule.getBlockEntity(fixture.world, position.x, position.y, position.z)
+            }
+        extraRefs.forEach(WellSelfTestExclusions::registerBlock)
+        CraftorySelfTest.clear(
+            fixture.world,
+            sectionRef,
+            listOf(wellPosition) + fixture.stakePositions + fixture.extraBlockPositions,
+        )
+        (fixture.stakeRefs + extraRefs).forEach(WellSelfTestExclusions::releaseBlock)
         fixture.stakeRefs.clear()
         WellSelfTestExclusions.releaseWell(fixture.wellPosition)
     }
@@ -374,6 +412,79 @@ internal object WellPersistenceSelfTest {
         worldChunk.setSaving(false)
         worldChunk.removeKeepLoaded()
     }
+}
+
+private fun prepareSmotheredReloadFixture(world: World): WellPersistenceSelfTest.Fixture {
+    val position = WellSelfTest.SMOTHERED_POS
+    val sectionRef =
+        world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z)
+            ?: error("smothered test section is not loaded")
+    val chunkIndex = ChunkUtil.indexChunkFromBlock(position.x, position.z)
+    val damperPositions =
+        listOf(
+            CraftorySelfTest.TestPosition(position.x + 2, position.y, position.z),
+            CraftorySelfTest.TestPosition(position.x - 2, position.y, position.z),
+            CraftorySelfTest.TestPosition(position.x, position.y, position.z + 2),
+        )
+    val fixture =
+        WellPersistenceSelfTest.Fixture(
+            world,
+            position,
+            sectionRef,
+            emptyList(),
+            chunkIndex,
+            mutableListOf(),
+            WellState.DORMANT,
+            WellStrength.FLICKER,
+            null,
+            damperPositions,
+        )
+    var setupComplete = false
+    try {
+        WellSelfTestExclusions.registerWell(position)
+        val ref =
+            CraftoryCore.wells().spawn(
+                world,
+                position,
+                Temperament.SPARK,
+                WellStrength.STEADY,
+                WellState.WILD,
+            ) ?: error("WILD Well for smothered reload did not spawn")
+        val well =
+            world.chunkStore.store.getComponent(ref, Glimmerwell.type)
+                ?: error("Well state is missing")
+        val store = world.chunkStore.store
+        val section =
+            store.getComponent(sectionRef, BlockComponentSection.getComponentType())
+                ?: error("smothered test block section is missing")
+        WellSelfTest.Helpers.placeTestDampers(
+            world,
+            store,
+            sectionRef,
+            section,
+            damperPositions,
+            fixture.stakeRefs,
+        )
+        WellSelfTest.Helpers.assertDamperSmothering(store, well, fixture.stakeRefs)
+        setupComplete = true
+        return fixture
+    } finally {
+        if (!setupComplete) cleanupFailedSmotheredFixture(world, position, sectionRef, damperPositions, fixture)
+    }
+}
+
+private fun cleanupFailedSmotheredFixture(
+    world: World,
+    position: BlockPos,
+    sectionRef: Ref<ChunkStore>,
+    damperPositions: List<CraftorySelfTest.TestPosition>,
+    fixture: WellPersistenceSelfTest.Fixture,
+) {
+    CraftoryCore.wells().remove(world, position)
+    val wellPosition = CraftorySelfTest.TestPosition(position.x, position.y, position.z)
+    CraftorySelfTest.clear(world, sectionRef, listOf(wellPosition) + damperPositions)
+    fixture.stakeRefs.forEach(WellSelfTestExclusions::releaseBlock)
+    WellSelfTestExclusions.releaseWell(position)
 }
 
 private fun scheduleReloadRetry(

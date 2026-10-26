@@ -45,34 +45,36 @@ import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.EnergyHudState
+import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.Logger
 import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.random.Random
 
 private const val READOUT_INTERVAL_TICKS = 100L
+private val LOGGER = Logger.getLogger(JarCarrierSystem::class.java.name)
+private val loggedBurstFailures = ConcurrentHashMap.newKeySet<java.util.UUID>()
+
+private object BurstFailureLog {
+    fun first(player: java.util.UUID): Boolean = loggedBurstFailures.add(player)
+
+    fun clear(player: java.util.UUID) {
+        loggedBurstFailures.remove(player)
+    }
+}
 
 class JarCarrier(
-    var stability: Double = 100.0,
-    var temperamentId: String = Temperament.SPARK.id,
-    var strengthId: String = WellStrength.FLICKER.name,
-    var taste: String = "",
-    var wellId: String = "",
-    var lastTick: Long = 0,
     var nextAmbushTick: Long = 0,
     var lastReadoutTick: Long = 0,
     var originalBaseSpeed: Float = 1.0f,
+    var lowestStability: Double = 100.0,
 ) : Component<EntityStore> {
     override fun clone(): Component<EntityStore> =
         JarCarrier(
-            stability,
-            temperamentId,
-            strengthId,
-            taste,
-            wellId,
-            lastTick,
             nextAmbushTick,
             lastReadoutTick,
             originalBaseSpeed,
+            lowestStability,
         )
 
     companion object {
@@ -80,26 +82,6 @@ class JarCarrier(
         val CODEC: BuilderCodec<JarCarrier> =
             BuilderCodec
                 .builder(JarCarrier::class.java, ::JarCarrier)
-                .append(
-                    KeyedCodec("Stability", Codec.DOUBLE),
-                    { state, value -> state.stability = value },
-                    { it.stability },
-                ).add()
-                .append(KeyedCodec("TemperamentId", Codec.STRING), { state, value -> state.temperamentId = value }, {
-                    it.temperamentId
-                })
-                .add()
-                .append(
-                    KeyedCodec("StrengthId", Codec.STRING),
-                    { state, value -> state.strengthId = value },
-                    { it.strengthId },
-                ).add()
-                .append(KeyedCodec("Taste", Codec.STRING), { state, value -> state.taste = value }, { it.taste })
-                .add()
-                .append(KeyedCodec("WellId", Codec.STRING), { state, value -> state.wellId = value }, { it.wellId })
-                .add()
-                .append(KeyedCodec("LastTick", Codec.LONG), { state, value -> state.lastTick = value }, { it.lastTick })
-                .add()
                 .append(KeyedCodec("NextAmbushTick", Codec.LONG), { state, value -> state.nextAmbushTick = value }, {
                     it.nextAmbushTick
                 })
@@ -117,6 +99,11 @@ class JarCarrier(
                     {
                         it.originalBaseSpeed
                     },
+                ).add()
+                .append(
+                    KeyedCodec("LowestStability", Codec.DOUBLE),
+                    { state, value -> state.lowestStability = value },
+                    { it.lowestStability },
                 ).add()
                 .build()
     }
@@ -144,6 +131,7 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
                 processPlayer(ref, playerRef, transform.position, store, world, tick)
             }
         }
+        CarrierAcceptanceSelfTest.tick(world, store)
     }
 
     private fun processPlayer(
@@ -156,81 +144,73 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
     ) {
         val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
         val existing = store.getComponent(ref, JarCarrier.type)
-        if (store.getComponent(ref, MountedComponent.getComponentType()) != null) {
-            if (existing != null) removeCarrier(ref, playerRef, store, inventory, existing)
+        val mounted = store.getComponent(ref, MountedComponent.getComponentType()) != null
+        val jars = filledJarSlots(inventory)
+        if (jars.isEmpty()) {
+            if (existing != null) removeCarrier(ref, playerRef, position, store, existing)
             return
         }
-        val jar = findFilledJar(inventory)
-        if (jar == null) {
-            if (existing != null) removeCarrier(ref, playerRef, store, inventory, existing)
+        val carrier = existing ?: createCarrier(ref, store, tick)
+        var lowestStability = 100.0
+        val weatherKind = weatherKindAt(world, position)
+        jars.forEach { (slot, item) ->
+            val stability = (item.getFromMetadataOrNull(GobJarMetadata.STABILITY) ?: 100.0).coerceIn(0.0, 100.0)
+            val temperament =
+                Temperament.entries.firstOrNull {
+                    it.id == item.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT)
+                } ?: Temperament.SPARK
+            var nextStability = JarCarrierRules.drainForSecond(stability, temperament, weatherKind)
+            if (JarCarrierRules.shouldBurst(nextStability)) {
+                if (spawnBurstWell(world, position, item)) {
+                    check(JarCarrierRules.burstResult(nextStability, true) == JarCarrierRules.BurstResult.CONSUME)
+                    inventory.setItemStackForSlot(slot, ItemStack.EMPTY)
+                    BurstFailureLog.clear(playerRef.uuid)
+                    clearCarrierReadout(playerRef, position, store)
+                    knockBack(ref, store, position)
+                    return@forEach
+                }
+                check(JarCarrierRules.burstResult(nextStability, false) == JarCarrierRules.BurstResult.RETRY_AT_ONE)
+                nextStability = 1.0
+                if (BurstFailureLog.first(playerRef.uuid)) {
+                    LOGGER.warning("Gob-Jar burst Well spawn failed; retaining jar at stability 1 for retry")
+                }
+            }
+            if (nextStability.toInt() != stability.toInt()) {
+                inventory.setItemStackForSlot(slot, item.withMetadata(GobJarMetadata.STABILITY, nextStability))
+            }
+            lowestStability = minOf(lowestStability, nextStability)
+        }
+        if (filledJarSlots(inventory).isEmpty()) {
+            removeCarrier(ref, playerRef, position, store, carrier)
             return
         }
-        val carrier = existing ?: createCarrier(ref, jar.second, store, tick)
-        updateCarrier(ref, playerRef, position, store, world, tick, inventory, jar.first, carrier)
+        carrier.lowestStability = lowestStability
+        if (mounted) restoreMovement(playerRef, ref, store, carrier) else applySlowdown(playerRef, ref, store, carrier)
+        updateAmbush(world, position, playerRef, carrier, tick)
+        updateReadout(playerRef, position, carrier, store, tick)
     }
 
-    private fun findFilledJar(
+    private fun filledJarSlots(
         inventory: com.hypixel.hytale.server.core.inventory.container.ItemContainer,
-    ): Pair<Short, ItemStack>? =
-        (0 until inventory.capacity.toInt()).firstNotNullOfOrNull { slot ->
+    ): List<Pair<Short, ItemStack>> =
+        (0 until inventory.capacity.toInt()).mapNotNull { slot ->
             val item = inventory.getItemStack(slot.toShort())
             if (item?.itemId == CraftoryIds.GOB_JAR_FILLED) slot.toShort() to item else null
         }
 
     private fun createCarrier(
         ref: Ref<EntityStore>,
-        jar: ItemStack,
         store: Store<EntityStore>,
         tick: Long,
     ): JarCarrier {
         val movement = store.getComponent(ref, MovementManager.getComponentType())
         val carrier =
             JarCarrier(
-                stability =
-                    (jar.getFromMetadataOrNull(GobJarMetadata.STABILITY) ?: 100.0).coerceIn(0.0, 100.0),
-                temperamentId = jar.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT) ?: Temperament.SPARK.id,
-                strengthId = jar.getFromMetadataOrNull(GobJarMetadata.STRENGTH) ?: WellStrength.FLICKER.name,
-                taste = jar.getFromMetadataOrNull(GobJarMetadata.TASTE) ?: "",
-                wellId = jar.getFromMetadataOrNull(GobJarMetadata.WELL_ID) ?: "",
-                lastTick = tick,
                 nextAmbushTick = tick + AMBUSH_INTERVAL_TICKS,
                 originalBaseSpeed = movement?.settings?.baseSpeed ?: 1.0f,
             )
         store.putComponent(ref, JarCarrier.type, carrier)
         return carrier
-    }
-
-    private fun updateCarrier(
-        ref: Ref<EntityStore>,
-        playerRef: PlayerRef,
-        position: Vector3d,
-        store: Store<EntityStore>,
-        world: World,
-        tick: Long,
-        inventory: com.hypixel.hytale.server.core.inventory.container.ItemContainer,
-        jarSlot: Short,
-        carrier: JarCarrier,
-    ) {
-        val elapsed = (tick - carrier.lastTick).coerceAtLeast(0L) / 20.0
-        carrier.lastTick = tick
-        drainStability(carrier, world, position, elapsed)
-        applySlowdown(playerRef, ref, store, carrier)
-        updateAmbush(world, position, playerRef, carrier, tick)
-        updateReadout(playerRef, position, carrier, store, tick)
-        if (JarCarrierRules.shouldBurst(carrier.stability)) {
-            burst(ref, playerRef, position, store, world, inventory, jarSlot, carrier)
-        }
-    }
-
-    private fun drainStability(
-        carrier: JarCarrier,
-        world: World,
-        position: Vector3d,
-        elapsed: Double,
-    ) {
-        val temperament = Temperament.entries.firstOrNull { it.id == carrier.temperamentId } ?: Temperament.SPARK
-        val weatherSeconds = if (dislikedWeather(world, position, temperament)) elapsed else 0.0
-        carrier.stability = JarCarrierRules.stabilityAfter(carrier.stability, elapsed, 0, weatherSeconds)
     }
 
     private fun updateAmbush(
@@ -259,35 +239,17 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         showReadout(playerRef, position, carrier, store)
     }
 
-    private fun burst(
+    private fun removeCarrier(
         ref: Ref<EntityStore>,
         playerRef: PlayerRef,
         position: Vector3d,
         store: Store<EntityStore>,
-        world: World,
-        inventory: com.hypixel.hytale.server.core.inventory.container.ItemContainer,
-        jarSlot: Short,
         carrier: JarCarrier,
     ) {
-        inventory.setItemStackForSlot(jarSlot, ItemStack.EMPTY)
-        spawnBurstWell(world, position, carrier)
-        knockBack(ref, store, position)
-        removeCarrier(ref, playerRef, store, inventory, carrier, flushMetadata = false)
-    }
-
-    private fun removeCarrier(
-        ref: Ref<EntityStore>,
-        playerRef: PlayerRef,
-        store: Store<EntityStore>,
-        inventory: com.hypixel.hytale.server.core.inventory.container.ItemContainer,
-        carrier: JarCarrier,
-        flushMetadata: Boolean = true,
-    ) {
-        if (flushMetadata) flushCarrierMetadata(inventory, carrier)
         store.removeComponent(ref, JarCarrier.type)
-        val movement = store.getComponent(ref, MovementManager.getComponentType()) ?: return
-        movement.settings.baseSpeed = carrier.originalBaseSpeed
-        movement.update(playerRef.packetHandler)
+        BurstFailureLog.clear(playerRef.uuid)
+        restoreMovement(playerRef, ref, store, carrier)
+        clearCarrierReadout(playerRef, position, store)
     }
 
     companion object {
@@ -297,17 +259,18 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
 
 private const val CREW_READOUT_RADIUS_SQUARED = 32.0 * 32.0
 
-private fun dislikedWeather(
+private fun weatherKindAt(
     world: World,
     position: Vector3d,
-    temperament: Temperament,
-): Boolean {
+): WeatherKind {
     val blockPos = BlockPos(floor(position.x).toInt(), floor(position.y).toInt(), floor(position.z).toInt())
     val section =
-        world.chunkStore.getChunkSectionReferenceAtBlock(blockPos.x, blockPos.y, blockPos.z) ?: return false
+        world.chunkStore.getChunkSectionReferenceAtBlock(blockPos.x, blockPos.y, blockPos.z) ?: return WeatherKind.OTHER
     val sectionData =
-        world.chunkStore.store.getComponent(section, EnvironmentSection.getComponentType()) ?: return false
-    val environment = sectionData.get(blockPos.x and 31, blockPos.y and 31, blockPos.z and 31) ?: return false
+        world.chunkStore.store.getComponent(section, EnvironmentSection.getComponentType()) ?: return WeatherKind.OTHER
+    val environment =
+        sectionData.get(blockPos.x and 31, blockPos.y and 31, blockPos.z and 31)
+            ?: return WeatherKind.OTHER
     val weatherResource = world.entityStore.store.getResource(WeatherResource.getResourceType())
     val weatherIndex = weatherResource.getEffectiveWeatherIndex(environment)
     val id =
@@ -316,7 +279,7 @@ private fun dislikedWeather(
             .getAsset(weatherIndex)
             ?.id
             .orEmpty()
-    return StormHuntRules.dislikesWeather(temperament, StormHuntRules.weatherKind(id))
+    return StormHuntRules.weatherKind(id)
 }
 
 internal fun applySlowdown(
@@ -329,32 +292,22 @@ internal fun applySlowdown(
     val speed = JarCarrierRules.slowedSpeed(carrier.originalBaseSpeed)
     if (movement.settings.baseSpeed != speed) {
         movement.settings.baseSpeed = speed
-        movement.update(playerRef.packetHandler)
+        playerRef.packetHandler?.let(movement::update)
     }
 }
 
-internal fun flushCarrierMetadata(
-    inventory: com.hypixel.hytale.server.core.inventory.container.ItemContainer,
+internal fun restoreMovement(
+    playerRef: PlayerRef,
+    ref: Ref<EntityStore>,
+    store: Store<EntityStore>,
     carrier: JarCarrier,
 ) {
-    for (slot in 0 until inventory.capacity.toInt()) {
-        val item = inventory.getItemStack(slot.toShort())
-        if (item?.itemId == CraftoryIds.GOB_JAR_FILLED) {
-            inventory.setItemStackForSlot(slot.toShort(), metadataStack(item, carrier))
-        }
+    val movement = store.getComponent(ref, MovementManager.getComponentType()) ?: return
+    if (movement.settings.baseSpeed != carrier.originalBaseSpeed) {
+        movement.settings.baseSpeed = carrier.originalBaseSpeed
+        playerRef.packetHandler?.let(movement::update)
     }
 }
-
-internal fun metadataStack(
-    item: ItemStack,
-    carrier: JarCarrier,
-): ItemStack =
-    item
-        .withMetadata(GobJarMetadata.STABILITY, carrier.stability)
-        .withMetadata(GobJarMetadata.TEMPERAMENT, carrier.temperamentId)
-        .withMetadata(GobJarMetadata.STRENGTH, carrier.strengthId)
-        .withMetadata(GobJarMetadata.TASTE, carrier.taste)
-        .withMetadata(GobJarMetadata.WELL_ID, carrier.wellId)
 
 private fun showReadout(
     carrierRef: PlayerRef,
@@ -376,7 +329,7 @@ private fun showReadout(
         if (playerRef.uuid == carrierRef.uuid) {
             NotificationUtil.sendNotification(
                 playerRef.packetHandler,
-                Message.raw("Gob-Jar stability: ${carrier.stability.toInt()}%"),
+                Message.raw("Gob-Jar stability: ${carrier.lowestStability.toInt()}%"),
                 NotificationStyle.Default,
             )
             return@forEach
@@ -390,9 +343,34 @@ private fun showReadout(
                 ?.itemId == CraftoryIds.SQUINT_GOGGLES
         if (eligible && goggles) {
             val readout = store.getComponent(entity, EnergyHudState.type) ?: return@forEach
-            readout.carrierStability = carrier.stability.toInt()
+            readout.carrierStability = carrier.lowestStability.toInt()
             readout.carrierStabilityUntilTick = store.externalData.world.tick + READOUT_INTERVAL_TICKS
         }
+    }
+}
+
+internal fun clearCarrierReadout(
+    carrierRef: PlayerRef,
+    position: Vector3d,
+    store: Store<EntityStore>,
+) {
+    val crews = CraftoryCore.crewService()
+    val crewId = crews.crewOf(carrierRef.uuid).id
+    val worldUuid = store.externalData.world.worldConfig.uuid
+    Universe.get().getPlayers().forEach { playerRef ->
+        if (playerRef.worldUuid != worldUuid) return@forEach
+        val dx = playerRef.transform.position.x - position.x
+        val dy = playerRef.transform.position.y - position.y
+        val dz = playerRef.transform.position.z - position.z
+        if (dx * dx + dy * dy + dz * dz > CREW_READOUT_RADIUS_SQUARED ||
+            crews.crewOf(playerRef.uuid).id != crewId
+        ) {
+            return@forEach
+        }
+        val entity = playerRef.reference ?: return@forEach
+        val readout = store.getComponent(entity, EnergyHudState.type) ?: return@forEach
+        readout.carrierStability = null
+        readout.carrierStabilityUntilTick = 0
     }
 }
 
@@ -426,15 +404,19 @@ private fun spawnPoachers(
 private fun spawnBurstWell(
     world: World,
     position: Vector3d,
-    carrier: JarCarrier,
-) {
+    jar: ItemStack,
+): Boolean {
     val origin = BlockPos(floor(position.x).toInt(), floor(position.y).toInt(), floor(position.z).toInt())
     val surface =
         WellBirths.findSurface(world, origin.x, origin.z, origin.y)
-            ?: return
-    val temperament = Temperament.entries.firstOrNull { it.id == carrier.temperamentId } ?: Temperament.SPARK
-    val strength = WellStrength.entries.firstOrNull { it.name == carrier.strengthId } ?: WellStrength.FLICKER
-    CraftoryCore.wells().spawn(world, surface, temperament, strength, WellState.WILD)
+            ?: return false
+    val temperament =
+        Temperament.entries.firstOrNull { it.id == jar.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT) }
+            ?: Temperament.SPARK
+    val strength =
+        WellStrength.entries.firstOrNull { it.name == jar.getFromMetadataOrNull(GobJarMetadata.STRENGTH) }
+            ?: WellStrength.FLICKER
+    return CraftoryCore.wells().spawn(world, surface, temperament, strength, WellState.WILD) != null
 }
 
 private fun knockBack(
@@ -466,7 +448,17 @@ internal class JarCarrierDamageSystem : DamageEventSystem() {
         event: Damage,
     ) {
         if (event.isCancelled || event.amount <= 0f) return
-        chunk.getComponent(index, JarCarrier.type)?.let { it.stability = (it.stability - 10.0).coerceAtLeast(0.0) }
+        val ref = chunk.getReferenceTo(index)
+        val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
+        for (slot in 0 until inventory.capacity.toInt()) {
+            val item = inventory.getItemStack(slot.toShort())
+            if (item?.itemId != CraftoryIds.GOB_JAR_FILLED) continue
+            val stability = (item.getFromMetadataOrNull(GobJarMetadata.STABILITY) ?: 100.0).coerceIn(0.0, 100.0)
+            val reduced = (stability - 10.0).coerceAtLeast(0.0)
+            if (reduced.toInt() != stability.toInt()) {
+                inventory.setItemStackForSlot(slot.toShort(), item.withMetadata(GobJarMetadata.STABILITY, reduced))
+            }
+        }
     }
 }
 
@@ -482,8 +474,10 @@ internal class JarCarrierDropSystem : EntityEventSystem<EntityStore, DropItemEve
     ) {
         val carrier = chunk.getComponent(index, JarCarrier.type) ?: return
         val drop = event as? DropItemEvent.Drop ?: return
-        val item = drop.itemStack
-        if (item.itemId == CraftoryIds.GOB_JAR_FILLED) drop.itemStack = metadataStack(item, carrier)
+        if (drop.itemStack.itemId != CraftoryIds.GOB_JAR_FILLED) return
+        val player = chunk.getComponent(index, PlayerRef.getComponentType()) ?: return
+        val transform = chunk.getComponent(index, TransformComponent.getComponentType()) ?: return
+        clearCarrierReadout(player, transform.position, store)
     }
 }
 
@@ -498,14 +492,8 @@ internal class JarCarrierSeatLifecycle : com.hypixel.hytale.component.system.Ref
         commandBuffer: CommandBuffer<EntityStore>,
     ) {
         val carrier = store.getComponent(ref, JarCarrier.type)
-        if (carrier != null) {
-            flushCarrierForSeat(ref, carrier, store)
-        }
-        commandBuffer.tryRemoveComponent(ref, JarCarrier.type)
         val player = store.getComponent(ref, PlayerRef.getComponentType()) ?: return
-        val movement = store.getComponent(ref, MovementManager.getComponentType()) ?: return
-        if (carrier != null) movement.settings.baseSpeed = carrier.originalBaseSpeed
-        movement.update(player.packetHandler)
+        if (carrier != null) restoreMovement(player, ref, store, carrier)
     }
 
     override fun onEntityRemove(
@@ -513,15 +501,12 @@ internal class JarCarrierSeatLifecycle : com.hypixel.hytale.component.system.Ref
         reason: com.hypixel.hytale.component.RemoveReason,
         store: Store<EntityStore>,
         commandBuffer: CommandBuffer<EntityStore>,
-    ) = Unit
-
-    private fun flushCarrierForSeat(
-        ref: Ref<EntityStore>,
-        carrier: JarCarrier,
-        store: Store<EntityStore>,
     ) {
-        val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
-        flushCarrierMetadata(inventory, carrier)
+        val carrier = commandBuffer.getComponent(ref, JarCarrier.type) ?: return
+        val player = commandBuffer.getComponent(ref, PlayerRef.getComponentType()) ?: return
+        if (commandBuffer.getComponent(ref, MountedComponent.getComponentType()) == null) {
+            applySlowdown(player, ref, store, carrier)
+        }
     }
 }
 
@@ -543,7 +528,9 @@ internal class JarCarrierSaveLifecycle : RefSystem<EntityStore>() {
     ) {
         if (reason != RemoveReason.UNLOAD && reason != RemoveReason.REMOVE) return
         val carrier = commandBuffer.getComponent(ref, JarCarrier.type) ?: return
-        val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
-        flushCarrierMetadata(inventory, carrier)
+        val player = commandBuffer.getComponent(ref, PlayerRef.getComponentType()) ?: return
+        val position = commandBuffer.getComponent(ref, TransformComponent.getComponentType())?.position ?: return
+        restoreMovement(player, ref, store, carrier)
+        clearCarrierReadout(player, position, store)
     }
 }

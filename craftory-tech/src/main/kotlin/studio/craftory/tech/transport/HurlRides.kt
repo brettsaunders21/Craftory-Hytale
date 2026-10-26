@@ -18,7 +18,15 @@ import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.well.JarCarrier
 import java.util.UUID
 
-enum class HurlStartFailure { NO_ROUTE, ALREADY_RIDING, INSUFFICIENT_ENERGY, SPAWN_FAILED, FORBIDDEN, PENDING }
+enum class HurlStartFailure {
+    NO_ROUTE,
+    ALREADY_RIDING,
+    INSUFFICIENT_ENERGY,
+    SPAWN_FAILED,
+    JAR_CARRIER,
+    FORBIDDEN,
+    PENDING,
+}
 
 data class HurlStartResult(
     val capsule: Ref<EntityStore>? = null,
@@ -39,7 +47,7 @@ internal object HurlRides {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
         if (rider != null && carriesFilledJar(store, rider)) {
-            return HurlStartResult(failure = HurlStartFailure.FORBIDDEN)
+            return HurlStartResult(failure = HurlStartFailure.JAR_CARRIER)
         }
         val identity = StationPermissions.riderIdentity(store, rider, riderUuid)
         if (!StationPermissions.mayStart(world, from, to, identity, rider != null || riderUuid != null)) {
@@ -90,7 +98,7 @@ internal object HurlRides {
         world.debugAssertInTickingThread()
         val store = world.entityStore.store
         if (rider != null && carriesFilledJar(store, rider)) {
-            return HurlStartResult(failure = HurlStartFailure.FORBIDDEN)
+            return HurlStartResult(failure = HurlStartFailure.JAR_CARRIER)
         }
         if (rider != null && HurlMounts.occupied(rider, store)) {
             return HurlStartResult(failure = HurlStartFailure.ALREADY_RIDING)

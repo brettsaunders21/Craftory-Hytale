@@ -79,6 +79,32 @@ class WellLogicTest {
     }
 
     @Test
+    fun `Stormcall budget uses strike region when it crosses a border`() {
+        val existingStrongWellPositions = listOf(511 to 0)
+        val playerRegionCount = StormHuntRules.strongWellCountInRegion(511, 0, existingStrongWellPositions)
+        val strikeRegionCount = StormHuntRules.strongWellCountInRegion(520, 0, existingStrongWellPositions)
+        assertEquals(1, playerRegionCount)
+        assertEquals(0, strikeRegionCount)
+        assertFalse(StormHuntRules.canSpawnStrongWell(playerRegionCount, 1))
+        assertTrue(StormHuntRules.canSpawnStrongWell(strikeRegionCount, 1))
+    }
+
+    @Test
+    fun `per-jar drain applies each temperament weather independently`() {
+        val spark = JarCarrierRules.drainForSecond(50.0, Temperament.SPARK, WeatherKind.STORM)
+        val ember = JarCarrierRules.drainForSecond(50.0, Temperament.EMBER, WeatherKind.STORM)
+        assertEquals(49.8, spark, 0.0001)
+        assertEquals(49.7, ember, 0.0001)
+    }
+
+    @Test
+    fun `burst consumes only after a successful Well spawn`() {
+        assertEquals(JarCarrierRules.BurstResult.RETRY_AT_ONE, JarCarrierRules.burstResult(0.0, false))
+        assertEquals(JarCarrierRules.BurstResult.CONSUME, JarCarrierRules.burstResult(0.0, true))
+        assertEquals(JarCarrierRules.BurstResult.RETAIN, JarCarrierRules.burstResult(1.0, false))
+    }
+
+    @Test
     fun `weather dislikes match the temperament table`() {
         assertTrue(StormHuntRules.dislikesWeather(Temperament.SPARK, WeatherKind.RAIN))
         assertFalse(StormHuntRules.dislikesWeather(Temperament.SPARK, WeatherKind.STORM))
@@ -88,10 +114,22 @@ class WellLogicTest {
             assertFalse(StormHuntRules.dislikesWeather(it, WeatherKind.RAIN))
             assertFalse(StormHuntRules.dislikesWeather(it, WeatherKind.STORM))
         }
-        assertEquals(WeatherKind.STORM, StormHuntRules.weatherKind("Weather_Thunderstorm"))
-        assertEquals(WeatherKind.RAIN, StormHuntRules.weatherKind("Weather_Rain"))
-        assertEquals(WeatherKind.CLEAR, StormHuntRules.weatherKind("Weather_Clear"))
-        assertEquals(WeatherKind.OTHER, StormHuntRules.weatherKind("Blood_Moon"))
+        assertEquals(WeatherKind.STORM, StormHuntRules.weatherKind("Zone1_Storm"))
+        assertEquals(WeatherKind.STORM, StormHuntRules.weatherKind("Zone2_Thunder_Storm"))
+        assertEquals(WeatherKind.STORM, StormHuntRules.weatherKind("Zone4_Swamp_Storm"))
+        assertEquals(WeatherKind.STORM, StormHuntRules.weatherKind("Zone4_Storm"))
+        assertEquals(WeatherKind.RAIN, StormHuntRules.weatherKind("Zone1_Rain"))
+        assertEquals(WeatherKind.CLEAR, StormHuntRules.weatherKind("Zone1_Sunny"))
+        assertEquals(WeatherKind.CLEAR, StormHuntRules.weatherKind("Zone1_Sunny_Fireflies"))
+        listOf(
+            "Zone2_Sand_Storm",
+            "Zone3_Snow_Storm",
+            "Zone4_AshWastes_Storm",
+            "Cave_Goblin_Void_Event_Storm",
+            "Skylands_Rapid_Marsh_Stormy",
+            "Zone1_Cloudy_Medium",
+            "Blood_Moon",
+        ).forEach { assertEquals(WeatherKind.OTHER, StormHuntRules.weatherKind(it)) }
     }
 
     @Test

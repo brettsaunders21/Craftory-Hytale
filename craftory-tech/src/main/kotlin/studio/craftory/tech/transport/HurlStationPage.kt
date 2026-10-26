@@ -207,7 +207,8 @@ internal fun HurlStartFailure.messageKey(): String =
     when (this) {
         HurlStartFailure.INSUFFICIENT_ENERGY -> "server.craftory.hurl.insufficient-energy"
         HurlStartFailure.ALREADY_RIDING -> "server.craftory.hurl.already-riding"
-        HurlStartFailure.FORBIDDEN -> "server.craftory.hurl.jar-carrier"
+        HurlStartFailure.JAR_CARRIER -> "server.craftory.hurl.jar-carrier"
+        HurlStartFailure.FORBIDDEN -> "server.craftory.wrench.foreign-crew"
         HurlStartFailure.SPAWN_FAILED -> "server.craftory.hurl.spawn-failed"
         HurlStartFailure.NO_ROUTE -> "server.craftory.hurl.no-route"
         HurlStartFailure.PENDING -> "server.craftory.hurl.warming-up"

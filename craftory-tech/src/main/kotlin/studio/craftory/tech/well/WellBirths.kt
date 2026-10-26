@@ -279,10 +279,10 @@ internal class WellBirthSystem(
                 ?.id
                 ?.lowercase()
                 .orEmpty()
-        if (weatherId.contains("thunder") || weatherId.contains("storm")) {
-            tryStormcall(world, settings, birthState, player, position, store)
-        } else {
-            tryRainFlicker(world, settings, birthState, player, position, playerPos, weatherId, store)
+        when (StormHuntRules.weatherKind(weatherId)) {
+            WeatherKind.STORM -> tryStormcall(world, settings, birthState, player, position, store)
+            WeatherKind.RAIN -> tryRainFlicker(world, settings, birthState, player, position, playerPos, store)
+            else -> Unit
         }
     }
 
@@ -308,18 +308,18 @@ internal class WellBirthSystem(
                 floor(strikeTargetPosition.y).toInt(),
                 floor(strikeTargetPosition.z).toInt(),
             )
-        val region = regionId(strikeOrigin.x shr 9, strikeOrigin.z shr 9)
+        val strikePosition = highestStrikePosition(world, strikeOrigin) ?: return
+        val region = regionId(strikePosition.x shr 9, strikePosition.z shr 9)
         if (!WellBirthRules.cooldownElapsed(state.lastStormcallByRegion[region], now, interval)) return
-        val strength = StormHuntRules.rollStormStrength(WellBirths.stormVanesWithin(world, strikeOrigin, 64), Random)
+        val strength = StormHuntRules.rollStormStrength(WellBirths.stormVanesWithin(world, strikePosition, 64), Random)
         if (strength != WellStrength.FLICKER &&
             !StormHuntRules.canSpawnStrongWell(
-                strongWildWellsInRegion(world, strikeOrigin),
+                strongWildWellsInRegion(world, strikePosition),
                 settings.strongWildWellRegionBudget,
             )
         ) {
             return
         }
-        val strikePosition = highestStrikePosition(world, strikeOrigin) ?: return
         if (WellBirths.spawnStormcall(world, strikePosition, strength) != null) {
             state.lastStormcallByRegion[region] = now
             state.stormCrackles[strikePosition.pack()] = now + 30L * 20L
@@ -334,10 +334,8 @@ internal class WellBirthSystem(
         player: PlayerRef,
         position: Vector3d,
         playerPos: BlockPos,
-        weatherId: String,
         store: ComponentAccessor<EntityStore>,
     ) {
-        if (!weatherId.contains("rain") && !weatherId.contains("storm")) return
         val now = world.tick
         val cooldown = settings.playerFlickerCooldownSeconds.coerceAtLeast(0) * 20L
         if (!WellBirthRules.cooldownElapsed(state.lastFlickerByPlayer[player.uuid], now, cooldown)) return
@@ -363,14 +361,13 @@ internal class WellBirthSystem(
     ): Int {
         val region = StormHuntRules.regionOf(position.x, position.z)
         val center = BlockPos(region.first * 512 + 256, position.y, region.second * 512 + 256)
-        return CraftoryCore
-            .wells()
-            .wellsNear(world.chunkStore.store, center, 725)
-            .count {
-                it.well.strength != WellStrength.FLICKER &&
-                    it.well.state == WellState.WILD &&
-                    StormHuntRules.regionOf(it.pos.x, it.pos.z) == region
-            }
+        val strongWells =
+            CraftoryCore
+                .wells()
+                .wellsNear(world.chunkStore.store, center, 725)
+                .filter { it.well.strength != WellStrength.FLICKER && it.well.state == WellState.WILD }
+                .map { it.pos.x to it.pos.z }
+        return StormHuntRules.strongWellCountInRegion(position.x, position.z, strongWells)
     }
 
     private fun highestStrikePosition(

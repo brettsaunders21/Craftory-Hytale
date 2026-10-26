@@ -747,6 +747,7 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 | 26 | Jar weather stability | Drain 1 stability per 10 seconds only in disliked weather: Spark dislikes rain but not storms; Ember dislikes rain and storms; other temperaments have no weather penalty for now |
 | 27 | Slice 5a lightning | Use a fake lightning particle and thunder sound because native server lightning is unavailable; sample weather by polling |
 | 28 | Slice 5a capture visuals | Use queued block-state changes for Storm Vane and Damper visuals; tether beams refresh on a low-rate schedule |
+| 29 | Capture pulse alignment | Press timing is interval-based; whether capture should align to Well pulses is a client playtest question |
 | 29 | Slice 5a Storm Vane | A passive, non-energy block; storm activation is sampled by the existing weather polling path |
 | 30 | Slice 5a Fizz Damper | Powered at 2 Fizz/s per unit; three or more active dampers within four blocks smother a Wild Well |
 | 31 | Slice 5a stake spacing | Stake angular gaps are measured against equal spacing; a deviation greater than 40 degrees marks a stake leaning |

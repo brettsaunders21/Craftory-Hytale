@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent
 import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
+import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
@@ -40,7 +41,7 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.random.Random
 
-private typealias BlockEntityRef = Ref<ChunkStore>
+internal typealias BlockEntityRef = Ref<ChunkStore>
 
 private typealias WellSelfTestReport = (String) -> Unit
 
@@ -56,6 +57,7 @@ internal object WellSelfTest {
     fun run(
         world: World,
         report: WellSelfTestReport,
+        testPlayer: PlayerRef? = null,
     ) {
         val tempDir = Files.createTempDirectory("craftory-well-selftest")
         listOf(CAUGHT_POS, FORCED_POS, BLOCK_REMOVED_POS, STAKED_POS, SMOTHERED_POS, CALMED_POS)
@@ -70,7 +72,7 @@ internal object WellSelfTest {
             Helpers.testCarrierReload(world, report)
             testDamperSmothering(world, report)
             Helpers.testGuardianDeath(world, report)
-            Helpers.testStakeLifecycle(world, tempDir, report)
+            Helpers.testStakeLifecycle(world, tempDir, report, testPlayer)
             testHurlRefusal(world, report)
             val remaining = CraftoryCore.wells().wellsNear(world.chunkStore.store, CAUGHT_POS, 64).size
             check(remaining == 0) { "well cleanup left $remaining indexed wells within radius 64" }
@@ -100,6 +102,7 @@ internal object WellSelfTest {
                     "wellPositions=${exclusions.third}, guardians=$guardians)",
             )
         }
+        CarrierAcceptanceSelfTest.start(world, testPlayer, report)
     }
 
     private fun testJarAndScan(
@@ -307,7 +310,7 @@ internal object WellSelfTest {
         }
     }
 
-    private object Helpers {
+    internal object Helpers {
         fun placeTestDampers(
             world: World,
             store: Store<ChunkStore>,
@@ -370,15 +373,10 @@ internal object WellSelfTest {
             val store = world.entityStore.store
             val carrier =
                 JarCarrier(
-                    stability = 73.5,
-                    temperamentId = Temperament.EMBER.id,
-                    strengthId = WellStrength.STEADY.name,
-                    taste = "Ingredient_Scraps",
-                    wellId = WellSelfTest.STAKED_POS.pack().toString(),
-                    lastTick = 17,
                     nextAmbushTick = 1217,
                     lastReadoutTick = 100,
                     originalBaseSpeed = 1.25f,
+                    lowestStability = 73.5,
                 )
             val filledJar =
                 JarActions.filledJar(
@@ -389,7 +387,7 @@ internal object WellSelfTest {
                         WellSelfTest.STAKED_POS.pack().toString(),
                     ),
                 )
-            val updatedJar = metadataStack(filledJar, carrier)
+            val updatedJar = filledJar.withMetadata(GobJarMetadata.STABILITY, 73.5)
             val holder = EntityStore.REGISTRY.newHolder()
             holder.addComponent(JarCarrier.type, carrier)
             holder.ensureComponent(EntityStore.REGISTRY.nonSerializedComponentType)
@@ -407,7 +405,7 @@ internal object WellSelfTest {
                 WellSelfTestExclusions.registerEntity(ref)
                 val restored = store.getComponent(ref, JarCarrier.type) ?: error("JarCarrier state was not restored")
                 assertCarrierState(updatedJar, restored)
-                report("selftest: PASS JarCarrier metadata flush preserves stability and identity")
+                report("selftest: PASS Gob-Jar metadata preserves stability and identity")
                 report("selftest: PASS JarCarrier unload/reload preserves escort state")
             } finally {
                 WellSelfTestExclusions.releaseEntity(ref)
@@ -425,12 +423,7 @@ internal object WellSelfTest {
                     updatedJar.getFromMetadataOrNull(GobJarMetadata.STRENGTH) == WellStrength.STEADY.name,
             )
             check(
-                restored.stability == 73.5 &&
-                    restored.temperamentId == Temperament.EMBER.id &&
-                    restored.strengthId == WellStrength.STEADY.name &&
-                    restored.taste == "Ingredient_Scraps" &&
-                    restored.wellId == WellSelfTest.STAKED_POS.pack().toString() &&
-                    restored.lastTick == 17L &&
+                restored.lowestStability == 73.5 &&
                     restored.nextAmbushTick == 1217L &&
                     restored.lastReadoutTick == 100L &&
                     restored.originalBaseSpeed == 1.25f,
@@ -489,6 +482,7 @@ internal object WellSelfTest {
             world: World,
             tempDir: Path,
             report: WellSelfTestReport,
+            hammerPlayer: PlayerRef?,
         ) {
             val wellRef =
                 CraftoryCore.wells().spawn(
@@ -526,28 +520,71 @@ internal object WellSelfTest {
                     WellSelfTest.STAKED_POS.z,
                 )
                     ?: error("Stake test section is not loaded")
-            val section =
-                store.getComponent(sectionRef, BlockComponentSection.getComponentType())
-                    ?: error("Stake test section is missing")
             val crews = CrewService(tempDir.resolve("stake-crews.json"))
             val refs = mutableListOf<BlockEntityRef>()
             try {
-                val ownerCrew = createStakeOwnerCrew(crews, playerUuid)
-                placeTestStakes(world, store, sectionRef, section, positions, playerUuid, refs)
+                placeTestStakes(world, sectionRef, positions, playerUuid, refs)
                 recomputeStakeRing(world, WellSelfTest.STAKED_POS, well, playerUuid, crews)
-                checkStakeLeaning(store, well, refs)
-                straightenTestStakes(world, positions, playerUuid, crews)
-                checkStakeClaim(well, ownerCrew.id, wellRef, playerUuid, crews, store)
-                verifyStakeBeam(world, positions.first(), report)
-                assertStakeBreak(world, positions.first(), well)
-                report("selftest: PASS Tinker's Hammer claim, foreign-crew denial, and stake break")
+                verifyStakeLifecycleActions(
+                    world,
+                    positions,
+                    playerUuid,
+                    crews,
+                    well,
+                    wellRef,
+                    refs,
+                    store,
+                    report,
+                    hammerPlayer,
+                )
             } finally {
-                refs.forEach(WellSelfTestExclusions::releaseBlock)
-                CraftorySelfTest.clear(world, sectionRef, positions)
-                CraftoryCore.wells().remove(world, WellSelfTest.STAKED_POS)
-                crews.close()
-                Files.deleteIfExists(tempDir.resolve("stake-crews.json"))
+                cleanupStakeLifecycle(world, sectionRef, positions, refs, crews, tempDir)
             }
+        }
+
+        private fun verifyStakeLifecycleActions(
+            world: World,
+            positions: List<CraftorySelfTest.TestPosition>,
+            playerUuid: UUID,
+            crews: CrewService,
+            well: Glimmerwell,
+            wellRef: Ref<ChunkStore>,
+            refs: List<Ref<ChunkStore>>,
+            store: Store<ChunkStore>,
+            report: WellSelfTestReport,
+            hammerPlayer: PlayerRef?,
+        ) {
+            check(refs.all { store.getComponent(it, TetherStakeState.type)?.leaning == true }) {
+                "uneven stake gaps did not mark all stakes leaning"
+            }
+            check(well.state == WellState.DORMANT) { "leaning stakes tethered the Well" }
+            val firstStake = positions.first()
+            if (hammerPlayer == null) {
+                report("selftest: FAIL foreign stake hammer test requires a player sender")
+            } else {
+                crews.crewOf(hammerPlayer.uuid)
+                val foreignHammerStraightened =
+                    straightenTetherStake(
+                        world,
+                        Vector3i(firstStake.x, firstStake.y, firstStake.z),
+                        hammerPlayer,
+                        crews,
+                        hasOverride = false,
+                    )
+                check(!foreignHammerStraightened) {
+                    "foreign crew straightened a leaning stake"
+                }
+                check(store.getComponent(refs.first(), TetherStakeState.type)?.leaning == true) {
+                    "foreign hammer changed the leaning stake"
+                }
+                report("selftest: PASS foreign crew hammer leaves stake leaning")
+            }
+            straightenTestStakes(world, positions, playerUuid, crews)
+            val ownerCrew = createStakeOwnerCrew(crews, playerUuid)
+            checkStakeClaim(well, ownerCrew.id, wellRef, playerUuid, crews, store)
+            verifyStakeBeam(world, positions.first(), report)
+            assertStakeBreak(world, positions.first(), well)
+            report("selftest: PASS Tinker's Hammer claim, foreign-crew denial, and stake break")
         }
 
         private fun verifyStakeBeam(
@@ -568,13 +605,15 @@ internal object WellSelfTest {
 
         private fun placeTestStakes(
             world: World,
-            store: Store<ChunkStore>,
             sectionRef: Ref<ChunkStore>,
-            section: BlockComponentSection,
             positions: List<CraftorySelfTest.TestPosition>,
             playerUuid: UUID,
             refs: MutableList<BlockEntityRef>,
         ) {
+            val store = world.chunkStore.store
+            val section =
+                store.getComponent(sectionRef, BlockComponentSection.getComponentType())
+                    ?: error("Stake test section is missing")
             positions.forEach { position ->
                 CraftorySelfTest.place(
                     world,
@@ -594,17 +633,6 @@ internal object WellSelfTest {
                 stake.wellId = WellSelfTest.STAKED_POS.pack().toString()
                 stake.placerUuid = playerUuid.toString()
             }
-        }
-
-        private fun checkStakeLeaning(
-            store: Store<ChunkStore>,
-            well: Glimmerwell,
-            refs: List<BlockEntityRef>,
-        ) {
-            check(refs.all { store.getComponent(it, TetherStakeState.type)?.leaning == true }) {
-                "uneven stake gaps did not mark all stakes leaning"
-            }
-            check(well.state == WellState.DORMANT) { "leaning stakes tethered the Well" }
         }
 
         private fun straightenTestStakes(
@@ -680,7 +708,7 @@ internal object WellSelfTest {
         val ref = store.addEntity(holder, AddReason.SPAWN) ?: error("Carrier Hurl test entity did not spawn")
         try {
             val result = HurlRides.startArc(world, HurlPoint(0.0, 0.0, 0.0), HurlPoint(1.0, 2.0, 3.0), ref)
-            check(result.failure == HurlStartFailure.FORBIDDEN) {
+            check(result.failure == HurlStartFailure.JAR_CARRIER) {
                 "Hurl boarding did not refuse a Gob-Jar carrier: $result"
             }
             report("selftest: PASS Hurl refuses Gob-Jar carriers")
@@ -711,4 +739,19 @@ internal object WellSelfTest {
             ),
         ) { "could not clear test block at $pos" }
     }
+}
+
+private fun cleanupStakeLifecycle(
+    world: World,
+    sectionRef: Ref<ChunkStore>,
+    positions: List<CraftorySelfTest.TestPosition>,
+    refs: List<Ref<ChunkStore>>,
+    crews: CrewService,
+    tempDir: Path,
+) {
+    refs.forEach(WellSelfTestExclusions::releaseBlock)
+    CraftorySelfTest.clear(world, sectionRef, positions)
+    CraftoryCore.wells().remove(world, WellSelfTest.STAKED_POS)
+    crews.close()
+    Files.deleteIfExists(tempDir.resolve("stake-crews.json"))
 }

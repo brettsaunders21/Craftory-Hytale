@@ -15,12 +15,27 @@ enum class WeatherKind {
 }
 
 object StormHuntRules {
+    private val stormRainWeatherIds =
+        setOf(
+            "zone1_storm",
+            "zone2_thunder_storm",
+            "zone4_storm",
+            "zone4_swamp_storm",
+        )
+    private val clearWeatherIds =
+        setOf(
+            "zone1_sunny",
+            "zone1_sunny_fireflies",
+            "zone2_sunny",
+            "skylands_sunny",
+        )
+
     fun weatherKind(weatherId: String): WeatherKind {
         val id = weatherId.lowercase()
         return when {
-            "thunder" in id || "storm" in id -> WeatherKind.STORM
+            id in stormRainWeatherIds -> WeatherKind.STORM
             "rain" in id -> WeatherKind.RAIN
-            "clear" in id || id.isBlank() -> WeatherKind.CLEAR
+            id in clearWeatherIds || id.isBlank() -> WeatherKind.CLEAR
             else -> WeatherKind.OTHER
         }
     }
@@ -51,6 +66,15 @@ object StormHuntRules {
         x: Int,
         z: Int,
     ): Pair<Int, Int> = (x shr 9) to (z shr 9)
+
+    fun strongWellCountInRegion(
+        x: Int,
+        z: Int,
+        wellPositions: List<Pair<Int, Int>>,
+    ): Int {
+        val region = regionOf(x, z)
+        return wellPositions.count { regionOf(it.first, it.second) == region }
+    }
 
     fun canSpawnStrongWell(
         existingStrongWells: Int,
@@ -132,7 +156,21 @@ internal fun recordCapturePress(
 }
 
 object JarCarrierRules {
+    enum class BurstResult { RETAIN, RETRY_AT_ONE, CONSUME }
+
     fun slowedSpeed(originalBaseSpeed: Float): Float = originalBaseSpeed * 0.7f
+
+    fun drainForSecond(
+        stability: Double,
+        temperament: Temperament,
+        weatherKind: WeatherKind,
+    ): Double =
+        stabilityAfter(
+            stability,
+            1.0,
+            0,
+            if (StormHuntRules.dislikesWeather(temperament, weatherKind)) 1.0 else 0.0,
+        )
 
     fun stabilityAfter(
         stability: Double,
@@ -146,6 +184,16 @@ object JarCarrierRules {
         ).coerceIn(0.0, 100.0)
 
     fun shouldBurst(stability: Double): Boolean = stability <= 0.0
+
+    fun burstResult(
+        stability: Double,
+        spawnSucceeded: Boolean,
+    ): BurstResult =
+        when {
+            stability > 0.0 -> BurstResult.RETAIN
+            spawnSucceeded -> BurstResult.CONSUME
+            else -> BurstResult.RETRY_AT_ONE
+        }
 
     fun ambushRoll(
         chance: Double,

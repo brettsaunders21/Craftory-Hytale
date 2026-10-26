@@ -72,11 +72,29 @@ private fun fireCannon(
     result.failure?.let {
         val key =
             when (it) {
-                HurlStartFailure.ALREADY_RIDING -> "already-riding"
-                HurlStartFailure.SPAWN_FAILED -> "spawn-failed"
-                HurlStartFailure.PENDING -> "warming-up"
-                HurlStartFailure.FORBIDDEN -> "jar-carrier"
-                else -> "no-net"
+                HurlStartFailure.ALREADY_RIDING -> {
+                    "already-riding"
+                }
+
+                HurlStartFailure.SPAWN_FAILED -> {
+                    "spawn-failed"
+                }
+
+                HurlStartFailure.PENDING -> {
+                    "warming-up"
+                }
+
+                HurlStartFailure.JAR_CARRIER -> {
+                    "jar-carrier"
+                }
+
+                HurlStartFailure.FORBIDDEN -> {
+                    return player.sendMessage(Message.translation("server.craftory.wrench.foreign-crew"))
+                }
+
+                else -> {
+                    "no-net"
+                }
             }
         player.sendMessage(Message.translation("server.craftory.hurl.$key"))
     }

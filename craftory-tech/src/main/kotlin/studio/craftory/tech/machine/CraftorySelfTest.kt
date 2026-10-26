@@ -32,6 +32,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction
+import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.Universe
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
@@ -1217,7 +1218,12 @@ object CraftorySelfTest {
             val initialCleanup = GnasherSelfTestHolders.clearDrops(world, sectionRef, GNASHER)
             clear(world, sectionRef, testPositions(world))
             clear(world, drySectionRef, listOf(RATTLEWHEEL_DRY))
-            WellSelfTest.run(world) { context.sendMessage(Message.raw(it)) }
+            val senderRef = context.senderAsPlayerRef()
+            val testPlayer =
+                senderRef?.let {
+                    world.entityStore.store.getComponent(it, PlayerRef.getComponentType())
+                }
+            WellSelfTest.run(world, { context.sendMessage(Message.raw(it)) }, testPlayer)
             place(world, store, sectionRef, section, CraftoryIds.BURNER, BURNER, BurnerState.type)
             pipePositions().forEach {
                 place(world, store, sectionRef, section, CraftoryIds.PIPE, it, EnergyMember.type)

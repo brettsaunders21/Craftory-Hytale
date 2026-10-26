@@ -55,8 +55,20 @@ object JarActions {
         if (well.strength != WellStrength.FLICKER && well.strength != WellStrength.STEADY) return JarCatchResult.TooBig
         val crew = crews.crewOf(playerUuid)
         if (crew.tier < 2) return JarCatchResult.TierLocked
-        if (well.claimCrewId != crew.id) return JarCatchResult.ForeignCrew
+        if (!mayUseWellClaim(playerUuid, well.claimCrewId, null, crews)) return JarCatchResult.ForeignCrew
         return JarCatchResult.Caught(well.temperament, well.strength, well.taste, wellId)
+    }
+
+    internal fun mayUseWellClaim(
+        playerUuid: UUID,
+        claimCrewId: UUID?,
+        additionalCrewId: UUID?,
+        crews: CrewService,
+        hasOverride: Boolean = false,
+    ): Boolean {
+        if (hasOverride) return true
+        val playerCrewId = crews.crewOf(playerUuid).id
+        return playerCrewId == claimCrewId || playerCrewId == additionalCrewId
     }
 
     @Suppress("ComplexCondition")
@@ -79,8 +91,10 @@ object JarActions {
             return false
         }
         well.state = WellState.JARRED
+        markWellNeedsSaving(world.chunkStore.store, pos)
         if (!CraftoryCore.wells().remove(world, pos)) {
             well.state = WellState.TETHERED
+            markWellNeedsSaving(world.chunkStore.store, pos)
             return false
         }
         val crew = crews.crewOf(playerUuid)

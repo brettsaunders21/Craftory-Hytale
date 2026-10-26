@@ -206,6 +206,7 @@ internal class FizzDamperSystem : EntityTickingSystem<ChunkStore>() {
                 WellStrength.STEADY -> WellStrength.FLICKER
                 WellStrength.FLICKER -> WellStrength.FLICKER
             }
+        markWellNeedsSaving(store, position)
     }
 
     internal fun countPoweredDampers(
@@ -305,13 +306,16 @@ internal class TetherStakeLifecycle : RefSystem<ChunkStore>() {
         val state = commandBuffer.getComponent(ref, TetherStakeState.type) ?: return
         val packed = state.wellId.toLongOrNull() ?: return
         val position = BlockPos.unpack(packed)
-        val well =
+        val wellRef =
             CraftoryCore
                 .wells()
                 .wellsNear(store, position, 0)
                 .firstOrNull()
-                ?.well ?: return
-        if (well.state == WellState.TETHERED) well.state = WellState.DORMANT
+                ?: return
+        if (wellRef.well.state == WellState.TETHERED) {
+            wellRef.well.state = WellState.DORMANT
+            markWellNeedsSaving(store, position)
+        }
     }
 }
 
@@ -349,7 +353,8 @@ internal class TetherStakeBeamSystem : EntityTickingSystem<ChunkStore>() {
                 .firstOrNull()
                 ?.well ?: return
         if (well.state != WellState.TETHERED) return
-        spawnTetherBeam(world, wellPosition, BlockPos(position.x, position.y, position.z))
+        val stakePosition = BlockPos(position.x, position.y, position.z)
+        world.execute { spawnTetherBeam(world, wellPosition, stakePosition) }
     }
 
     companion object {
@@ -361,8 +366,30 @@ internal fun straightenTetherStake(
     world: World,
     position: Vector3i,
     player: PlayerRef,
+): Boolean =
+    straightenTetherStake(
+        world,
+        position,
+        player,
+        CraftoryCore.crewService(),
+        player.hasPermission("hytale.command.craftory.wrench.any"),
+    )
+
+internal fun straightenTetherStake(
+    world: World,
+    position: Vector3i,
+    player: PlayerRef,
+    crews: CrewService,
+    hasOverride: Boolean,
 ): Boolean {
-    val straightened = straightenTetherStake(world, position, player.uuid, CraftoryCore.crewService())
+    val straightened =
+        straightenTetherStake(
+            world,
+            position,
+            player.uuid,
+            crews,
+            hasOverride,
+        )
     if (straightened) player.sendMessage(Message.raw("The tether stake is straightened."))
     return straightened
 }
@@ -372,6 +399,7 @@ internal fun straightenTetherStake(
     position: Vector3i,
     placerUuid: UUID,
     crews: CrewService,
+    hasOverride: Boolean = false,
 ): Boolean {
     val section = world.chunkStore.getChunkSectionReferenceAtBlock(position.x, position.y, position.z) ?: return false
     val store = world.chunkStore.store
@@ -387,9 +415,11 @@ internal fun straightenTetherStake(
             .firstOrNull()
             ?.ref ?: return false
     val well = store.getComponent(wellRef, Glimmerwell.type) ?: return false
+    val placer = runCatching { UUID.fromString(state.placerUuid) }.getOrDefault(placerUuid)
+    val placerCrewId = runCatching { crews.crewOf(placer).id }.getOrNull()
+    if (!JarActions.mayUseWellClaim(placerUuid, well.claimCrewId, placerCrewId, crews, hasOverride)) return false
     state.leaning = false
     store.getComponent(ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
-    val placer = runCatching { UUID.fromString(state.placerUuid) }.getOrDefault(placerUuid)
     tetherStakeIfComplete(world, wellPosition, well, placer, crews)
     return true
 }
@@ -428,6 +458,7 @@ private fun tetherStakeIfComplete(
     val claimant = runCatching { crews.crewOf(placer).id }.getOrNull() ?: return
     well.state = WellState.TETHERED
     well.claimCrewId = claimant
+    markWellNeedsSaving(world.chunkStore.store, wellPosition)
 }
 
 private fun collectStakes(

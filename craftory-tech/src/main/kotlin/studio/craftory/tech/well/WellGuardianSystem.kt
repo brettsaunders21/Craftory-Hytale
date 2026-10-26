@@ -128,13 +128,14 @@ internal class WellGuardianDeathSystem : DeathSystems.OnDeathSystem() {
     ) {
         val packed = commandBuffer.getComponent(ref, SparkjawGuardian.type)?.wellId?.toLongOrNull() ?: return
         val position = BlockPos.unpack(packed)
-        val well =
+        val wellRef =
             CraftoryCore
                 .wells()
                 .wellsNear(store.externalData.world.chunkStore.store, position, 0)
                 .firstOrNull()
-                ?.well ?: return
-        calmWellAfterGuardianDeath(well)
+                ?: return
+        calmWellAfterGuardianDeath(wellRef.well)
+        markWellNeedsSaving(store.externalData.world.chunkStore.store, position)
     }
 }
 
