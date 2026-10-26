@@ -16,6 +16,7 @@ import com.hypixel.hytale.component.dependency.SystemDependency
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.tick.TickingSystem
 import com.hypixel.hytale.math.util.ChunkUtil
+import com.hypixel.hytale.protocol.BlockMaterial
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.command.system.CommandContext
@@ -120,10 +121,11 @@ private data class ScrapRushFloorSnapshot(
     val x: Int,
     val y: Int,
     val z: Int,
-    val blockId: Int,
-    val blockType: BlockType,
-    val rotation: Int,
-    val filler: Int,
+)
+
+private data class ScrapRushFloorPreparation(
+    val rejection: String? = null,
+    val placedOnEmpty: Boolean = false,
 )
 
 private fun reportCleanup(
@@ -1767,7 +1769,8 @@ object CraftorySelfTest {
                 areaIsActive = { _, _ -> true },
             )
         private val owner = UUID.randomUUID()
-        private val spawnPoints = system.selfTestSpawnPoints(position, 3)
+        private val spawnCandidates = system.selfTestSpawnCandidates(position)
+        private var spawnPoints = emptyList<Vector3i>()
         private val floorSnapshots = mutableListOf<ScrapRushFloorSnapshot>()
         private val spawnedIds = mutableListOf<String>()
         private var finished = false
@@ -1780,7 +1783,7 @@ object CraftorySelfTest {
 
         private fun requestChunks() {
             val grid = world.chunkStore
-            val points = listOf(position) + spawnPoints
+            val points = listOf(position) + spawnCandidates
             val chunkIndexes =
                 points
                     .map { ChunkUtil.indexChunk(it.x shr 5, it.z shr 5) }
@@ -1866,42 +1869,91 @@ object CraftorySelfTest {
         }
 
         private fun placeFloors() {
-            val grid = world.chunkStore
             val solidFloor = BlockType.fromString("Rock_Stone") ?: error("Rock_Stone block type is missing")
             val solidFloorId = BlockType.getAssetMap().getIndex(solidFloor.id)
-            spawnPoints.forEach { point ->
-                val floorY = point.y - 1
-                val sectionRef =
-                    grid.getChunkSectionReferenceAtBlock(point.x, floorY, point.z)
-                        ?: error("spawn floor section missing at ${point.x},$floorY,${point.z}")
-                val section =
-                    grid.store.getComponent(sectionRef, BlockSection.getComponentType())
-                        ?: error("spawn floor block section missing at ${point.x},$floorY,${point.z}")
-                val blockId = section.get(point.x and 31, floorY and 31, point.z and 31)
-                val blockType = BlockType.getAssetMap().getAsset(blockId) ?: BlockType.EMPTY
-                floorSnapshots.add(
-                    ScrapRushFloorSnapshot(sectionRef, point.x, floorY, point.z, blockId, blockType, 0, 0),
-                )
-                if (blockId != solidFloorId) {
-                    check(
-                        BlockOperations.setBlock(
-                            grid,
-                            sectionRef,
-                            point.x,
-                            floorY,
-                            point.z,
-                            solidFloorId,
-                            solidFloor,
-                            0,
-                            0,
-                            SetBlockSettings.NO_DROP_ITEMS,
-                        ),
-                    ) {
-                        "failed to place Rock_Stone at ${point.x},$floorY,${point.z} " +
-                            "(existing=${blockType.id})"
+            check(solidFloor.getBlockEntity() == null) { "Rock_Stone unexpectedly has a block entity" }
+            val selected = mutableListOf<Vector3i>()
+            val existingSolid = mutableListOf<Vector3i>()
+            val placedOnEmpty = mutableListOf<Vector3i>()
+            val rejected = mutableListOf<String>()
+            for (point in spawnCandidates) {
+                if (selected.size < SCRAP_RUSH_SPAWN_COUNT) {
+                    val floor = prepareSpawnFloor(point, solidFloor, solidFloorId)
+                    if (floor.rejection == null) {
+                        selected.add(point)
+                        if (floor.placedOnEmpty) placedOnEmpty.add(point) else existingSolid.add(point)
+                    } else {
+                        rejected.add(
+                            "at=${point.x},${point.y - 1},${point.z}: ${floor.rejection}",
+                        )
                     }
                 }
             }
+            if (selected.size != SCRAP_RUSH_SPAWN_COUNT) {
+                val floorsRestored = restoreFloors()
+                error(
+                    "not enough safe Scrap Rush spawn floors: " +
+                        "selected=${selected.size}/$SCRAP_RUSH_SPAWN_COUNT " +
+                        "floorsRestored=$floorsRestored " +
+                        "rejected=${rejected.joinToString("; ").ifEmpty { "none" }}",
+                )
+            }
+            spawnPoints = selected
+            system.setSelfTestSpawnPoints(spawnPoints)
+            report(
+                true,
+                "Scrap Rush spawn floors selected",
+                "alreadySolid=${existingSolid.size} placedOnEmpty=${placedOnEmpty.size}",
+            )
+        }
+
+        private fun prepareSpawnFloor(
+            point: Vector3i,
+            solidFloor: BlockType,
+            solidFloorId: Int,
+        ): ScrapRushFloorPreparation {
+            val floorY = point.y - 1
+            val grid = world.chunkStore
+            val sectionRef =
+                grid.getChunkSectionReferenceAtBlock(point.x, floorY, point.z)
+                    ?: return ScrapRushFloorPreparation("floor section is not loaded")
+            val section =
+                grid.store.getComponent(sectionRef, BlockSection.getComponentType())
+                    ?: return ScrapRushFloorPreparation("floor block section is missing")
+            val blockId = section.get(point.x and 31, floorY and 31, point.z and 31)
+            val blockType = BlockType.getAssetMap().getAsset(blockId)
+            val blockEntity = BlockModule.getBlockEntity(grid.store, sectionRef, point.x, floorY, point.z)
+            if (blockEntity != null || blockType?.getBlockEntity() != null) {
+                return ScrapRushFloorPreparation("block entity")
+            }
+            if (blockType?.getMaterial() == BlockMaterial.Solid) return ScrapRushFloorPreparation()
+            if (blockId != BlockType.EMPTY_ID) {
+                val reason =
+                    if (blockType == null) {
+                        "unknown block id=$blockId"
+                    } else {
+                        "non-solid non-empty block=${blockType.id} material=${blockType.getMaterial()}"
+                    }
+                return ScrapRushFloorPreparation(reason)
+            }
+            if (
+                !BlockOperations.setBlock(
+                    grid,
+                    sectionRef,
+                    point.x,
+                    floorY,
+                    point.z,
+                    solidFloorId,
+                    solidFloor,
+                    0,
+                    0,
+                    SetBlockSettings.NO_DROP_ITEMS,
+                )
+            ) {
+                return ScrapRushFloorPreparation("failed to place Rock_Stone into EMPTY")
+            }
+            floorSnapshots.add(ScrapRushFloorSnapshot(sectionRef, point.x, floorY, point.z))
+            return ScrapRushFloorPreparation(placedOnEmpty = true)
         }
 
         private fun startFirstRaid() {
@@ -1976,6 +2028,8 @@ object CraftorySelfTest {
             ids: List<String>,
             naturalOwner: UUID,
         ) {
+            val ownerBeforeDefeat = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
+            val raidCrewBeforeDefeat = store.getComponent(blockRef, ScrapRushRaid.type)?.crewId
             store.getComponent(blockRef, Jank.type)?.stolen = true
             store.getComponent(blockRef, EnergyMember.type)?.apply {
                 production = 0
@@ -1996,11 +2050,18 @@ object CraftorySelfTest {
                         currentRef.isValid &&
                         store.getComponent(currentRef, ScrapRushRaid.type) == null
                 val pageGranted = crews.hasKnowledge(naturalOwner, NotebookPages.SCRAP_RUSH_PAGE_ID)
+                val ownerAfterDefeat = store.getComponent(blockRef, MachineOwner.type)?.placerUuid
+                val ownerPageGranted =
+                    ownerAfterDefeat?.let { crews.hasKnowledge(it, NotebookPages.SCRAP_RUSH_PAGE_ID) } ?: false
+                val expectedCrewId = crews.crewOf(naturalOwner).id
+                val actualCrewId = ownerAfterDefeat?.let { crews.crewOf(it).id }
                 report(
                     ticked && world.tick > despawnTick && cleared && raidRemoved && pageGranted,
                     "Scrap Rush natural defeat clears Stolen",
                     "ticked=$ticked elapsed=${world.tick - despawnTick} cleared=$cleared " +
-                        "raidRemoved=$raidRemoved page=$pageGranted",
+                        "raidRemoved=$raidRemoved page=$pageGranted ownerBefore=$ownerBeforeDefeat " +
+                        "ownerAfter=$ownerAfterDefeat raidCrew=$raidCrewBeforeDefeat " +
+                        "expectedCrew=$expectedCrewId actualCrew=$actualCrewId ownerPage=$ownerPageGranted",
                 )
                 finish()
             }
@@ -2188,6 +2249,10 @@ object CraftorySelfTest {
                 0,
                 SetBlockSettings.NO_DROP_ITEMS,
             )
+            return restoreFloors()
+        }
+
+        private fun restoreFloors(): Boolean {
             floorSnapshots.forEach { floor ->
                 BlockOperations.setBlock(
                     world.chunkStore,
@@ -2195,17 +2260,27 @@ object CraftorySelfTest {
                     floor.x,
                     floor.y,
                     floor.z,
-                    floor.blockId,
-                    floor.blockType,
-                    floor.rotation,
-                    floor.filler,
+                    BlockType.EMPTY_ID,
+                    BlockType.EMPTY,
+                    0,
+                    0,
                     SetBlockSettings.NO_DROP_ITEMS,
                 )
             }
             return floorSnapshots.all { floor ->
                 val section =
                     world.chunkStore.store.getComponent(floor.sectionRef, BlockSection.getComponentType())
-                section?.get(floor.x and 31, floor.y and 31, floor.z and 31) == floor.blockId
+                val empty =
+                    section?.get(floor.x and 31, floor.y and 31, floor.z and 31) == BlockType.EMPTY_ID
+                val noBlockEntity =
+                    BlockModule.getBlockEntity(
+                        world.chunkStore.store,
+                        floor.sectionRef,
+                        floor.x,
+                        floor.y,
+                        floor.z,
+                    ) == null
+                empty && noBlockEntity
             }
         }
 
@@ -2274,6 +2349,7 @@ object CraftorySelfTest {
     private val WRENCH_TAKE_APART = TestPosition(10_020, 148, 10_004)
     private val WRENCH_PACK = TestPosition(10_022, 148, 10_004)
     private val SCRAP_RUSH_TEST = TestPosition(10_024, 148, 10_004)
+    private const val SCRAP_RUSH_SPAWN_COUNT = 3
 
     private fun pipePositions(): List<TestPosition> =
         listOf(PIPE) + (10_019..10_034).map { TestPosition(it, 149, 10_000) }

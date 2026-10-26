@@ -75,6 +75,7 @@ internal class ScrapRushSystem(
 
     private val schedules = mutableMapOf<UUID, ScheduleState>()
     private val selfTestSpawns = mutableListOf<SelfTestSpawn>()
+    private var selfTestSpawnPointOverride: List<Vector3i>? = null
 
     override fun getQuery(): Query<ChunkStore> =
         Query.and(
@@ -276,10 +277,16 @@ internal class ScrapRushSystem(
     internal fun selfTestSpawnPoints(
         position: Vector3i,
         count: Int,
-    ): List<Vector3i> =
-        SELF_TEST_SPAWN_OFFSETS.take(count).map { (x, z) ->
+    ): List<Vector3i> = selfTestSpawnCandidates(position).take(count)
+
+    internal fun selfTestSpawnCandidates(position: Vector3i): List<Vector3i> =
+        SELF_TEST_SPAWN_OFFSETS.map { (x, z) ->
             Vector3i(position.x + x, position.y, position.z + z)
         }
+
+    internal fun setSelfTestSpawnPoints(points: List<Vector3i>) {
+        selfTestSpawnPointOverride = points.toList()
+    }
 
     internal fun selfTestSpawnResults(): List<SelfTestSpawn> = selfTestSpawns.toList()
 
@@ -297,7 +304,8 @@ internal class ScrapRushSystem(
         if (directSpawnForSelfTest) {
             selfTestSpawns.clear()
             val spawned = mutableListOf<String>()
-            selfTestSpawnPoints(position, count).forEach { spawnPosition ->
+            val spawnPoints = selfTestSpawnPointOverride ?: selfTestSpawnPoints(position, count)
+            spawnPoints.take(count).forEach { spawnPosition ->
                 val result = spawnNpcDirectlyForSelfTest(world, position, spawnPosition)
                 if (result == null) {
                     lastSpawnDiagnostic = spawnEnvironmentDiagnostic(world, spawnPosition, null)
@@ -619,7 +627,25 @@ internal class ScrapRushSystem(
         private const val TICKS_PER_SECOND = 20
         private const val STEAL_DISTANCE_SQUARED = 4.0
         private const val SPAWN_ATTEMPTS = 12
-        private val SELF_TEST_SPAWN_OFFSETS = listOf(3 to 0, 0 to 3, -3 to 0, 0 to -3, 3 to 3)
+        private val SELF_TEST_SPAWN_OFFSETS =
+            listOf(
+                3 to 0,
+                0 to 3,
+                -3 to 0,
+                0 to -3,
+                3 to 3,
+                -3 to 3,
+                -3 to -3,
+                3 to -3,
+                6 to 0,
+                0 to 6,
+                -6 to 0,
+                0 to -6,
+                6 to 6,
+                -6 to 6,
+                -6 to -6,
+                6 to -6,
+            )
         private const val GOBLIN_ROLE = "Coffer_Goblin_Scrapper"
         private val RAIDABLE_MACHINE_TYPES =
             setOf(
