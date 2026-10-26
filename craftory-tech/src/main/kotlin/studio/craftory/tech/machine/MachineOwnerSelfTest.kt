@@ -1,20 +1,26 @@
 package studio.craftory.tech.machine
 
+import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
+import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.math.util.ChunkUtil
 import com.hypixel.hytale.server.core.Message
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple
-import com.hypixel.hytale.server.core.modules.block.BlockEntity
-import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent
 import com.hypixel.hytale.server.core.inventory.ItemStack
+import com.hypixel.hytale.server.core.modules.block.BlockEntity
+import com.hypixel.hytale.server.core.modules.block.BlockModule
+import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
 import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockComponentSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import com.hypixel.hytale.server.core.universe.world.storage.GetChunkFlags
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
@@ -24,335 +30,200 @@ import studio.craftory.tech.well.WellSelfTestExclusions
 import studio.craftory.tech.well.WellSelfTestPlayer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-internal object MachineOwnerSelfTest {
-    private val cradlePosition = Position(10_505, 148, 10_000)
-    private val resonatorPosition = Position(10_506, 148, 10_000)
-    private val fixtures = listOf(CraftoryIds.WELL_CRADLE to cradlePosition, CraftoryIds.RESONATOR to resonatorPosition)
-    private val checkNames =
-        listOf(
-            "Cradle placement assigns its synthetic player",
-            "Resonator placement assigns its synthetic player",
-            "machine owner may use a placed fixture",
-            "foreign synthetic player cannot use a placed fixture",
-        )
+private const val CLEANUP_DELAY_MILLIS = 100L
+private val machineOwnerFixtures =
+    listOf(
+        CraftoryIds.WELL_CRADLE to Position(10_505, 148, 10_000),
+        CraftoryIds.RESONATOR to Position(10_506, 148, 10_000),
+    )
+private val machineOwnerChecks =
+    listOf(
+        "Cradle placement assigns its synthetic player",
+        "Resonator placement assigns its synthetic player",
+        "machine owner may use a placed fixture",
+        "foreign synthetic player cannot use a placed fixture",
+    )
 
+internal object MachineOwnerSelfTest {
     fun start(
-        context: com.hypixel.hytale.server.core.command.system.CommandContext,
+        context: CommandContext,
         world: World,
     ) {
         context.sendMessage(Message.raw("selftest: starting machine-owner placement check"))
         world.chunkStore
             .getChunkSectionReferenceAtBlockAsync(
-                cradlePosition.x,
-                cradlePosition.y,
-                cradlePosition.z,
+                machineOwnerFixtures.first().second.x,
+                machineOwnerFixtures.first().second.y,
+                machineOwnerFixtures.first().second.z,
                 GetChunkFlags.SET_TICKING,
             ).whenComplete { sectionRef, failure ->
                 world.execute {
-                    run(context, world, sectionRef, failure)
+                    MachineOwnerSelfTestRun(context, world, sectionRef, failure).start()
                 }
             }
     }
+}
 
-    private fun run(
-        context: com.hypixel.hytale.server.core.command.system.CommandContext,
-        world: World,
-        sectionRef: com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>?,
-        failure: Throwable?,
-    ) {
-        val store = world.chunkStore.store
-        val results = linkedMapOf<String, Boolean>()
-        val blockRefs = mutableListOf<com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>>()
-        val playerRefs = mutableListOf<com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>>()
-        val players = mutableListOf<com.hypixel.hytale.server.core.universe.PlayerRef>()
-        var chunkIndex: Long? = null
-        var chunkHeld = false
-        var crews: CrewService? = null
-        var crewDirectory: Path? = null
+internal class MachineOwnerSelfTestRun(
+    val context: CommandContext,
+    val world: World,
+    val sectionRef: Ref<ChunkStore>?,
+    val sectionFailure: Throwable?,
+) {
+    val chunkStore = world.chunkStore.store
+    val entityStore = world.entityStore.store
+    val results = linkedMapOf<String, Boolean>()
+    val blockRefs = mutableListOf<Ref<ChunkStore>>()
+    val playerRefs = mutableListOf<Ref<EntityStore>>()
+    val players = mutableListOf<PlayerRef>()
+    var owner: PlayerRef? = null
+    var foreign: PlayerRef? = null
+    var chunkIndex: Long? = null
+    var chunkHeld = false
+    var crews: CrewService? = null
+    var crewDirectory: Path? = null
+    var cleanupFailure: Throwable? = null
 
-        fun check(
-            name: String,
-            passed: Boolean,
-            detail: String,
-        ) {
-            if (name in results) return
-            results[name] = passed
-            context.sendMessage(Message.raw("selftest: ${if (passed) "PASS" else "FAIL"} $name ($detail)"))
+    fun start() {
+        val setupFailure = runCatching { MachineOwnerSelfTestSetup.setup(this) }.exceptionOrNull()
+        if (setupFailure != null) {
+            failUnreportedChecks(setupFailure.message ?: setupFailure.javaClass.simpleName)
         }
-
-        fun failUnreportedChecks(detail: String) {
-            checkNames.filterNot(results::containsKey).forEach { check(it, false, detail) }
-        }
-
-        try {
-            if (failure != null) error("owner fixture chunk load failed (${failure.message ?: "unknown error"})")
-            val fixtureSectionRef = sectionRef?.takeIf { it.isValid }
-                ?: error("owner fixture chunk load returned an invalid section")
-
-            val section =
-                store.getComponent(fixtureSectionRef, BlockComponentSection.getComponentType())
-                    ?: error("owner fixture block section is missing")
-            val keptChunkIndex = ChunkUtil.indexChunk(cradlePosition.x shr 5, cradlePosition.z shr 5)
-            chunkIndex = keptChunkIndex
-            val chunkRef = world.chunkStore.getChunkReference(keptChunkIndex)?.takeIf { it.isValid }
-                ?: error("owner fixture chunk reference is missing")
-            val worldChunk = store.getComponent(chunkRef, WorldChunk.getComponentType())
-                ?: error("owner fixture WorldChunk component is missing")
-            worldChunk.addKeepLoaded()
-            chunkHeld = true
-
-            fixtures.forEach { (_, position) ->
-                FluidSelfTestSetup.clearBlock(world, position)
-            }
-            val owner =
-                WellSelfTestPlayer.createInWorld(
-                    world,
-                    BlockPos(cradlePosition.x, cradlePosition.y, cradlePosition.z),
-                )
-            players += owner
-            owner.reference?.let {
-                playerRefs += it
-                WellSelfTestExclusions.registerEntity(it)
-            }
-            val foreign =
-                WellSelfTestPlayer.createInWorld(
-                    world,
-                    BlockPos(cradlePosition.x, cradlePosition.y, cradlePosition.z),
-                )
-            players += foreign
-            foreign.reference?.let {
-                playerRefs += it
-                WellSelfTestExclusions.registerEntity(it)
-            }
-            val tempCrewDirectory = Files.createTempDirectory("craftory-machine-owner-selftest-")
-            crewDirectory = tempCrewDirectory
-            crews = CrewService(tempCrewDirectory.resolve("crews.json"))
-
-            fixtures.forEach { (itemId, position) ->
-                placeBlock(world, fixtureSectionRef, section, itemId, position)
-                val blockRef =
-                    BlockModule.getBlockEntity(world, position.x, position.y, position.z)
-                        ?.takeIf { it.isValid }
-                        ?: error("$itemId block entity is missing")
-                blockRefs += blockRef
-                WellSelfTestExclusions.registerBlock(blockRef)
-            }
-
-            val ownerEntity = owner.reference ?: error("owner synthetic player entity is missing")
-            world.entityStore.store.invoke(
-                ownerEntity,
-                PlaceBlockEvent(ItemStack(CraftoryIds.WELL_CRADLE), Vector3i(cradlePosition.x, cradlePosition.y, cradlePosition.z), RotationTuple.NONE),
-            )
-            world.entityStore.store.invoke(
-                ownerEntity,
-                PlaceBlockEvent(ItemStack(CraftoryIds.RESONATOR), Vector3i(resonatorPosition.x, resonatorPosition.y, resonatorPosition.z), RotationTuple.NONE),
-            )
-            world.execute {
-                world.scheduleAfter(
-                    {
-                        world.execute {
-                            verifyAndCleanup(
-                                context,
-                                world,
-                                sectionRef,
-                                players,
-                                playerRefs,
-                                blockRefs,
-                                owner.uuid,
-                                foreign.uuid,
-                                crews,
-                                crewDirectory,
-                                chunkIndex,
-                                chunkHeld,
-                                results,
-                                ::check,
-                                ::failUnreportedChecks,
-                            )
-                        }
-                    },
-                    100,
-                    TimeUnit.MILLISECONDS,
-                )
-            }
-        } catch (testFailure: Exception) {
-            failUnreportedChecks(testFailure.message ?: testFailure.javaClass.simpleName)
-            world.scheduleAfter(
-                {
-                    world.execute {
-                        verifyAndCleanup(
-                            context,
-                            world,
-                            sectionRef,
-                            players,
-                            playerRefs,
-                            blockRefs,
-                            players.firstOrNull()?.uuid,
-                            players.getOrNull(1)?.uuid,
-                            crews,
-                            crewDirectory,
-                            chunkIndex,
-                            chunkHeld,
-                            results,
-                            ::check,
-                            ::failUnreportedChecks,
-                            testFailure,
-                        )
-                    }
-                },
-                100,
-                TimeUnit.MILLISECONDS,
-            )
-        }
+        world.scheduleAfter(
+            {
+                world.execute {
+                    verifyAndCleanup(setupFailure)
+                }
+            },
+            CLEANUP_DELAY_MILLIS,
+            TimeUnit.MILLISECONDS,
+        )
     }
 
-    private fun verifyAndCleanup(
-        context: com.hypixel.hytale.server.core.command.system.CommandContext,
-        world: World,
-        sectionRef: com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>?,
-        players: List<com.hypixel.hytale.server.core.universe.PlayerRef>,
-        playerRefs: List<com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore>>,
-        blockRefs: List<com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>>,
-        ownerUuid: java.util.UUID?,
-        foreignUuid: java.util.UUID?,
-        crews: CrewService?,
-        crewDirectory: Path?,
-        chunkIndex: Long?,
-        chunkHeld: Boolean,
-        results: MutableMap<String, Boolean>,
-        check: (String, Boolean, String) -> Unit,
-        failUnreportedChecks: (String) -> Unit,
-        setupFailure: Exception? = null,
+    fun verifyAndCleanup(setupFailure: Throwable?) {
+        val verificationFailure =
+            setupFailure ?: runCatching { MachineOwnerSelfTestVerification.verify(this) }.exceptionOrNull()
+        if (verificationFailure != null) {
+            failUnreportedChecks(verificationFailure.message ?: verificationFailure.javaClass.simpleName)
+        }
+        val cleanup = MachineOwnerSelfTestCleanup.cleanup(this)
+        check("machine-owner fixture cleanup", cleanup.passed, cleanup.details)
+        reportResults(cleanup)
+    }
+
+    fun failUnreportedChecks(detail: String) {
+        machineOwnerChecks.filterNot(results::containsKey).forEach { check(it, false, detail) }
+    }
+
+    fun check(
+        name: String,
+        passed: Boolean,
+        detail: String,
     ) {
-        val store = world.chunkStore.store
-        var removalFailure: Throwable? = setupFailure
-        try {
-            if (setupFailure != null) error(setupFailure.message ?: "fixture setup failed")
-            val owner = ownerUuid ?: error("owner synthetic player is missing")
-            val foreign = foreignUuid ?: error("foreign synthetic player is missing")
-            val crew = checkNotNull(crews)
-            val ownerAllowed =
-                fixtures.all { (_, position) ->
-                    machineOwnerAt(world, store, position) == owner &&
-                        mayUseMachine(owner, owner, players.firstOrNull(), crew)
-                } && owner in crew.crewOf(owner).members
-            check("Cradle placement assigns its synthetic player", machineOwnerAt(world, store, cradlePosition) == owner, "owner=$owner")
-            check("Resonator placement assigns its synthetic player", machineOwnerAt(world, store, resonatorPosition) == owner, "owner=$owner")
-            check("machine owner may use a placed fixture", ownerAllowed, "owner crew allowed=$ownerAllowed")
-            val foreignAllowed =
-                fixtures.any { (_, position) ->
-                    val fixtureOwner = machineOwnerAt(world, store, position)
-                    fixtureOwner != null && mayUseMachine(fixtureOwner, foreign, players.getOrNull(1), crew)
-                } || owner in crew.crewOf(foreign).members
-            check("foreign synthetic player cannot use a placed fixture", !foreignAllowed, "foreign allowed=$foreignAllowed")
-        } catch (testFailure: Exception) {
-            failUnreportedChecks(testFailure.message ?: testFailure.javaClass.simpleName)
-        }
+        if (name in results) return
+        results[name] = passed
+        val result = if (passed) "PASS" else "FAIL"
+        context.sendMessage(Message.raw("selftest: $result $name ($detail)"))
+    }
 
-        val initialOwners =
-            fixtures.count { (_, position) ->
-                machineOwnerAt(world, store, position) != null
-            }
-        var blocksRemoved = 0
-        val ownersRemoved = initialOwners
-        var playersRemoved = 0
-        playerRefs.forEach { ref ->
-            if (ref.isValid) {
-                runCatching { store.removeEntity(ref, RemoveReason.REMOVE) }
-                    .onFailure { if (removalFailure == null) removalFailure = it }
-            }
-            if (!ref.isValid) playersRemoved++
-            WellSelfTestExclusions.releaseEntity(ref)
-        }
-        fixtures.forEach { (_, position) ->
-            runCatching { FluidSelfTestSetup.clearBlock(world, position) }
-                .onSuccess { blocksRemoved++ }
-                .onFailure { if (removalFailure == null) removalFailure = it }
-        }
-        blockRefs.forEach(WellSelfTestExclusions::releaseBlock)
-
-        var keepLoadedReleased = !chunkHeld
-        if (chunkHeld && chunkIndex != null) {
-            val keptChunk = world.chunkStore.getChunkReference(chunkIndex)
-                ?.takeIf { it.isValid }
-                ?.let { store.getComponent(it, WorldChunk.getComponentType()) }
-            if (keptChunk != null) {
-                runCatching {
-                    keptChunk.removeKeepLoaded()
-                    keepLoadedReleased = true
-                }.onFailure { if (removalFailure == null) removalFailure = it }
-            }
-        }
-        runCatching { crews?.close() }
-            .onFailure { if (removalFailure == null) removalFailure = it }
-        if (crewDirectory != null) {
-            runCatching { Files.deleteIfExists(crewDirectory.resolve("crews.json")) }
-                .onFailure { if (removalFailure == null) removalFailure = it }
-            runCatching { Files.deleteIfExists(crewDirectory) }
-                .onFailure { if (removalFailure == null) removalFailure = it }
-        }
-
-        val blockSection =
-            sectionRef?.takeIf { it.isValid }
-                ?.let { store.getComponent(it, BlockSection.getComponentType()) }
-        val remainingBlocks =
-            fixtures.count { (_, position) ->
-                blockSection?.get(position.x and 31, position.y and 31, position.z and 31) != BlockType.EMPTY_ID
-            }
-        val remainingOwners =
-            fixtures.count { (_, position) ->
-                BlockModule.getBlockEntity(world, position.x, position.y, position.z)
-                    ?.let { store.getComponent(it, MachineOwner.type) != null } == true
-            }
-        val remainingPlayers = playerRefs.count { it.isValid }
-        val remainingExclusions =
-            blockRefs.count(WellSelfTestExclusions::isBlock) +
-                playerRefs.count(WellSelfTestExclusions::isEntity)
-        val remainingKeepLoaded = if (keepLoadedReleased) 0 else 1
-        val cleanupPassed =
-            removalFailure == null &&
-                remainingBlocks == 0 &&
-                remainingOwners == 0 &&
-                remainingPlayers == 0 &&
-                remainingExclusions == 0 &&
-                remainingKeepLoaded == 0 &&
-                blocksRemoved == fixtures.size &&
-                playersRemoved == playerRefs.size
-        check(
-            "machine-owner fixture cleanup",
-            cleanupPassed,
-            "blocksRemoved=$blocksRemoved ownersRemoved=$ownersRemoved playersRemoved=$playersRemoved " +
-                "remainingBlocks=$remainingBlocks remainingOwners=$remainingOwners remainingPlayers=$remainingPlayers " +
-                "remainingExclusions=$remainingExclusions remainingKeepLoaded=$remainingKeepLoaded",
-        )
-        val passedCount = results.values.count { it }
-        val failedCount = results.size - passedCount
-        context.sendMessage(
-            Message.raw("selftest: machine-owner $passedCount passed, $failedCount failed"),
-        )
+    private fun reportResults(cleanup: MachineOwnerCleanupCounts) {
+        val passed = results.values.count { it }
+        val failed = results.size - passed
+        context.sendMessage(Message.raw("selftest: machine-owner $passed passed, $failed failed"))
         context.sendMessage(
             Message.raw(
-                "selftest: machine-owner cleanup (blocks=$blocksRemoved, owners=$ownersRemoved, " +
-                    "playersCreated=${players.size}, playersRemoved=$playersRemoved, " +
-                    "remainingBlocks=$remainingBlocks, remainingOwners=$remainingOwners, " +
-                    "remainingPlayers=$remainingPlayers, remainingExclusions=$remainingExclusions, " +
-                    "remainingKeepLoaded=$remainingKeepLoaded)",
+                "selftest: machine-owner cleanup (blocks=${cleanup.blocksRemoved}, " +
+                    "owners=${cleanup.ownersRemoved}, playersCreated=${cleanup.playersCreated}, " +
+                    "playersRemoved=${cleanup.playersRemoved}, remainingBlocks=${cleanup.remainingBlocks}, " +
+                    "remainingOwners=${cleanup.remainingOwners}, remainingPlayers=${cleanup.remainingPlayers}, " +
+                    "remainingExclusions=${cleanup.remainingExclusions}, " +
+                    "remainingKeepLoaded=${cleanup.remainingKeepLoaded})",
             ),
         )
     }
+}
 
-    private fun placeBlock(
-        world: World,
-        sectionRef: com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>,
+private object MachineOwnerSelfTestSetup {
+    fun setup(run: MachineOwnerSelfTestRun) {
+        val (sectionRef, section) = fixtureSection(run)
+        holdFixtureChunk(run)
+        machineOwnerFixtures.forEach { (_, position) -> FluidSelfTestSetup.clearBlock(run.world, position) }
+        run.owner = createPlayer(run)
+        run.foreign = createPlayer(run)
+        createCrewService(run)
+        placeFixtures(run, sectionRef, section)
+        dispatchPlacementEvents(run)
+    }
+
+    private fun fixtureSection(run: MachineOwnerSelfTestRun): Pair<Ref<ChunkStore>, BlockComponentSection> {
+        if (run.sectionFailure != null) {
+            error("owner fixture chunk load failed (${run.sectionFailure.message ?: "unknown error"})")
+        }
+        val ref =
+            run.sectionRef?.takeIf { it.isValid }
+                ?: error("owner fixture chunk load returned an invalid section")
+        val section =
+            run.chunkStore.getComponent(ref, BlockComponentSection.getComponentType())
+                ?: error("owner fixture block section is missing")
+        return ref to section
+    }
+
+    private fun holdFixtureChunk(run: MachineOwnerSelfTestRun) {
+        val position = machineOwnerFixtures.first().second
+        val index = ChunkUtil.indexChunk(position.x shr 5, position.z shr 5)
+        run.chunkIndex = index
+        val ref =
+            run.world.chunkStore
+                .getChunkReference(index)
+                ?.takeIf { it.isValid }
+                ?: error("owner fixture chunk reference is missing")
+        val chunk =
+            run.chunkStore.getComponent(ref, WorldChunk.getComponentType())
+                ?: error("owner fixture WorldChunk component is missing")
+        chunk.addKeepLoaded()
+        run.chunkHeld = true
+    }
+
+    private fun createPlayer(run: MachineOwnerSelfTestRun): PlayerRef {
+        val position = machineOwnerFixtures.first().second
+        val player = WellSelfTestPlayer.createInWorld(run.world, BlockPos(position.x, position.y, position.z))
+        run.players += player
+        val ref = player.reference ?: error("synthetic player entity is missing")
+        run.playerRefs += ref
+        WellSelfTestExclusions.registerEntity(ref)
+        return player
+    }
+
+    private fun createCrewService(run: MachineOwnerSelfTestRun) {
+        val directory = Files.createTempDirectory("craftory-machine-owner-selftest-")
+        run.crewDirectory = directory
+        run.crews = CrewService(directory.resolve("crews.json"))
+    }
+
+    private fun placeFixtures(
+        run: MachineOwnerSelfTestRun,
+        sectionRef: Ref<ChunkStore>,
         section: BlockComponentSection,
-        blockId: String,
+    ) {
+        machineOwnerFixtures.forEach { (itemId, position) ->
+            placeFixture(run, sectionRef, section, itemId, position)
+        }
+    }
+
+    private fun placeFixture(
+        run: MachineOwnerSelfTestRun,
+        sectionRef: Ref<ChunkStore>,
+        section: BlockComponentSection,
+        itemId: String,
         position: Position,
     ) {
-        val type = BlockType.fromString(blockId) ?: error("missing owner test block $blockId")
-        check(
+        val type = BlockType.fromString(itemId) ?: error("missing owner test block $itemId")
+        val placed =
             BlockOperations.setBlock(
-                world.chunkStore,
+                run.world.chunkStore,
                 sectionRef,
                 position.x,
                 position.y,
@@ -362,10 +233,10 @@ internal object MachineOwnerSelfTest {
                 0,
                 0,
                 SetBlockSettings.NO_UPDATE_STATE,
-            ),
-        ) { "failed to place owner test block $blockId at $position" }
+            )
+        if (!placed) error("failed to place owner test block $itemId at $position")
         BlockEntity.ensureBlockEntity(
-            world.chunkStore.store,
+            run.world.chunkStore.store,
             sectionRef,
             section,
             position.x and 31,
@@ -373,15 +244,228 @@ internal object MachineOwnerSelfTest {
             position.z and 31,
             type,
             0,
-        ) ?: error("failed to create owner test block entity for $blockId at $position")
+        ) ?: error("failed to create owner test block entity for $itemId at $position")
+        val blockRef =
+            BlockModule
+                .getBlockEntity(run.world, position.x, position.y, position.z)
+                ?.takeIf { it.isValid }
+                ?: error("$itemId block entity is missing")
+        run.blockRefs += blockRef
+        WellSelfTestExclusions.registerBlock(blockRef)
     }
 
-    private fun machineOwnerAt(
-        world: World,
-        store: com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.ChunkStore>,
-        position: Position,
-    ): java.util.UUID? {
-        val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return null
-        return store.getComponent(ref, MachineOwner.type)?.placerUuid
+    private fun dispatchPlacementEvents(run: MachineOwnerSelfTestRun) {
+        val ownerRef = run.owner?.reference ?: error("owner synthetic player entity is missing")
+        machineOwnerFixtures.forEach { (itemId, position) ->
+            run.world.entityStore.store.invoke(
+                ownerRef,
+                PlaceBlockEvent(
+                    ItemStack(itemId),
+                    Vector3i(position.x, position.y, position.z),
+                    RotationTuple.NONE,
+                ),
+            )
+        }
     }
+}
+
+private object MachineOwnerSelfTestVerification {
+    fun verify(run: MachineOwnerSelfTestRun) {
+        val owner = run.owner ?: error("owner synthetic player is missing")
+        val foreign = run.foreign ?: error("foreign synthetic player is missing")
+        val crews = run.crews ?: error("owner test crew service is missing")
+        val ownerUuid = owner.uuid
+        val cradleOwner = machineOwnerAt(run.world, run.chunkStore, machineOwnerFixtures[0].second)
+        val resonatorOwner = machineOwnerAt(run.world, run.chunkStore, machineOwnerFixtures[1].second)
+        run.check(
+            machineOwnerChecks[0],
+            cradleOwner == ownerUuid,
+            "owner=$ownerUuid actual=$cradleOwner",
+        )
+        run.check(
+            machineOwnerChecks[1],
+            resonatorOwner == ownerUuid,
+            "owner=$ownerUuid actual=$resonatorOwner",
+        )
+        verifyOwnerUse(run, owner, ownerUuid, crews)
+        verifyForeignRejection(run, foreign, ownerUuid, crews)
+    }
+
+    private fun verifyOwnerUse(
+        run: MachineOwnerSelfTestRun,
+        owner: PlayerRef,
+        ownerUuid: UUID,
+        crews: CrewService,
+    ) {
+        val ownerAllowed =
+            machineOwnerFixtures.all { (_, position) ->
+                val fixtureOwner = machineOwnerAt(run.world, run.chunkStore, position) ?: return@all false
+                fixtureOwner == ownerUuid && mayUseMachine(fixtureOwner, ownerUuid, owner, crews)
+            } && ownerUuid in crews.crewOf(ownerUuid).members
+        run.check(machineOwnerChecks[2], ownerAllowed, "owner crew allowed=$ownerAllowed")
+    }
+
+    private fun verifyForeignRejection(
+        run: MachineOwnerSelfTestRun,
+        foreign: PlayerRef,
+        ownerUuid: UUID,
+        crews: CrewService,
+    ) {
+        val foreignAllowed =
+            machineOwnerFixtures.any { (_, position) ->
+                val fixtureOwner = machineOwnerAt(run.world, run.chunkStore, position) ?: return@any false
+                mayUseMachine(fixtureOwner, foreign.uuid, foreign, crews)
+            } || ownerUuid in crews.crewOf(foreign.uuid).members
+        run.check(machineOwnerChecks[3], !foreignAllowed, "foreign allowed=$foreignAllowed")
+    }
+}
+
+private object MachineOwnerSelfTestCleanup {
+    fun cleanup(run: MachineOwnerSelfTestRun): MachineOwnerCleanupCounts {
+        val ownersRemoved = countOwners(run)
+        val playersRemoved = removePlayers(run)
+        val blocksRemoved = removeBlocks(run)
+        releaseBlockExclusions(run)
+        releaseCrewResources(run)
+        val remainingBlocks = countRemainingBlocks(run)
+        val remainingOwners = countOwners(run)
+        val remainingPlayers = run.playerRefs.count { it.isValid }
+        val remainingExclusions = countRemainingExclusions(run)
+        val keepLoadedReleased = releaseFixtureChunk(run)
+        val remainingKeepLoaded = if (keepLoadedReleased) 0 else 1
+        return MachineOwnerCleanupCounts(
+            blocksRemoved,
+            ownersRemoved,
+            run.players.size,
+            playersRemoved,
+            remainingBlocks,
+            remainingOwners,
+            remainingPlayers,
+            remainingExclusions,
+            remainingKeepLoaded,
+            run.cleanupFailure == null,
+            playersRemoved == run.players.size,
+        )
+    }
+
+    private fun removePlayers(run: MachineOwnerSelfTestRun): Int {
+        var removed = 0
+        run.playerRefs.forEach { ref ->
+            val wasValid = ref.isValid
+            if (wasValid) {
+                runCatching { run.entityStore.removeEntity(ref, RemoveReason.REMOVE) }
+                    .onFailure { recordFailure(run, it) }
+            }
+            if (wasValid && !ref.isValid) removed++
+            WellSelfTestExclusions.releaseEntity(ref)
+        }
+        return removed
+    }
+
+    private fun removeBlocks(run: MachineOwnerSelfTestRun): Int {
+        val section = currentBlockSection(run)
+        var removed = 0
+        machineOwnerFixtures.forEach { (_, position) ->
+            val existed = section?.get(position.x and 31, position.y and 31, position.z and 31) != BlockType.EMPTY_ID
+            runCatching { FluidSelfTestSetup.clearBlock(run.world, position) }
+                .onSuccess { if (existed) removed++ }
+                .onFailure { recordFailure(run, it) }
+        }
+        return removed
+    }
+
+    private fun releaseBlockExclusions(run: MachineOwnerSelfTestRun) {
+        run.blockRefs.forEach(WellSelfTestExclusions::releaseBlock)
+    }
+
+    private fun releaseCrewResources(run: MachineOwnerSelfTestRun) {
+        runCatching { run.crews?.close() }.onFailure { recordFailure(run, it) }
+        val directory = run.crewDirectory ?: return
+        runCatching { Files.deleteIfExists(directory.resolve("crews.json")) }
+            .onFailure { recordFailure(run, it) }
+        runCatching { Files.deleteIfExists(directory) }.onFailure { recordFailure(run, it) }
+    }
+
+    private fun releaseFixtureChunk(run: MachineOwnerSelfTestRun): Boolean {
+        if (!run.chunkHeld) return true
+        val ref =
+            run.chunkIndex
+                ?.let(run.world.chunkStore::getChunkReference)
+                ?.takeIf { it.isValid }
+                ?: return false
+        val chunk = run.chunkStore.getComponent(ref, WorldChunk.getComponentType()) ?: return false
+        val result = runCatching { chunk.removeKeepLoaded() }
+        result.onFailure { recordFailure(run, it) }
+        if (result.isFailure) return false
+        run.chunkHeld = false
+        return true
+    }
+
+    private fun countOwners(run: MachineOwnerSelfTestRun): Int =
+        machineOwnerFixtures.count { (_, position) ->
+            machineOwnerAt(run.world, run.chunkStore, position) != null
+        }
+
+    private fun countRemainingBlocks(run: MachineOwnerSelfTestRun): Int {
+        val section = currentBlockSection(run) ?: return machineOwnerFixtures.size
+        return machineOwnerFixtures.count { (_, position) ->
+            section.get(position.x and 31, position.y and 31, position.z and 31) != BlockType.EMPTY_ID
+        }
+    }
+
+    private fun currentBlockSection(run: MachineOwnerSelfTestRun): BlockSection? =
+        run.sectionRef
+            ?.takeIf { it.isValid }
+            ?.let { run.chunkStore.getComponent(it, BlockSection.getComponentType()) }
+
+    private fun countRemainingExclusions(run: MachineOwnerSelfTestRun): Int =
+        run.blockRefs.count(WellSelfTestExclusions::isBlock) +
+            run.playerRefs.count(WellSelfTestExclusions::isEntity)
+
+    private fun recordFailure(
+        run: MachineOwnerSelfTestRun,
+        failure: Throwable,
+    ) {
+        if (run.cleanupFailure == null) run.cleanupFailure = failure
+    }
+}
+
+private fun machineOwnerAt(
+    world: World,
+    store: Store<ChunkStore>,
+    position: Position,
+): UUID? {
+    val ref = BlockModule.getBlockEntity(world, position.x, position.y, position.z) ?: return null
+    return store.getComponent(ref, MachineOwner.type)?.placerUuid
+}
+
+private data class MachineOwnerCleanupCounts(
+    val blocksRemoved: Int,
+    val ownersRemoved: Int,
+    val playersCreated: Int,
+    val playersRemoved: Int,
+    val remainingBlocks: Int,
+    val remainingOwners: Int,
+    val remainingPlayers: Int,
+    val remainingExclusions: Int,
+    val remainingKeepLoaded: Int,
+    val noFailures: Boolean,
+    val allPlayersRemoved: Boolean,
+) {
+    val passed: Boolean
+        get() =
+            noFailures &&
+                allPlayersRemoved &&
+                remainingBlocks == 0 &&
+                remainingOwners == 0 &&
+                remainingPlayers == 0 &&
+                remainingExclusions == 0 &&
+                remainingKeepLoaded == 0
+
+    val details: String
+        get() =
+            "blocksRemoved=$blocksRemoved ownersRemoved=$ownersRemoved " +
+                "playersRemoved=$playersRemoved remainingBlocks=$remainingBlocks " +
+                "remainingOwners=$remainingOwners remainingPlayers=$remainingPlayers " +
+                "remainingExclusions=$remainingExclusions remainingKeepLoaded=$remainingKeepLoaded"
 }
