@@ -129,29 +129,24 @@ class GobJarUseInteraction : SimpleInteraction() {
         wellId: String,
     ): Boolean {
         val state = world.entityStore.store.getResource(WellCaptureState.type)
-        val current = state.progressByPlayer[playerRef.uuid]
-        val tick = world.tick
-        if (current == null || current.wellId != wellId) {
-            state.progressByPlayer[playerRef.uuid] = CaptureProgress(wellId, 1, tick)
-            playerRef.sendMessage(Message.translation("server.craftory.jar.capture-press").param("press", 1))
-            return false
+        return when (val result = recordCapturePress(state, playerRef.uuid, wellId, world.tick)) {
+            is CapturePressResult.Progress -> {
+                playerRef.sendMessage(
+                    Message.translation("server.craftory.jar.capture-press").param("press", result.pressCount),
+                )
+                false
+            }
+
+            CapturePressResult.Miss -> {
+                resetStakeAndKnockBack(world, wellRef, playerRef, wellId)
+                playerRef.sendMessage(Message.translation("server.craftory.jar.capture-missed"))
+                false
+            }
+
+            CapturePressResult.Complete -> {
+                true
+            }
         }
-        if (!TetherRules.capturePressIntervalValid(tick - current.lastPressTick)) {
-            state.progressByPlayer.remove(playerRef.uuid)
-            resetStakeAndKnockBack(world, wellRef, playerRef, wellId)
-            playerRef.sendMessage(Message.translation("server.craftory.jar.capture-missed"))
-            return false
-        }
-        val pressCount = current.pressCount + 1
-        if (!TetherRules.captureComplete(pressCount)) {
-            state.progressByPlayer[playerRef.uuid] = CaptureProgress(wellId, pressCount, tick)
-            playerRef.sendMessage(
-                Message.translation("server.craftory.jar.capture-press").param("press", pressCount),
-            )
-            return false
-        }
-        state.progressByPlayer.remove(playerRef.uuid)
-        return true
     }
 
     private fun resetStakeAndKnockBack(

@@ -410,7 +410,7 @@ private fun pulseEffects(
     position: Vector3d,
     store: ComponentAccessor<EntityStore>,
 ) {
-    ParticleUtil.spawnParticleEffect("Impact_Spark", position, store)
+    ParticleUtil.spawnParticleEffect("Magic_Sparks_GS", position, store)
     SoundUtil.playSoundEvent2dToPlayer(
         player,
         "SFX_Interact",

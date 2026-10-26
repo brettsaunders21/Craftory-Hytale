@@ -3,6 +3,7 @@ package studio.craftory.tech.well
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -94,6 +95,40 @@ object TetherRules {
     fun capturePressIntervalValid(tickDelta: Long): Boolean = tickDelta in 4L..40L
 
     fun captureComplete(pressCount: Int): Boolean = pressCount >= 3
+}
+
+internal sealed interface CapturePressResult {
+    data class Progress(
+        val pressCount: Int,
+    ) : CapturePressResult
+
+    data object Complete : CapturePressResult
+
+    data object Miss : CapturePressResult
+}
+
+internal fun recordCapturePress(
+    state: WellCaptureState,
+    playerUuid: UUID,
+    wellId: String,
+    tick: Long,
+): CapturePressResult {
+    val current = state.progressByPlayer[playerUuid]
+    if (current == null || current.wellId != wellId) {
+        state.progressByPlayer[playerUuid] = CaptureProgress(wellId, 1, tick)
+        return CapturePressResult.Progress(1)
+    }
+    if (!TetherRules.capturePressIntervalValid(tick - current.lastPressTick)) {
+        state.progressByPlayer.remove(playerUuid)
+        return CapturePressResult.Miss
+    }
+    val pressCount = current.pressCount + 1
+    if (TetherRules.captureComplete(pressCount)) {
+        state.progressByPlayer.remove(playerUuid)
+        return CapturePressResult.Complete
+    }
+    state.progressByPlayer[playerUuid] = CaptureProgress(wellId, pressCount, tick)
+    return CapturePressResult.Progress(pressCount)
 }
 
 object JarCarrierRules {

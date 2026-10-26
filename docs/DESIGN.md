@@ -752,5 +752,6 @@ Each slice is playable end to end and builds on ARCHITECTURE §8 milestones 0–
 | 31 | Slice 5a stake spacing | Stake angular gaps are measured against equal spacing; a deviation greater than 40 degrees marks a stake leaning |
 | 32 | Slice 5a storm budget | At most one Steady-or-stronger Wild Well per 512×512 region; budget is configurable |
 | 33 | Slice 5b deferral | Wellhead/catalysis, Slurp Walker, Riftmoth feeding/corruption, and Cradle/seat changes remain deferred |
+| 34 | Slice 5a carrier readout | The carrier gets a throttled notification; nearby crew read stability through Squint Goggles |
 
 Naming: a new mod name to replace "Craftory" is being chosen; see the README once decided.

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import studio.craftory.core.api.well.Temperament
 import studio.craftory.core.api.well.WellStrength
+import java.util.UUID
 import kotlin.random.Random
 
 class WellLogicTest {
@@ -126,6 +127,20 @@ class WellLogicTest {
         assertFalse(TetherRules.capturePressIntervalValid(41))
         assertFalse(TetherRules.captureComplete(2))
         assertTrue(TetherRules.captureComplete(3))
+    }
+
+    @Test
+    fun `capture press state completes on the third press and resets on a miss`() {
+        val state = WellCaptureState()
+        val player = UUID.randomUUID()
+        assertEquals(CapturePressResult.Progress(1), recordCapturePress(state, player, "well", 100))
+        assertEquals(CapturePressResult.Progress(2), recordCapturePress(state, player, "well", 110))
+        assertEquals(CapturePressResult.Complete, recordCapturePress(state, player, "well", 120))
+        assertFalse(state.progressByPlayer.containsKey(player))
+
+        assertEquals(CapturePressResult.Progress(1), recordCapturePress(state, player, "well", 200))
+        assertEquals(CapturePressResult.Miss, recordCapturePress(state, player, "well", 241))
+        assertFalse(state.progressByPlayer.containsKey(player))
     }
 
     @Test

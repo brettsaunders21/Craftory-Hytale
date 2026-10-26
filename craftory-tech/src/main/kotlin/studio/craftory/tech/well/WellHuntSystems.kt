@@ -462,18 +462,18 @@ private fun stakeAt(
     return if (state.wellId == packedWellId) ref to state else null
 }
 
-private fun spawnTetherBeam(
+internal fun spawnTetherBeam(
     world: World,
     well: BlockPos,
     stake: BlockPos,
-) {
+): Ref<EntityStore>? {
     val beamIndex = Beam.getAssetMap().getIndex("Chain")
-    if (beamIndex < 0) return
+    if (beamIndex < 0) return null
     val origin = Vector3d(well.x + 0.5, well.y + 0.5, well.z + 0.5)
-    BeamComponent.spawn(
+    return BeamComponent.spawn(
         world.entityStore.store,
         origin,
-        5f,
+        1.2f,
         AttachedBeam.toBlock(
             beamIndex,
             1f,

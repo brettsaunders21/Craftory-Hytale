@@ -66,13 +66,13 @@ internal class WellPulseSystem(
             state.lastPulseByPosition[id] = tick
             val drift = sin(tick / 8.0) * 0.25
             ParticleUtil.spawnParticleEffect(
-                "Impact_Spark",
+                "Magic_Sparks_GS",
                 Vector3d(well.pos.x + 0.5 + drift, well.pos.y + 1.2, well.pos.z + 0.5),
                 store,
             )
             if (well.well.strength == WellStrength.FLICKER) {
                 ParticleUtil.spawnParticleEffect(
-                    "Impact_Spark",
+                    "Magic_Sparks_GS",
                     Vector3d(well.pos.x + 0.5 - drift, well.pos.y + 1.6, well.pos.z + 0.5),
                     store,
                 )

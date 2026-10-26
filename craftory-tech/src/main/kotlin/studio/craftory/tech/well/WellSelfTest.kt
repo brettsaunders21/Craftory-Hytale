@@ -1,12 +1,16 @@
 package studio.craftory.tech.well
 
+import com.hypixel.hytale.builtin.beam.asset.Beam
 import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.math.vector.Rotation3f
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType
+import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent
 import com.hypixel.hytale.server.core.entity.UUIDComponent
+import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent
 import com.hypixel.hytale.server.core.universe.world.SetBlockSettings
@@ -58,6 +62,7 @@ internal object WellSelfTest {
             testJarAndScan(world, tempDir, report)
             testEmptyBlockRemoval(world, report)
             testStormcall(world, report)
+            testRuntimeAssets(report)
             testChunkReload(world, report)
             Helpers.testCarrierReload(world, report)
             testDamperSmothering(world, report)
@@ -70,6 +75,10 @@ internal object WellSelfTest {
         } finally {
             CraftoryCore.wells().remove(world, CAUGHT_POS)
             CraftoryCore.wells().remove(world, FORCED_POS)
+            world.chunkStore.store
+                .getResource(WellBirthState.type)
+                .stormCrackles
+                .remove(FORCED_POS.pack())
             CraftoryCore.wells().remove(world, BLOCK_REMOVED_POS)
             CraftoryCore.wells().remove(world, STAKED_POS)
             CraftoryCore.wells().remove(world, SMOTHERED_POS)
@@ -119,6 +128,14 @@ internal object WellSelfTest {
             well.claimCrewId = crew.id
             val result = JarActions.checkCatch(spawned, player, crews, store)
             check(result is JarCatchResult.Caught) { "Flicker catch failed: $result" }
+            val captureState = WellCaptureState()
+            val missedPlayer = UUID.randomUUID()
+            check(recordCapturePress(captureState, player, result.wellId, 100) == CapturePressResult.Progress(1))
+            check(recordCapturePress(captureState, player, result.wellId, 110) == CapturePressResult.Progress(2))
+            check(recordCapturePress(captureState, player, result.wellId, 120) == CapturePressResult.Complete)
+            check(recordCapturePress(captureState, missedPlayer, result.wellId, 100) == CapturePressResult.Progress(1))
+            check(recordCapturePress(captureState, missedPlayer, result.wellId, 141) == CapturePressResult.Miss)
+            report("selftest: PASS three-press capture success and miss timing")
             check(JarActions.commitCatch(world, spawned, CAUGHT_POS, player, result, crews)) {
                 "Flicker catch commit failed"
             }
@@ -178,6 +195,20 @@ internal object WellSelfTest {
         ) { "forced Stormcall did not start 30-second crackle tracking" }
         report("selftest: PASS forced Stormcall birth, fake strike, and crackle")
         CraftoryCore.wells().remove(world, FORCED_POS)
+    }
+
+    private fun testRuntimeAssets(report: WellSelfTestReport) {
+        val missingParticles =
+            listOf("Lightning", "Magic_Sparks_GS", "Dungeon_Goblin_Toxic_Water")
+                .filter { ParticleSystem.getAssetMap().getAsset(it) == null }
+        val missingSounds =
+            listOf("SFX_Global_Weather_Thunder", "SFX_Interact")
+                .filter { SoundEvent.getAssetMap().getIndex(it) < 0 }
+        val chainBeam = Beam.getAssetMap().getIndex("Chain")
+        report(
+            "selftest: asset check " +
+                "(missingParticles=$missingParticles missingSounds=$missingSounds chainBeam=$chainBeam)",
+        )
     }
 
     private fun testChunkReload(
@@ -323,9 +354,7 @@ internal object WellSelfTest {
             report: (String) -> Unit,
         ) {
             val store = world.entityStore.store
-            val holder = EntityStore.REGISTRY.newHolder()
-            holder.addComponent(
-                JarCarrier.type,
+            val carrier =
                 JarCarrier(
                     stability = 73.5,
                     temperamentId = Temperament.EMBER.id,
@@ -336,8 +365,19 @@ internal object WellSelfTest {
                     nextAmbushTick = 1217,
                     lastReadoutTick = 100,
                     originalBaseSpeed = 1.25f,
-                ),
-            )
+                )
+            val filledJar =
+                JarActions.filledJar(
+                    JarCatchResult.Caught(
+                        Temperament.EMBER,
+                        WellStrength.STEADY,
+                        "Ingredient_Scraps",
+                        WellSelfTest.STAKED_POS.pack().toString(),
+                    ),
+                )
+            val updatedJar = metadataStack(filledJar, carrier)
+            val holder = EntityStore.REGISTRY.newHolder()
+            holder.addComponent(JarCarrier.type, carrier)
             holder.ensureComponent(EntityStore.REGISTRY.nonSerializedComponentType)
             holder.ensureComponent(UUIDComponent.getComponentType())
             holder.addComponent(
@@ -352,22 +392,35 @@ internal object WellSelfTest {
                 ref = store.addEntity(unloaded, AddReason.LOAD) ?: error("JarCarrier reload failed")
                 WellSelfTestExclusions.registerEntity(ref)
                 val restored = store.getComponent(ref, JarCarrier.type) ?: error("JarCarrier state was not restored")
-                check(
-                    restored.stability == 73.5 &&
-                        restored.temperamentId == Temperament.EMBER.id &&
-                        restored.strengthId == WellStrength.STEADY.name &&
-                        restored.taste == "Ingredient_Scraps" &&
-                        restored.wellId == WellSelfTest.STAKED_POS.pack().toString() &&
-                        restored.lastTick == 17L &&
-                        restored.nextAmbushTick == 1217L &&
-                        restored.lastReadoutTick == 100L &&
-                        restored.originalBaseSpeed == 1.25f,
-                ) { "JarCarrier unload/reload did not preserve its escort state" }
+                assertCarrierState(updatedJar, restored)
+                report("selftest: PASS JarCarrier metadata flush preserves stability and identity")
                 report("selftest: PASS JarCarrier unload/reload preserves escort state")
             } finally {
                 WellSelfTestExclusions.releaseEntity(ref)
                 if (ref.isValid) store.removeEntity(ref, RemoveReason.REMOVE)
             }
+        }
+
+        private fun assertCarrierState(
+            updatedJar: ItemStack,
+            restored: JarCarrier,
+        ) {
+            check(updatedJar.getFromMetadataOrNull(GobJarMetadata.STABILITY) == 73.5)
+            check(
+                updatedJar.getFromMetadataOrNull(GobJarMetadata.TEMPERAMENT) == Temperament.EMBER.id &&
+                    updatedJar.getFromMetadataOrNull(GobJarMetadata.STRENGTH) == WellStrength.STEADY.name,
+            )
+            check(
+                restored.stability == 73.5 &&
+                    restored.temperamentId == Temperament.EMBER.id &&
+                    restored.strengthId == WellStrength.STEADY.name &&
+                    restored.taste == "Ingredient_Scraps" &&
+                    restored.wellId == WellSelfTest.STAKED_POS.pack().toString() &&
+                    restored.lastTick == 17L &&
+                    restored.nextAmbushTick == 1217L &&
+                    restored.lastReadoutTick == 100L &&
+                    restored.originalBaseSpeed == 1.25f,
+            ) { "JarCarrier unload/reload did not preserve its escort state" }
         }
 
         fun testGuardianDeath(
@@ -439,14 +492,15 @@ internal object WellSelfTest {
             val crews = CrewService(tempDir.resolve("stake-crews.json"))
             val refs = mutableListOf<BlockEntityRef>()
             try {
-                val ownerCrew = crews.crewOf(playerUuid)
-                crews.setTier(ownerCrew.id, 2)
+                val ownerCrew = createStakeOwnerCrew(crews, playerUuid)
                 placeTestStakes(world, store, sectionRef, section, positions, playerUuid, refs)
                 recomputeStakeRing(world, WellSelfTest.STAKED_POS, well, playerUuid, crews)
                 checkStakeLeaning(store, well, refs)
                 straightenTestStakes(world, positions, playerUuid, crews)
                 checkStakeClaim(well, ownerCrew.id, wellRef, playerUuid, crews, store)
-                report("selftest: PASS Tinker's Hammer tether claim and foreign-crew denial")
+                verifyStakeBeam(world, positions.first(), report)
+                assertStakeBreak(world, positions.first(), well)
+                report("selftest: PASS Tinker's Hammer claim, foreign-crew denial, and stake break")
             } finally {
                 refs.forEach(WellSelfTestExclusions::releaseBlock)
                 CraftorySelfTest.clear(world, sectionRef, positions)
@@ -454,6 +508,22 @@ internal object WellSelfTest {
                 crews.close()
                 Files.deleteIfExists(tempDir.resolve("stake-crews.json"))
             }
+        }
+
+        private fun verifyStakeBeam(
+            world: World,
+            stake: CraftorySelfTest.TestPosition,
+            report: WellSelfTestReport,
+        ) {
+            val beam =
+                spawnTetherBeam(
+                    world,
+                    WellSelfTest.STAKED_POS,
+                    BlockPos(stake.x, stake.y, stake.z),
+                ) ?: error("verified tether beam asset failed to spawn")
+            check(beam.isValid) { "tether beam reference was invalid" }
+            world.entityStore.store.removeEntity(beam, RemoveReason.REMOVE)
+            report("selftest: PASS tether stake beam spawn and cleanup")
         }
 
         private fun placeTestStakes(
@@ -537,6 +607,22 @@ internal object WellSelfTest {
             }
         }
     }
+
+    private fun assertStakeBreak(
+        world: World,
+        stake: CraftorySelfTest.TestPosition,
+        well: Glimmerwell,
+    ) {
+        clearBlock(world, BlockPos(stake.x, stake.y, stake.z))
+        check(well.state == WellState.DORMANT) {
+            "breaking a tether stake did not return the Well to DORMANT"
+        }
+    }
+
+    private fun createStakeOwnerCrew(
+        crews: CrewService,
+        playerUuid: UUID,
+    ) = crews.crewOf(playerUuid).also { crews.setTier(it.id, 2) }
 
     private fun testHurlRefusal(
         world: World,

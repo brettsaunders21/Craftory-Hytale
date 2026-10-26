@@ -41,7 +41,7 @@ internal object LensScanner {
         if (perfect) {
             playerRef.sendMessage(Message.translation("server.craftory.lens.perfect").param("taste", well.taste))
             ParticleUtil.spawnParticleEffect(
-                "Impact_Spark",
+                "Magic_Sparks_GS",
                 Vector3d(session.pos.x + 0.5, session.pos.y + 1.2, session.pos.z + 0.5),
                 store,
             )

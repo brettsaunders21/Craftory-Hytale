@@ -93,6 +93,7 @@ import studio.craftory.tech.well.GobJarUseInteraction
 import studio.craftory.tech.well.JarCarrier
 import studio.craftory.tech.well.JarCarrierDamageSystem
 import studio.craftory.tech.well.JarCarrierDropSystem
+import studio.craftory.tech.well.JarCarrierSaveLifecycle
 import studio.craftory.tech.well.JarCarrierSeatLifecycle
 import studio.craftory.tech.well.JarCarrierSystem
 import studio.craftory.tech.well.LensScanState
@@ -405,6 +406,7 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(JarCarrierDamageSystem())
         entityRegistry.registerSystem(JarCarrierDropSystem())
         entityRegistry.registerSystem(JarCarrierSeatLifecycle())
+        entityRegistry.registerSystem(JarCarrierSaveLifecycle())
         entityRegistry.registerSystem(WellBirthSystem(wellConfig))
         entityRegistry.registerSystem(WellKillBirthSystem(wellConfig))
         entityRegistry.registerSystem(RiftmothDrainSystem())

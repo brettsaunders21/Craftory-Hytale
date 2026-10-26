@@ -5,14 +5,17 @@ import com.hypixel.hytale.builtin.weather.resources.WeatherResource
 import com.hypixel.hytale.codec.Codec
 import com.hypixel.hytale.codec.KeyedCodec
 import com.hypixel.hytale.codec.builder.BuilderCodec
+import com.hypixel.hytale.component.AddReason
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Component
 import com.hypixel.hytale.component.ComponentType
 import com.hypixel.hytale.component.Ref
+import com.hypixel.hytale.component.RemoveReason
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.query.Query
 import com.hypixel.hytale.component.system.EntityEventSystem
+import com.hypixel.hytale.component.system.RefSystem
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem
 import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle
 import com.hypixel.hytale.server.core.Message
@@ -265,7 +268,7 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         inventory.setItemStackForSlot(jarSlot, ItemStack.EMPTY)
         spawnBurstWell(world, position, carrier)
         knockBack(ref, store, position)
-        removeCarrier(ref, playerRef, store, inventory, carrier)
+        removeCarrier(ref, playerRef, store, inventory, carrier, flushMetadata = false)
     }
 
     private fun removeCarrier(
@@ -274,8 +277,9 @@ internal class JarCarrierSystem : DelayedEntitySystem<EntityStore>(1.0f) {
         store: Store<EntityStore>,
         inventory: com.hypixel.hytale.server.core.inventory.container.ItemContainer,
         carrier: JarCarrier,
+        flushMetadata: Boolean = true,
     ) {
-        flushCarrierMetadata(inventory, carrier)
+        if (flushMetadata) flushCarrierMetadata(inventory, carrier)
         store.removeComponent(ref, JarCarrier.type)
         val movement = store.getComponent(ref, MovementManager.getComponentType()) ?: return
         movement.settings.baseSpeed = carrier.originalBaseSpeed
@@ -508,6 +512,29 @@ internal class JarCarrierSeatLifecycle : com.hypixel.hytale.component.system.Ref
         carrier: JarCarrier,
         store: Store<EntityStore>,
     ) {
+        val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
+        flushCarrierMetadata(inventory, carrier)
+    }
+}
+
+internal class JarCarrierSaveLifecycle : RefSystem<EntityStore>() {
+    override fun getQuery(): Query<EntityStore> = JarCarrier.type
+
+    override fun onEntityAdded(
+        ref: Ref<EntityStore>,
+        reason: AddReason,
+        store: Store<EntityStore>,
+        commandBuffer: CommandBuffer<EntityStore>,
+    ) = Unit
+
+    override fun onEntityRemove(
+        ref: Ref<EntityStore>,
+        reason: RemoveReason,
+        store: Store<EntityStore>,
+        commandBuffer: CommandBuffer<EntityStore>,
+    ) {
+        if (reason != RemoveReason.UNLOAD && reason != RemoveReason.REMOVE) return
+        val carrier = commandBuffer.getComponent(ref, JarCarrier.type) ?: return
         val inventory = InventoryComponent.getCombined(store, ref, *InventoryComponent.EVERYTHING)
         flushCarrierMetadata(inventory, carrier)
     }
