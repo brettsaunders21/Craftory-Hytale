@@ -85,6 +85,7 @@ class Box:
     quad: str | None = None  # normal for quads, e.g. "+Z"; size z ignored
     double_sided: bool = False
     visible: bool = True
+    piece: bool = False  # attachment root that follows the wearer's bone of the same name
     children: list["Box"] = field(default_factory=list)
     uv: dict[str, tuple[int, int, int, int]] = field(default_factory=dict)
 
@@ -197,7 +198,7 @@ def _node(b: Box, ids: list[int]) -> dict:
         "type": "none",
         "offset": _vec(b.offset),
         "stretch": _vec(b.stretch),
-        "settings": {"isPiece": False},
+        "settings": {"isPiece": b.piece},
         "textureLayout": {},
         "unwrapMode": "custom",
         "visible": b.visible,
@@ -207,10 +208,10 @@ def _node(b: Box, ids: list[int]) -> dict:
     if b.has_shape:
         if b.quad:
             shape["type"] = "quad"
-            shape["settings"] = {"size": {"x": r5(b.size[0]), "y": r5(b.size[1])}, "normal": b.quad, "isPiece": False}
+            shape["settings"] = {"size": {"x": r5(b.size[0]), "y": r5(b.size[1])}, "normal": b.quad, "isPiece": b.piece}
         else:
             shape["type"] = "box"
-            shape["settings"] = {"size": _vec(b.size), "isPiece": False}
+            shape["settings"] = {"size": _vec(b.size), "isPiece": b.piece}
         for f, (x, y, _, _) in b.uv.items():
             shape["textureLayout"][f] = {"offset": {"x": x, "y": y}, "mirror": {"x": False, "y": False}, "angle": 0}
     node = {

@@ -28,7 +28,7 @@ def cog_hat():
     for i in range(8):  # cog teeth around the brim
         crown.add(Box(f"CogTooth{i}", (6, 4, 4), pos=(0, -4, 0), offset=(0, 0, 17.5), rot=(0, i * 45, 0),
                       paint=metal(BRASS, rust=0.35, rivets=False)))
-    return Model([Box("Head").add(crown)], fmt="character")
+    return Model([Box("Head", piece=True).add(crown)], fmt="character")
 
 
 def goggles():
@@ -41,7 +41,7 @@ def goggles():
                    shading="fullbright"),
                Box("GoggleLoupe", (5, 5, 5), pos=(0, 0, 5), paint=brass()))
     band.add(lens_l, lens_r, Box("GoggleBridge", (5, 3, 3), pos=(0, 0.5, 16), paint=BRASS_P))
-    return Model([Box("Head").add(band)], fmt="character")
+    return Model([Box("Head", piece=True).add(band)], fmt="character")
 
 
 def backpack():
@@ -61,7 +61,7 @@ def backpack():
         Box("StrapR", (5, 30, 2), pos=(9, 0, 9.5), paint=ROPE_P),
         Box("Pot", (8, 7, 8), pos=(0, -4, -11), paint=CORRUGATED),
     )
-    return Model([Box("Chest").add(pack)], fmt="character")
+    return Model([Box("Chest", piece=True).add(pack)], fmt="character")
 
 
 ATTACHMENTS = {"Grizzlecog_Hat": cog_hat, "Grizzlecog_Goggles": goggles, "Grizzlecog_Backpack": backpack}

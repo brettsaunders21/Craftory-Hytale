@@ -1,45 +1,227 @@
+$C = "../../Common.ui";
+
+@Muted = (FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center);
+@Value = (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+
+@Icon = Group {
+  @Texture = "";
+  Anchor: (Width: 14, Height: 14, Top: 2, Right: 5);
+  Background: @Texture;
+};
+
+@Bar = Group {
+  Anchor: (Height: 8, Top: 3);
+  Background: "../../Common/ProgressBar.png";
+};
+
+@DetailRow = Group {
+  LayoutMode: Left;
+  Anchor: (Height: 18);
+  Visible: false;
+};
+
+@Chip = Group {
+  @Fill = ();
+  LayoutMode: Left;
+  Anchor: (Height: 20, Right: 4);
+  Padding: (Horizontal: 6);
+  Background: @Fill;
+  Visible: false;
+};
+
 Group {
-  Anchor: (Top: 24, Right: 24, Width: 320);
+  Anchor: (Top: 20, Right: 20, Width: 284);
   LayoutMode: Top;
-  Background: #000000(0.55);
-  Padding: (Full: 12);
 
-  Label #Title {
-    Text: "Craftory energy";
-    Style: (FontSize: 18, RenderBold: true);
-    Anchor: (Bottom: 6);
-  }
+  Group #Panel {
+    LayoutMode: Top;
+    Background: (TexturePath: "../../Common/TooltipDefaultBackground.png", Border: 24);
+    Padding: (Full: 14);
 
-  Group #EnergyBar {
-    Anchor: (Bottom: 8);
-  }
+    Group #Header {
+      LayoutMode: Left;
+      Anchor: (Height: 40);
 
-  Label #Grade {
-    Text: "Grade: Fizz";
-    Anchor: (Bottom: 3);
-  }
+      Group #IconSlot {
+        Anchor: (Width: 40, Height: 40, Right: 10);
+        Background: (TexturePath: "../../Common/ContainerPanelPatch.png", Border: 4);
 
-  Label #Members {
-    Text: "Members: 0";
-    Anchor: (Bottom: 3);
-  }
+        ItemIcon #Icon {
+          Anchor: (Full: 4);
+        }
+      }
 
-  Label #Jank {
-    Text: "";
-    Anchor: (Bottom: 3);
-  }
+      Group {
+        LayoutMode: Top;
+        FlexWeight: 1;
 
-  Label #Status {
-    Text: "";
-    Anchor: (Bottom: 3);
-  }
+        Label #Name {
+          Text: %server.craftory.hud.energy.unknown;
+          Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+          Anchor: (Height: 22);
+        }
 
-  Label #JarStability {
-    Text: "";
-    Anchor: (Bottom: 3);
-  }
+        Group #GradeRow {
+          LayoutMode: Left;
+          Anchor: (Height: 18);
 
-  Label #Flow {
-    Text: "Net flow: 0 Fizz/t";
+          @Icon #GradeFizz { @Texture = "Energy/GradeFizz.png"; }
+          @Icon #GradePressurised { @Texture = "Energy/GradePressurised.png"; Visible: false; }
+          @Icon #GradeGlimmer { @Texture = "Energy/GradeGlimmer.png"; Visible: false; }
+
+          Label #Grade {
+            Text: %server.craftory.hud.energy.grade.fizz;
+            Style: (FontSize: 12, TextColor: #80e256, RenderBold: true, VerticalAlignment: Center);
+            Anchor: (Right: 8);
+          }
+
+          Label #Members {
+            Text: "";
+            Style: @Muted;
+          }
+        }
+      }
+    }
+
+    Group #StatusRow {
+      LayoutMode: Left;
+      Anchor: (Height: 20, Top: 8);
+
+      @Chip #ChipRunning {
+        @Fill = (TexturePath: "Energy/ChipRunning.png", Border: 6);
+        @Icon { @Texture = "Energy/StatusRunning.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
+        Label { Text: %server.craftory.hud.energy.status.running; Style: (FontSize: 11, TextColor: #9fe39a, RenderBold: true, VerticalAlignment: Center); }
+      }
+
+      @Chip #ChipIdle {
+        @Fill = (TexturePath: "Energy/ChipIdle.png", Border: 6);
+        @Icon { @Texture = "Energy/StatusIdle.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
+        Label { Text: %server.craftory.hud.energy.status.idle; Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); }
+      }
+
+      @Chip #ChipNoPower {
+        @Fill = (TexturePath: "Energy/ChipNoPower.png", Border: 6);
+        @Icon { @Texture = "Energy/StatusNoPower.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
+        Label { Text: %server.craftory.hud.energy.status.no-power; Style: (FontSize: 11, TextColor: #f08a84, RenderBold: true, VerticalAlignment: Center); }
+      }
+
+      @Chip #ChipStalled {
+        @Fill = (TexturePath: "Energy/ChipWarn.png", Border: 6);
+        @Icon { @Texture = "Energy/StatusStalled.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
+        Label { Text: %server.craftory.hud.energy.status.stalled; Style: (FontSize: 11, TextColor: #e8a93b, RenderBold: true, VerticalAlignment: Center); }
+      }
+
+      @Chip #ChipStolen {
+        @Fill = (TexturePath: "Energy/ChipNoPower.png", Border: 6);
+        @Icon { @Texture = "Energy/StatusStolen.png"; Anchor: (Width: 12, Height: 12, Top: 4, Right: 4); }
+        Label { Text: %server.craftory.hud.energy.status.stolen; Style: (FontSize: 11, TextColor: #f08a84, RenderBold: true, VerticalAlignment: Center); }
+      }
+    }
+
+    Group #Divider {
+      Anchor: (Height: 1, Top: 8, Bottom: 6);
+      Background: #96a9be(0.25);
+    }
+
+    Group #StoredRow {
+      LayoutMode: Top;
+      Anchor: (Bottom: 6);
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 18);
+
+        @Icon { @Texture = "Energy/Stored.png"; }
+        Label { Text: %server.craftory.hud.energy.stored; Style: @Muted; FlexWeight: 1; }
+        Label #StoredValue { Text: ""; Style: (...@Value, HorizontalAlignment: End); }
+      }
+
+      @Bar {
+        ProgressBar #Energy { BarTexturePath: "Energy/BarFizz.png"; Value: 0; }
+      }
+    }
+
+    Group #FlowRow {
+      LayoutMode: Left;
+      Anchor: (Height: 18, Bottom: 4);
+
+      @Icon { @Texture = "Energy/FlowIn.png"; }
+      Label #In { Text: ""; Style: (FontSize: 12, TextColor: #80e256, RenderBold: true, VerticalAlignment: Center); FlexWeight: 1; }
+      @Icon { @Texture = "Energy/FlowOut.png"; }
+      Label #Out { Text: ""; Style: (FontSize: 12, TextColor: #f2b33d, RenderBold: true, VerticalAlignment: Center); FlexWeight: 1; }
+    }
+
+    Group #JankRow {
+      LayoutMode: Top;
+      Anchor: (Bottom: 4);
+      Visible: false;
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 18);
+
+        @Icon { @Texture = "Energy/Jank.png"; }
+        Label { Text: %server.craftory.hud.energy.jank; Style: @Muted; FlexWeight: 1; }
+        Label #JankValue { Text: ""; Style: (...@Value, HorizontalAlignment: End); }
+      }
+
+      @Bar {
+        ProgressBar #JankBar { BarTexturePath: "Energy/BarJank.png"; Value: 0; }
+      }
+    }
+
+    @DetailRow #WaterRow {
+      @Icon { @Texture = "Energy/Water.png"; }
+      Label #WaterValue { Text: ""; Style: @Muted; }
+    }
+
+    @DetailRow #WindRow {
+      @Icon { @Texture = "Energy/Wind.png"; }
+      Label #WindValue { Text: ""; Style: @Muted; }
+    }
+
+    @DetailRow #OutputRow {
+      @Icon { @Texture = "Energy/FlowOut.png"; }
+      Label #OutputValue { Text: ""; Style: @Muted; }
+    }
+
+    @DetailRow #GrowthRow {
+      @Icon { @Texture = "Energy/Shroom.png"; }
+      Label #GrowthValue { Text: ""; Style: @Muted; }
+    }
+
+    @DetailRow #ReadyRow {
+      @Icon { @Texture = "Energy/Stored.png"; }
+      Label #ReadyValue { Text: ""; Style: @Muted; }
+    }
+
+    @DetailRow #TwitchRow {
+      @Icon { @Texture = "Energy/Jank.png"; }
+      Label #TwitchValue { Text: ""; Style: @Muted; }
+    }
+
+    @DetailRow #DarkRow {
+      @Icon { @Texture = "Energy/Moon.png"; }
+      Label #DarkValue { Text: ""; Style: @Muted; }
+    }
+
+    Group #JarRow {
+      LayoutMode: Top;
+      Anchor: (Top: 2);
+      Visible: false;
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 18);
+
+        @Icon { @Texture = "Energy/Jar.png"; }
+        Label { Text: %server.craftory.hud.energy.jar; Style: @Muted; FlexWeight: 1; }
+        Label #JarValue { Text: ""; Style: (...@Value, HorizontalAlignment: End); }
+      }
+
+      @Bar {
+        ProgressBar #JarBar { BarTexturePath: "Energy/BarJar.png"; Value: 0; }
+      }
+    }
   }
 }
