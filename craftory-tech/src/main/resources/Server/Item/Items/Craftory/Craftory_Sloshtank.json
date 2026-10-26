@@ -16,7 +16,7 @@
     "DrawType": "Model",
     "Opacity": "Transparent",
     "Group": "GoblinLab",
-    "HitboxType": "Craftory/Craftory_Sloshtank",
+    "HitboxType": "Craftory_Sloshtank",
     "CustomModel": "Blocks/Craftory/Sloshtank/Sloshtank_Empty.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Sloshtank/Sloshtank_Empty_Texture.png"}],
     "Interactions": {

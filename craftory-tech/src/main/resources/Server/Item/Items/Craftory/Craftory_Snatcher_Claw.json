@@ -37,7 +37,7 @@
     },
     "VariantRotation": "NESW",
     "RotationYawPlacementOffset": "TwoSeventy",
-    "HitboxType": "Craftory/Craftory_Snatcher_Claw",
+    "HitboxType": "Craftory_Snatcher_Claw",
     "Support": {
       "Down": [
         {

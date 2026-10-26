@@ -14,6 +14,7 @@ internal data class MachineVent(
     val x: Double,
     val y: Double,
     val z: Double,
+    val modelPath: String? = null,
 )
 
 internal object MachineVents {
@@ -24,8 +25,22 @@ internal object MachineVents {
             CraftoryIds.CANISTER to MachineVent("Smoke-Emitter", 0.5, 28.0 / 32, 0.5),
             CraftoryIds.FIZZ_DAMPER to MachineVent("Steam-Emitter", 0.5, 29.0 / 32, 0.5),
             CraftoryIds.GNASHER_PIT to MachineVent("Spark-Emitter", 0.5, 23.0 / 32, 0.5),
-            CraftoryIds.GUTTER_BOILER to MachineVent("Steam-Emitter", 0.5, 31.5 / 32, 0.5),
-            CraftoryIds.JUNK_HEART to MachineVent("Smoke-Emitter", 0.5, 28.0 / 32, 0.5),
+            CraftoryIds.GUTTER_BOILER to
+                MachineVent(
+                    "Steam-Emitter",
+                    0.5,
+                    31.5 / 32,
+                    0.5 + 7.0 / 32,
+                    "Blocks/Craftory/Boiler_Whistle_Stack/Boiler_Whistle_Stack.blockymodel",
+                ),
+            CraftoryIds.JUNK_HEART to
+                MachineVent(
+                    "Smoke-Emitter",
+                    0.5,
+                    33.0 / 32,
+                    0.5,
+                    "Blocks/Craftory/Junk_Heart_Chimney/Junk_Heart_Chimney_Cap.blockymodel",
+                ),
             CraftoryIds.RATTLEWHEEL to MachineVent("Spark-Emitter", 0.5, 29.0 / 32, 0.5),
             CraftoryIds.SCORCH_OVEN to MachineVent("Smoke-Emitter", 0.5, 38.0 / 32, 0.5),
             CraftoryIds.SHROOM_BED to MachineVent("Spore-Emitter", 0.5, 30.0 / 32, 0.5),
@@ -47,8 +62,9 @@ internal object MachineVents {
         blockPos: Vector3i,
         store: Store<ChunkStore>,
     ): Vector3d? {
-        val section = store.getComponent(blockState.sectionRef, BlockSection.getComponentType())
-            ?: return null
+        val section =
+            store.getComponent(blockState.sectionRef, BlockSection.getComponentType())
+                ?: return null
         val type =
             BlockType.getAssetMap().getAsset(section.get(blockPos.x, blockPos.y, blockPos.z))
                 ?: return null

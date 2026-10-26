@@ -106,14 +106,7 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
             jank.apply(result.state)
             dirty = result.state != before
             if (result.fizzled) {
-                emitFizzle(ventPosition, position, store.externalData.world.entityStore.store)
-                if (slots.modifiers().squawk) {
-                    alertCrew(
-                        chunk.getComponent(index, MachineOwner.type)?.placerUuid,
-                        machineName(member.typeId),
-                        position,
-                    )
-                }
+                handleFizzle(slots, member, chunk, index, position, ventPosition, store)
             }
         }
 
@@ -134,6 +127,25 @@ internal class JankSystem : EntityTickingSystem<ChunkStore>() {
             jank.effectTicks = 0
         }
         if (dirty) blockState.markNeedsSaving(commandBuffer)
+    }
+
+    private fun handleFizzle(
+        slots: BodgeSlots,
+        member: EnergyMember,
+        chunk: ArchetypeChunk<ChunkStore>,
+        index: Int,
+        position: Vector3i,
+        ventPosition: Vector3d,
+        store: Store<ChunkStore>,
+    ) {
+        emitFizzle(ventPosition, position, store.externalData.world.entityStore.store)
+        if (slots.modifiers().squawk) {
+            alertCrew(
+                chunk.getComponent(index, MachineOwner.type)?.placerUuid,
+                machineName(member.typeId),
+                position,
+            )
+        }
     }
 
     private fun emitFizzle(

@@ -11,7 +11,7 @@
   "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
-    "HitboxType": "Craftory/Craftory_Fizz_Damper",
+    "HitboxType": "Craftory_Fizz_Damper",
     "BlockParticleSetId": "Wood",
     "DrawType": "Model",
     "Flags": {},

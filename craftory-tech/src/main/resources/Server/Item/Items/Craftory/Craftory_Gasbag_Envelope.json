@@ -13,7 +13,7 @@
   "BlockType": {
     "Material": "Solid",
     "DrawType": "Model",
-    "HitboxType": "Craftory/Craftory_Gasbag_Envelope",
+    "HitboxType": "Craftory_Gasbag_Envelope",
     "CustomModel": "Blocks/Craftory/Gasbag_Envelope/Gasbag_Envelope.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Gasbag_Envelope/Gasbag_Envelope_Texture.png"}]
   },

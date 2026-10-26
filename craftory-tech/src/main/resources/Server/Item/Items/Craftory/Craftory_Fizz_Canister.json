@@ -94,12 +94,12 @@
       ]
     },
     "VariantRotation": "NESW",
-    "HitboxType": "Craftory/Craftory_Fizz_Canister",
+    "HitboxType": "Craftory_Fizz_Canister",
     "AmbientSoundEventId": "SFX_GoblinLab_Broken_Device",
     "Particles": [
       {
         "SystemId": "Goblin_Decorative_Broken",
-      "TargetNodeName": "Smoke-Emitter",
+        "TargetNodeName": "Smoke-Emitter",
         "PositionOffset": {
           "X": 0,
           "Y": 0.02,

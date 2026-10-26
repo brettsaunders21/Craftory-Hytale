@@ -21,7 +21,7 @@
   },
   "MaxStack": 1,
   "BlockType": {
-    "HitboxType": "Craftory/Craftory_Crank_A_Fizz",
+    "HitboxType": "Craftory_Crank_A_Fizz",
     "CustomModelTexture": [
       {
         "Texture": "Blocks/Craftory/Crank_A_Fizz/Crank_A_Fizz_Texture.png",

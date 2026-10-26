@@ -1085,7 +1085,7 @@
           "name": "CrossbarZ",
           "position": {
             "x": 0.0,
-            "y": 25.0,
+            "y": 25.2,
             "z": 0.0
           },
           "orientation": {
@@ -1109,7 +1109,7 @@
             "settings": {
               "size": {
                 "x": 3.0,
-                "y": 3.0,
+                "y": 2.8,
                 "z": 26.0
               },
               "isPiece": false

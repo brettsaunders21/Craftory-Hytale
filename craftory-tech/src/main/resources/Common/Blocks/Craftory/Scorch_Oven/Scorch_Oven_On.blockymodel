@@ -328,7 +328,7 @@
               "id": "4",
               "name": "DoorLatch",
               "position": {
-                "x": 5.0,
+                "x": 5.2,
                 "y": -1.0,
                 "z": 1.2
               },
@@ -439,7 +439,7 @@
           "name": "Ashpan",
           "position": {
             "x": -2.0,
-            "y": -9.0,
+            "y": -8.8,
             "z": 11.0
           },
           "orientation": {

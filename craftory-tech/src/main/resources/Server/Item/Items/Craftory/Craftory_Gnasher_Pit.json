@@ -31,7 +31,7 @@
     },
     "Material": "Solid",
     "Opacity": "Transparent",
-    "HitboxType": "Craftory/Craftory_Gnasher_Pit",
+    "HitboxType": "Craftory_Gnasher_Pit",
     "BlockEntity": {
       "Components": {
         "Craftory_EnergyMember": {

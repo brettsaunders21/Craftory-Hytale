@@ -153,7 +153,7 @@
         }
       }
     },
-    "HitboxType": "Craftory/Craftory_Scorch_Oven",
+    "HitboxType": "Craftory_Scorch_Oven",
     "Support": {
       "Down": [
         {

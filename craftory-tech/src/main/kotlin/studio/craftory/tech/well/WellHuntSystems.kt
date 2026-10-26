@@ -30,8 +30,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.EnvironmentSe
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import org.joml.Vector3d
-import studio.craftory.tech.CraftoryIds
-import studio.craftory.tech.machine.MachineVents
 import org.joml.Vector3i
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
@@ -41,6 +39,7 @@ import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellState
 import studio.craftory.core.api.well.WellStrength
 import studio.craftory.tech.CraftoryIds
+import studio.craftory.tech.machine.MachineVents
 import java.util.UUID
 import kotlin.math.atan2
 

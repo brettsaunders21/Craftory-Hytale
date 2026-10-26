@@ -3,6 +3,9 @@ package studio.craftory.tech.machine
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import studio.craftory.core.api.BlockPos
+import studio.craftory.core.api.multiblock.MultiblockGeometry
+import studio.craftory.tech.CraftoryIds
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.math.abs
@@ -10,6 +13,20 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+
+internal fun hitboxFilesByStem(hitboxes: Path): Map<String, Path> {
+    val files =
+        Files.walk(hitboxes).use { paths ->
+            paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".json") }.toList()
+        }
+    val byStem = files.groupBy { it.fileName.toString().removeSuffix(".json") }
+    val duplicates = byStem.filterValues { it.size > 1 }
+    assertTrue(
+        duplicates.isEmpty(),
+        "duplicate hitbox stems: ${duplicates.mapValues { (_, paths) -> paths.joinToString() }}",
+    )
+    return byStem.mapValues { (_, paths) -> paths.single() }
+}
 
 internal data class ModelBounds(
     val min: DoubleArray,
@@ -35,7 +52,9 @@ internal object BlockModelGeometry {
 
     fun bounds(model: JsonObject): ModelBounds {
         val points = mutableListOf<DoubleArray>()
-        model.getAsJsonArray("nodes").forEach { visit(it.asJsonObject, identity(), DoubleArray(3), DoubleArray(3), points) }
+        model.getAsJsonArray("nodes").forEach {
+            visit(it.asJsonObject, identity(), DoubleArray(3), DoubleArray(3), points)
+        }
         require(points.isNotEmpty()) { "model has no visible geometry" }
         return ModelBounds(
             DoubleArray(3) { axis -> points.minOf { it[axis] } },
@@ -54,11 +73,21 @@ internal object BlockModelGeometry {
                 val first = faces[firstIndex]
                 for (secondIndex in firstIndex + 1 until faces.size) {
                     val second = faces[secondIndex]
-                    if (first.box == second.box || dot(first.normal, second.normal) <= 0.9999) continue
-                    if (kotlin.math.abs(first.plane - second.plane) >= 0.01) continue
-                    val overlap = polygonIntersectionArea(project(first.vertices, first.normal), project(second.vertices, first.normal))
-                    if (overlap > 0.01) {
-                        add("${first.node}:${first.name} overlaps ${second.node}:${second.name} (${overlap.toString(4)} sq units)")
+                    if (first.box != second.box &&
+                        dot(first.normal, second.normal) > 0.9999 &&
+                        kotlin.math.abs(first.plane - second.plane) < 0.01
+                    ) {
+                        val overlap =
+                            polygonIntersectionArea(
+                                project(first.vertices, first.normal),
+                                project(second.vertices, first.normal),
+                            )
+                        if (overlap > 0.01) {
+                            add(
+                                "${first.node}:${first.name} overlaps ${second.node}:${second.name} " +
+                                    "($overlap sq units)",
+                            )
+                        }
                     }
                 }
             }
@@ -132,7 +161,12 @@ internal object BlockModelGeometry {
             for (x in listOf(-1.0, 1.0)) {
                 for (y in listOf(-1.0, 1.0)) {
                     for (z in listOf(-1.0, 1.0)) {
-                        val local = doubleArrayOf(x * shapeSize[0] * stretch[0] / 2, y * shapeSize[1] * stretch[1] / 2, z * shapeSize[2] * stretch[2] / 2)
+                        val local =
+                            doubleArrayOf(
+                                x * shapeSize[0] * stretch[0] / 2,
+                                y * shapeSize[1] * stretch[1] / 2,
+                                z * shapeSize[2] * stretch[2] / 2,
+                            )
                         points.add(add(center, multiply(worldRotation, local)))
                     }
                 }
@@ -201,13 +235,21 @@ internal object BlockModelGeometry {
         vertices: List<DoubleArray>,
         normal: DoubleArray,
     ): List<DoubleArray> {
-        val reference = if (kotlin.math.abs(normal[0]) < 0.9) doubleArrayOf(1.0, 0.0, 0.0) else doubleArrayOf(0.0, 1.0, 0.0)
+        val reference =
+            if (kotlin.math.abs(normal[0]) < 0.9) {
+                doubleArrayOf(1.0, 0.0, 0.0)
+            } else {
+                doubleArrayOf(0.0, 1.0, 0.0)
+            }
         val u = normalize(cross(normal, reference))
         val v = cross(normal, u)
         return vertices.map { doubleArrayOf(dot(it, u), dot(it, v)) }
     }
 
-    private fun polygonIntersectionArea(subject: List<DoubleArray>, clip: List<DoubleArray>): Double {
+    private fun polygonIntersectionArea(
+        subject: List<DoubleArray>,
+        clip: List<DoubleArray>,
+    ): Double {
         var output = subject
         val orientation = if (signedArea(clip) >= 0) 1.0 else -1.0
         for (edgeIndex in clip.indices) {
@@ -265,7 +307,11 @@ internal object BlockModelGeometry {
         origin: DoubleArray,
         a: DoubleArray,
         b: DoubleArray,
-    ): Double = cross2(doubleArrayOf(a[0] - origin[0], a[1] - origin[1]), doubleArrayOf(b[0] - origin[0], b[1] - origin[1]))
+    ): Double =
+        cross2(
+            doubleArrayOf(a[0] - origin[0], a[1] - origin[1]),
+            doubleArrayOf(b[0] - origin[0], b[1] - origin[1]),
+        )
 
     private fun dot(
         a: DoubleArray,
@@ -275,7 +321,7 @@ internal object BlockModelGeometry {
     private fun cross(
         a: DoubleArray,
         b: DoubleArray,
-    ): Double =
+    ): DoubleArray =
         doubleArrayOf(
             a[1] * b[2] - a[2] * b[1],
             a[2] * b[0] - a[0] * b[2],
@@ -307,12 +353,20 @@ internal object BlockModelGeometry {
         )
     }
 
-    private fun add(a: DoubleArray, b: DoubleArray): DoubleArray = DoubleArray(3) { a[it] + b[it] }
+    private fun add(
+        a: DoubleArray,
+        b: DoubleArray,
+    ): DoubleArray = DoubleArray(3) { a[it] + b[it] }
 
-    private fun multiply(matrix: Array<DoubleArray>, value: DoubleArray): DoubleArray =
-        DoubleArray(3) { row -> (0..2).sumOf { column -> matrix[row][column] * value[column] } }
+    private fun multiply(
+        matrix: Array<DoubleArray>,
+        value: DoubleArray,
+    ): DoubleArray = DoubleArray(3) { row -> (0..2).sumOf { column -> matrix[row][column] * value[column] } }
 
-    private fun multiply(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<DoubleArray> =
+    private fun multiply(
+        a: Array<DoubleArray>,
+        b: Array<DoubleArray>,
+    ): Array<DoubleArray> =
         Array(3) { row -> DoubleArray(3) { column -> (0..2).sumOf { k -> a[row][k] * b[k][column] } } }
 }
 
@@ -329,7 +383,12 @@ internal class BlockModelLintTest {
                 common,
                 resourceRoot("craftory-core")?.resolve("Common"),
             ).filter { Files.exists(it) }
-        val models = commonRoots.flatMap { root -> Files.walk(root).use { it.filter { path -> path.toString().endsWith(".blockymodel") }.toList() } }
+        val models =
+            commonRoots.flatMap { root ->
+                Files.walk(root).use { paths ->
+                    paths.filter { path -> path.toString().endsWith(".blockymodel") }.toList()
+                }
+            }
         assertTrue(models.isNotEmpty())
         val parsedModels = models.associateWith { path -> parse(path) }
         parsedModels.forEach { (path, model) -> BlockModelGeometry.bounds(model) }
@@ -352,6 +411,7 @@ internal class BlockModelLintTest {
 
     @Test
     fun craftoryModelBlocksHaveFittedHitboxesAndAttachedParticles() {
+        val hitboxByStem = hitboxFilesByStem(hitboxes)
         Files.list(items).use { paths ->
             paths.filter { it.fileName.toString().endsWith(".json") }.forEach { itemPath ->
                 val item = parse(itemPath)
@@ -361,42 +421,36 @@ internal class BlockModelLintTest {
                 assertTrue(modelPaths.isNotEmpty(), "${itemPath.fileName} has no model")
                 val hitboxType = blockType.get("HitboxType")?.asString
                 assertNotNull(hitboxType, "${itemPath.fileName} has no hitbox type")
-                assertTrue(hitboxType.startsWith("Craftory/"), "${itemPath.fileName} uses non-Craftory hitbox $hitboxType")
+                assertTrue('/' !in hitboxType, "${itemPath.fileName} HitboxType must be a file stem: $hitboxType")
 
                 val definitions = blockType.getAsJsonObject("State")?.getAsJsonObject("Definitions")
-                val particles = mutableListOf<JsonObject>()
-                blockType.getAsJsonArray("Particles")?.forEach { particles.add(it.asJsonObject) }
-                definitions?.entrySet()?.forEach { (_, state) ->
-                    state.asJsonObject.getAsJsonArray("Particles")?.forEach { particles.add(it.asJsonObject) }
-                }
                 val models = modelPaths.map { path -> parse(common.resolve(path)) }
-                particles.forEach { particle ->
-                    val target = particle.get("TargetNodeName")?.asString
-                    assertNotNull(target, "${itemPath.fileName} has an unattached particle")
-                    models.forEach { model ->
-                        assertNotNull(BlockModelGeometry.nodePosition(model, target), "$target missing in a state model for ${itemPath.fileName}")
-                    }
-                    particle.getAsJsonObject("PositionOffset")?.entrySet()?.forEach { (_, value) ->
-                        assertTrue(abs(value.asDouble) <= 0.1, "${itemPath.fileName} particle offset is not tiny")
-                    }
-                }
-
-                definitions?.entrySet()?.forEach stateLoop@{ (_, state) ->
+                val baseModels =
+                    blockType
+                        .get("CustomModel")
+                        ?.takeIf { it.isJsonPrimitive }
+                        ?.asString
+                        ?.let(::listOf)
+                        ?: modelPaths
+                assertParticleTargets(itemPath, blockType.getAsJsonArray("Particles"), baseModels, "base")
+                definitions?.entrySet()?.forEach { (stateName, state) ->
                     val stateDefinition = state.asJsonObject
-                    val stateHitbox = stateDefinition.get("HitboxType")?.asString ?: return@stateLoop
-                    val stateModel = stateDefinition.get("CustomModel")?.asString ?: return@stateLoop
-                    val stateHitboxPath = hitboxes.resolve("$stateHitbox.json")
-                    assertTrue(Files.exists(stateHitboxPath), "${itemPath.fileName} state hitbox file missing: $stateHitboxPath")
-                    assertHitboxFits(itemPath.fileName.toString(), BlockModelGeometry.bounds(parse(common.resolve(stateModel))), parse(stateHitboxPath).getAsJsonArray("Boxes"))
+                    val stateModels =
+                        stateDefinition
+                            .get("CustomModel")
+                            ?.takeIf { it.isJsonPrimitive }
+                            ?.asString
+                            ?.let(::listOf)
+                            ?: baseModels
+                    assertParticleTargets(
+                        itemPath,
+                        stateDefinition.get("Particles")?.takeIf { it.isJsonArray }?.asJsonArray,
+                        stateModels,
+                        stateName,
+                    )
                 }
 
-                if (itemPath.fileName.toString() == "Craftory_Gutterpipe.json") return@forEach
-                val allBounds = models.map(BlockModelGeometry::bounds)
-                val union = blockBounds(allBounds)
-                val hitboxPath = hitboxes.resolve("$hitboxType.json")
-                assertTrue(Files.exists(hitboxPath), "${itemPath.fileName} hitbox file missing: $hitboxPath")
-                val hitbox = parse(hitboxPath).getAsJsonArray("Boxes")
-                assertHitboxFits(itemPath.fileName.toString(), union, hitbox)
+                assertBlockHitboxes(itemPath, definitions, models, hitboxType, hitboxByStem)
             }
         }
     }
@@ -406,7 +460,9 @@ internal class BlockModelLintTest {
         MachineVents.entries.forEach { (blockId, vent) ->
             val itemPath = items.resolve("$blockId.json")
             assertTrue(Files.exists(itemPath), "missing machine vent block item $blockId")
-            val models = modelPaths(parse(itemPath).getAsJsonObject("BlockType"))
+            val models =
+                vent.modelPath?.let(::listOf)
+                    ?: modelPaths(parse(itemPath).getAsJsonObject("BlockType"))
             assertTrue(models.isNotEmpty(), "$blockId has no models")
             models.forEach { ref ->
                 val model = parse(common.resolve(ref))
@@ -419,11 +475,100 @@ internal class BlockModelLintTest {
         }
     }
 
+    @Test
+    fun multiblockVentsUseRotatedVentingPartOrigins() {
+        val controller = BlockPos(20, 10, 30)
+        for (rotation in 0..3) {
+            val stack = MultiblockGeometry.worldPosition(controller, GutterBoilerTemplate.WHISTLE_STACK, rotation)
+            val boilerVent = MachineVents.entries.getValue(CraftoryIds.GUTTER_BOILER)
+            val boilerPosition =
+                assertNotNull(MachineVents.position(CraftoryIds.GUTTER_BOILER, stack.x, stack.y, stack.z))
+            assertEquals(stack.x + boilerVent.x, boilerPosition.x, 1e-8)
+            assertEquals(stack.y + boilerVent.y, boilerPosition.y, 1e-8)
+            assertEquals(stack.z + boilerVent.z, boilerPosition.z, 1e-8)
+
+            val chimney = MultiblockGeometry.worldPosition(controller, JunkHeartTemplate.CHIMNEY_TOP, rotation)
+            val heartVent = MachineVents.entries.getValue(CraftoryIds.JUNK_HEART)
+            val smokePosition =
+                assertNotNull(MachineVents.position(CraftoryIds.JUNK_HEART, chimney.x, chimney.y, chimney.z))
+            assertEquals(chimney.x + heartVent.x, smokePosition.x, 1e-8)
+            assertEquals(chimney.y + heartVent.y, smokePosition.y, 1e-8)
+            assertEquals(chimney.z + heartVent.z, smokePosition.z, 1e-8)
+        }
+    }
+
+    private fun assertParticleTargets(
+        itemPath: Path,
+        particles: JsonArray?,
+        modelRefs: List<String>,
+        state: String,
+    ) {
+        val models = modelRefs.map { ref -> ref to parse(common.resolve(ref)) }
+        particles?.forEach { element ->
+            val particle = element.asJsonObject
+            val target = particle.get("TargetNodeName")?.asString
+            assertNotNull(target, "${itemPath.fileName} $state has an unattached particle")
+            models.forEach { (ref, model) ->
+                assertNotNull(
+                    BlockModelGeometry.nodePosition(model, target),
+                    "$target missing from $state model $ref for ${itemPath.fileName}",
+                )
+            }
+            particle.getAsJsonObject("PositionOffset")?.entrySet()?.forEach { (_, value) ->
+                assertTrue(abs(value.asDouble) <= 0.1, "${itemPath.fileName} particle offset is not tiny")
+            }
+        }
+    }
+
+    private fun assertBlockHitboxes(
+        itemPath: Path,
+        definitions: JsonObject?,
+        models: List<JsonObject>,
+        hitboxType: String,
+        hitboxByStem: Map<String, Path>,
+    ) {
+        definitions?.entrySet()?.forEach stateLoop@{ (stateName, state) ->
+            val stateDefinition = state.asJsonObject
+            val stateHitbox = stateDefinition.get("HitboxType")?.asString ?: return@stateLoop
+            val stateModel = stateDefinition.get("CustomModel")?.asString ?: return@stateLoop
+            assertTrue(
+                '/' !in stateHitbox,
+                "${itemPath.fileName} state HitboxType must be a file stem: $stateHitbox",
+            )
+            val stateHitboxPath =
+                assertNotNull(
+                    hitboxByStem[stateHitbox],
+                    "${itemPath.fileName} state hitbox missing: $stateHitbox",
+                )
+            assertHitboxFits(
+                "${itemPath.fileName} $stateName",
+                blockBounds(listOf(BlockModelGeometry.bounds(parse(common.resolve(stateModel))))),
+                parse(stateHitboxPath).getAsJsonArray("Boxes"),
+            )
+        }
+        if (itemPath.fileName.toString() == "Craftory_Gutterpipe.json") return
+        val union = blockBounds(models.map(BlockModelGeometry::bounds))
+        val hitboxPath =
+            assertNotNull(
+                hitboxByStem[hitboxType],
+                "${itemPath.fileName} hitbox missing: $hitboxType",
+            )
+        assertHitboxFits(itemPath.fileName.toString(), union, parse(hitboxPath).getAsJsonArray("Boxes"))
+    }
+
     private fun modelPaths(blockType: JsonObject): List<String> {
         val models = mutableListOf<String>()
-        blockType.get("CustomModel")?.takeIf { it.isJsonPrimitive }?.asString?.let(models::add)
+        blockType
+            .get("CustomModel")
+            ?.takeIf { it.isJsonPrimitive }
+            ?.asString
+            ?.let(models::add)
         blockType.getAsJsonObject("State")?.getAsJsonObject("Definitions")?.entrySet()?.forEach { (_, state) ->
-            state.asJsonObject.get("CustomModel")?.takeIf { it.isJsonPrimitive }?.asString?.let(models::add)
+            state.asJsonObject
+                .get("CustomModel")
+                ?.takeIf { it.isJsonPrimitive }
+                ?.asString
+                ?.let(models::add)
         }
         return models.distinct()
     }
@@ -456,10 +601,29 @@ internal class BlockModelLintTest {
     ) {
         val hitboxBounds = boxBounds(boxes)
         for (axis in 0..2) {
-            assertTrue(hitboxBounds.min[axis] >= model.min[axis] - 2.0 / 32, "$label hitbox undercovers model")
-            assertTrue(hitboxBounds.max[axis] <= model.max[axis] + 2.0 / 32, "$label hitbox overreaches model")
+            assertTrue(
+                hitboxBounds.min[axis] >= model.min[axis] - 2.0 / 32,
+                "$label hitbox undercovers ${listOf(
+                    "X",
+                    "Y",
+                    "Z",
+                )[axis]}: ${hitboxBounds.min[axis]} < ${model.min[axis]}",
+            )
+            assertTrue(
+                hitboxBounds.max[axis] <= model.max[axis] + 2.0 / 32,
+                "$label hitbox overreaches ${listOf(
+                    "X",
+                    "Y",
+                    "Z",
+                )[axis]}: ${hitboxBounds.max[axis]} > ${model.max[axis]}",
+            )
         }
-        assertTrue(volume(hitboxBounds) <= volume(model) * 1.25 + 1e-8, "$label hitbox is too large")
+        assertTrue(
+            volume(hitboxBounds) <= volume(model) * 1.25 + 1e-8,
+            "$label hitbox is too large: ${volume(hitboxBounds)} > ${volume(model) * 1.25}; " +
+                "hitbox=${hitboxBounds.min.contentToString()}..${hitboxBounds.max.contentToString()}, " +
+                "model=${model.min.contentToString()}..${model.max.contentToString()}",
+        )
     }
 
     private fun vector(json: JsonObject) =

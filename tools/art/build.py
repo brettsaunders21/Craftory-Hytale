@@ -202,6 +202,43 @@ def set_item_hitbox(item_path: Path, name: str, hitbox_type: str, states: dict[s
     item_path.write_text(text)
 
 
+def set_item_particle_target(item_path: Path, system_id: str, target_node: str) -> None:
+    text = item_path.read_text()
+    pattern = re.compile(
+        rf'(?m)^(?P<indent>[ \t]*)"SystemId"\s*:\s*"{re.escape(system_id)}"(?P<system_comma>,?)\s*\n'
+        rf'[ \t]*"TargetNodeName"\s*:\s*"[^"]+"(?P<target_comma>,?)'
+    )
+    replacement = (
+        lambda match: f'{match.group("indent")}"SystemId": "{system_id}"{match.group("system_comma")}\n'
+        f'{match.group("indent")}"TargetNodeName": "{target_node}"{match.group("target_comma")}'
+    )
+    text, count = pattern.subn(replacement, text, count=1)
+    if count != 1:
+        raise ValueError(f"missing particle target for {system_id} in {item_path}")
+    json.loads(text)
+    item_path.write_text(text)
+
+
+def normalize_item_hitbox_ids() -> None:
+    for item_path in ITEM_DIR.glob("*.json"):
+        item = json.loads(item_path.read_text())
+        block_type = item.get("BlockType", {})
+        if block_type.get("DrawType") != "Model":
+            continue
+        base_hitbox = block_type.get("HitboxType")
+        state_hitboxes = {}
+        definitions = block_type.get("State", {}).get("Definitions", {})
+        for state, definition in definitions.items():
+            hitbox = definition.get("HitboxType")
+            if isinstance(hitbox, str) and "/" in hitbox:
+                state_hitboxes[state] = hitbox.rsplit("/", 1)[-1]
+        if isinstance(base_hitbox, str) and "/" in base_hitbox:
+            base_hitbox = base_hitbox.rsplit("/", 1)[-1]
+            set_item_hitbox(item_path, item_path.stem, base_hitbox, state_hitboxes)
+        elif state_hitboxes:
+            raise ValueError(f"state hitboxes have no base hitbox in {item_path}")
+
+
 def export_hitboxes(name: str, models: dict[str, tuple[Model, dict]], manifest: list[str]) -> None:
     item_path = ITEM_DIR / f"Craftory_{name}.json"
     if not item_path.exists():
@@ -214,7 +251,7 @@ def export_hitboxes(name: str, models: dict[str, tuple[Model, dict]], manifest: 
         state_hitboxes = {}
         for suffix, (model, _) in models.items():
             state = suffix.removeprefix("_")
-            hitbox_type = f"Craftory/Gutterpipe/Craftory_Gutterpipe_{state}"
+            hitbox_type = f"Craftory_Gutterpipe_{state}"
             state_hitboxes[state] = hitbox_type
             path = HITBOX_DIR / "Gutterpipe" / f"Craftory_Gutterpipe_{state}.json"
             write_json(hitbox_for_models([model]), written(manifest, path))
@@ -222,7 +259,7 @@ def export_hitboxes(name: str, models: dict[str, tuple[Model, dict]], manifest: 
         set_item_hitbox(item_path, name, base_hitbox, state_hitboxes)
         return
 
-    hitbox_type = f"Craftory/Craftory_{name}"
+    hitbox_type = f"Craftory_{name}"
     path = HITBOX_DIR / f"Craftory_{name}.json"
     write_json(hitbox_for_models([model for model, _ in models.values()]), written(manifest, path))
     set_item_hitbox(item_path, name, hitbox_type)
@@ -328,6 +365,13 @@ def export_trails(manifest: list[str]) -> None:
 def main() -> None:
     manifest: list[str] = []
     export_blocks(manifest)
+    normalize_item_hitbox_ids()
+    for item_name, system_id, target_node in (
+        ("Craftory_Fizz_Canister", "Goblin_Decorative_Broken", "Smoke-Emitter"),
+        ("Craftory_Boomshroom_Burner", "Campfire_New_Cartoon", "Flame-Emitter"),
+        ("Craftory_Gutter_Boiler", "Goblin_Decorative_Steam", "Steam-Emitter"),
+    ):
+        set_item_particle_target(ITEM_DIR / f"{item_name}.json", system_id, target_node)
     export_items(manifest)
     hand_items.export(COMMON, COMMON.parent, manifest, build, written)
     export_particles(manifest)

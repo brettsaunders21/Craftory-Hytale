@@ -37,7 +37,7 @@
     "State": {
       "Definitions": {
         "C00": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C00",
+          "HitboxType": "Craftory_Gutterpipe_C00",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C00.blockymodel",
           "CustomModelTexture": [
@@ -47,7 +47,7 @@
           ]
         },
         "C01": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C01",
+          "HitboxType": "Craftory_Gutterpipe_C01",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C01.blockymodel",
           "CustomModelTexture": [
@@ -57,7 +57,7 @@
           ]
         },
         "C02": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C02",
+          "HitboxType": "Craftory_Gutterpipe_C02",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C02.blockymodel",
           "CustomModelTexture": [
@@ -67,7 +67,7 @@
           ]
         },
         "C03": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C03",
+          "HitboxType": "Craftory_Gutterpipe_C03",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C03.blockymodel",
           "CustomModelTexture": [
@@ -77,7 +77,7 @@
           ]
         },
         "C04": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C04",
+          "HitboxType": "Craftory_Gutterpipe_C04",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C04.blockymodel",
           "CustomModelTexture": [
@@ -87,7 +87,7 @@
           ]
         },
         "C05": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C05",
+          "HitboxType": "Craftory_Gutterpipe_C05",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C05.blockymodel",
           "CustomModelTexture": [
@@ -97,7 +97,7 @@
           ]
         },
         "C06": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C06",
+          "HitboxType": "Craftory_Gutterpipe_C06",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C06.blockymodel",
           "CustomModelTexture": [
@@ -107,7 +107,7 @@
           ]
         },
         "C07": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C07",
+          "HitboxType": "Craftory_Gutterpipe_C07",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C07.blockymodel",
           "CustomModelTexture": [
@@ -117,7 +117,7 @@
           ]
         },
         "C08": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C08",
+          "HitboxType": "Craftory_Gutterpipe_C08",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C08.blockymodel",
           "CustomModelTexture": [
@@ -127,7 +127,7 @@
           ]
         },
         "C09": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C09",
+          "HitboxType": "Craftory_Gutterpipe_C09",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C09.blockymodel",
           "CustomModelTexture": [
@@ -137,7 +137,7 @@
           ]
         },
         "C10": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C10",
+          "HitboxType": "Craftory_Gutterpipe_C10",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C10.blockymodel",
           "CustomModelTexture": [
@@ -147,7 +147,7 @@
           ]
         },
         "C11": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C11",
+          "HitboxType": "Craftory_Gutterpipe_C11",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C11.blockymodel",
           "CustomModelTexture": [
@@ -157,7 +157,7 @@
           ]
         },
         "C12": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C12",
+          "HitboxType": "Craftory_Gutterpipe_C12",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C12.blockymodel",
           "CustomModelTexture": [
@@ -167,7 +167,7 @@
           ]
         },
         "C13": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C13",
+          "HitboxType": "Craftory_Gutterpipe_C13",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C13.blockymodel",
           "CustomModelTexture": [
@@ -177,7 +177,7 @@
           ]
         },
         "C14": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C14",
+          "HitboxType": "Craftory_Gutterpipe_C14",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C14.blockymodel",
           "CustomModelTexture": [
@@ -187,7 +187,7 @@
           ]
         },
         "C15": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C15",
+          "HitboxType": "Craftory_Gutterpipe_C15",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C15.blockymodel",
           "CustomModelTexture": [
@@ -197,7 +197,7 @@
           ]
         },
         "C16": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C16",
+          "HitboxType": "Craftory_Gutterpipe_C16",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C16.blockymodel",
           "CustomModelTexture": [
@@ -207,7 +207,7 @@
           ]
         },
         "C17": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C17",
+          "HitboxType": "Craftory_Gutterpipe_C17",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C17.blockymodel",
           "CustomModelTexture": [
@@ -217,7 +217,7 @@
           ]
         },
         "C18": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C18",
+          "HitboxType": "Craftory_Gutterpipe_C18",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C18.blockymodel",
           "CustomModelTexture": [
@@ -227,7 +227,7 @@
           ]
         },
         "C19": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C19",
+          "HitboxType": "Craftory_Gutterpipe_C19",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C19.blockymodel",
           "CustomModelTexture": [
@@ -237,7 +237,7 @@
           ]
         },
         "C20": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C20",
+          "HitboxType": "Craftory_Gutterpipe_C20",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C20.blockymodel",
           "CustomModelTexture": [
@@ -247,7 +247,7 @@
           ]
         },
         "C21": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C21",
+          "HitboxType": "Craftory_Gutterpipe_C21",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C21.blockymodel",
           "CustomModelTexture": [
@@ -257,7 +257,7 @@
           ]
         },
         "C22": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C22",
+          "HitboxType": "Craftory_Gutterpipe_C22",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C22.blockymodel",
           "CustomModelTexture": [
@@ -267,7 +267,7 @@
           ]
         },
         "C23": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C23",
+          "HitboxType": "Craftory_Gutterpipe_C23",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C23.blockymodel",
           "CustomModelTexture": [
@@ -277,7 +277,7 @@
           ]
         },
         "C24": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C24",
+          "HitboxType": "Craftory_Gutterpipe_C24",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C24.blockymodel",
           "CustomModelTexture": [
@@ -287,7 +287,7 @@
           ]
         },
         "C25": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C25",
+          "HitboxType": "Craftory_Gutterpipe_C25",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C25.blockymodel",
           "CustomModelTexture": [
@@ -297,7 +297,7 @@
           ]
         },
         "C26": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C26",
+          "HitboxType": "Craftory_Gutterpipe_C26",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C26.blockymodel",
           "CustomModelTexture": [
@@ -307,7 +307,7 @@
           ]
         },
         "C27": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C27",
+          "HitboxType": "Craftory_Gutterpipe_C27",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C27.blockymodel",
           "CustomModelTexture": [
@@ -317,7 +317,7 @@
           ]
         },
         "C28": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C28",
+          "HitboxType": "Craftory_Gutterpipe_C28",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C28.blockymodel",
           "CustomModelTexture": [
@@ -327,7 +327,7 @@
           ]
         },
         "C29": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C29",
+          "HitboxType": "Craftory_Gutterpipe_C29",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C29.blockymodel",
           "CustomModelTexture": [
@@ -337,7 +337,7 @@
           ]
         },
         "C30": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C30",
+          "HitboxType": "Craftory_Gutterpipe_C30",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C30.blockymodel",
           "CustomModelTexture": [
@@ -347,7 +347,7 @@
           ]
         },
         "C31": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C31",
+          "HitboxType": "Craftory_Gutterpipe_C31",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C31.blockymodel",
           "CustomModelTexture": [
@@ -357,7 +357,7 @@
           ]
         },
         "C32": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C32",
+          "HitboxType": "Craftory_Gutterpipe_C32",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C32.blockymodel",
           "CustomModelTexture": [
@@ -367,7 +367,7 @@
           ]
         },
         "C33": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C33",
+          "HitboxType": "Craftory_Gutterpipe_C33",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C33.blockymodel",
           "CustomModelTexture": [
@@ -377,7 +377,7 @@
           ]
         },
         "C34": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C34",
+          "HitboxType": "Craftory_Gutterpipe_C34",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C34.blockymodel",
           "CustomModelTexture": [
@@ -387,7 +387,7 @@
           ]
         },
         "C35": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C35",
+          "HitboxType": "Craftory_Gutterpipe_C35",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C35.blockymodel",
           "CustomModelTexture": [
@@ -397,7 +397,7 @@
           ]
         },
         "C36": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C36",
+          "HitboxType": "Craftory_Gutterpipe_C36",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C36.blockymodel",
           "CustomModelTexture": [
@@ -407,7 +407,7 @@
           ]
         },
         "C37": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C37",
+          "HitboxType": "Craftory_Gutterpipe_C37",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C37.blockymodel",
           "CustomModelTexture": [
@@ -417,7 +417,7 @@
           ]
         },
         "C38": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C38",
+          "HitboxType": "Craftory_Gutterpipe_C38",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C38.blockymodel",
           "CustomModelTexture": [
@@ -427,7 +427,7 @@
           ]
         },
         "C39": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C39",
+          "HitboxType": "Craftory_Gutterpipe_C39",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C39.blockymodel",
           "CustomModelTexture": [
@@ -437,7 +437,7 @@
           ]
         },
         "C40": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C40",
+          "HitboxType": "Craftory_Gutterpipe_C40",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C40.blockymodel",
           "CustomModelTexture": [
@@ -447,7 +447,7 @@
           ]
         },
         "C41": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C41",
+          "HitboxType": "Craftory_Gutterpipe_C41",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C41.blockymodel",
           "CustomModelTexture": [
@@ -457,7 +457,7 @@
           ]
         },
         "C42": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C42",
+          "HitboxType": "Craftory_Gutterpipe_C42",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C42.blockymodel",
           "CustomModelTexture": [
@@ -467,7 +467,7 @@
           ]
         },
         "C43": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C43",
+          "HitboxType": "Craftory_Gutterpipe_C43",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C43.blockymodel",
           "CustomModelTexture": [
@@ -477,7 +477,7 @@
           ]
         },
         "C44": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C44",
+          "HitboxType": "Craftory_Gutterpipe_C44",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C44.blockymodel",
           "CustomModelTexture": [
@@ -487,7 +487,7 @@
           ]
         },
         "C45": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C45",
+          "HitboxType": "Craftory_Gutterpipe_C45",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C45.blockymodel",
           "CustomModelTexture": [
@@ -497,7 +497,7 @@
           ]
         },
         "C46": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C46",
+          "HitboxType": "Craftory_Gutterpipe_C46",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C46.blockymodel",
           "CustomModelTexture": [
@@ -507,7 +507,7 @@
           ]
         },
         "C47": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C47",
+          "HitboxType": "Craftory_Gutterpipe_C47",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C47.blockymodel",
           "CustomModelTexture": [
@@ -517,7 +517,7 @@
           ]
         },
         "C48": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C48",
+          "HitboxType": "Craftory_Gutterpipe_C48",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C48.blockymodel",
           "CustomModelTexture": [
@@ -527,7 +527,7 @@
           ]
         },
         "C49": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C49",
+          "HitboxType": "Craftory_Gutterpipe_C49",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C49.blockymodel",
           "CustomModelTexture": [
@@ -537,7 +537,7 @@
           ]
         },
         "C50": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C50",
+          "HitboxType": "Craftory_Gutterpipe_C50",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C50.blockymodel",
           "CustomModelTexture": [
@@ -547,7 +547,7 @@
           ]
         },
         "C51": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C51",
+          "HitboxType": "Craftory_Gutterpipe_C51",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C51.blockymodel",
           "CustomModelTexture": [
@@ -557,7 +557,7 @@
           ]
         },
         "C52": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C52",
+          "HitboxType": "Craftory_Gutterpipe_C52",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C52.blockymodel",
           "CustomModelTexture": [
@@ -567,7 +567,7 @@
           ]
         },
         "C53": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C53",
+          "HitboxType": "Craftory_Gutterpipe_C53",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C53.blockymodel",
           "CustomModelTexture": [
@@ -577,7 +577,7 @@
           ]
         },
         "C54": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C54",
+          "HitboxType": "Craftory_Gutterpipe_C54",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C54.blockymodel",
           "CustomModelTexture": [
@@ -587,7 +587,7 @@
           ]
         },
         "C55": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C55",
+          "HitboxType": "Craftory_Gutterpipe_C55",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C55.blockymodel",
           "CustomModelTexture": [
@@ -597,7 +597,7 @@
           ]
         },
         "C56": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C56",
+          "HitboxType": "Craftory_Gutterpipe_C56",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C56.blockymodel",
           "CustomModelTexture": [
@@ -607,7 +607,7 @@
           ]
         },
         "C57": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C57",
+          "HitboxType": "Craftory_Gutterpipe_C57",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C57.blockymodel",
           "CustomModelTexture": [
@@ -617,7 +617,7 @@
           ]
         },
         "C58": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C58",
+          "HitboxType": "Craftory_Gutterpipe_C58",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C58.blockymodel",
           "CustomModelTexture": [
@@ -627,7 +627,7 @@
           ]
         },
         "C59": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C59",
+          "HitboxType": "Craftory_Gutterpipe_C59",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C59.blockymodel",
           "CustomModelTexture": [
@@ -637,7 +637,7 @@
           ]
         },
         "C60": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C60",
+          "HitboxType": "Craftory_Gutterpipe_C60",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C60.blockymodel",
           "CustomModelTexture": [
@@ -647,7 +647,7 @@
           ]
         },
         "C61": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C61",
+          "HitboxType": "Craftory_Gutterpipe_C61",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C61.blockymodel",
           "CustomModelTexture": [
@@ -657,7 +657,7 @@
           ]
         },
         "C62": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C62",
+          "HitboxType": "Craftory_Gutterpipe_C62",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C62.blockymodel",
           "CustomModelTexture": [
@@ -667,7 +667,7 @@
           ]
         },
         "C63": {
-          "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C63",
+          "HitboxType": "Craftory_Gutterpipe_C63",
           "DrawType": "Model",
           "CustomModel": "Blocks/Craftory/Gutterpipe/Gutterpipe_C63.blockymodel",
           "CustomModelTexture": [
@@ -679,7 +679,7 @@
       }
     },
     "Group": "Dev",
-    "HitboxType": "Craftory/Gutterpipe/Craftory_Gutterpipe_C00",
+    "HitboxType": "Craftory_Gutterpipe_C00",
     "Flags": {},
     "Gathering": {
       "Breaking": {

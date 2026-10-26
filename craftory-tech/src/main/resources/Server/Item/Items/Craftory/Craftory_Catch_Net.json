@@ -28,7 +28,7 @@
         }
       }
     },
-    "HitboxType": "Craftory/Craftory_Catch_Net",
+    "HitboxType": "Craftory_Catch_Net",
     "Gathering": {"Soft": {}},
     "BlockParticleSetId": "Grass",
     "BlockSoundSetId": "LeavesGround",

@@ -11,7 +11,7 @@
   "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
-    "HitboxType": "Craftory/Craftory_Shroom_Bed",
+    "HitboxType": "Craftory_Shroom_Bed",
     "BlockParticleSetId": "Wood",
     "DrawType": "Model",
     "Flags": {},

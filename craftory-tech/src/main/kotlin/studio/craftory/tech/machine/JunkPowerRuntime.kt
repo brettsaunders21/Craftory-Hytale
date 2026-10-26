@@ -687,7 +687,10 @@ class CraftoryBlockUseInteraction : SimpleBlockInteraction() {
             when {
                 boiler.online && heldItem == null && GutterBoilerRules.vent(boiler) -> {
                     blockState.markNeedsSaving(store)
-                    GutterBoilerEffects.vent(world, position.x, position.y, position.z)
+                    val controller =
+                        store.getComponent(ref, studio.craftory.core.api.multiblock.MultiblockController.type)
+                            ?: return
+                    GutterBoilerEffects.vent(world, position.x, position.y, position.z, controller.rotation)
                     player.sendMessage(Message.raw("Vented boiler; pressure is ${boiler.pressure}."))
                 }
 

@@ -43,7 +43,7 @@ def bolt(name: str, pos, s=2, paint=BRASS_P, rot=(0, 0, 0)) -> Box:
 def crank_a_fizz():
     body = Box("Barrel", (18, 14, 26), pos=(0, 10, 0), paint=CORRUGATED)
     body.add(
-        Box("Skid", (26, 4, 26), pos=(0, -8, 0), paint=CORRUGATED_RUST),
+        Box("Skid", (26, 4, 28), pos=(0, -8, 0), paint=CORRUGATED_RUST),
         Box("BarrelLid", (19, 2, 27), pos=(0, 8, 0), paint=RUSTY),
         Box("BarrelFloor", (19, 2, 27), pos=(0, -7.5, 0), paint=DARK_TIN),
         lashing("RopeBandA", (19, 1, 27), pos=(-3, 1, 0)),
@@ -60,9 +60,9 @@ def crank_a_fizz():
     )
     pivot = Box("CrankPivot", pos=(9.5, 0, 0))  # animated: spins around X
     pivot.add(
-        Box("CrankAxle", (4, 2, 2), offset=(1, 0, 0), paint=DARK_TIN),
-        Box("CrankArm", (1, 2, 9), pos=(3, 0, 0), offset=(0, 0, 3.5), paint=RUSTY).add(
-            Box("CrankHandle", (5, 2, 2), pos=(2, 0, 4), paint=plank()),
+        Box("CrankAxle", (4, 2.2, 2), offset=(1, 0, 0), paint=DARK_TIN),
+        Box("CrankArm", (1, 2, 9), pos=(3, 0, 0), offset=(0, 0, 3.6), paint=RUSTY).add(
+            Box("CrankHandle", (5, 2, 2), pos=(0.8, 0.2, 4), paint=plank()),
         ),
     )
     body.add(pivot)
@@ -94,7 +94,7 @@ def boomshroom_burner(lit: bool):
         Box("ShroomCapTop", (20, 3, 20), pos=(0, 4, 0), paint=metal((0.60, 0.24, 0.16), rust=0.15, rivets=False)),
         Box("SpotA", (4, 1, 4), pos=(-4, 5.6, 2), paint=solid((0.86, 0.80, 0.65))),
         Box("SpotB", (3, 1, 3), pos=(4, 5.6, -3), paint=solid((0.86, 0.80, 0.65))),
-        Box("SpotC", (3, 3, 1), pos=(5, 1, 10.1), paint=solid((0.86, 0.80, 0.65))),
+        Box("SpotC", (3, 3, 1), pos=(5, 2, 10.1), paint=solid((0.86, 0.80, 0.65))),
         Box("FlueStem", (4, 6, 4), pos=(2, 7, 1), rot=(0, 0, 8), paint=SOOT_P),
         Box("Smoke-Emitter", pos=(2, 11, 1)),
     )
@@ -110,7 +110,7 @@ def boomshroom_burner(lit: bool):
             Box("FlameB", (11, 12, 0), offset=(0, 6, 0), rot=(0, 90, 0), quad="+Z", paint=FLAME_P,
                 shading="fullbright", double_sided=True),
         )
-        box.add(fl)
+        box.add(Box("Flame-Emitter", pos=(0, 6.5, 0)), fl)
     anims = {}
     if lit:
         anims["Flicker"] = anim_json(36, {
@@ -158,22 +158,22 @@ def fizz_canister(fill: float):
 def sloshtank(fill: float):
     tank = Box("Tank", (24, 26, 24), pos=(0, 13.5, 0), paint=metal(TIN, rust=0.3, corrugated=True))
     tank.add(
-        Box("BasePlate", (26, 3, 26), pos=(0, -12, 0), paint=DARK_TIN),
+        Box("BasePlate", (28, 3, 28), pos=(0, -12, 0), paint=DARK_TIN),
         Box("Top", (26, 3, 26), pos=(0, 13, 0), paint=RUSTY),
         Box("Bottom", (26, 3, 26), pos=(0, -11, 0), paint=DARK_TIN),
         Box("WaterGlass", (8, 19, 2), pos=(-3, -1, 10.4), paint=glass(FIZZ, fill)),
         Box("GlassFrameL", (1, 22, 2), pos=(-7.5, -1, 10.7), paint=BRASS_P),
         Box("GlassFrameR", (1, 22, 2), pos=(1.5, -1, 10.7), paint=BRASS_P),
-        Box("GlassFrameTop", (10, 1, 2), pos=(-3, 10, 10.7), paint=RUSTY),
-        Box("GlassFrameBottom", (10, 1, 2), pos=(-3, -12, 10.7), paint=RUSTY),
-        Box("GaugeCase", (10, 10, 2), pos=(6, 8, 10.5), paint=BRASS_RIV),
+        Box("GlassFrameTop", (9, 1, 1.8), pos=(-3, 10, 10.7), paint=RUSTY),
+        Box("GlassFrameBottom", (9, 1, 1.8), pos=(-3, -10.8, 10.7), paint=RUSTY),
+        Box("GaugeCase", (10, 10, 2), pos=(6.2, 7.7, 10.9), paint=BRASS_RIV),
         Box("GaugeFace", (7, 7, 1), pos=(6, 8, 11.8), paint=DEAD_GLASS),
         Box("GaugeNeedle", (1, 6, 1), pos=(6, 8, 12.7), rot=(0, 0, (0.5 - fill) * 90), paint=metal(RUST, rust=0.2)),
         Box("GaugeHub", (2, 2, 1), pos=(6, 8, 13.2), paint=BRASS_P),
         Box("Float", (3, 2, 1), pos=(-3, -9 + fill * 16, 11.6), paint=BRASS_P),
-        Box("RopeHandle", (2, 8, 2), pos=(-11, 7, 0), paint=ROPE_P),
+        Box("RopeHandle", (2, 8, 2), pos=(-11.5, 7, 0), paint=ROPE_P),
         lashing("RopeBand", (21, 2, 21), pos=(0, -6, 0), rot=(0, 0, -3)),
-        bolt("RivetA", (-7, 10, 10), paint=BRASS_P),
+        bolt("RivetA", (-6.8, 10, 10), paint=BRASS_P),
         bolt("RivetB", (7, -10, 10), paint=BRASS_P),
         Box("Outlet", (5, 4, 5), pos=(0, -8, 12), rot=(25, 0, 0), paint=BRASS_RIV),
     )
@@ -182,7 +182,7 @@ def sloshtank(fill: float):
 
 def gutter_boiler(lit: bool, offline: bool = False):
     glow_paint = DEAD_GLASS if offline or not lit else FIZZ_GLOW
-    body = Box("Boiler", (26, 23, 22), pos=(0, 11.5, 0), paint=metal(TIN_DARK, rust=0.45, corrugated=True))
+    body = Box("Boiler", (26, 21, 22), pos=(0, 11.5, 0), paint=metal(TIN_DARK, rust=0.45, corrugated=True))
     body.add(
         Box(
             "TopPlate",
@@ -195,13 +195,13 @@ def gutter_boiler(lit: bool, offline: bool = False):
         Box("PressureGlass", (9, 11, 2), pos=(0, 1, 11.4), paint=glass(FIZZ, 0.9 if lit else 0.2)),
         Box("GaugeFrame", (13, 14, 2), pos=(0, 1, 11.8), paint=BRASS_RIV),
         Box("GaugeNeedle", (1, 8, 1), pos=(0, 1, 13), rot=(0, 0, -25 if lit else -65), paint=glow_paint),
-        Box("GaugeHub", (3, 3, 2), pos=(0, 1, 13.5), paint=BRASS_P),
-        Box("ValveStem", (4, 7, 4), pos=(9, 8, -5), paint=BRASS_P).add(
+        Box("GaugeHub", (3, 3, 2), pos=(0, 1, 13.6), paint=BRASS_P),
+        Box("ValveStem", (4, 6, 4), pos=(9, 7.4, -5), paint=BRASS_P).add(
             Box("ValveWheel", (10, 2, 10), pos=(0, 4, 0), rot=(0, 10, 0), paint=RUSTY),
         ),
         Box("Flue", (8, 6, 8), pos=(0, 15, 0), paint=SOOT_RUST),
         Box("FlueLip", (12, 2, 12), pos=(0, 18, 0), paint=BRASS_RIV),
-        lashing("BoilerStrap", (2, 23, 24), pos=(10, 0, 0)),
+        lashing("BoilerStrap", (2, 21, 21.5), pos=(11, -0.5, 0)),
     )
     if offline:
         body.add(
@@ -232,27 +232,27 @@ def gasbag(fill: float):
         Box("Crown", (10, 5, 11), pos=(0, 8, 0), paint=leather((0.58, 0.46, 0.32))),
         Box("TaperedBase", (14, 4, 14), pos=(0, -6, 0), paint=leather((0.52, 0.40, 0.28))),
         Box("CanvasPatch", (9, 7, 2), pos=(7, -1, 10.5), rot=(0, 0, 8), paint=solid((0.63, 0.48, 0.31))),
-        Box("TinPatch", (6, 6, 1), pos=(-6, 5, 10.7), rot=(0, 0, -8), paint=metal(RUST, rust=0.2)),
+        Box("TinPatch", (6, 6, 1), pos=(-6, 5, 11), rot=(0, 0, -8), paint=metal(RUST, rust=0.2)),
         Box("FizzWindow", (6, 11, 1), pos=(-2, -1, 10.7), paint=glass(FIZZ, 0.72)),
-        Box("WindowRim", (8, 13, 1), pos=(-2, -1, 11), paint=BRASS_RIV),
+        Box("WindowRim", (8, 13, 1), pos=(-2, -1, 11.2), paint=BRASS_RIV),
         Box("Valve", (5, 7, 5), pos=(0, -6, 0), paint=BRASS_RIV).add(
             Box("ValveWheel", (8, 2, 8), pos=(0, -3, 0), paint=RUSTY),
         ),
-        Box("GaugeCase", (9, 9, 2), pos=(8, 7, 10.5), paint=BRASS_RIV),
+        Box("GaugeCase", (9, 9, 2), pos=(8, 7, 10.7), paint=BRASS_RIV),
         Box("GaugeFace", (6, 6, 1), pos=(8, 7, 11.8), paint=DEAD_GLASS),
         Box("GaugeNeedle", (1, 5, 1), pos=(8, 7, 12.6), rot=(0, 0, -15), paint=metal(RUST, rust=0.2)),
         Box("GaugeHub", (2, 2, 1), pos=(8, 7, 13), paint=BRASS_P),
         Box("BrassFrame", (20, 2, 18), pos=(0, 1, 0), paint=BRASS_RIV),
         Box("FrameLegL", (2, 8, 2), pos=(-8, -4, -7), paint=BRASS_P),
         Box("FrameLegR", (2, 8, 2), pos=(8, -4, -7), paint=BRASS_P),
-        Box("FrameCrossbar", (18, 2, 2), pos=(0, -7, -7), paint=BRASS_P),
+        Box("FrameCrossbar", (17, 1.8, 1.8), pos=(0, -7, -7), paint=BRASS_P),
         lashing("NetBelt", (24, 2, 21), pos=(0, -4, 0), rot=(0, 0, 3)),
         lashing("NetRopeA", (2, 17, 2), pos=(-7, 0, 10), rot=(0, 0, 30)),
         lashing("NetRopeB", (2, 17, 2), pos=(7, 0, 10), rot=(0, 0, -30)),
         lashing("NetRopeC", (2, 17, 2), pos=(-7, 0, -10), rot=(0, 0, -30)),
         lashing("NetRopeD", (2, 17, 2), pos=(7, 0, -10), rot=(0, 0, 30)),
-        bolt("PatchRivetA", (4, 3, 11), paint=BRASS_P),
-        bolt("PatchRivetB", (10, -3, 11), paint=BRASS_P),
+        bolt("PatchRivetA", (4, 3, 11.3), paint=BRASS_P),
+        bolt("PatchRivetB", (10, -3, 11.3), paint=BRASS_P),
     )
     bag.add(envelope)
     anim = anim_json(
@@ -281,8 +281,8 @@ def hurl_tube():
         Box("Breech", (26, 15, 3), pos=(0, 0, -13), paint=RUSTY),
         Box("Sight", (3, 4, 9), pos=(0, 8, 0), paint=BRASS_P),
         lashing("BreechRope", (16, 2, 16), pos=(0, -4, -9)),
-        bolt("MuzzleRivetA", (-5, 5, 14), paint=BRASS_P),
-        bolt("MuzzleRivetB", (5, -5, 14), paint=BRASS_P),
+        bolt("MuzzleRivetA", (-5, 5, 15.2), paint=BRASS_P),
+        bolt("MuzzleRivetB", (5, -5, 15.2), paint=BRASS_P),
     )
     return Model([tube]), {}
 
@@ -384,8 +384,8 @@ def crackle_coil(active: bool):
     )
     arc = Box("Arc", (1, 21, 1), pos=(0, 22, 0), paint=CYAN_GLOW, shading="fullbright", visible=active)
     arc.add(
-        Box("ArcBranch", (1, 13, 1), pos=(4, 0, 0), rot=(0, 0, 38), paint=CYAN_GLOW, shading="fullbright"),
-        Box("ArcTip", (1, 8, 1), pos=(-3, -5, 0), rot=(0, 0, -42), paint=CYAN_GLOW, shading="fullbright"),
+        Box("ArcBranch", (1, 13, 1), pos=(4, 0, 0.2), rot=(0, 0, 38), paint=CYAN_GLOW, shading="fullbright"),
+        Box("ArcTip", (1, 8, 1), pos=(-3, -5, -0.2), rot=(0, 0, -42), paint=CYAN_GLOW, shading="fullbright"),
     )
     tower.add(arc)
     if active:
@@ -408,7 +408,7 @@ def resonator():
         Box("FrameLeft", (4, 24, 4), pos=(-9, 15, 0), paint=DARK_TIN),
         Box("FrameRight", (4, 24, 4), pos=(9, 15, 0), paint=DARK_TIN),
         Box("TopBar", (24, 4, 5), pos=(0, 27, 0), paint=BRASS_RIV),
-        Box("BottomBar", (22, 3, 5), pos=(0, 7, 0), paint=RUSTY),
+        Box("BottomBar", (21.8, 3, 5), pos=(0, 7, 0), paint=RUSTY),
         Box("Crystal", (9, 14, 7), pos=(0, 17, 0), rot=(5, 15, -8), paint=CYAN_GLOW, shading="fullbright"),
         bolt("FrameRivetL", (-9, 25, 3)),
         bolt("FrameRivetR", (9, 25, 3)),
@@ -571,13 +571,13 @@ def gnasher_pit():
         Box("GritHeap", (5, 2, 4), pos=(6, -6, 13), paint=solid((0.45, 0.42, 0.38), noise=0.08)),
         Box("FizzLamp", (3, 3, 3), pos=(-10, 9, -9), paint=FIZZ_GLOW, shading="fullbright"),
         Box("LampPost", (1, 4, 1), pos=(-10, 6.5, -9), paint=DARK_TIN),
-        lashing("RopeCorner", (2, 14, 2), pos=(-12, 1, 11), rot=(0, 0, 5)),
+        lashing("RopeCorner", (2, 14, 2), pos=(-12, 1, 12), rot=(0, 0, 5)),
         Box("Hopper", (20, 8, 6), pos=(0, 11, -9), rot=(-18, 0, 2), paint=metal(TIN, rust=0.4)),
     )
     jaw_l = Box("JawL", pos=(0, 8.5, -4))  # animated: hinge at the back, chomps around X
-    jaw_l.add(Box("JawLPlate", (20, 3, 11), offset=(0, 0, 5.5), paint=SOOT_RUST).add(*teeth("JawL", 5, 1)))
+    jaw_l.add(Box("JawLPlate", (19, 2.8, 11), offset=(-0.5, 0, 5.5), paint=SOOT_RUST).add(*teeth("JawL", 5, 1)))
     jaw_r = Box("JawR", pos=(0, 8.5, 6))
-    jaw_r.add(Box("JawRPlate", (20, 3, 4), offset=(0, 0, 1), paint=DARK_TIN))
+    jaw_r.add(Box("JawRPlate", (19, 3, 4), pos=(0.5, 0, 0), offset=(0, 0, 1), paint=DARK_TIN))
     crate.add(jaw_l, jaw_r)
     crate.add(
         Box("GearL", (2, 10, 10), pos=(-12.5, 2, 0), rot=(30, 0, 0), paint=BRASS_RIV),
@@ -603,9 +603,9 @@ def scorch_oven(lit: bool):
         Box("Door", (12, 10, 2), pos=(-2, -1, 11.2), rot=(0, 0, -3), paint=BRASS_RIV).add(
             Box("DoorSlot", (8, 2, 1), pos=(0, 2, 1), paint=EMBER_GLOW if lit else DEAD_EMBER,
                 shading="fullbright" if lit else "standard"),
-            Box("DoorLatch", (2, 3, 2), pos=(5, -1, 1.2), paint=DARK_TIN),
+            Box("DoorLatch", (2, 3, 2), pos=(5.2, -1, 1.2), paint=DARK_TIN),
         ),
-        Box("Ashpan", (14, 3, 3), pos=(-2, -9, 11), paint=DARK_TIN),
+        Box("Ashpan", (14, 3, 3), pos=(-2, -8.8, 11), paint=DARK_TIN),
         Box("RoofSheet", (26, 2, 24), pos=(0, 11.5, 0), rot=(0, 0, 3), paint=CORRUGATED_RUST),
         Box("SidePatchL", (1, 10, 12), pos=(-12.4, 2, 1), rot=(5, 0, 0), paint=CORRUGATED),
         Box("SidePatchR", (1, 8, 8), pos=(12.4, -4, -3), rot=(-4, 0, 0), paint=metal(RUST, rust=0.3)),
@@ -635,12 +635,12 @@ def wakebell_anchor(lit: bool):
     bell.add(
         Box("BellLip", (10, 2, 10), pos=(0, -4.5, 0), paint=brass()),
         Box("BellCrown", (4, 2, 4), pos=(0, 5, 0), paint=BRASS_P),
-        Box("Clapper", (2, 3, 2), pos=(0, -6, 0), paint=CYAN_GLOW if lit else DARK_TIN,
+        Box("Clapper", (2, 3, 1.8), pos=(0, -6, 0), paint=CYAN_GLOW if lit else DARK_TIN,
             shading="fullbright" if lit else "standard"),
     )
     swing.add(lashing("BellRope", (1, 3, 1), pos=(0, -1, 0)), bell)
-    arm.add(swing, lashing("ArmLash", (4, 4, 4), pos=(-6, 0, 0), rot=(0, 0, 10)))
-    post.add(arm, Box("Lamp", (4, 4, 4), pos=(0, 13, 0), paint=CYAN_GLOW if lit else DEAD_GLASS,
+    arm.add(swing, lashing("ArmLash", (4, 4, 3.6), pos=(-6, 0, 0), rot=(0, 0, 10)))
+    post.add(arm, Box("Lamp", (3.8, 4, 3.8), pos=(0, 13, 0), paint=CYAN_GLOW if lit else DEAD_GLASS,
                       shading="fullbright" if lit else "standard"),
              Box("LampHat", (6, 2, 6), pos=(0, 15.5, 0), rot=(0, 30, 4), paint=RUSTY),
              Box("Brace", (2, 10, 2), pos=(4, -7, 0), rot=(0, 0, -35), paint=DARK_TIN))
@@ -663,16 +663,16 @@ def wellhead(pumping: bool):
         paint=CORRUGATED_RUST,
     )
     tank.add(
-        Box("TankTop", (20, 2, 20), pos=(0, 10, 0), paint=BRASS_RIV),
+        Box("TankTop", (20, 2, 20), pos=(0, 9.8, 0), paint=BRASS_RIV),
         Box("TankBase", (20, 2, 20), pos=(0, -9, 0), paint=DARK_TIN),
         Box("Gauge", (7, 8, 2), pos=(0, 1, 10), paint=glass(FIZZ, 0.9 if pumping else 0.2)),
         Box("GaugeFrame", (9, 10, 2), pos=(0, 1, 10.8), paint=BRASS_P),
         Box("GaugeNeedle", (1, 5, 1), pos=(0, 1, 12), rot=(0, 0, -24 if pumping else -70),
             paint=FIZZ_GLOW if pumping else DEAD_GLASS),
         Box("GaugeHub", (2, 2, 1), pos=(0, 1, 12.5), paint=BRASS_P),
-        Box("FeedPipe", (4, 12, 4), pos=(7, 12, -5), paint=DARK_TIN),
-        Box("FeedElbow", (4, 4, 8), pos=(7, 18, -7), paint=BRASS_P),
-        Box("OutputPipe", (4, 9, 4), pos=(-7, 12, 4), paint=DARK_TIN),
+        Box("FeedPipe", (4, 12, 4), pos=(6.8, 12, -5), paint=DARK_TIN),
+        Box("FeedElbow", (3.8, 4, 7.8), pos=(7, 18, -7), paint=BRASS_P),
+        Box("OutputPipe", (4, 9, 4), pos=(-6.8, 12, 4), paint=DARK_TIN),
         Box("OutputCap", (6, 2, 6), pos=(-7, 17, 4), paint=BRASS_RIV),
         Box(
             "OutputPortGlow",
@@ -684,26 +684,26 @@ def wellhead(pumping: bool):
         Box("WellSocket", (12, 3, 12), pos=(0, -11, 0), paint=BRASS_P),
         Box("SocketGlow", (8, 1, 8), pos=(0, -13.5, 0), paint=CYAN_GLOW if pumping else DEAD_GLASS,
             shading="fullbright" if pumping else "standard"),
-        lashing("Strap", (2, 17, 20), pos=(9, 0, 0)),
+        lashing("Strap", (2, 17, 19.8), pos=(9.2, -0.2, 0)),
         bolt("BoltA", (-7, 8, 9), paint=BRASS_P),
         bolt("BoltB", (7, -7, 9), paint=BRASS_P),
     )
     bellows = Box(
         "Bellows",
         (10, 7 if pumping else 10, 10),
-        pos=(7, 5 if pumping else 6.5, -5),
+        pos=(7, 5 if pumping else 6.5, -4.8),
         paint=CORRUGATED_RUST,
     )
     bellows.add(
         Box("BellowsRidgeA", (12, 1, 12), pos=(0, -2, 0), paint=RUSTY),
-        Box("BellowsRidgeB", (12, 1, 12), pos=(0, 2, 0), paint=RUSTY),
+        Box("BellowsRidgeB", (12, 1, 12), pos=(0, 2.2, 0), paint=RUSTY),
     )
     tank.add(bellows)
-    wheel = Box("PumpWheel", pos=(10, 4, -5))
+    wheel = Box("PumpWheel", pos=(8.8, 4.2, -5))
     wheel.add(
-        Box("WheelHub", (4, 4, 4), paint=BRASS_P),
+        Box("WheelHub", (4, 4, 4), pos=(0, 0, 0.2), paint=BRASS_P),
         Box("WheelSpokeA", (2, 14, 2), paint=RUSTY),
-        Box("WheelSpokeB", (14, 2, 2), paint=RUSTY),
+        Box("WheelSpokeB", (13.8, 2, 1.8), paint=RUSTY),
         Box("WheelRim", (14, 1, 14), paint=BRASS_RIV),
     )
     tank.add(wheel)
@@ -722,8 +722,8 @@ def glimmerwell_anchor(corrupted: bool):
             shading="fullbright"),
         Box("ShardB", (3, 7, 3), pos=(6, 7, -2), rot=(-10, -18, -15), paint=glow_paint,
             shading="fullbright"),
-        bolt("AnchorBoltA", (-6, 4, 6), paint=BRASS_P),
-        bolt("AnchorBoltB", (6, 4, -6), paint=BRASS_P),
+        bolt("AnchorBoltA", (-6, 4, 6.2), paint=BRASS_P),
+        bolt("AnchorBoltB", (6, 4, -6.2), paint=BRASS_P),
     )
     return Model([base]), {}
 
@@ -740,8 +740,8 @@ def junk_heart_firebox(lit: bool):
         Box("GrateBar0", (1, 11, 1), pos=(-5, -3, 16), paint=DARK_TIN),
         Box("GrateBar1", (1, 11, 1), pos=(0, -3, 16), paint=DARK_TIN),
         Box("GrateBar2", (1, 11, 1), pos=(5, -3, 16), paint=DARK_TIN),
-        Box("FizzCoil", (4, 12, 4), pos=(-12, 4, 13), paint=FIZZ_GLOW, shading="fullbright"),
-        Box("CoilCage", (6, 2, 6), pos=(-12, 11, 13), paint=BRASS_P),
+        Box("FizzCoil", (4, 12, 4), pos=(-11, 4, 12.5), paint=FIZZ_GLOW, shading="fullbright"),
+        Box("CoilCage", (6, 2, 6), pos=(-11, 11, 12.5), paint=BRASS_P),
         Box("PlateL", (1, 18, 20), pos=(-15.3, 1, -2), rot=(3, 0, 0), paint=CORRUGATED),
         Box("PlateR", (1, 14, 14), pos=(15.3, -3, 4), rot=(-2, 0, 0), paint=metal(RUST, rust=0.3)),
         Box("Top", (32, 2, 32), pos=(0, 13, 0), rot=(0, 0, 1), paint=RUSTY),
@@ -756,24 +756,24 @@ def junk_heart_firebox(lit: bool):
 def rattlewheel(on: bool):
     base = Box("WheelBase", (26, 4, 26), pos=(0, 2, 0), paint=CORRUGATED_RUST)
     base.add(
-        Box("BearingPost", (4, 14, 4), pos=(0, 10, 0), paint=DARK_TIN),
-        Box("BraceL", (3, 12, 3), pos=(-7, 8, 0), rot=(0, 0, -18), paint=plank()),
-        Box("BraceR", (3, 12, 3), pos=(7, 8, 0), rot=(0, 0, 18), paint=plank(WOOD, horizontal=False)),
-        bolt("BearingBoltL", (-3, 15, 2), s=2),
-        bolt("BearingBoltR", (3, 15, 2), s=2, paint=RUSTY),
+        Box("BearingPost", (3.8, 13.8, 3.8), pos=(0, 10, 0), paint=DARK_TIN),
+        Box("BraceL", (3, 12, 2.8), pos=(-7, 8, 0), rot=(0, 0, -18), paint=plank()),
+        Box("BraceR", (3, 12, 2.6), pos=(7, 8, 0), rot=(0, 0, 18), paint=plank(WOOD, horizontal=False)),
+        bolt("BearingBoltL", (-3.2, 15, 2.2), s=2),
+        bolt("BearingBoltR", (3.2, 15, 2.2), s=2, paint=RUSTY),
     )
     wheel = Box("WheelPivot", pos=(0, 17, 0))
     wheel.add(
         Box("Axle", (4, 4, 12), paint=DARK_TIN),
         Box("RimA", (28, 3, 3), pos=(0, 0, 0), rot=(0, 0, 45), paint=metal(TIN, rust=0.25)),
-        Box("RimB", (28, 3, 3), pos=(0, 0, 0), rot=(0, 0, -45), paint=CORRUGATED),
+        Box("RimB", (28, 3, 2.8), pos=(0, 0, 0), rot=(0, 0, -45), paint=CORRUGATED),
         Box("PaddleA", (7, 2, 11), pos=(0, 10, 0), rot=(0, 0, 3), paint=plank()),
         Box("PaddleB", (7, 2, 11), pos=(10, 0, 0), rot=(0, 0, 93), paint=CORRUGATED_RUST),
         Box("PaddleC", (7, 2, 11), pos=(0, -10, 0), rot=(0, 0, 183), paint=plank(WOOD, horizontal=False)),
         Box("PaddleD", (7, 2, 11), pos=(-10, 0, 0), rot=(0, 0, 273), paint=metal(RUST, rust=0.3)),
         Box("Hub", (8, 8, 5), paint=FIZZ_GLOW if on else BRASS_P,
             shading="fullbright" if on else "standard"),
-        bolt("HubCap", (0, 0, 3), s=4, paint=RUSTY if on else DARK_TIN),
+        bolt("HubCap", (0, 0, 3), s=3.8, paint=RUSTY if on else DARK_TIN),
         Box("Spark-Emitter", pos=(0, 12, 0)),
     )
     return Model([base, wheel]), {}
@@ -785,7 +785,7 @@ def shroom_bed():
         Box("Soil", (23, 2, 19), pos=(0, 3, 0), paint=SOOT_RUST),
         Box("CanopyPostA", (2, 24, 2), pos=(-11, 14, -9), rot=(0, 0, 2), paint=plank()),
         Box("CanopyPostB", (2, 24, 2), pos=(11, 14, -9), rot=(0, 0, -3), paint=plank(WOOD, horizontal=False)),
-        Box("CanopyPostC", (2, 24, 2), pos=(-11, 14, 9), paint=plank(WOOD, horizontal=False)),
+        Box("CanopyPostC", (2, 23, 2), pos=(-11, 14, 9), paint=plank(WOOD, horizontal=False)),
         Box("CanopyPostD", (2, 24, 2), pos=(11, 14, 9), rot=(0, 0, 2), paint=plank()),
         Box("Canopy", (28, 3, 26), pos=(0, 26, 0), paint=CORRUGATED),
         Box("CanopyPatch", (12, 1, 10), pos=(-5, 28, 2), rot=(0, 3, -2), paint=RUSTY),
@@ -807,7 +807,7 @@ def scrap_plating():
         Box("SheetN", (31, 31, 1), pos=(0.5, 0, -15.6), rot=(0, 0, 1), paint=CORRUGATED),
         Box("SheetS", (31, 31, 1), pos=(-0.5, 0, 15.6), rot=(0, 0, -1), paint=CORRUGATED_RUST),
         Box("SheetW", (1, 31, 31), pos=(-15.6, 0, 0), paint=metal(TIN, rust=0.5)),
-        Box("SheetE", (1, 31, 31), pos=(15.6, 0, 0.5), paint=metal(RUST, rust=0.2, corrugated=True)),
+        Box("SheetE", (1, 31, 30.5), pos=(15.6, 0, 0.5), paint=metal(RUST, rust=0.2, corrugated=True)),
         Box("SheetTop", (32, 1, 32), pos=(0, 15.6, 0), rot=(0, 1.5, 0), paint=metal(TIN_DARK, rust=0.5)),
         Box("SheetBottom", (32, 1, 32), pos=(0, -15.5, 0), paint=DARK_TIN),
         Box("PatchS", (12, 9, 1), pos=(6, 6, 16.3), rot=(0, 0, 8), paint=brass(rivets=True)),
@@ -838,7 +838,7 @@ def storm_vane(on: bool):
     base = Box("Foot", (24, 3, 24), pos=(0, 1.5, 0), paint=DARK_TIN)
     mast = Box("Mast", (3, 27, 3), pos=(0, 16, 0), paint=RUSTY)
     mast.add(
-        Box("Crossbar", (22, 3, 3), pos=(0, 7, 0), rot=(0, 0, -5), paint=BRASS_P),
+        Box("Crossbar", (22, 3, 2.8), pos=(0, 7, 0), rot=(0, 0, -5), paint=BRASS_P),
         Box("Vane", (3, 12, 1), pos=(0, 7, 2.2), rot=(0, 0, -12), paint=FIZZ_GLOW if on else CORRUGATED),
         Box("CopperWire", (1, 17, 1), pos=(2, -4, 2), rot=(0, 0, 8), paint=BRASS_P),
         Box("Spark", (4, 4, 2), pos=(0, 11, 3), paint=CYAN_GLOW if on else DEAD_GLASS,
@@ -859,7 +859,7 @@ def fizz_damper(on: bool):
         Box("Nozzle", (6, 4, 6), pos=(0, 13, 0), paint=DARK_TIN),
         Box("Foam", (10, 5, 10), pos=(0, 17, 0), paint=FIZZ_GLOW if on else DEAD_GLASS,
             shading="fullbright" if on else "standard"),
-        lashing("Strap", (20, 2, 2), pos=(0, 2, 8)),
+        lashing("Strap", (20, 2, 2), pos=(0, 2, 9.5)),
         bolt("BoltA", (-7, 0, 8), 2),
         bolt("BoltB", (7, 0, 8), 2),
         Box("Steam-Emitter", pos=(0, 20, 0)),
@@ -868,10 +868,10 @@ def fizz_damper(on: bool):
 
 
 def tether_stake():
-    post = Box("Post", (5, 28, 5), pos=(0, 14, 0), paint=RUSTY)
+    post = Box("Post", (5, 25, 5), pos=(0, 15.5, 0), paint=RUSTY)
     post.add(
-        Box("Spike", (3, 6, 3), pos=(0, -11, 0), paint=DARK_TIN),
-        Box("Clamp", (9, 4, 9), pos=(0, 4, 0), paint=BRASS_RIV),
+        Box("Spike", (3, 6, 3), pos=(0, -12.5, 0), paint=DARK_TIN),
+        Box("Clamp", (10, 4, 10), pos=(0, 4, 0), paint=BRASS_RIV),
         Box("Coil", (7, 3, 7), pos=(0, 10, 0), rot=(0, 0, 8), paint=CYAN_GLOW, shading="fullbright"),
         Box("Wire", (2, 16, 2), pos=(4, -1, 0), rot=(0, 0, -8), paint=BRASS_P),
         bolt("Bolt", (0, 4, 3), 2),
@@ -903,6 +903,7 @@ def boiler_whistle_stack():
         Box("Rim", (16, 3, 16), pos=(0, 23, 0), paint=BRASS_RIV),
         Box("Whistle", (16, 7, 9), pos=(0, 29, 2), paint=BRASS_RIV),
         Box("Mouth", (8, 2, 1), pos=(0, 29, 7), paint=SOOT_P),
+        Box("Steam-Emitter", pos=(0, 29, 7)),
         Box("PressureCap", (8, 3, 8), pos=(0, 24, -9), paint=BRASS_P),
         bolt("RivetA", (-8, 2, 11), 2),
         bolt("RivetB", (8, 2, 11), 2),
@@ -918,7 +919,7 @@ def gasbag_frame():
             frame.add(bolt(f"Foot{x}_{z}", (x, 2, z), 2))
     frame.add(
         Box("CrossbarX", (26, 3, 3), pos=(0, 25, 0), paint=BRASS_P),
-        Box("CrossbarZ", (3, 3, 26), pos=(0, 25, 0), paint=BRASS_P),
+        Box("CrossbarZ", (3, 2.8, 26), pos=(0, 25.2, 0), paint=BRASS_P),
     )
     return Model([frame]), {}
 
@@ -929,8 +930,8 @@ def gasbag_envelope():
         Box("PatchA", (10, 8, 1), pos=(-7, 3, 14), rot=(0, 0, -8), paint=plank((0.67, 0.49, 0.32))),
         Box("PatchB", (7, 9, 1), pos=(7, -5, 14), rot=(0, 0, 12), paint=leather((0.36, 0.30, 0.24))),
         Box("Seam", (2, 25, 1), pos=(0, 0, 14.5), paint=ROPE_P),
-        bolt("GrommetA", (-11, 0, 14), 2, BRASS_P),
-        bolt("GrommetB", (11, 0, 14), 2, BRASS_P),
+        bolt("GrommetA", (-11, 0, 14.2), 2, BRASS_P),
+        bolt("GrommetB", (11, 0, 14.2), 2, BRASS_P),
     )
     return Model([envelope]), {}
 

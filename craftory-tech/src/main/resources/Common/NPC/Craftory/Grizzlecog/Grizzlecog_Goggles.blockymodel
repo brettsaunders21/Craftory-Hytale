@@ -27,7 +27,7 @@
           "z": 1.0
         },
         "settings": {
-          "isPiece": true
+          "isPiece": false
         },
         "textureLayout": {},
         "unwrapMode": "custom",

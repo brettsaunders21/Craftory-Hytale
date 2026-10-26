@@ -542,6 +542,42 @@
         },
         {
           "id": "6",
+          "name": "Steam-Emitter",
+          "position": {
+            "x": 0.0,
+            "y": 29.0,
+            "z": 7.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "shape": {
+            "type": "none",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "stretch": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            },
+            "settings": {
+              "isPiece": false
+            },
+            "textureLayout": {},
+            "unwrapMode": "custom",
+            "visible": true,
+            "doubleSided": false,
+            "shadingMode": "standard"
+          }
+        },
+        {
+          "id": "7",
           "name": "PressureCap",
           "position": {
             "x": 0.0,
@@ -649,7 +685,7 @@
           }
         },
         {
-          "id": "7",
+          "id": "8",
           "name": "RivetA",
           "position": {
             "x": -8.0,
@@ -757,7 +793,7 @@
           }
         },
         {
-          "id": "8",
+          "id": "9",
           "name": "RivetB",
           "position": {
             "x": 8.0,

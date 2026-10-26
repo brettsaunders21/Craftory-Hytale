@@ -14,7 +14,7 @@
     "Opacity": "Transparent",
     "CustomModel": "Blocks/Craftory/Hurl_Tube/Hurl_Tube.blockymodel",
     "CustomModelTexture": [{"Texture": "Blocks/Craftory/Hurl_Tube/Hurl_Tube_Texture.png"}],
-    "HitboxType": "Craftory/Craftory_Hurl_Tube",
+    "HitboxType": "Craftory_Hurl_Tube",
     "VariantRotation": "Pipe",
     "Gathering": {"Breaking": {"GatherType": "Rocks"}},
     "BlockSoundSetId": "Soft",

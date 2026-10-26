@@ -2,6 +2,7 @@ package studio.craftory.tech.machine
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import studio.craftory.tech.CraftoryIds
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.math.abs
@@ -17,21 +18,23 @@ internal class GutterpipeModelTest {
     private val item = parse(resources.resolve("Server/Item/Items/Craftory/Craftory_Gutterpipe.json"))
     private val blockType = item.getAsJsonObject("BlockType")
     private val definitions = blockType.getAsJsonObject("State").getAsJsonObject("Definitions")
+    private val hitboxesByStem = hitboxFilesByStem(hitboxes)
 
     @Test
     fun allSixtyFourStatesMapToTheirOwnModelAndHitbox() {
         assertEquals(64, definitions.size())
-        assertEquals("Craftory/Gutterpipe/Craftory_Gutterpipe_C00", blockType.get("HitboxType").asString)
+        assertEquals("Craftory_Gutterpipe_C00", blockType.get("HitboxType").asString)
         for (mask in 0..63) {
             val name = GutterpipeMask.stateName(mask)
             val definition = definitions.getAsJsonObject(name)
             val modelPath = definition.get("CustomModel").asString
             val hitboxType = definition.get("HitboxType").asString
             assertTrue(modelPath.endsWith("/Gutterpipe_$name.blockymodel"), "$name model path")
-            assertEquals("Craftory/Gutterpipe/Craftory_Gutterpipe_$name", hitboxType)
+            assertEquals("Craftory_Gutterpipe_$name", hitboxType)
             val model = parse(common.resolve(modelPath))
             val bounds = BlockModelGeometry.bounds(model)
-            val hitbox = parse(hitboxes.resolve("$hitboxType.json")).getAsJsonArray("Boxes").first().asJsonObject
+            val hitboxPath = assertNotNull(hitboxesByStem[hitboxType], "$name hitbox missing: $hitboxType")
+            val hitbox = parse(hitboxPath).getAsJsonArray("Boxes").first().asJsonObject
             val minimum = hitbox.getAsJsonObject("Min")
             val maximum = hitbox.getAsJsonObject("Max")
             for (axis in 0..2) {
@@ -46,18 +49,18 @@ internal class GutterpipeModelTest {
                 val positiveFace = BlockModelGeometry.hasAxisAlignedFaceAt(model, axis, center + 16)
                 val negativeFace = BlockModelGeometry.hasAxisAlignedFaceAt(model, axis, center - 16)
                 if (mask and positiveBit != 0) {
-                    assertEquals(16.0, high, 0.01, "$name +${key} connection")
-                    assertTrue(positiveFace, "$name has no +${key} face on the connection plane")
+                    assertEquals(16.0, high, 0.01, "$name +$key connection")
+                    assertTrue(positiveFace, "$name has no +$key face on the connection plane")
                 } else {
-                    assertTrue(high <= 14.01, "$name reaches unconnected +${key} face")
-                    assertTrue(!positiveFace, "$name has an unconnected +${key} face")
+                    assertTrue(high <= 14.01, "$name reaches unconnected +$key face")
+                    assertTrue(!positiveFace, "$name has an unconnected +$key face")
                 }
                 if (mask and negativeBit != 0) {
-                    assertEquals(-16.0, low, 0.01, "$name -${key} connection")
-                    assertTrue(negativeFace, "$name has no -${key} face on the connection plane")
+                    assertEquals(-16.0, low, 0.01, "$name -$key connection")
+                    assertTrue(negativeFace, "$name has no -$key face on the connection plane")
                 } else {
-                    assertTrue(low >= -14.01, "$name reaches unconnected -${key} face")
-                    assertTrue(!negativeFace, "$name has an unconnected -${key} face")
+                    assertTrue(low >= -14.01, "$name reaches unconnected -$key face")
+                    assertTrue(!negativeFace, "$name has an unconnected -$key face")
                 }
             }
         }
@@ -104,9 +107,13 @@ internal class GutterpipeModelTest {
         assertTrue(!GutterpipeMask.connects(null, false, false, -1))
     }
 
-    private fun model(state: String) = parse(common.resolve(definitions.getAsJsonObject(state).get("CustomModel").asString))
+    private fun model(state: String) =
+        parse(common.resolve(definitions.getAsJsonObject(state).get("CustomModel").asString))
 
-    private fun node(model: JsonObject, name: String): JsonObject {
+    private fun node(
+        model: JsonObject,
+        name: String,
+    ): JsonObject {
         fun find(nodes: com.google.gson.JsonArray): JsonObject? {
             nodes.forEach { element ->
                 val node = element.asJsonObject
