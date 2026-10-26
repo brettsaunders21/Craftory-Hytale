@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.transport.FluidHandler
@@ -43,6 +44,9 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
 
     fun bind(currentStore: Store<ChunkStore>) {
         currentStore.externalData.world.debugAssertInTickingThread()
+        if (store !== currentStore) {
+            refsByPosition.keys.toList().forEach { pos -> connectFootprintNeighbours(currentStore, pos) }
+        }
         store = currentStore
     }
 
@@ -128,13 +132,13 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         graph.drainDirtyInChunk(tick, chunkX, chunkZ, dirtyVisitor)
     }
 
-    fun amount(pos: Long): Long = graph.amountAt(pos)
+    fun amount(pos: Long): Long = graph.amountAt(resolveNodePosition(pos))
 
-    fun capacity(pos: Long): Long = graph.capacityAt(pos)
+    fun capacity(pos: Long): Long = graph.capacityAt(resolveNodePosition(pos))
 
-    fun fluid(pos: Long): String? = fluidName(graph.fluidKeyAt(pos)).ifEmpty { null }
+    fun fluid(pos: Long): String? = fluidName(graph.fluidKeyAt(resolveNodePosition(pos))).ifEmpty { null }
 
-    fun isNode(pos: Long): Boolean = graph.containsNode(pos)
+    fun isNode(pos: Long): Boolean = graph.containsNode(resolveNodePosition(pos))
 
     fun insert(
         pos: Long,
@@ -142,13 +146,13 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         amount: Long,
     ): Long {
         val key = intern(fluid)
-        return graph.insert(pos, key, amount)
+        return graph.insert(resolveNodePosition(pos), key, amount)
     }
 
     fun drain(
         pos: Long,
         amount: Long,
-    ): Long = graph.drain(pos, amount)
+    ): Long = graph.drain(resolveNodePosition(pos), amount)
 
     fun insert(
         currentStore: Store<ChunkStore>,
@@ -173,12 +177,41 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
     ) {
         if (graph.containsNode(pos)) {
             refsByPosition[pos] = ref
+            store?.let { currentStore -> connectFootprintNeighbours(currentStore, pos) }
             return
         }
         refsByPosition[pos] = ref
         val key = if (fluid.isBlank() || amount <= 0) FluidNodeRecord.NO_FLUID else intern(fluid)
         val storedAmount = if (key < 0) 0 else amount.coerceAtLeast(0)
         graph.addNode(pos, kind, FluidNodeRecord(key, storedAmount))
+        store?.let { currentStore -> connectFootprintNeighbours(currentStore, pos) }
+    }
+
+    private fun connectFootprintNeighbours(
+        currentStore: Store<ChunkStore>,
+        pos: Long,
+    ) {
+        val ownCells =
+            BlockFootprints.cells(
+                currentStore,
+                PackedPosition.x(pos),
+                PackedPosition.y(pos),
+                PackedPosition.z(pos),
+            )
+        val ownCellIds = ownCells.mapTo(HashSet()) { BlockPos.pack(it.x, it.y, it.z) }
+        ownCells.forEach { cell ->
+            FACES.forEach faceLoop@{ face ->
+                val x = cell.x + face[0]
+                val y = cell.y + face[1]
+                val z = cell.z + face[2]
+                if (BlockPos.pack(x, y, z) in ownCellIds) return@faceLoop
+                val origin = BlockFootprints.origin(currentStore, x, y, z)
+                val neighbour = BlockPos.pack(origin.x, origin.y, origin.z)
+                if (neighbour != pos && graph.containsNode(neighbour)) {
+                    graph.connectFootprint(pos, neighbour)
+                }
+            }
+        }
     }
 
     private fun removeNode(
@@ -196,11 +229,22 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         currentStore: Store<ChunkStore>,
         pos: Long,
     ) {
-        val x = PackedPosition.x(pos)
-        val y = PackedPosition.y(pos)
-        val z = PackedPosition.z(pos)
-        for (face in FACES) {
-            if (pullSourceFromFace(currentStore, pos, x, y, z, face)) return
+        val ownCells =
+            BlockFootprints.cells(
+                currentStore,
+                PackedPosition.x(pos),
+                PackedPosition.y(pos),
+                PackedPosition.z(pos),
+            )
+        val ownCellIds = ownCells.mapTo(HashSet()) { BlockPos.pack(it.x, it.y, it.z) }
+        for (cell in ownCells) {
+            for (face in FACES) {
+                val sourceX = cell.x + face[0]
+                val sourceY = cell.y + face[1]
+                val sourceZ = cell.z + face[2]
+                if (BlockPos.pack(sourceX, sourceY, sourceZ) in ownCellIds) continue
+                if (pullSourceFromFace(currentStore, pos, sourceX, sourceY, sourceZ)) return
+            }
         }
     }
 
@@ -210,17 +254,14 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         x: Int,
         y: Int,
         z: Int,
-        face: IntArray,
     ): Boolean {
-        val sourceX = x + face[0]
-        val sourceY = y + face[1]
-        val sourceZ = z + face[2]
+        val source = BlockFootprints.origin(currentStore, x, y, z)
         val sectionRef =
             currentStore.externalData.world.chunkStore
-                .getChunkSectionReferenceAtBlock(sourceX, sourceY, sourceZ)
+                .getChunkSectionReferenceAtBlock(source.x, source.y, source.z)
                 ?: return false
         val section = currentStore.getComponent(sectionRef, FluidSection.getComponentType()) ?: return false
-        if (section.getFluid(sourceX, sourceY, sourceZ)?.id != WATER_SOURCE) return false
+        if (section.getFluid(source.x, source.y, source.z)?.id != WATER_SOURCE) return false
         graph.insert(pos, intern(WATER_SOURCE), SOURCE_PULL_AMOUNT)
         return true
     }
@@ -232,11 +273,30 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         val key = graph.fluidKeyAt(pos)
         val fluid = fluidName(key)
         if (fluid.isEmpty()) return
-        val x = PackedPosition.x(pos)
-        val y = PackedPosition.y(pos)
-        val z = PackedPosition.z(pos)
-        for (face in FACES) {
-            if (!pushToHandlerFace(currentStore, pos, fluid, x, y, z, face)) return
+        val ownCells =
+            BlockFootprints.cells(
+                currentStore,
+                PackedPosition.x(pos),
+                PackedPosition.y(pos),
+                PackedPosition.z(pos),
+            )
+        val ownCellIds = ownCells.mapTo(HashSet()) { BlockPos.pack(it.x, it.y, it.z) }
+        val visitedTargets = HashSet<Long>()
+        for (cell in ownCells) {
+            for (face in FACES) {
+                val targetX = cell.x + face[0]
+                val targetY = cell.y + face[1]
+                val targetZ = cell.z + face[2]
+                if (BlockPos.pack(targetX, targetY, targetZ) !in ownCellIds) {
+                    val target = BlockFootprints.origin(currentStore, targetX, targetY, targetZ)
+                    val targetId = BlockPos.pack(target.x, target.y, target.z)
+                    if (visitedTargets.add(targetId) &&
+                        !pushToHandlerFace(currentStore, pos, fluid, target.x, target.y, target.z)
+                    ) {
+                        return
+                    }
+                }
+            }
         }
     }
 
@@ -244,14 +304,10 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         currentStore: Store<ChunkStore>,
         pos: Long,
         fluid: String,
-        x: Int,
-        y: Int,
-        z: Int,
-        face: IntArray,
+        targetX: Int,
+        targetY: Int,
+        targetZ: Int,
     ): Boolean {
-        val targetX = x + face[0]
-        val targetY = y + face[1]
-        val targetZ = z + face[2]
         val sectionRef =
             currentStore.externalData.world.chunkStore
                 .getChunkSectionReferenceAtBlock(targetX, targetY, targetZ)
@@ -339,6 +395,18 @@ internal class FluidTransportWorld : Resource<ChunkStore> {
         fluidKeys.add(fluid)
         fluidIndices[fluid] = key
         return key
+    }
+
+    private fun resolveNodePosition(pos: Long): Long {
+        val currentStore = store ?: return pos
+        val origin =
+            BlockFootprints.origin(
+                currentStore,
+                PackedPosition.x(pos),
+                PackedPosition.y(pos),
+                PackedPosition.z(pos),
+            )
+        return BlockPos.pack(origin.x, origin.y, origin.z)
     }
 
     private fun fluidName(key: Int): String = if (key < 0 || key >= fluidKeys.size) "" else fluidKeys[key]

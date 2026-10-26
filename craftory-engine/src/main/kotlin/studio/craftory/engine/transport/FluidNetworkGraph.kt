@@ -57,6 +57,7 @@ private const val DIRTY_INTERVAL_TICKS = 20L
 
 class FluidNetworkGraph {
     private val nodeMap = LongIntMap()
+    private val footprintLinks = HashMap<Long, MutableSet<Long>>()
     private var nodePositions = LongArray(INITIAL_CAPACITY)
     private var nodeKinds = ByteArray(INITIAL_CAPACITY)
     private var nodeCapacities = LongArray(INITIAL_CAPACITY)
@@ -150,16 +151,33 @@ class FluidNetworkGraph {
         firstPos: Long,
         secondPos: Long,
     ): Boolean {
+        if (!areAdjacent(firstPos, secondPos)) return false
+        return connectNodes(firstPos, secondPos, footprint = false)
+    }
+
+    fun connectFootprint(
+        firstPos: Long,
+        secondPos: Long,
+    ): Boolean = connectNodes(firstPos, secondPos, footprint = true)
+
+    private fun connectNodes(
+        firstPos: Long,
+        secondPos: Long,
+        footprint: Boolean,
+    ): Boolean {
         val first = nodeMap.getOrDefault(firstPos, -1)
         val second = nodeMap.getOrDefault(secondPos, -1)
         if (first < 0) return false
         if (second < 0) return false
-        if (!areAdjacent(firstPos, secondPos)) return false
-        if (!canConnect(first, second)) return false
+        if (!canConnect(first, second, footprint)) return false
         val firstNetwork = nodeNetworks[first]
         val secondNetwork = nodeNetworks[second]
-        if (firstNetwork == secondNetwork) return true
+        if (firstNetwork == secondNetwork) {
+            if (footprint && !areAdjacent(firstPos, secondPos)) addFootprintLink(firstPos, secondPos)
+            return true
+        }
         if (!mergeNetworks(firstNetwork, secondNetwork)) return false
+        if (footprint && !areAdjacent(firstPos, secondPos)) addFootprintLink(firstPos, secondPos)
         redistribute(nodeNetworks[first])
         return true
     }
@@ -180,6 +198,7 @@ class FluidNetworkGraph {
         val oldFlush = networkLastFlushTicks[oldNetwork]
         unlink(handle)
         nodeMap.remove(pos)
+        removeFootprintLinks(pos)
         nodeActive[handle] = false
         nodeNetworks[handle] = -1
         nodeNext[handle] = -1
@@ -257,9 +276,7 @@ class FluidNetworkGraph {
             totalCapacity += nodeCapacities[current]
             totalAmount += nodeAmounts[current]
             if (fluidKey == FluidNodeRecord.NO_FLUID) fluidKey = nodeFluidKeys[current]
-            val currentPos = nodePositions[current]
-            for (face in FACES.indices) {
-                val adjacent = nodeMap.getOrDefault(neighbour(currentPos, face), -1)
+            forEachNeighbour(current) { adjacent ->
                 if (shouldVisit(current, adjacent, oldNetwork)) {
                     visited[adjacent] = visitStamp
                     queue[tail++] = adjacent
@@ -367,8 +384,7 @@ class FluidNetworkGraph {
         val handle = nodeMap.getOrDefault(pos, -1)
         if (handle < 0) return 0
         var count = 0
-        for (face in FACES.indices) {
-            val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
+        forEachNeighbour(handle) { adjacent ->
             if (adjacent >= 0 && canConnect(handle, adjacent)) count++
         }
         return count
@@ -462,9 +478,7 @@ class FluidNetworkGraph {
     private fun retryConnections(initialNetwork: Int) {
         var handle = networkHeads[initialNetwork]
         while (handle >= 0) {
-            val pos = nodePositions[handle]
-            for (face in FACES.indices) {
-                val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
+            forEachNeighbour(handle) { adjacent ->
                 if (adjacent >= 0 && canConnect(handle, adjacent)) {
                     val firstNetwork = nodeNetworks[handle]
                     val secondNetwork = nodeNetworks[adjacent]
@@ -536,16 +550,29 @@ class FluidNetworkGraph {
     private fun canConnect(
         first: Int,
         second: Int,
+        footprint: Boolean,
     ): Boolean {
         val firstKind = FluidNodeKind.values()[nodeKinds[first].toInt()]
         val secondKind = FluidNodeKind.values()[nodeKinds[second].toInt()]
         if (firstKind == FluidNodeKind.TANK && secondKind == FluidNodeKind.TANK) {
             return PackedPosition.x(nodePositions[first]) == PackedPosition.x(nodePositions[second]) &&
                 PackedPosition.z(nodePositions[first]) == PackedPosition.z(nodePositions[second]) &&
-                kotlin.math.abs(PackedPosition.y(nodePositions[first]) - PackedPosition.y(nodePositions[second])) == 1
+                kotlin.math
+                    .abs(PackedPosition.y(nodePositions[first]) - PackedPosition.y(nodePositions[second]))
+                    .let { it == 1 || (footprint && it > 1) }
         }
         return true
     }
+
+    private fun canConnect(
+        first: Int,
+        second: Int,
+    ): Boolean =
+        canConnect(
+            first,
+            second,
+            footprintLinks[nodePositions[first]]?.contains(nodePositions[second]) == true,
+        )
 
     private fun redistribute(network: Int) {
         val amount = networkAmounts[network]
@@ -587,12 +614,43 @@ class FluidNetworkGraph {
 
     private fun collectNeighbours(handle: Int): Int {
         var count = 0
-        val pos = nodePositions[handle]
-        for (face in FACES.indices) {
-            val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
+        forEachNeighbour(handle) { adjacent ->
             if (adjacent >= 0 && nodeNetworks[adjacent] == nodeNetworks[handle]) neighbourScratch[count++] = adjacent
         }
         return count
+    }
+
+    private inline fun forEachNeighbour(
+        handle: Int,
+        action: (Int) -> Unit,
+    ) {
+        val pos = nodePositions[handle]
+        for (face in FACES.indices) {
+            val adjacent = nodeMap.getOrDefault(neighbour(pos, face), -1)
+            if (adjacent >= 0) action(adjacent)
+        }
+        footprintLinks[pos]?.forEach { adjacentPos ->
+            val adjacent = nodeMap.getOrDefault(adjacentPos, -1)
+            if (adjacent >= 0) action(adjacent)
+        }
+    }
+
+    private fun addFootprintLink(
+        first: Long,
+        second: Long,
+    ) {
+        footprintLinks.getOrPut(first, ::HashSet).add(second)
+        footprintLinks.getOrPut(second, ::HashSet).add(first)
+    }
+
+    private fun removeFootprintLinks(pos: Long) {
+        val neighbours = footprintLinks.remove(pos) ?: return
+        neighbours.forEach { neighbour ->
+            footprintLinks[neighbour]?.let { links ->
+                links.remove(pos)
+                if (links.isEmpty()) footprintLinks.remove(neighbour)
+            }
+        }
     }
 
     private fun unlink(handle: Int) {
@@ -686,7 +744,7 @@ class FluidNetworkGraph {
 
     companion object {
         private const val INITIAL_CAPACITY = 16
-        private const val MAX_NEIGHBOURS = 6
+        private const val MAX_NEIGHBOURS = 128
         private val FACES =
             arrayOf(
                 intArrayOf(1, 0, 0),

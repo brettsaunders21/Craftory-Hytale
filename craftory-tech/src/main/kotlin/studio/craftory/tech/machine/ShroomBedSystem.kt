@@ -19,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3d
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
+import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.tech.CraftoryIds
 import studio.craftory.tech.machine.jank.BodgeSlots
@@ -235,19 +237,25 @@ internal class ShroomBedSystem(
             world.entityStore.store,
         )
         applyKnockback(world, position)
-        BED_NEIGHBOURS.forEach { offset ->
-            val adjacent =
-                BlockModule.getBlockEntity(
-                    world,
-                    position.x + offset[0],
-                    position.y,
-                    position.z + offset[1],
-                ) ?: return@forEach
-            val neighbour = commandBuffer.getComponent(adjacent, ShroomBedState.type) ?: return@forEach
-            applyChainTrigger(neighbour)
-            commandBuffer
-                .getComponent(adjacent, BlockModule.BlockStateInfo.getComponentType())
-                ?.markNeedsSaving(commandBuffer)
+        val ownCells = BlockFootprints.cells(world.chunkStore.store, position.x, position.y, position.z)
+        val ownCellIds = ownCells.mapTo(HashSet()) { BlockPos.pack(it.x, it.y, it.z) }
+        val visitedNeighbours = HashSet<Long>()
+        ownCells.forEach { cell ->
+            BED_NEIGHBOURS.forEach neighbourLoop@{ offset ->
+                val x = cell.x + offset[0]
+                val z = cell.z + offset[1]
+                val origin = BlockFootprints.origin(world.chunkStore.store, x, cell.y, z)
+                val neighbourId = BlockPos.pack(origin.x, origin.y, origin.z)
+                if (neighbourId in ownCellIds || !visitedNeighbours.add(neighbourId)) {
+                    return@neighbourLoop
+                }
+                val adjacent = BlockModule.getBlockEntity(world, origin.x, origin.y, origin.z) ?: return@neighbourLoop
+                val neighbour = commandBuffer.getComponent(adjacent, ShroomBedState.type) ?: return@neighbourLoop
+                applyChainTrigger(neighbour)
+                commandBuffer
+                    .getComponent(adjacent, BlockModule.BlockStateInfo.getComponentType())
+                    ?.markNeedsSaving(commandBuffer)
+            }
         }
         blockState.markNeedsSaving(commandBuffer)
     }

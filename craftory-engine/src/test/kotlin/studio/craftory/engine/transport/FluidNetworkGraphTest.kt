@@ -39,6 +39,41 @@ class FluidNetworkGraphTest {
     }
 
     @Test
+    fun `footprint links join non-adjacent nodes and split when removed`() {
+        val graph = FluidNetworkGraph()
+        val tank = pos(0)
+        val pipe = pos(0, 2)
+        graph.addNode(tank, FluidNodeKind.TANK)
+        graph.addNode(pipe, FluidNodeKind.PIPE)
+
+        assertTrue(graph.connectFootprint(tank, pipe))
+        assertEquals(graph.networkOf(tank), graph.networkOf(pipe))
+        assertEquals(8_250L, graph.capacityAt(tank))
+
+        graph.removeNode(tank, FluidNodeRemovalReason.BREAK)
+
+        assertEquals(-1, graph.networkOf(tank))
+        assertTrue(graph.networkOf(pipe) >= 0)
+        assertEquals(250L, graph.capacityAt(pipe))
+    }
+
+    @Test
+    fun `footprint links stack tall tanks without joining a horizontal tank`() {
+        val graph = FluidNetworkGraph()
+        val bottom = pos(10)
+        val top = pos(10, 2)
+        val side = pos(11)
+        graph.addNode(bottom, FluidNodeKind.TANK)
+        graph.addNode(top, FluidNodeKind.TANK)
+        graph.addNode(side, FluidNodeKind.TANK)
+
+        assertTrue(graph.connectFootprint(bottom, top))
+        assertEquals(16_000L, graph.capacityAt(bottom))
+        assertNotEquals(graph.networkOf(bottom), graph.networkOf(side))
+        assertEquals(8_000L, graph.capacityAt(side))
+    }
+
+    @Test
     fun `fluid conflicts refuse a connection and retry after the network empties`() {
         val graph = FluidNetworkGraph()
         val left = pos(0)

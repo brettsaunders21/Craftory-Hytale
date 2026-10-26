@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.modules.block.BlockModule
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
@@ -107,14 +108,15 @@ internal class GutterpipeStateSystem : EntityTickingSystem<ChunkStore>() {
             val x = position.x + face.dx
             val y = position.y + face.dy
             val z = position.z + face.dz
-            val neighborType = blockTypeAt(store, x, y, z)
+            val origin = BlockFootprints.origin(store, x, y, z)
+            val neighborType = blockTypeAt(store, origin.x, origin.y, origin.z)
             val neighborId = neighborType?.let(::baseBlockId)
             val connected =
                 GutterpipeMask.connects(
                     neighborId,
-                    itemTransport.hasReceiverAt(store, x, y, z),
-                    fluidTransport.isNode(x, y, z),
-                    energy.networkOf(BlockPos.pack(x, y, z)),
+                    itemTransport.hasReceiverAt(store, origin.x, origin.y, origin.z),
+                    fluidTransport.isNode(origin.x, origin.y, origin.z),
+                    energy.networkOf(BlockPos.pack(origin.x, origin.y, origin.z)),
                 )
             if (connected) mask = mask or face.mask
         }

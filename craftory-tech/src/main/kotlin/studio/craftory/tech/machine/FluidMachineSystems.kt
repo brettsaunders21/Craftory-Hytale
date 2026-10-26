@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.EnergySolveSystem
@@ -417,8 +418,16 @@ internal class GasbagSystem : EntityTickingSystem<ChunkStore>() {
         y: Int,
         z: Int,
     ): Boolean {
-        for (face in FACES) {
-            if (isFireAt(store, x + face[0], y + face[1], z + face[2])) return true
+        val ownCells = BlockFootprints.cells(store, x, y, z)
+        val ownCellIds = ownCells.mapTo(HashSet()) { BlockPos.pack(it.x, it.y, it.z) }
+        for (cell in ownCells) {
+            for (face in FACES) {
+                val adjacentX = cell.x + face[0]
+                val adjacentY = cell.y + face[1]
+                val adjacentZ = cell.z + face[2]
+                if (BlockPos.pack(adjacentX, adjacentY, adjacentZ) in ownCellIds) continue
+                if (isFireAt(store, adjacentX, adjacentY, adjacentZ)) return true
+            }
         }
         return false
     }

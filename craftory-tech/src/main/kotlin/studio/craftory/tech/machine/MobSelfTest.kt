@@ -516,7 +516,13 @@ internal object MobSelfTest {
         CraftorySelfTest.clear(
             state.run.world,
             state.sectionRef,
-            listOf(MOB_ANCHOR, MOB_BURNER, MOB_PIPE, MOB_CANISTER),
+            listOf(
+                MOB_ANCHOR,
+                MOB_BURNER,
+                CraftorySelfTest.TestPosition(MOB_BURNER.x, MOB_BURNER.y + 1, MOB_BURNER.z),
+                MOB_PIPE,
+                MOB_CANISTER,
+            ),
         )
     }
 
@@ -567,8 +573,8 @@ internal object MobSelfTest {
     private val HOME = BlockPos(10_006, FLOOR_Y, 10_010)
     private val MOB_ANCHOR = CraftorySelfTest.TestPosition(10_004, 150, 10_012)
     private val MOB_BURNER = CraftorySelfTest.TestPosition(10_008, 150, 10_012)
-    private val MOB_PIPE = CraftorySelfTest.TestPosition(10_008, 151, 10_012)
-    private val MOB_CANISTER = CraftorySelfTest.TestPosition(10_008, 152, 10_012)
+    private val MOB_PIPE = CraftorySelfTest.TestPosition(10_008, 152, 10_012)
+    private val MOB_CANISTER = CraftorySelfTest.TestPosition(10_008, 153, 10_012)
     private val ROLE_IDS =
         listOf(
             CraftoryIds.GLIMMER_WISP,

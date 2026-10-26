@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore
 import org.joml.Vector3d
 import org.joml.Vector3i
+import studio.craftory.core.api.BlockFootprints
 import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.transport.ItemPipe
@@ -410,10 +411,11 @@ internal class ItemTransportWorld : Resource<ChunkStore> {
         y: Int,
         z: Int,
     ): Ref<ChunkStore>? {
+        val origin = BlockFootprints.origin(currentStore, x, y, z)
         val sectionRef =
             currentStore.externalData.world.chunkStore
-                .getChunkSectionReferenceAtBlock(x, y, z) ?: return null
-        return BlockModule.getBlockEntity(currentStore, sectionRef, x, y, z)
+                .getChunkSectionReferenceAtBlock(origin.x, origin.y, origin.z) ?: return null
+        return BlockModule.getBlockEntity(currentStore, sectionRef, origin.x, origin.y, origin.z)
     }
 
     @Suppress("UNCHECKED_CAST")
