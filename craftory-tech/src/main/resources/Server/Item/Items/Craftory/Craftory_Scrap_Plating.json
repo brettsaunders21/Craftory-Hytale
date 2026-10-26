@@ -6,6 +6,8 @@
   "ItemLevel": 10,
   "MaxStack": 100,
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Scrap_Plating.png",
+  "Categories": ["Craftory.Materials"],
+  "Quality": "Common",
   "PlayerAnimationsId": "Block",
   "BlockType": {
     "Material": "Solid",

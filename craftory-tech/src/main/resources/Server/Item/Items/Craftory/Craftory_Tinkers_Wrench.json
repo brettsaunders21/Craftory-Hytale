@@ -4,9 +4,10 @@
     "Description": "server.items.Craftory_Tinkers_Wrench.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Tinkers_Wrench.png",
+  "Categories": ["Craftory.Tools"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Model": "Items/Craftory/Tinkers_Wrench/Tinkers_Wrench.blockymodel",
   "Texture": "Items/Craftory/Tinkers_Wrench/Tinkers_Wrench_Texture.png",
   "Interactions": {

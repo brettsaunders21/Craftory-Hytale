@@ -4,9 +4,8 @@
     "Description": "server.items.Craftory_Wakebell_Anchor.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Wakebell_Anchor.png",
-  "Categories": [
-    "Furniture.Lighting"
-  ],
+  "Categories": ["Craftory.Machines"],
+  "Quality": "Common",
   "Recipe": {
     "Input": [
       {

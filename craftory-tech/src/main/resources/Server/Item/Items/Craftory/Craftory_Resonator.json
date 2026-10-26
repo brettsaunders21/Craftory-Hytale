@@ -5,7 +5,8 @@
   },
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
-  "Categories": ["Furniture.Lighting"],
+  "Categories": ["Craftory.Machines"],
+  "Quality": "Rare",
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Resonator.png",
   "BlockType": {

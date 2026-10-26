@@ -1,0 +1,36 @@
+{
+  "Icon": "Icons/ItemCategories/Craftory/Craftory.png",
+  "Order": 4,
+  "Children": [
+    {
+      "Id": "Power",
+      "Name": "server.ui.itemcategory.craftory.power",
+      "Icon": "Icons/ItemCategories/Craftory/Power.png"
+    },
+    {
+      "Id": "Machines",
+      "Name": "server.ui.itemcategory.craftory.machines",
+      "Icon": "Icons/ItemCategories/Craftory/Machines.png"
+    },
+    {
+      "Id": "Logistics",
+      "Name": "server.ui.itemcategory.craftory.logistics",
+      "Icon": "Icons/ItemCategories/Craftory/Logistics.png"
+    },
+    {
+      "Id": "Tools",
+      "Name": "server.ui.itemcategory.craftory.tools",
+      "Icon": "Icons/ItemCategories/Craftory/Tools.png"
+    },
+    {
+      "Id": "Wells",
+      "Name": "server.ui.itemcategory.craftory.wells",
+      "Icon": "Icons/ItemCategories/Craftory/Wells.png"
+    },
+    {
+      "Id": "Materials",
+      "Name": "server.ui.itemcategory.craftory.materials",
+      "Icon": "Icons/ItemCategories/Craftory/Materials.png"
+    }
+  ]
+}

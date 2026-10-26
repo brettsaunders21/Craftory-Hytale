@@ -4,7 +4,8 @@
     "Description": "server.items.Craftory_Gob_Jar_Filled.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gob_Jar_Filled.png",
+  "Categories": ["Craftory.Wells"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer"
+  "Quality": "Rare"
 }

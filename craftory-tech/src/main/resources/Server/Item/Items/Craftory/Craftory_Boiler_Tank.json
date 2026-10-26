@@ -5,9 +5,9 @@
   },
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
-  "Categories": ["Furniture"],
+  "Categories": ["Craftory.Power"],
   "Set": "Furniture_Goblin",
-  "Quality": "Technical",
+  "Quality": "Uncommon",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Boiler_Tank.png",
   "MaxStack": 16,
   "BlockType": {

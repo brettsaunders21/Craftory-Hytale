@@ -4,8 +4,9 @@
     "Description": "server.items.Craftory_Gnasher_Pit.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Gnasher_Pit.png",
+  "Categories": ["Craftory.Machines"],
   "PlayerAnimationsId": "Block",
-  "Quality": "Developer",
+  "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
     "CustomModelTexture": [

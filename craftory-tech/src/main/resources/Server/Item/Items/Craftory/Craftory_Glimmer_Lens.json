@@ -4,9 +4,10 @@
     "Description": "server.items.Craftory_Glimmer_Lens.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Glimmer_Lens.png",
+  "Categories": ["Craftory.Tools"],
   "MaxStack": 1,
   "PlayerAnimationsId": "Item",
-  "Quality": "Developer",
+  "Quality": "Common",
   "Interactions": {
     "Secondary": {
       "Interactions": [

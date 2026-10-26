@@ -5,12 +5,10 @@
   },
   "ItemLevel": 11,
   "PlayerAnimationsId": "Block",
-  "Categories": [
-    "Furniture"
-  ],
+  "Categories": ["Craftory.Power"],
   "Set": "Furniture_Goblin",
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Rattlewheel.png",
-  "Quality": "Developer",
+  "Quality": "Common",
   "MaxStack": 1,
   "BlockType": {
     "BlockParticleSetId": "Wood",

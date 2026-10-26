@@ -4,9 +4,9 @@
     "Description": "server.items.Craftory_Hurl_Tube.description"
   },
   "Icon": "Icons/ItemsGenerated/Craftory/Craftory_Hurl_Tube.png",
-  "Categories": ["Tool.TechnicalBlocks"],
+  "Categories": ["Craftory.Logistics"],
   "PlayerAnimationsId": "Block",
-  "Quality": "Technical",
+  "Quality": "Uncommon",
   "MaxStack": 100,
   "BlockType": {
     "Material": "Solid",
