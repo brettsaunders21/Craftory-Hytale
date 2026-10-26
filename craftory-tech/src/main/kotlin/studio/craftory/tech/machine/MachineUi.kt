@@ -51,8 +51,16 @@ data class RattlewheelHud(
 
 data class ShroomBedHud(
     val growthPercent: Int,
+    val stored: Int,
     val twitch: Int,
     val darkness: String,
+)
+
+internal data class MemberActivity(
+    val inNetwork: Boolean,
+    val production: Long,
+    val demand: Long,
+    val delivered: Long,
 )
 
 data class EnergyHudSnapshot(
@@ -74,18 +82,17 @@ data class EnergyHudSnapshot(
 internal fun machineStatus(
     jank: Jank?,
     rattlewheel: RattlewheelHud?,
-    inNetwork: Boolean,
-    demand: Long,
-    supply: Long,
+    member: MemberActivity?,
     stored: Long,
 ): MachineStatus =
     when {
         jank?.stolen == true -> MachineStatus.STOLEN
         (jank?.stallTicks ?: 0) > 0 -> MachineStatus.STALLED
         rattlewheel != null && rattlewheel.fizzPerSecond > 0 -> MachineStatus.RUNNING
-        !inNetwork -> MachineStatus.IDLE
-        demand > 0 && supply == 0L && stored == 0L -> MachineStatus.NO_POWER
-        supply > 0 || demand > 0 -> MachineStatus.RUNNING
+        member == null || !member.inNetwork -> MachineStatus.IDLE
+        member.production > 0 -> MachineStatus.RUNNING
+        member.demand > 0 && member.delivered == 0L && stored == 0L -> MachineStatus.NO_POWER
+        member.demand > 0 -> MachineStatus.RUNNING
         else -> MachineStatus.IDLE
     }
 
@@ -380,6 +387,7 @@ internal fun energyHudCommands(
 
     emitIfChanged(before?.shroomBed != null, current.shroomBed != null) {
         commands.set("#GrowthRow.Visible", it)
+        commands.set("#ReadyRow.Visible", it)
         commands.set("#TwitchRow.Visible", it)
         commands.set("#DarkRow.Visible", it)
     }
@@ -392,6 +400,14 @@ internal fun energyHudCommands(
                 Message
                     .translation("server.craftory.hud.energy.detail.growth")
                     .param("growth", shroomBed.growthPercent),
+            )
+        }
+        if (previous == null || beforeShroomBed?.stored != shroomBed.stored) {
+            commands.set(
+                "#ReadyValue.Text",
+                Message
+                    .translation("server.craftory.hud.energy.detail.ready")
+                    .param("count", shroomBed.stored),
             )
         }
         if (previous == null || beforeShroomBed?.twitch != shroomBed.twitch) {
@@ -517,6 +533,15 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
         val members = energy.networkMembers(id)
         val supply = energy.networkSupply(id)
         val demand = energy.networkDemand(id)
+        val memberActivity =
+            member?.let {
+                MemberActivity(
+                    inNetwork = inNetwork,
+                    production = it.production,
+                    demand = it.demand,
+                    delivered = it.delivered,
+                )
+            }
         return EnergyHudSnapshot(
             itemId = machineItemId(member?.typeId, shroomBed != null, blockItemId(world, position)),
             stored = stored,
@@ -534,9 +559,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                         rattlewheel?.let {
                             RattlewheelHud(it.waterFlow, it.windMode, it.fizzPerSecond)
                         },
-                    inNetwork = inNetwork,
-                    demand = demand,
-                    supply = supply,
+                    member = memberActivity,
                     stored = stored,
                 ),
             rattlewheel =
@@ -545,7 +568,7 @@ internal class JunkPowerHudSystem : DelayedEntitySystem<EntityStore>(0.5f) {
                 },
             shroomBed =
                 shroomBed?.let {
-                    ShroomBedHud((it.growth / 10).toInt(), it.twitch, it.darknessSource)
+                    ShroomBedHud((it.growth / 10).toInt(), it.stored, it.twitch, it.darknessSource)
                 },
         )
     }

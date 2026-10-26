@@ -190,6 +190,11 @@ Group {
       Label #GrowthValue { Text: ""; Style: @Muted; }
     }
 
+    @DetailRow #ReadyRow {
+      @Icon { @Texture = "Energy/Stored.png"; }
+      Label #ReadyValue { Text: ""; Style: @Muted; }
+    }
+
     @DetailRow #TwitchRow {
       @Icon { @Texture = "Energy/Jank.png"; }
       Label #TwitchValue { Text: ""; Style: @Muted; }

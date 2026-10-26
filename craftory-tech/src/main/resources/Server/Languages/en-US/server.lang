@@ -286,5 +286,6 @@ craftory.hud.energy.detail.wind-on = Wind turning the sails
 craftory.hud.energy.detail.wind-off = No wind
 craftory.hud.energy.detail.output = Output {rate} Fizz/s
 craftory.hud.energy.detail.growth = Growth {growth}%
+craftory.hud.energy.detail.ready = {count} shrooms ready
 craftory.hud.energy.detail.twitch = Twitch {twitch}/100
 craftory.hud.energy.detail.darkness = Darkness: {source}
