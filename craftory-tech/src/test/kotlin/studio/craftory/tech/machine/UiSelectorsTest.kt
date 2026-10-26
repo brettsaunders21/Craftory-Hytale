@@ -129,7 +129,7 @@ internal fun validateUiTranslationReferences(resourceRoots: List<Path>): List<St
         .filter { it.fileName.toString().endsWith(".ui") }
         .forEach { path ->
             val source = Files.readString(path)
-            Regex("""%([A-Za-z0-9_.\-]+)""").findAll(source).forEach { match ->
+            Regex("""%([^\s;,)}\]"']+)""").findAll(source).forEach { match ->
                 val reference = match.groupValues[1]
                 val line = source.take(match.range.first).count { it == '\n' } + 1
                 if (!Regex("^[A-Za-z0-9.]+$").matches(reference)) {
