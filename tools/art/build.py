@@ -115,12 +115,20 @@ def export_beams(manifest: list[str]) -> None:
     particles.tether_beam().save(written(manifest, d / "Craftory_Tether_Cyan.png"), optimize=True)
 
 
+def export_trails(manifest: list[str]) -> None:
+    d = COMMON / "Trails"
+    for name, img in particles.trails().items():
+        d.mkdir(parents=True, exist_ok=True)
+        img.save(written(manifest, d / f"{name}.png"), optimize=True)
+
+
 def main() -> None:
     manifest: list[str] = []
     export_blocks(manifest)
     export_items(manifest)
     export_particles(manifest)
     export_beams(manifest)
+    export_trails(manifest)
     grizzlecog.export(manifest, COMMON, build)
     vanilla_ref = os.environ.get("CRAFTORY_VANILLA_REF")
     if vanilla_ref:

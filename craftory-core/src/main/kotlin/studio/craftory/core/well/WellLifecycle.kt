@@ -14,6 +14,7 @@ import studio.craftory.core.api.BlockPos
 import studio.craftory.core.api.CraftoryCore
 import studio.craftory.core.api.well.Glimmerwell
 import studio.craftory.core.api.well.WellIndex
+import studio.craftory.core.api.well.fireWellRemoved
 
 internal class WellLifecycle : RefSystem<ChunkStore>() {
     override fun getQuery(): Query<ChunkStore> =

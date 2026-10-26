@@ -88,6 +88,8 @@ import studio.craftory.tech.machine.SelfTestRun
 import studio.craftory.tech.machine.SelfTestSystem
 import studio.craftory.tech.machine.ShroomBedState
 import studio.craftory.tech.machine.ShroomBedSystem
+import studio.craftory.tech.machine.Slice5bSelfTestRun
+import studio.craftory.tech.machine.Slice5bSelfTestSystem
 import studio.craftory.tech.machine.SloshtankStateSystem
 import studio.craftory.tech.machine.SnatcherClawState
 import studio.craftory.tech.machine.SnatcherClawSystem
@@ -95,6 +97,8 @@ import studio.craftory.tech.machine.TimedBlockAnimation
 import studio.craftory.tech.machine.TimedBlockAnimationSystem
 import studio.craftory.tech.machine.TransportSelfTestRun
 import studio.craftory.tech.machine.TransportSelfTestSystem
+import studio.craftory.tech.machine.WellheadState
+import studio.craftory.tech.machine.WellheadSystem
 import studio.craftory.tech.machine.jank.BodgeSlots
 import studio.craftory.tech.machine.jank.Jank
 import studio.craftory.tech.mob.RiftmothDrainSystem
@@ -139,6 +143,11 @@ import studio.craftory.tech.well.TetherStakeBeamSystem
 import studio.craftory.tech.well.TetherStakeLifecycle
 import studio.craftory.tech.well.TetherStakePlacementSystem
 import studio.craftory.tech.well.TetherStakeState
+import studio.craftory.tech.well.WellAffliction
+import studio.craftory.tech.well.WellAfflictionDeathSystem
+import studio.craftory.tech.well.WellAfflictionFollower
+import studio.craftory.tech.well.WellAfflictionRuntimeConfig
+import studio.craftory.tech.well.WellAfflictionSystem
 import studio.craftory.tech.well.WellBirthState
 import studio.craftory.tech.well.WellBirthSystem
 import studio.craftory.tech.well.WellCaptureState
@@ -151,6 +160,9 @@ import studio.craftory.tech.well.WellKillBirthSystem
 import studio.craftory.tech.well.WellPulseState
 import studio.craftory.tech.well.WellPulseSystem
 import studio.craftory.tech.well.WellRuntimeConfig
+import studio.craftory.tech.well.WellheadBreakSystem
+import studio.craftory.tech.well.WellheadDamageSystem
+import studio.craftory.tech.well.WellheadPlacementSystem
 
 class CraftoryTechPlugin(
     init: JavaPluginInit,
@@ -169,11 +181,13 @@ class CraftoryTechPlugin(
         val pluginVersion = getManifest().getVersion().toString()
         WellRuntimeConfig.current = wellConfig.get()
         ResonatorRuntimeConfig.crystalUses = config.get().resonatorCrystalUses.coerceAtLeast(1)
+        WellAfflictionRuntimeConfig.settings = config.get().wellRisk
         CraftoryCore.registerModule("CraftoryTech", pluginVersion)
         CraftoryMobs.registerRoleAlias("glimmer_wisp", CraftoryIds.GLIMMER_WISP)
         CraftoryMobs.registerRoleAlias("sparkjaw", CraftoryIds.SPARKJAW)
         CraftoryMobs.registerRoleAlias("riftmoth", CraftoryIds.RIFTMOTH)
         CraftoryMobs.registerRoleAlias("goblin_poacher", CraftoryIds.GOBLIN_POACHER)
+        CraftoryMobs.registerRoleAlias("slurp_walker", CraftoryIds.SLURP_WALKER)
         CraftoryCore.registerEnergyType(
             CraftoryIds.CRANK_TYPE,
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 0, 0),
@@ -203,6 +217,13 @@ class CraftoryTechPlugin(
             MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
             EnergyFaces.DOWN,
             EnergyFaces.ALL xor EnergyFaces.DOWN,
+        )
+        CraftoryCore.registerConverterType(
+            CraftoryIds.WELLHEAD_TYPE,
+            MemberSpec(MemberSpec.CONSUMER, 0, 40, 0, 0, 1),
+            MemberSpec(MemberSpec.PRODUCER, 0, 0, 0, 1, 1),
+            EnergyFaces.ALL xor EnergyFaces.UP xor EnergyFaces.DOWN,
+            EnergyFaces.UP,
         )
         CraftoryCore.registerEnergyType(
             CraftoryIds.WELL_CRADLE_TYPE,
@@ -370,6 +391,18 @@ class CraftoryTechPlugin(
                 CraftoryIds.CRADLE_COMPONENT,
                 CradleState.CODEC,
             )
+        WellheadState.type =
+            chunkRegistry.registerComponent(
+                WellheadState::class.java,
+                CraftoryIds.WELLHEAD_COMPONENT,
+                WellheadState.CODEC,
+            )
+        WellAffliction.type =
+            chunkRegistry.registerComponent(
+                WellAffliction::class.java,
+                CraftoryIds.WELL_AFFLICTION_COMPONENT,
+                WellAffliction.CODEC,
+            )
         CraftoryCore.registerInspectableComponent(CraftoryIds.JUNK_HEART_COMPONENT) { accessor, ref ->
             accessor.getComponent(ref, JunkHeartState.type)
         }
@@ -447,6 +480,8 @@ class CraftoryTechPlugin(
                 "CraftoryGrizzlecogVisitLedger",
                 GrizzlecogVisitLedger.CODEC,
             )
+        Slice5bSelfTestRun.type =
+            chunkRegistry.registerResource(Slice5bSelfTestRun::class.java, ::Slice5bSelfTestRun)
         AnchorRefreshIndex.type = chunkRegistry.registerResource(AnchorRefreshIndex::class.java, ::AnchorRefreshIndex)
         chunkRegistry.registerSystem(MachineClockLifecycle())
         chunkRegistry.registerSystem(AnchorLifecycle())
@@ -476,6 +511,8 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(CrackleCoilSystem())
         chunkRegistry.registerSystem(ResonatorSystem())
         chunkRegistry.registerSystem(CradleSystem())
+        chunkRegistry.registerSystem(WellheadSystem())
+        chunkRegistry.registerSystem(WellAfflictionSystem())
         chunkRegistry.registerSystem(FirstSparkSystem())
         chunkRegistry.registerSystem(MultiblockAssemblySystem())
         chunkRegistry.registerSystem(GhostPreviewLifecycle())
@@ -487,11 +524,18 @@ class CraftoryTechPlugin(
         chunkRegistry.registerSystem(TransportSelfTestSystem())
         chunkRegistry.registerSystem(FluidSelfTestSystem())
         chunkRegistry.registerSystem(PolishSelfTestSystem())
+        chunkRegistry.registerSystem(Slice5bSelfTestSystem())
         val entityRegistry = getEntityStoreRegistry()
         LensScanState.type = entityRegistry.registerResource(LensScanState::class.java, ::LensScanState)
         WellPulseState.type = entityRegistry.registerResource(WellPulseState::class.java, ::WellPulseState)
         WellCaptureState.type = entityRegistry.registerResource(WellCaptureState::class.java, ::WellCaptureState)
         WellGuardianIndex.type = entityRegistry.registerResource(WellGuardianIndex::class.java, ::WellGuardianIndex)
+        WellAfflictionFollower.type =
+            entityRegistry.registerComponent(
+                WellAfflictionFollower::class.java,
+                CraftoryIds.WELL_AFFLICTION_FOLLOWER_COMPONENT,
+                WellAfflictionFollower.CODEC,
+            )
         SparkjawGuardian.type =
             entityRegistry.registerComponent(
                 SparkjawGuardian::class.java,
@@ -523,6 +567,9 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(JunkPowerKickSystem())
         entityRegistry.registerSystem(CradlePlaceSystem())
         entityRegistry.registerSystem(CradleBreakSystem())
+        entityRegistry.registerSystem(WellheadPlacementSystem())
+        entityRegistry.registerSystem(WellheadBreakSystem())
+        entityRegistry.registerSystem(WellheadDamageSystem())
         entityRegistry.registerSystem(MachineOwnerPlacementSystem())
         entityRegistry.registerSystem(TetherStakePlacementSystem())
         entityRegistry.registerSystem(BuildableMachineCraftGate())
@@ -531,6 +578,7 @@ class CraftoryTechPlugin(
         entityRegistry.registerSystem(WellGuardianCalmSystem())
         entityRegistry.registerSystem(WellGuardianLifecycle())
         entityRegistry.registerSystem(WellGuardianDeathSystem())
+        entityRegistry.registerSystem(WellAfflictionDeathSystem())
         entityRegistry.registerSystem(JarCarrierSystem())
         entityRegistry.registerSystem(JarCarrierDamageSystem())
         entityRegistry.registerSystem(JarCarrierDropSystem())

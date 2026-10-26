@@ -484,6 +484,22 @@
         ],
         "Stock": 1
       }
+    },
+    {
+      "Type": "Fixed",
+      "Trade": {
+        "Output": {
+          "ItemId": "Craftory_Wellhead",
+          "Quantity": 1
+        },
+        "Input": [
+          {
+            "ItemId": "Ingredient_Scraps",
+            "Quantity": 20
+          }
+        ],
+        "Stock": 1
+      }
     }
   ]
 }

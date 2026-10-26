@@ -31,7 +31,7 @@ data class WellRemovalEvent(
 @Suppress("TooGenericExceptionCaught")
 class WellAccess internal constructor() {
     private val bornListeners = CopyOnWriteArrayList<(WellEvent) -> Unit>()
-    private val removedListeners = CopyOnWriteArrayList<(WellRemovalEvent) -> Unit>()
+    internal val removedListeners = CopyOnWriteArrayList<(WellRemovalEvent) -> Unit>()
     private val scannedListeners = CopyOnWriteArrayList<(WellScanEvent) -> Unit>()
 
     fun wellsNear(
@@ -141,6 +141,44 @@ class WellAccess internal constructor() {
         return removed
     }
 
+    fun setState(
+        world: World,
+        pos: BlockPos,
+        state: WellState,
+    ): Boolean =
+        updateWell(world, pos) { well ->
+            if (well.state == state) return@updateWell false
+            well.state = state
+            true
+        }
+
+    fun setStrength(
+        world: World,
+        pos: BlockPos,
+        strength: WellStrength,
+    ): Boolean =
+        updateWell(world, pos) { well ->
+            if (well.strength == strength) return@updateWell false
+            well.strength = strength
+            true
+        }
+
+    fun setCorrupted(
+        world: World,
+        pos: BlockPos,
+        corrupted: Boolean,
+    ): Boolean {
+        world.debugAssertInTickingThread()
+        val store = world.chunkStore.store
+        val wellRef = wellsNear(store, pos, 0).firstOrNull() ?: return false
+        if (wellRef.well.corrupted != corrupted) {
+            wellRef.well.corrupted = corrupted
+            store.getComponent(wellRef.ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+        }
+        setCorruptedVisual(world, pos, corrupted)
+        return true
+    }
+
     fun onWellBorn(listener: (WellEvent) -> Unit): AutoCloseable {
         bornListeners.add(listener)
         return AutoCloseable { bornListeners.remove(listener) }
@@ -149,20 +187,6 @@ class WellAccess internal constructor() {
     fun onWellRemoved(listener: (WellRemovalEvent) -> Unit): AutoCloseable {
         removedListeners.add(listener)
         return AutoCloseable { removedListeners.remove(listener) }
-    }
-
-    internal fun fireWellRemoved(
-        world: World,
-        pos: BlockPos,
-    ) {
-        val event = WellRemovalEvent(world, pos)
-        removedListeners.forEach { listener ->
-            try {
-                listener(event)
-            } catch (exception: Exception) {
-                LOGGER.log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
-            }
-        }
     }
 
     fun onWellScanned(listener: (WellScanEvent) -> Unit): AutoCloseable {
@@ -180,18 +204,10 @@ class WellAccess internal constructor() {
         }
     }
 
-    private fun distanceSquared(
-        left: BlockPos,
-        right: BlockPos,
-    ): Long {
-        val dx = left.x.toLong() - right.x
-        val dy = left.y.toLong() - right.y
-        val dz = left.z.toLong() - right.z
-        return dx * dx + dy * dy + dz * dz
-    }
-
     companion object {
         const val ANCHOR_BLOCK_ID = "Craftory_Glimmerwell_Anchor"
+        private const val NORMAL_STATE = "Normal"
+        private const val CORRUPTED_STATE = "Corrupted"
         private val LOGGER: Logger = Logger.getLogger(WellAccess::class.java.name)
 
         fun defaultTaste(temperament: Temperament): String =
@@ -206,4 +222,64 @@ class WellAccess internal constructor() {
                 Temperament.HOLLOW -> "Plant_Crop_Mushroom_Glowing_Purple"
             }
     }
+}
+
+internal fun WellAccess.fireWellRemoved(
+    world: World,
+    pos: BlockPos,
+) {
+    val event = WellRemovalEvent(world, pos)
+    removedListeners.forEach { listener ->
+        try {
+            listener(event)
+        } catch (exception: IllegalStateException) {
+            Logger
+                .getLogger(WellAccess::class.java.name)
+                .log(Level.WARNING, "Glimmerwell removal listener failed at $pos", exception)
+        }
+    }
+}
+
+private fun distanceSquared(
+    left: BlockPos,
+    right: BlockPos,
+): Long {
+    val dx = left.x.toLong() - right.x
+    val dy = left.y.toLong() - right.y
+    val dz = left.z.toLong() - right.z
+    return dx * dx + dy * dy + dz * dz
+}
+
+private inline fun WellAccess.updateWell(
+    world: World,
+    pos: BlockPos,
+    update: (Glimmerwell) -> Boolean,
+): Boolean {
+    world.debugAssertInTickingThread()
+    val store = world.chunkStore.store
+    val wellRef = wellsNear(store, pos, 0).firstOrNull() ?: return false
+    if (!update(wellRef.well)) return false
+    store.getComponent(wellRef.ref, BlockModule.BlockStateInfo.getComponentType())?.markNeedsSaving(store)
+    return true
+}
+
+private fun WellAccess.setCorruptedVisual(
+    world: World,
+    pos: BlockPos,
+    corrupted: Boolean,
+) {
+    val sectionRef = world.chunkStore.getChunkSectionReferenceAtBlock(pos.x, pos.y, pos.z) ?: return
+    val blockType = BlockType.fromString(WellAccess.ANCHOR_BLOCK_ID) ?: return
+    val state = if (corrupted) "Corrupted" else "Normal"
+    if (blockType.getBlockForState(state) == null) return
+    BlockOperations.setBlockInteractionState(
+        world.chunkStore,
+        sectionRef,
+        pos.x,
+        pos.y,
+        pos.z,
+        blockType,
+        state,
+        false,
+    )
 }

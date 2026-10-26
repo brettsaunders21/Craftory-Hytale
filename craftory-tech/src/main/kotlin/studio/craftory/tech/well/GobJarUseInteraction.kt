@@ -60,7 +60,7 @@ class GobJarUseInteraction : SimpleInteraction() {
             return
         }
         val world = commandBuffer.externalData.world
-        val ref = wellRef(world, position)
+        val ref = gobJarWellRef(world, position)
         if (ref == null) {
             playerRef.sendMessage(Message.translation("server.craftory.jar.not-well"))
             return
@@ -294,7 +294,7 @@ private fun targetPosition(
         .getTargetBlock(context.entity, 8.0, commandBuffer)
         ?.let { BlockPos(it.x, it.y, it.z) }
 
-private fun wellRef(
+private fun gobJarWellRef(
     world: World,
     position: BlockPos,
 ): Ref<ChunkStore>? {

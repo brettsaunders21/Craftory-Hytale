@@ -14,4 +14,11 @@ object ConverterMath {
     ): Long =
         studio.craftory.engine.energy.ConverterMath
             .convert(delivered, ratePercent)
+
+    fun catalyse(
+        delivered: Long,
+        lossPercent: Int = 15,
+    ): Long =
+        studio.craftory.engine.energy.ConverterMath
+            .catalyse(delivered, lossPercent)
 }

@@ -8,6 +8,7 @@ class CraftoryTechConfig(
     var scrapRush: ScrapRushSettings = ScrapRushSettings(),
     var grizzlecogVisits: GrizzlecogVisitsSettings = GrizzlecogVisitsSettings(),
     var resonatorCrystalUses: Long = 200,
+    var wellRisk: WellRiskSettings = WellRiskSettings(),
 ) {
     companion object {
         val CODEC: BuilderCodec<CraftoryTechConfig> =
@@ -27,6 +28,69 @@ class CraftoryTechConfig(
                     KeyedCodec("ResonatorCrystalUses", Codec.LONG),
                     { config, value -> config.resonatorCrystalUses = value.coerceAtLeast(1) },
                     { it.resonatorCrystalUses },
+                ).add()
+                .append(
+                    KeyedCodec("WellRisk", WellRiskSettings.CODEC),
+                    { config, value -> config.wellRisk = value },
+                    { it.wellRisk },
+                ).add()
+                .build()
+    }
+}
+
+class WellRiskSettings(
+    var riftmothIntervalSeconds: Int = 300,
+    var riftmothChancePercent: Int = 20,
+    var riftmothFeedSecondsToCorrupt: Int = 60,
+    var voidSpawnIntervalSeconds: Int = 120,
+    var voidSpawnCap: Int = 3,
+    var poacherRaidIntervalSeconds: Int = 1200,
+    var poacherRaidChancePercent: Int = 10,
+    var siphonSeconds: Int = 120,
+) {
+    companion object {
+        val CODEC: BuilderCodec<WellRiskSettings> =
+            BuilderCodec
+                .builder(WellRiskSettings::class.java, ::WellRiskSettings)
+                .append(
+                    KeyedCodec("RiftmothIntervalSeconds", Codec.INTEGER),
+                    { settings, value -> settings.riftmothIntervalSeconds = value.coerceAtLeast(0) },
+                    { it.riftmothIntervalSeconds },
+                ).add()
+                .append(
+                    KeyedCodec("RiftmothChancePercent", Codec.INTEGER),
+                    { settings, value -> settings.riftmothChancePercent = value.coerceIn(0, 100) },
+                    { it.riftmothChancePercent },
+                ).add()
+                .append(
+                    KeyedCodec("RiftmothFeedSecondsToCorrupt", Codec.INTEGER),
+                    { settings, value -> settings.riftmothFeedSecondsToCorrupt = value.coerceAtLeast(1) },
+                    { it.riftmothFeedSecondsToCorrupt },
+                ).add()
+                .append(
+                    KeyedCodec("VoidSpawnIntervalSeconds", Codec.INTEGER),
+                    { settings, value -> settings.voidSpawnIntervalSeconds = value.coerceAtLeast(1) },
+                    { it.voidSpawnIntervalSeconds },
+                ).add()
+                .append(
+                    KeyedCodec("VoidSpawnCap", Codec.INTEGER),
+                    { settings, value -> settings.voidSpawnCap = value.coerceAtLeast(0) },
+                    { it.voidSpawnCap },
+                ).add()
+                .append(
+                    KeyedCodec("PoacherRaidIntervalSeconds", Codec.INTEGER),
+                    { settings, value -> settings.poacherRaidIntervalSeconds = value.coerceAtLeast(0) },
+                    { it.poacherRaidIntervalSeconds },
+                ).add()
+                .append(
+                    KeyedCodec("PoacherRaidChancePercent", Codec.INTEGER),
+                    { settings, value -> settings.poacherRaidChancePercent = value.coerceIn(0, 100) },
+                    { it.poacherRaidChancePercent },
+                ).add()
+                .append(
+                    KeyedCodec("SiphonSeconds", Codec.INTEGER),
+                    { settings, value -> settings.siphonSeconds = value.coerceAtLeast(1) },
+                    { it.siphonSeconds },
                 ).add()
                 .build()
     }

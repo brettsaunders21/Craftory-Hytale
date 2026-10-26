@@ -33,13 +33,26 @@ def textures_for(model_path: Path) -> list[Path]:
     return own or pngs
 
 
-def model_rows():
+def model_rows(slice5b_only=False):
     rows = []
     for mp in sorted(COMMON.rglob("*.blockymodel")):
+        if slice5b_only and not any(
+            marker in mp.stem
+            for marker in ("Wellhead_Off", "Wellhead_Pumping", "Glimmerwell_Anchor", "Slurp_Walker")
+        ):
+            continue
         model = json.loads(mp.read_text())
         anims = sorted(mp.parent.glob("*.blockyanim"))
         for tp in textures_for(mp):
-            label = f"{mp.relative_to(COMMON).as_posix()}\n  tex {tp.name}"
+            if slice5b_only and "Glimmerwell_Anchor" in mp.stem:
+                state = "corrupted" if "Corrupted" in tp.stem else "normal"
+                label = f"Glimmerwell anchor - {state}"
+            elif slice5b_only and "Wellhead_Pumping" in mp.stem:
+                label = "Wellhead - pumping"
+            elif slice5b_only and "Wellhead_Off" in mp.stem:
+                label = "Wellhead - off"
+            else:
+                label = f"{mp.relative_to(COMMON).as_posix()}\n  tex {tp.name}"
             views = [render(model, Image.open(tp), yaw, pitch, CELL) for _, yaw, pitch in ANGLES]
             rows.append((label, views, mp.stem + "__" + tp.stem))
         for ap in anims:
@@ -108,13 +121,17 @@ def grizzlecog_row(assets_zip: Path | None):
             "Grizzlecog")
 
 
-def icon_rows():
+def icon_rows(slice5b_only=False):
     out = []
     for ip in sorted((COMMON / "Icons" / "ItemsGenerated" / "Craftory").glob("*.png")) + sorted(
-            (COMMON / "Particles" / "Craftory").glob("*.png")) + sorted((COMMON / "Beams").glob("*.png")):
+        (COMMON / "Particles" / "Craftory").glob("*.png")
+    ) + sorted((COMMON / "Beams").glob("*.png")):
+        if slice5b_only and ip.stem not in {"Craftory_Glimmerwell_Anchor", "Craftory_Wellhead"}:
+            continue
         im = Image.open(ip).convert("RGBA")
         out.append((ip.name, im))
-    for temperament, color in (
+    if not slice5b_only:
+        for temperament, color in (
             ("SPARK", "#5ff3ff"),
             ("EMBER", "#ff8a2b"),
             ("TIDE", "#3f8cff"),
@@ -123,9 +140,9 @@ def icon_rows():
             ("GALE", "#d6f2ff"),
             ("CLANK", "#8bff3a"),
             ("HOLLOW", "#6a2a9a"),
-    ):
-        swatch = Image.new("RGBA", (64, 64), color)
-        out.append((f"Well tint {temperament} {color}", swatch))
+        ):
+            swatch = Image.new("RGBA", (64, 64), color)
+            out.append((f"Well tint {temperament} {color}", swatch))
     return out
 
 
@@ -157,10 +174,12 @@ def mob_preview(out: Path, vanilla_root: Path) -> None:
 
 def main():
     out = Path(sys.argv[1])
-    zip_path = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+    args = [arg for arg in sys.argv[2:] if arg != "--slice5b"]
+    slice5b_only = "--slice5b" in sys.argv[2:]
+    zip_path = Path(args[0]) if args else None
     (out / "renders").mkdir(parents=True, exist_ok=True)
-    rows = model_rows()
-    g = grizzlecog_row(zip_path)
+    rows = model_rows(slice5b_only)
+    g = None if slice5b_only else grizzlecog_row(zip_path)
     if g:
         rows.append(g)
     for label, views, key in rows:
@@ -168,7 +187,7 @@ def main():
         for i, v in enumerate(views):
             strip.alpha_composite(v, (i * CELL, 0))
         strip.save(out / "renders" / f"{key}.png")
-    icons = icon_rows()
+    icons = icon_rows(slice5b_only)
     label_w = 300
     cols = 2
     row_h = CELL
@@ -179,8 +198,12 @@ def main():
     width = max(cols * (label_w + CELL * 3), icon_cols * icon_cell[0])
     sheet = Image.new("RGBA", (width, 60 + model_h + 40 + icon_h), BG)
     d = ImageDraw.Draw(sheet)
-    d.text((10, 10), "Craftory art pass 2: Goblin workshop and Spark-era assets. Offline numpy renders.",
-           fill=INK)
+    title = (
+        "Craftory Slice 5b preview. Offline renders, not the Hytale client."
+        if slice5b_only
+        else "Craftory art pass 2: Goblin workshop and Spark-era assets. Offline numpy renders."
+    )
+    d.text((10, 10), title, fill=INK)
     d.text((10, 30), "Models: front 3/4, back 3/4, top. Anim rows: 3 frames. Icons: 4x and 1:1 (64px).", fill=INK)
     for i, (label, views, _) in enumerate(rows):
         x = (i % cols) * (label_w + CELL * 3)
@@ -199,7 +222,7 @@ def main():
         big.save(out / "renders" / f"icon4x_{name}.png", format="PNG")
         im.save(out / "renders" / f"icon1x_{name}.png", format="PNG")
     vanilla_ref = os.environ.get("CRAFTORY_VANILLA_REF")
-    if vanilla_ref:
+    if vanilla_ref and not slice5b_only:
         mob_preview(out, Path(vanilla_ref).expanduser())
     sheet.save(out / "art_preview.png", optimize=True)
     print(f"{len(rows)} model rows, {len(icons)} icons -> {out / 'art_preview.png'} {sheet.size}")

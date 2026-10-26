@@ -61,6 +61,7 @@ internal class MachineOwnerPlacementSystem :
                 CraftoryIds.GASBAG,
                 CraftoryIds.WAKEBELL_ANCHOR,
                 CraftoryIds.WELL_CRADLE,
+                CraftoryIds.WELLHEAD,
                 CraftoryIds.RESONATOR,
             )
     }

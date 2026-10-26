@@ -19,6 +19,7 @@ class GlimmerwellCodecTest {
                 "Ingredient_Scraps",
                 1234L,
                 crewId,
+                corrupted = true,
             )
         val encoded = Glimmerwell.CODEC.encode(source) ?: error("codec encode returned null")
         val decoded = Glimmerwell.CODEC.decode(encoded) ?: error("codec decode returned null")
@@ -28,6 +29,7 @@ class GlimmerwellCodecTest {
         assertEquals(source.taste, decoded.taste)
         assertEquals(source.birthTick, decoded.birthTick)
         assertEquals(crewId, decoded.claimCrewId)
+        assertEquals(source.corrupted, decoded.corrupted)
 
         val noClaimSource =
             Glimmerwell(
@@ -40,6 +42,7 @@ class GlimmerwellCodecTest {
         val encodedNoClaim = Glimmerwell.CODEC.encode(noClaimSource) ?: error("codec encode returned null")
         val noClaim = Glimmerwell.CODEC.decode(encodedNoClaim) ?: error("codec decode returned null")
         assertNull(noClaim.claimCrewId)
+        assertEquals(false, noClaim.corrupted)
     }
 
     @Test

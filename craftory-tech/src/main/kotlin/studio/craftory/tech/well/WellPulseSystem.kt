@@ -62,7 +62,8 @@ internal class WellPulseSystem(
                 .wells()
                 .wellsNear(world.chunkStore.store, origin, config.get().pulseRadius.coerceAtLeast(0))
         wells.forEach { well ->
-            if (well.well.state != WellState.WILD) return@forEach
+            if (WellSelfTestExclusions.isWell(well.pos)) return@forEach
+            if (well.well.state != WellState.WILD && !well.well.corrupted) return@forEach
             val id = well.pos.pack()
             if (!WellBirthRules.cooldownElapsed(
                     state.lastPulseByPosition[id],
@@ -73,19 +74,35 @@ internal class WellPulseSystem(
                 return@forEach
             }
             state.lastPulseByPosition[id] = tick
-            WellPulseAppearance.particles(well.well.strength, tick).forEach { particle ->
-                val position =
-                    Vector3d(
-                        well.pos.x + 0.5 + particle.horizontalOffset,
-                        well.pos.y + particle.height,
-                        well.pos.z + 0.5,
-                    )
-                spawnTintedParticle(
+            if (well.well.corrupted) {
+                val drift = sin(tick / 8.0) * 0.25
+                ParticleUtil.spawnParticleEffect(
+                    CraftoryIds.CHIMNEY_SMOKE_PARTICLE,
+                    Vector3d(well.pos.x + 0.5 + drift, well.pos.y + 1.2, well.pos.z + 0.5),
                     store,
-                    position,
-                    particle.scale,
-                    WellPulseAppearance.tint(well.well.temperament),
                 )
+                if (well.well.strength == WellStrength.FLICKER) {
+                    ParticleUtil.spawnParticleEffect(
+                        CraftoryIds.CHIMNEY_SMOKE_PARTICLE,
+                        Vector3d(well.pos.x + 0.5 - drift, well.pos.y + 1.6, well.pos.z + 0.5),
+                        store,
+                    )
+                }
+            } else {
+                WellPulseAppearance.particles(well.well.strength, tick).forEach { particle ->
+                    val position =
+                        Vector3d(
+                            well.pos.x + 0.5 + particle.horizontalOffset,
+                            well.pos.y + particle.height,
+                            well.pos.z + 0.5,
+                        )
+                    spawnTintedParticle(
+                        store,
+                        position,
+                        particle.scale,
+                        WellPulseAppearance.tint(well.well.temperament),
+                    )
+                }
             }
         }
     }
