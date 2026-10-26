@@ -7,7 +7,7 @@ $C.@PageOverlay {
     Anchor: (Width: 640);
 
     #Title {
-      $C.@Title {
+      $C.@Title #TitleLabel {
         @Text = "Tinker's Notebook";
       }
     }
