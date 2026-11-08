@@ -7,7 +7,7 @@ junit-platform = "1.14.4"
 jmh = "0.7.3"
 ktlint = "1.8.0"
 kotlin = "2.4.21"
-spotless = "8.10.4"
+spotless = "8.11.0"
 
 [libraries]
 detekt-gradle-plugin = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
